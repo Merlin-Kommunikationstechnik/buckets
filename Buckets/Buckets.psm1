@@ -560,7 +560,9 @@ function Remove-Bucket {
     Removes one or more buckets and all their objects.
     .DESCRIPTION
     Deletes bucket directories and their contents. Supports exact names, multiple
-    buckets, and wildcard patterns. Prompts for confirmation unless -Force is used.
+    buckets, and wildcard patterns. Only removes directories containing .dat/.json
+    files (or empty directories). Skips buckets with other file types. Prompts for
+    confirmation unless -Force is used.
     .PARAMETER Bucket
     Bucket name(s) or wildcard patterns to remove. Supports glob-style wildcards (*, ?).
     .PARAMETER Path
@@ -629,7 +631,18 @@ function Remove-Bucket {
     }
 
     foreach ($m in $matched) {
-        $fileCount = (Get-BucketStats -Bucket $m.Name -Path $Path).ObjectCount
+        $allFiles = Get-ChildItem -Path $m.Path -File -ErrorAction SilentlyContinue
+        $otherFiles = $allFiles | Where-Object { $_.Extension -notin ".dat", ".json" }
+        if ($otherFiles) {
+            Write-Warning "Bucket '$($m.Name)' contains non-bucket files, skipping:"
+            foreach ($f in $otherFiles) {
+                Write-Warning "  $($f.Name)"
+            }
+            continue
+        }
+
+        $stats = Get-BucketStats -Bucket $m.Name -Path $Path
+        $fileCount = $stats.ObjectCount
 
         if ($WhatIf) {
             Write-Host "Removing bucket '$($m.Name)' ($fileCount object(s))"
