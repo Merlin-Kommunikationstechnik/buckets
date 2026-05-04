@@ -65,10 +65,10 @@ Save-BucketObject
 `-Key` takes a **property name**. The value of that property on each object becomes the filename:
 
 ```powershell
-# Single object: creates Alice.json
+# Single object: creates Alice.dat
 Save-BucketObject -Bucket users -InputObject @{ Name = "Alice" } -Key Name
 
-# Array: creates bob.json, charlie.json
+# Array: creates bob.dat, charlie.dat
 $users = @(
     @{ Name = "Bob"; Age = 25 }
     @{ Name = "Charlie"; Age = 35 }
@@ -110,11 +110,11 @@ Retrieves objects from one or more buckets.
 
 ```powershell
 Get-BucketObject
-    [[-Bucket] <string[]>]
-    [[-Path] <string>]
-    [[-Key] <string>]
-    [-Filter <hashtable>]
-    [-Where <scriptblock>]
+    [-Bucket <string[]>]
+    [-Path <string>]
+    [-Key <string>]
+    [-Match <hashtable>]
+    [-Filter <scriptblock>]
     [<CommonParameters>]
 ```
 
@@ -123,8 +123,8 @@ Get-BucketObject
 | `-Bucket` | Bucket name(s) to search | All buckets |
 | `-Path` | Storage root directory | `$PWD/.buckets` |
 | `-Key` | Object key to retrieve | All objects |
-| `-Filter` | Hashtable of exact-match filters | — |
-| `-Where` | ScriptBlock for custom filtering | — |
+| `-Match` | Hashtable of exact-match filters | — |
+| `-Filter` | ScriptBlock for custom filtering | — |
 
 Retrieved objects include metadata properties: `_BucketName`, `_BucketKey`, `_BucketFile`.
 
@@ -144,15 +144,15 @@ Get-BucketObject -Bucket users, orders
 Get-BucketObject -Bucket users -Key "Alice"
 
 # Hashtable filter (exact match)
-Get-BucketObject -Bucket users -Filter @{ Role = "admin" }
+Get-BucketObject -Bucket users -Match @{ Role = "admin" }
 
 # ScriptBlock filter (full expression support)
-Get-BucketObject -Bucket users -Where { $_.Age -gt 30 }
-Get-BucketObject -Bucket users -Where { $_.Role -eq "admin" -and $_.Score -ge 90 }
-Get-BucketObject -Where { $_.Name -match "^[AD]" }
+Get-BucketObject -Bucket users -Filter { $_.Age -gt 30 }
+Get-BucketObject -Bucket users -Filter { $_.Role -eq "admin" -and $_.Score -ge 90 }
+Get-BucketObject -Filter { $_.Name -match "^[AD]" }
 
 # Cross-bucket with filter
-Get-BucketObject -Where { $_.Price -gt 20 }
+Get-BucketObject -Filter { $_.Price -gt 20 }
 
 # Search for a key across all buckets
 Get-BucketObject -Key "special-item"
@@ -334,8 +334,8 @@ Get-BucketObject -Bucket users | Where-Object { $_.Age -gt 30 }
 # Retrieve, modify, update
 Get-BucketObject -Bucket users | ForEach-Object {
     $_.LastUpdated = Get-Date
-    $_
-} | Update-BucketObject -Bucket users -Key $_._BucketKey
+    Update-BucketObject -Bucket users -Key $_._BucketKey -InputObject $_
+}
 ```
 
 ## Storage Structure

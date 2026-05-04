@@ -142,11 +142,11 @@ Write-Host "========================================`n" -ForegroundColor Cyan
 Write-Host "[Buckets]" -ForegroundColor Green
 Get-Bucket | Format-Table -AutoSize
 
-Write-Host "[Users] Where Role = 'admin'" -ForegroundColor Green
-Get-BucketObject -Bucket users -Where { $_.Role -eq "admin" } | ForEach-Object { Write-Host "  $($_.Name) ($($_.Email))" }
+Write-Host "[Users] Filter Role = 'admin'" -ForegroundColor Green
+Get-BucketObject -Bucket users -Filter { $_.Role -eq "admin" } | ForEach-Object { Write-Host "  $($_.Name) ($($_.Email))" }
 
 Write-Host "`n[Orders] Shipped with Express shipping" -ForegroundColor Green
-Get-BucketObject -Bucket orders -Where { $_.Status -eq "shipped" -and $_.Shipping.Method -eq "Express" } | ForEach-Object { Write-Host "  $($_.OrderId) by $($_.Customer)" }
+Get-BucketObject -Bucket orders -Filter { $_.Status -eq "shipped" -and $_.Shipping.Method -eq "Express" } | ForEach-Object { Write-Host "  $($_.OrderId) by $($_.Customer)" }
 
 Write-Host "`n[Config] JSON verification" -ForegroundColor Green
 $cfg = Get-BucketObject -Bucket config -Key "app-config"
@@ -154,10 +154,10 @@ Write-Host "  DB: $($cfg.Database.Host):$($cfg.Database.Port)/$($cfg.Database.Na
 Write-Host "  Cache: $($cfg.Cache.Provider) (TTL: $($cfg.Cache.TTL)s)"
 
 Write-Host "`n[Metrics] Hours with CPU > 80%" -ForegroundColor Green
-Get-BucketObject -Bucket metrics -Where { $_.CPU -gt 80 } | ForEach-Object { Write-Host "  Hour $($_.Hour): CPU=$($_.CPU)%, Mem=$($_.Memory)%" }
+Get-BucketObject -Bucket metrics -Filter { $_.CPU -gt 80 } | ForEach-Object { Write-Host "  Hour $($_.Hour): CPU=$($_.CPU)%, Mem=$($_.Memory)%" }
 
 Write-Host "`n[Logs] Filter WARN/ERROR" -ForegroundColor Green
-Get-BucketObject -Bucket logs -Where { $_.Level -in @("WARN", "ERROR") } | ForEach-Object { Write-Host "  [$($_.Level)] $($_.Message)" }
+Get-BucketObject -Bucket logs -Filter { $_.Level -in @("WARN", "ERROR") } | ForEach-Object { Write-Host "  [$($_.Level)] $($_.Message)" }
 
 Write-Host "`n[Mixed] Formats" -ForegroundColor Green
 Get-BucketObject -Bucket mixed | ForEach-Object {

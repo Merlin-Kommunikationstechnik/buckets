@@ -188,9 +188,9 @@ function Get-BucketObject {
 
         [string]$Key,
 
-        [hashtable]$Filter,
+        [hashtable]$Match,
 
-        [scriptblock]$Where
+        [scriptblock]$Filter
     )
 
     $bucketPaths = if ($Bucket -and $Bucket.Count -gt 0) {
@@ -214,20 +214,19 @@ function Get-BucketObject {
         foreach ($file in $files) {
             $obj = Read-BucketFile -File $file
 
-            if ($Filter) {
-                $match = $true
-                foreach ($kvp in $Filter.GetEnumerator()) {
+            if ($Match) {
+                $hit = $true
+                foreach ($kvp in $Match.GetEnumerator()) {
                     if ($obj.$($kvp.Name) -ne $kvp.Value) {
-                        $match = $false
+                        $hit = $false
                         break
                     }
                 }
-                if (-not $match) { continue }
+                if (-not $hit) { continue }
             }
 
-            if ($Where) {
-                $passed = $null -ne ($obj | Where-Object $Where)
-                if (-not $passed) { continue }
+            if ($Filter) {
+                if ($null -eq ($obj | Where-Object $Filter)) { continue }
             }
 
             $obj | Add-Member -NotePropertyName "_BucketName" -NotePropertyValue $bucketName -Force
