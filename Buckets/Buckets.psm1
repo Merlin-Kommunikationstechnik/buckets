@@ -1,3 +1,13 @@
+<#
+.SYNOPSIS
+    A PowerShell module for file-based PSObject storage using directory-backed buckets.
+.DESCRIPTION
+    Buckets provides a simple way to store, retrieve, and manage PowerShell objects
+    in directory-based collections called "buckets". Objects are automatically serialized
+    to binary (default) or JSON format, with auto-fallback to binary when JSON depth
+    limits are exceeded.
+#>
+
 $script:DefaultPath = Join-Path $PWD.Path ".buckets"
 
 function Get-BucketPath {
@@ -32,9 +42,35 @@ function Save-BucketObject {
     <#
     .SYNOPSIS
     Saves a PSObject to a bucket. Creates the bucket if it doesn't exist.
+    .DESCRIPTION
+    Serializes one or more PowerShell objects and stores them in a bucket directory.
+    Arrays are stored as individual files. By default objects are serialized to binary
+    (.dat) using PSSerializer. Use -AsJson for JSON format. If JSON serialization
+    exceeds the depth limit, the object automatically falls back to binary format.
+    .PARAMETER InputObject
+    The object(s) to store. Accepts pipeline input. Arrays are stored as individual files.
+    .PARAMETER Bucket
+    Name of the bucket to save to. Creates the bucket if it doesn't exist. Default: "default".
+    .PARAMETER Path
+    Root directory for bucket storage. Default: $PWD/.buckets.
     .PARAMETER Key
-    Property name to use as the object key. The value of this property on each object becomes the filename.
-    If omitted, a GUID is used.
+    Property name whose value becomes the filename. Special characters (/, :, *, ?, ", <, >, |, ., []) are sanitized to underscores. If omitted, a GUID is used.
+    .PARAMETER Depth
+    Maximum depth for JSON serialization. Default: 20.
+    .PARAMETER BinaryDepth
+    Maximum depth for binary (PSSerializer) serialization. Default: 2.
+    .PARAMETER AsTimestamp
+    Use a timestamp-based filename (yyyyMMddHHmmssfff_index) instead of a GUID.
+    .PARAMETER AsJson
+    Store objects as JSON (.json) instead of binary (.dat).
+    .OUTPUTS
+    PSCustomObject with Bucket, Key, and FilePath properties.
+    .EXAMPLE
+    Save-BucketObject -InputObject @{ Name = "Alice"; Age = 30 } -Key Name
+    .EXAMPLE
+    $users | Save-BucketObject -Bucket users -Key Email -AsJson
+    .EXAMPLE
+    Get-Process | Save-BucketObject -Bucket processes -AsTimestamp
     #>
     [CmdletBinding()]
     param(
@@ -178,7 +214,30 @@ function Get-ObjectFiles {
 function Get-BucketObject {
     <#
     .SYNOPSIS
-    Retrieves objects from a bucket.
+    Retrieves objects from one or more buckets.
+    .DESCRIPTION
+    Reads serialized objects from bucket directories. When no bucket is specified,
+    searches all buckets under the storage path. Supports exact-match hashtable
+    filtering (-Match) and arbitrary scriptblock filtering (-Filter).
+    Retrieved objects include metadata properties: _BucketName, _BucketKey, _BucketFile.
+    .PARAMETER Bucket
+    Bucket name(s) to search. If omitted, searches all buckets under -Path.
+    .PARAMETER Path
+    Root directory for bucket storage. Default: $PWD/.buckets.
+    .PARAMETER Key
+    Specific object key to retrieve. Looks for both .json and .dat files.
+    .PARAMETER Match
+    Hashtable of property-value pairs for exact-match filtering. All pairs must match.
+    .PARAMETER Filter
+    ScriptBlock for custom filtering. Use $_ to reference object properties (e.g., { $_.Age -gt 30 }).
+    .OUTPUTS
+    Deserialized PSObjects with _BucketName, _BucketKey, and _BucketFile metadata.
+    .EXAMPLE
+    Get-BucketObject -Bucket users -Match @{ Role = "admin" }
+    .EXAMPLE
+    Get-BucketObject -Filter { $_.Status -eq "shipped" -and $_.Shipping.Method -eq "Express" }
+    .EXAMPLE
+    Get-BucketObject -Bucket users, orders
     #>
     [CmdletBinding()]
     param(
@@ -241,6 +300,32 @@ function Update-BucketObject {
     <#
     .SYNOPSIS
     Updates an existing object in a bucket.
+    .DESCRIPTION
+    Replaces an existing object file with new data. Preserves the storage format (JSON or binary)
+    of the existing file unless -AsJson forces a format change. If JSON serialization exceeds
+    the depth limit, the object automatically falls back to binary format.
+    .PARAMETER InputObject
+    The updated object to store. Accepts pipeline input.
+    .PARAMETER Bucket
+    Name of the bucket containing the object.
+    .PARAMETER Key
+    Object key to update. Must exist in the bucket.
+    .PARAMETER Path
+    Root directory for bucket storage. Default: $PWD/.buckets.
+    .PARAMETER Depth
+    Maximum depth for JSON serialization. Default: 20.
+    .PARAMETER BinaryDepth
+    Maximum depth for binary (PSSerializer) serialization. Default: 2.
+    .PARAMETER AsJson
+    Force JSON format for the updated file.
+    .OUTPUTS
+    PSCustomObject with Bucket, Key, and FilePath properties.
+    .EXAMPLE
+    Get-BucketObject -Bucket users -Key "Alice" | ForEach-Object { $_.Age = 31; $_ } | Update-BucketObject -Bucket users -Key "Alice"
+    .EXAMPLE
+    $user = Get-BucketObject -Bucket users -Key "Alice"
+    $user.Email = "alice@new.com"
+    Update-BucketObject -Bucket users -Key "Alice" -InputObject $user
     #>
     [CmdletBinding()]
     param(
@@ -319,6 +404,21 @@ function Remove-BucketObject {
     <#
     .SYNOPSIS
     Removes an object from a bucket.
+    .DESCRIPTION
+    Deletes a specific object file from a bucket directory. Use -Key to remove a single
+    object or -All to clear the entire bucket.
+    .PARAMETER Bucket
+    Name of the bucket containing the object(s) to remove.
+    .PARAMETER Path
+    Root directory for bucket storage. Default: $PWD/.buckets.
+    .PARAMETER Key
+    Object key to remove. Looks for both .json and .dat files.
+    .PARAMETER All
+    Remove all objects from the bucket.
+    .EXAMPLE
+    Remove-BucketObject -Bucket users -Key "Alice"
+    .EXAMPLE
+    Remove-BucketObject -Bucket temp -All
     #>
     [CmdletBinding()]
     param(
@@ -363,7 +463,20 @@ function Remove-BucketObject {
 function Get-Bucket {
     <#
     .SYNOPSIS
-    Lists available buckets.
+    Lists available buckets with object counts.
+    .DESCRIPTION
+    Scans the storage path for bucket directories and returns information about each,
+    including name, path, and total object count (JSON + binary files).
+    .PARAMETER Path
+    Root directory for bucket storage. Default: $PWD/.buckets.
+    .PARAMETER Name
+    Filter buckets by name pattern (substring match).
+    .OUTPUTS
+    PSCustomObject with Name, Path, and ObjectCount properties.
+    .EXAMPLE
+    Get-Bucket
+    .EXAMPLE
+    Get-Bucket -Name "user"
     #>
     [CmdletBinding()]
     param(
@@ -398,6 +511,17 @@ function Get-BucketStats {
     <#
     .SYNOPSIS
     Shows statistics for a bucket.
+    .DESCRIPTION
+    Returns object count, total storage size, and oldest/newest object timestamps
+    for the specified bucket.
+    .PARAMETER Bucket
+    Name of the bucket to analyze.
+    .PARAMETER Path
+    Root directory for bucket storage. Default: $PWD/.buckets.
+    .OUTPUTS
+    PSCustomObject with Name, Path, ObjectCount, TotalSize, OldestObject, and NewestObject properties.
+    .EXAMPLE
+    Get-BucketStats -Bucket users
     #>
     [CmdletBinding()]
     param(
@@ -434,6 +558,23 @@ function Remove-Bucket {
     <#
     .SYNOPSIS
     Removes one or more buckets and all their objects.
+    .DESCRIPTION
+    Deletes bucket directories and their contents. Supports exact names, multiple
+    buckets, and wildcard patterns. Prompts for confirmation unless -Force is used.
+    .PARAMETER Bucket
+    Bucket name(s) or wildcard patterns to remove. Supports glob-style wildcards (*, ?).
+    .PARAMETER Path
+    Root directory for bucket storage. Default: $PWD/.buckets.
+    .PARAMETER Force
+    Skip confirmation prompt.
+    .PARAMETER WhatIf
+    Preview which buckets would be removed without actually deleting them.
+    .EXAMPLE
+    Remove-Bucket -Bucket users
+    .EXAMPLE
+    Remove-Bucket -Bucket "temp*" -Force
+    .EXAMPLE
+    Remove-Bucket * -WhatIf
     #>
     [CmdletBinding()]
     param(
