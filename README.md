@@ -1,5 +1,9 @@
 # Buckets
 
+<p align="center">
+  <img src="logo.png" alt="Buckets Logo" width="256">
+</p>
+
 A PowerShell module for file-based PSObject storage. Store, retrieve, and manage PowerShell objects in simple "buckets" — directory-based collections with automatic serialization.
 
 ## Quick Start
