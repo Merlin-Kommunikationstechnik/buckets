@@ -22,7 +22,7 @@ PowerShell module for file-based PSObject storage using directory-backed "bucket
 
 | Cmdlet | Key Params |
 |--------|-----------|
-| `New-BucketObject` | `-InputObject` (pipeline), `-Bucket` (default "default"), `-Key`, `-AsJson`, `-AsTimestamp`, `-Depth`, `-BinaryDepth`, `-Quiet` |
+| `New-BucketObject` | `-InputObject` (pipeline), `-Bucket` (default "default"), `-Key`, `-AsJson`, `-AsTimestamp`, `-Depth`, `-BinaryDepth`, `-Quiet`, `-Overwrite` |
 | `Get-BucketObject` | `-Key` (positional 0), `-Bucket` (positional 1, wildcards ok, all if omitted), `-Match` (hashtable), `-Filter` (scriptblock with `$_`) |
 | `Set-BucketObject` | `-InputObject` (pipeline binds `_BucketName`/`_BucketKey`), `-Bucket`, `-Key`, `-AsJson` |
 | `Remove-BucketObject` | `-Bucket`, `-Key` or `-All` |

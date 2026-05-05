@@ -65,6 +65,8 @@ function New-BucketObject {
     Store objects as JSON (.json) instead of binary (.dat).
     .PARAMETER Quiet
     Suppress all output. No progress indicator, no summary.
+    .PARAMETER Overwrite
+    Overwrite existing objects with the same key. Default: $false.
     .OUTPUTS
     By default, a progress indicator and summary are shown.
     Use -Verbose for per-object details. Use -Quiet for silent operation.
@@ -81,6 +83,9 @@ function New-BucketObject {
     .EXAMPLE
     # Silent, no output
     Get-Process | New-BucketObject -Bucket processes -Quiet
+    .EXAMPLE
+    # Overwrite existing object
+    New-BucketObject -Bucket users -InputObject @{ Name = "Alice"; Age = 31 } -Key Name -Overwrite
     #>
     [CmdletBinding()]
     param(
@@ -100,6 +105,8 @@ function New-BucketObject {
         [switch]$AsTimestamp,
 
         [switch]$AsJson,
+
+        [switch]$Overwrite,
 
         [switch]$Quiet
     )
@@ -146,6 +153,13 @@ function New-BucketObject {
             }
 
             $filePath = Join-Path $bucketPath $filename
+
+            if ((Test-Path $filePath) -and -not $Overwrite) {
+                Write-Verbose "Object with key '$([System.IO.Path]::GetFileNameWithoutExtension($filename))' already exists in bucket '$Bucket'. Use -Overwrite to replace."
+                $warningCount++
+                $index++
+                continue
+            }
 
             if ($AsJson) {
                 $warnVar = $null

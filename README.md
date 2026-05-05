@@ -61,6 +61,7 @@ New-BucketObject
 | `-AsTimestamp` | Use timestamp as filename | `false` |
 | `-AsJson` | Store as JSON instead of binary | `false` |
 | `-Quiet` | Suppress all output (no progress, no summary) | `false` |
+| `-Overwrite` | Overwrite existing objects with the same key | `false` |
 
 Default behaviour: shows a progress indicator and final summary. Use `-Verbose` for per-object details.
 
