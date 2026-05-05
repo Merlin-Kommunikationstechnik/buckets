@@ -29,15 +29,17 @@ function Show-Menu {
     Write-Host "`n  [1] List todos" -ForegroundColor White
     Write-Host "  [2] Add todo" -ForegroundColor White
     Write-Host "  [3] Edit todo" -ForegroundColor White
-    Write-Host "  [4] Delete todo" -ForegroundColor White
-    Write-Host "  [5] Filter by status" -ForegroundColor White
-    Write-Host "  [6] Filter by project" -ForegroundColor White
-    Write-Host "  [7] Filter by priority" -ForegroundColor White
+    Write-Host "  [4] Mark done (move to archive)" -ForegroundColor Green
+    Write-Host "  [5] Delete todo" -ForegroundColor White
+    Write-Host "  [6] Filter by status" -ForegroundColor White
+    Write-Host "  [7] Filter by project" -ForegroundColor White
+    Write-Host "  [8] Filter by priority" -ForegroundColor White
+    Write-Host "  [9] List archived todos" -ForegroundColor White
     Write-Host "  [q] Quit" -ForegroundColor White
 }
 
 function Format-Todo {
-    param([PSObject]$Todo)
+    param([PSObject]$Todo, [switch]$Simple)
     $project = Get-BucketObject -Key $Todo.ProjectId -Bucket projects -WarningAction SilentlyContinue
     $projName = if ($project) { $project.Name } else { "(unknown)" }
 
@@ -56,14 +58,18 @@ function Format-Todo {
     Write-Host "$($Todo.Id.ToString().PadLeft(3)) " -ForegroundColor DarkGray -NoNewline
     Write-Host "$($Todo.Title)" -ForegroundColor White -NoNewline
     Write-Host " ($projName)" -ForegroundColor DarkGray
-    Write-Host "      Status: $($Todo.Status)" -NoNewline
-    Write-Host "  Priority: " -NoNewline
-    Write-Host "$($Todo.Priority)" -ForegroundColor $priColor
+    if (-not $Simple) {
+        Write-Host "      Status: $($Todo.Status)" -NoNewline
+        Write-Host "  Priority: " -NoNewline
+        Write-Host "$($Todo.Priority)" -ForegroundColor $priColor
+    }
     Write-Host ""
 }
 
 function Get-NextId {
-    $all = @(Get-BucketObject -Bucket todos -WarningAction SilentlyContinue)
+    $a = @(Get-BucketObject -Bucket todos -WarningAction SilentlyContinue)
+    $b = @(Get-BucketObject -Bucket done -WarningAction SilentlyContinue)
+    $all = $a + $b
     if ($all.Count -eq 0) { return 1 }
     return ($all | ForEach-Object { $_.Id } | Measure-Object -Maximum).Maximum + 1
 }
@@ -101,7 +107,7 @@ function Action-Add {
     }
 
     Write-Host "  Priority (high/medium/low): " -NoNewline
-    $priority = Read-Host -Prompt " "
+    $priority = Read-Host " "
     if ($priority -notin @("high", "medium", "low")) { $priority = "medium" }
 
     $newTodo = [PSCustomObject]@{
@@ -144,6 +150,21 @@ function Action-Edit {
     Write-Host "  Updated #$($todo.Id)" -ForegroundColor Green
 }
 
+function Action-MarkDone {
+    Write-Host "`n  --- Mark Todo Done ---" -ForegroundColor Cyan
+    $key = Read-Host "  Todo ID"
+
+    $todo = Get-BucketObject -Key $key -Bucket todos -WarningAction SilentlyContinue
+    if (-not $todo) {
+        Write-Host "  Todo #$key not found." -ForegroundColor Red
+        return
+    }
+
+    $todo.Status = "done"
+    Move-BucketObject -Bucket todos -Key $key -DestinationBucket done -Quiet
+    Write-Host "  Moved #$key to done archive" -ForegroundColor Green
+}
+
 function Action-Delete {
     Write-Host "`n  --- Delete Todo ---" -ForegroundColor Cyan
     $key = Read-Host "  Todo ID to delete"
@@ -163,7 +184,7 @@ function Action-Delete {
 
 function Action-FilterStatus {
     Write-Host "`n  Filter by status (todo/in-progress/done): " -ForegroundColor Cyan -NoNewline
-    $status = Read-Host -Prompt " "
+    $status = Read-Host " "
     if ($status -notin @("todo", "in-progress", "done")) {
         Write-Host "  Invalid status." -ForegroundColor Red
         return
@@ -198,7 +219,7 @@ function Action-FilterProject {
 
 function Action-FilterPriority {
     Write-Host "`n  Filter by priority (high/medium/low): " -ForegroundColor Cyan -NoNewline
-    $priority = Read-Host -Prompt " "
+    $priority = Read-Host " "
     if ($priority -notin @("high", "medium", "low")) {
         Write-Host "  Invalid priority." -ForegroundColor Red
         return
@@ -213,11 +234,22 @@ function Action-FilterPriority {
     foreach ($t in $todos) { Format-Todo $t }
 }
 
+function Action-Archived {
+    $done = @(Get-BucketObject -Bucket done -WarningAction SilentlyContinue) | Sort-Object Id
+    if ($done.Count -eq 0) {
+        Write-Host "`n  No archived todos." -ForegroundColor DarkGray
+        return
+    }
+    Write-Host "`n  Archived ($($done.Count)):" -ForegroundColor Green
+    foreach ($t in $done) { Format-Todo $t -Simple }
+}
+
 # --- Main loop ---
 Show-Header
 Write-Host "  Buckets-powered to-do manager" -ForegroundColor DarkGray
 
-while ($true) {
+$running = $true
+while ($running) {
     Show-Menu
     $choice = Read-Host -Prompt "  >"
     Write-Host ""
@@ -226,11 +258,15 @@ while ($true) {
         "1" { Action-List }
         "2" { Action-Add }
         "3" { Action-Edit }
-        "4" { Action-Delete }
-        "5" { Action-FilterStatus }
-        "6" { Action-FilterProject }
-        "7" { Action-FilterPriority }
-        "q" { Write-Host "`n  Bye!`n" -ForegroundColor Cyan; break }
+        "4" { Action-MarkDone }
+        "5" { Action-Delete }
+        "6" { Action-FilterStatus }
+        "7" { Action-FilterProject }
+        "8" { Action-FilterPriority }
+        "9" { Action-Archived }
+        "q" { $running = $false }
         default { Write-Host "  Unknown option." -ForegroundColor Red }
     }
 }
+
+Write-Host "`n  Bye!`n" -ForegroundColor Cyan
