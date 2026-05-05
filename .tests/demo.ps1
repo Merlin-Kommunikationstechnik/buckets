@@ -34,7 +34,6 @@ function Show-Menu {
     Write-Host "  [6] Filter by project" -ForegroundColor White
     Write-Host "  [7] Filter by priority" -ForegroundColor White
     Write-Host "  [q] Quit" -ForegroundColor White
-    Write-Host "`n  > " -ForegroundColor Yellow -NoNewline
 }
 
 function Format-Todo {
@@ -102,7 +101,7 @@ function Action-Add {
     }
 
     Write-Host "  Priority (high/medium/low): " -NoNewline
-    $priority = Read-Host ""
+    $priority = Read-Host -Prompt " "
     if ($priority -notin @("high", "medium", "low")) { $priority = "medium" }
 
     $newTodo = [PSCustomObject]@{
@@ -164,7 +163,7 @@ function Action-Delete {
 
 function Action-FilterStatus {
     Write-Host "`n  Filter by status (todo/in-progress/done): " -ForegroundColor Cyan -NoNewline
-    $status = Read-Host ""
+    $status = Read-Host -Prompt " "
     if ($status -notin @("todo", "in-progress", "done")) {
         Write-Host "  Invalid status." -ForegroundColor Red
         return
@@ -199,7 +198,7 @@ function Action-FilterProject {
 
 function Action-FilterPriority {
     Write-Host "`n  Filter by priority (high/medium/low): " -ForegroundColor Cyan -NoNewline
-    $priority = Read-Host ""
+    $priority = Read-Host -Prompt " "
     if ($priority -notin @("high", "medium", "low")) {
         Write-Host "  Invalid priority." -ForegroundColor Red
         return
@@ -220,7 +219,7 @@ Write-Host "  Buckets-powered to-do manager" -ForegroundColor DarkGray
 
 while ($true) {
     Show-Menu
-    $choice = Read-Host ""
+    $choice = Read-Host -Prompt "  >"
     Write-Host ""
 
     switch ($choice) {
