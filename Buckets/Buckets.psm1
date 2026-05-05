@@ -1083,43 +1083,84 @@ function Remove-Bucket {
     if ($matched.Count -eq 0) { return }
 
     $removable = @()
-    $skippedNames = @()
+    $skippedBuckets = @()
     foreach ($m in $matched) {
-        $allFiles = Get-ChildItem -Path $m.Path -File -ErrorAction SilentlyContinue
-        $otherFiles = $allFiles | Where-Object { $_.Extension -notin ".dat", ".json" }
-        if ($otherFiles) {
-            $skippedNames += $m.Name
+        # Safety: verify bucket is actually under the root path
+        $resolvedRoot = Resolve-SafePath -Path $Path
+        $resolvedBucket = Resolve-SafePath -Path $m.Path
+        if (-not $resolvedBucket.StartsWith($resolvedRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+            $skippedBuckets += [PSCustomObject]@{ Name = $m.Name; Reason = "path resolves outside root" }
             continue
         }
+
+        # Safety: reject if subdirectories exist
+        $subDirs = @(Get-ChildItem -Path $m.Path -Directory -ErrorAction SilentlyContinue)
+        if ($subDirs.Count -gt 0) {
+            $skippedBuckets += [PSCustomObject]@{ Name = $m.Name; Reason = "contains subdirectories" }
+            continue
+        }
+
+        # Safety: count files by type
+        $allFiles = @(Get-ChildItem -Path $m.Path -File -ErrorAction SilentlyContinue)
+        $datFiles = @($allFiles | Where-Object { $_.Extension -eq ".dat" })
+        $jsonFiles = @($allFiles | Where-Object { $_.Extension -eq ".json" })
+        $otherFiles = @($allFiles | Where-Object { $_.Extension -notin ".dat", ".json" })
+
+        if ($otherFiles.Count -gt 0) {
+            $skippedBuckets += [PSCustomObject]@{
+                Name   = $m.Name
+                Reason = "contains $($otherFiles.Count) non-bucket file(s): $($otherFiles.Name -join ', ')"
+            }
+            continue
+        }
+
         $stats = Get-BucketStats -Bucket $m.Name -Path $Path
         $removable += [PSCustomObject]@{
             Name       = $m.Name
             Objects    = if ($stats) { $stats.ObjectCount } else { 0 }
             Size       = if ($stats) { $stats.TotalSize } else { "0 KB" }
             Path       = $m.Path
+            DatCount   = $datFiles.Count
+            JsonCount  = $jsonFiles.Count
         }
     }
 
-    if ($removable.Count -eq 0) { return }
+    if ($removable.Count -eq 0 -and $skippedBuckets.Count -eq 0) { return }
 
     if ($WhatIf) {
-        Write-Host "  What if: Remove the following bucket(s):" -ForegroundColor Yellow
-        foreach ($r in $removable) {
-            Write-Host "    $($r.Name) ($($r.Objects) objects, $($r.Size))" -ForegroundColor DarkGray
+        if ($removable.Count -gt 0) {
+            Write-Host "  What if: Remove the following bucket(s):" -ForegroundColor Yellow
+            foreach ($r in $removable) {
+                Write-Host "    $($r.Name) ($($r.Objects) objects, $($r.Size))" -ForegroundColor DarkGray
+            }
         }
-        if ($skippedNames.Count -gt 0) {
-            Write-Host "  Skipped (non-bucket files): $($skippedNames -join ', ')" -ForegroundColor Yellow
+        if ($skippedBuckets.Count -gt 0) {
+            Write-Host "`n  Skipped:" -ForegroundColor Yellow
+            foreach ($s in $skippedBuckets) {
+                Write-Host "    $($s.Name) — $($s.Reason)" -ForegroundColor Red
+            }
         }
         return
     }
 
-    if (-not $Force) {
+    if ($removable.Count -eq 0 -and $skippedBuckets.Count -eq 0) { return }
+
+    if ($removable.Count -gt 0) {
         Write-Host "`n  Remove the following bucket(s):" -ForegroundColor Red
         foreach ($r in $removable) {
             Write-Host "    " -NoNewline
             Write-Host $r.Name -ForegroundColor White -NoNewline
             Write-Host " ($($r.Objects) objects, $($r.Size))" -ForegroundColor DarkGray
         }
+    }
+    if ($skippedBuckets.Count -gt 0) {
+        Write-Host "`n  Skipped:" -ForegroundColor Yellow
+        foreach ($s in $skippedBuckets) {
+            Write-Host "    $($s.Name) — $($s.Reason)" -ForegroundColor Red
+        }
+    }
+
+    if ($removable.Count -gt 0 -and -not $Force) {
         $confirm = Read-Host -Prompt "`n  Continue? (y/n)"
         if ($confirm -ne "y") {
             Write-Host "  Aborted." -ForegroundColor Yellow
@@ -1129,6 +1170,19 @@ function Remove-Bucket {
 
     $removedCount = 0
     foreach ($r in $removable) {
+        # Final safety: re-verify no non-bucket files appeared between check and delete
+        $finalFiles = @(Get-ChildItem -Path $r.Path -File -ErrorAction SilentlyContinue)
+        $finalOther = @($finalFiles | Where-Object { $_.Extension -notin ".dat", ".json" })
+        if ($finalOther.Count -gt 0) {
+            Write-Warning "Bucket '$($r.Name)' now contains non-bucket files, aborting: $($finalOther.Name -join ', ')"
+            continue
+        }
+        $finalDirs = @(Get-ChildItem -Path $r.Path -Directory -ErrorAction SilentlyContinue)
+        if ($finalDirs.Count -gt 0) {
+            Write-Warning "Bucket '$($r.Name)' now contains subdirectories, aborting"
+            continue
+        }
+
         Write-Verbose "Removing bucket '$($r.Name)' ($($r.Objects) object(s))"
         Remove-Item -Path $r.Path -Recurse -Force
         $cacheKeys = @($script:BucketPathCache.Keys) | Where-Object { $_ -like "*|$($r.Name)" }
