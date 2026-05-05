@@ -12,7 +12,7 @@ A PowerShell module for file-based PSObject storage. Store, retrieve, and manage
 Import-Module ./Buckets
 
 # Save objects (binary by default)
-Save-BucketObject -InputObject @{ Name = "Alice"; Age = 30 } -Key Name
+New-BucketObject -InputObject @{ Name = "Alice"; Age = 30 } -Key Name
 
 # Retrieve
 Get-BucketObject | Select-Object Name, Age
@@ -32,12 +32,12 @@ Objects that exceed JSON depth are automatically saved as binary with a warning.
 
 ## Cmdlets
 
-### Save-BucketObject
+### New-BucketObject
 
 Saves PSObjects to a bucket. Creates the bucket if it doesn't exist.
 
 ```powershell
-Save-BucketObject
+New-BucketObject
     [-InputObject] <PSObject>
     [[-Bucket] <string>]
     [[-Path] <string>]
@@ -46,6 +46,7 @@ Save-BucketObject
     [-BinaryDepth <int>]
     [-AsTimestamp]
     [-AsJson]
+    [-Quiet]
     [<CommonParameters>]
 ```
 
@@ -59,6 +60,9 @@ Save-BucketObject
 | `-BinaryDepth` | Binary serialization depth | `2` |
 | `-AsTimestamp` | Use timestamp as filename | `false` |
 | `-AsJson` | Store as JSON instead of binary | `false` |
+| `-Quiet` | Suppress all output (no progress, no summary) | `false` |
+
+Default behaviour: shows a progress indicator and final summary. Use `-Verbose` for per-object details.
 
 #### Key Parameter
 
@@ -66,14 +70,14 @@ Save-BucketObject
 
 ```powershell
 # Single object: creates Alice.dat
-Save-BucketObject -Bucket users -InputObject @{ Name = "Alice" } -Key Name
+New-BucketObject -Bucket users -InputObject @{ Name = "Alice" } -Key Name
 
 # Array: creates bob.dat, charlie.dat
 $users = @(
     @{ Name = "Bob"; Age = 25 }
     @{ Name = "Charlie"; Age = 35 }
 )
-Save-BucketObject -Bucket users -InputObject $users -Key Name
+New-BucketObject -Bucket users -InputObject $users -Key Name
 
 # Special characters are sanitized (/, :, *, etc. become _)
 ```
@@ -83,23 +87,29 @@ Without `-Key`, each object gets a unique GUID filename.
 #### Examples
 
 ```powershell
-# Default bucket, binary, GUID filename
-Save-BucketObject -InputObject @{ Name = "test" }
+# Default: progress bar and summary
+New-BucketObject -InputObject @{ Name = "test" }
+
+# Verbose: per-object details
+New-BucketObject -InputObject @{ Name = "test" } -Verbose
+
+# Quiet: silent, no output
+New-BucketObject -InputObject @{ Name = "test" } -Quiet
 
 # Named bucket, keyed by property
-Save-BucketObject -Bucket users -InputObject $users -Key Email
+New-BucketObject -Bucket users -InputObject $users -Key Email
 
 # JSON format
-Save-BucketObject -Bucket users -InputObject $users -Key Name -AsJson
+New-BucketObject -Bucket users -InputObject $users -Key Name -AsJson
 
 # Timestamp-based filenames
-Get-Process | Save-BucketObject -Bucket processes -AsTimestamp
+Get-Process | New-BucketObject -Bucket processes -AsTimestamp
 
 # Array (each element stored individually)
-$items | Save-BucketObject -Bucket items
+$items | New-BucketObject -Bucket items
 
 # Custom storage location
-Save-BucketObject -Path /tmp/buckets -InputObject $data -Key Name
+New-BucketObject -Path /tmp/buckets -InputObject $data -Key Name
 ```
 
 ---
@@ -331,7 +341,7 @@ Most cmdlets accept pipeline input:
 
 ```powershell
 # Save pipeline output directly
-Get-ChildItem / | Save-BucketObject -Bucket root -Key Name
+Get-ChildItem / | New-BucketObject -Bucket root -Key Name
 
 # Retrieve and filter
 Get-BucketObject -Bucket users | Where-Object { $_.Age -gt 30 }

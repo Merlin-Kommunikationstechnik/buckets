@@ -38,7 +38,7 @@ function Ensure-BucketExists {
     return $bucketPath
 }
 
-function Save-BucketObject {
+function New-BucketObject {
     <#
     .SYNOPSIS
     Saves a PSObject to a bucket. Creates the bucket if it doesn't exist.
@@ -63,14 +63,24 @@ function Save-BucketObject {
     Use a timestamp-based filename (yyyyMMddHHmmssfff_index) instead of a GUID.
     .PARAMETER AsJson
     Store objects as JSON (.json) instead of binary (.dat).
+    .PARAMETER Quiet
+    Suppress all output. No progress indicator, no summary.
     .OUTPUTS
-    PSCustomObject with Bucket, Key, and FilePath properties.
+    By default, a progress indicator and summary are shown.
+    Use -Verbose for per-object details. Use -Quiet for silent operation.
     .EXAMPLE
-    Save-BucketObject -InputObject @{ Name = "Alice"; Age = 30 } -Key Name
+    New-BucketObject -InputObject @{ Name = "Alice"; Age = 30 } -Key Name
     .EXAMPLE
-    $users | Save-BucketObject -Bucket users -Key Email -AsJson
+    $users | New-BucketObject -Bucket users -Key Email -AsJson
     .EXAMPLE
-    Get-Process | Save-BucketObject -Bucket processes -AsTimestamp
+    # Progress bar and summary (default)
+    Get-Process | New-BucketObject -Bucket processes -AsTimestamp
+    .EXAMPLE
+    # Per-object verbose output
+    Get-Process | New-BucketObject -Bucket processes -Verbose
+    .EXAMPLE
+    # Silent, no output
+    Get-Process | New-BucketObject -Bucket processes -Quiet
     #>
     [CmdletBinding()]
     param(
@@ -89,12 +99,19 @@ function Save-BucketObject {
 
         [switch]$AsTimestamp,
 
-        [switch]$AsJson
+        [switch]$AsJson,
+
+        [switch]$Quiet
     )
 
     begin {
         $bucketPath = Ensure-BucketExists -Name $Bucket -Path $Path
         $extension = if ($AsJson) { ".json" } else { ".dat" }
+        $savedCount = 0
+        $warningCount = 0
+        $useVerbose = $VerbosePreference -eq 'Continue'
+        $useQuiet = $Quiet.IsPresent
+        $showProgress = -not $useVerbose -and -not $useQuiet
     }
 
     process {
@@ -113,7 +130,8 @@ function Save-BucketObject {
             if (-not [string]::IsNullOrWhiteSpace($Key)) {
                 $keyValue = $item.$Key
                 if ($null -eq $keyValue) {
-                    Write-Warning "Property '$Key' not found on object, skipping"
+                    Write-Verbose "Property '$Key' not found on object, skipping"
+                    $warningCount++
                     $index++
                     continue
                 }
@@ -138,10 +156,12 @@ function Save-BucketObject {
                         $encoded = [System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($bytes))
                         $filePath = [System.IO.Path]::ChangeExtension($filePath, ".dat")
                         [System.IO.File]::WriteAllText($filePath, $encoded, [System.Text.Encoding]::UTF8)
-                        Write-Warning "Object '$([System.IO.Path]::GetFileNameWithoutExtension($filename))' exceeds JSON depth $Depth, saved as binary (.dat)"
+                        Write-Verbose "Object '$([System.IO.Path]::GetFileNameWithoutExtension($filename))' exceeds JSON depth $Depth, saved as binary (.dat)"
+                        $warningCount++
                     }
                     catch {
-                        Write-Warning "Failed to serialize object '$([System.IO.Path]::GetFileNameWithoutExtension($filename))' as binary: $_"
+                        Write-Verbose "Failed to serialize object '$([System.IO.Path]::GetFileNameWithoutExtension($filename))' as binary: $_"
+                        $warningCount++
                         $index++
                         continue
                     }
@@ -157,19 +177,43 @@ function Save-BucketObject {
                     [System.IO.File]::WriteAllText($filePath, $encoded, [System.Text.Encoding]::UTF8)
                 }
                 catch {
-                    Write-Warning "Failed to serialize object with key '$([System.IO.Path]::GetFileNameWithoutExtension($filename))': $_"
+                    Write-Verbose "Failed to serialize object with key '$([System.IO.Path]::GetFileNameWithoutExtension($filename))': $_"
+                    $warningCount++
                     $index++
                     continue
                 }
             }
 
-            [PSCustomObject]@{
-                Bucket   = $Bucket
-                Key      = [System.IO.Path]::GetFileNameWithoutExtension($filename)
-                FilePath = $filePath
+            $currentKey = [System.IO.Path]::GetFileNameWithoutExtension($filename)
+
+            if ($showProgress) {
+                $savedCount++
+                $activity = "Saving to '$Bucket'"
+                $status = "$savedCount object(s) saved"
+                $percent = 0
+                if ($isCollection -and $items.Count -gt 0) {
+                    $percent = [math]::Round(($savedCount / $items.Count) * 100)
+                }
+                Write-Progress -Activity $activity -Status $status -PercentComplete $percent -CurrentOperation $currentKey
+            }
+            elseif ($useVerbose) {
+                Write-Verbose "Saved [$Bucket/$currentKey] -> $filePath"
+            }
+            else {
+                $savedCount++
             }
 
             $index++
+        }
+    }
+
+    end {
+        if ($showProgress) {
+            Write-Progress -Activity "Saving to '$Bucket'" -Completed
+            Write-Host "✓ Saved $($savedCount) object(s) to '$Bucket'" -ForegroundColor Green
+            if ($warningCount -gt 0) {
+                Write-Host "  ⚠ $warningCount warning(s)" -ForegroundColor Yellow
+            }
         }
     }
 }
@@ -669,5 +713,5 @@ function Remove-Bucket {
     }
 }
 
-Remove-Item -Path Alias:Save-BucketObject -ErrorAction SilentlyContinue
+Remove-Item -Path Alias:New-BucketObject -ErrorAction SilentlyContinue
 Remove-Item -Path Alias:Get-BucketObject -ErrorAction SilentlyContinue
