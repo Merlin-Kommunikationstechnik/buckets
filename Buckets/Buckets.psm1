@@ -17,6 +17,25 @@ function Clear-BucketPathCache {
     $script:LastPWD = $PWD.Path
 }
 
+# Dynamic argument completer for -Bucket parameter
+# Registered via Register-ArgumentCompleter at module load (see bottom of file)
+function Get-BucketNameCompletions {
+    param($commandName, $parameterName, $wordToComplete, $commandAst, $fakeBoundParameters)
+
+    $path = if ($fakeBoundParameters.ContainsKey('Path')) { $fakeBoundParameters['Path'] } else { Get-DefaultPath }
+    if (-not [System.IO.Directory]::Exists($path)) { return }
+
+    $dirs = [System.IO.DirectoryInfo]::new($path).GetDirectories("$wordToComplete*")
+    $dirs | ForEach-Object {
+        [System.Management.Automation.CompletionResult]::new(
+            $_.Name,
+            $_.Name,
+            'ParameterValue',
+            $_.Name
+        )
+    }
+}
+
 function Get-DefaultPath {
     return Join-Path $PWD.Path ".buckets"
 }
@@ -1600,8 +1619,6 @@ function Import-Bucket {
         [Parameter(Mandatory = $true)]
         [string]$Bucket,
 
-        [string]$Path,
-
         [Parameter(Mandatory = $true)]
         [string]$InputFile,
 
@@ -1710,3 +1727,24 @@ Export-ModuleMember -Function @(
     'Export-Bucket',
     'Import-Bucket'
 )
+
+# Tab completion for -Bucket and -DestinationBucket parameters
+$script:CompleterBlock = {
+    param($commandName, $parameterName, $wordToComplete, $commandAst, $fakeBoundParameters)
+
+    $path = if ($fakeBoundParameters.ContainsKey('Path')) { $fakeBoundParameters['Path'] } else { Join-Path $PWD.Path ".buckets" }
+    if (-not [System.IO.Directory]::Exists($path)) { return }
+
+    [System.IO.DirectoryInfo]::new($path).GetDirectories("$wordToComplete*") | ForEach-Object {
+        [System.Management.Automation.CompletionResult]::new($_.Name, $_.Name, 'ParameterValue', $_.Name)
+    }
+}
+
+@('New-BucketObject', 'Get-BucketObject', 'Set-BucketObject', 'Remove-BucketObject',
+  'Get-BucketStats', 'Remove-Bucket', 'Copy-BucketObject', 'Rename-BucketObject',
+  'Move-BucketObject', 'Export-Bucket', 'Import-Bucket') | ForEach-Object {
+    Register-ArgumentCompleter -CommandName $_ -ParameterName Bucket -ScriptBlock $script:CompleterBlock
+}
+
+Register-ArgumentCompleter -CommandName Copy-BucketObject -ParameterName DestinationBucket -ScriptBlock $script:CompleterBlock
+Register-ArgumentCompleter -CommandName Move-BucketObject -ParameterName DestinationBucket -ScriptBlock $script:CompleterBlock
