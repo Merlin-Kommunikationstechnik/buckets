@@ -133,6 +133,82 @@ Save-BucketObject -Bucket mixed -InputObject @{ _Id = "m3"; Type = "json-fallbac
 Write-Host "  Saved 3 objects (2 JSON, 1 binary)" -ForegroundColor DarkGray
 
 # ============================================================
+# 8. Secure bucket objects (SecretStore)
+# ============================================================
+Write-Host "`n[8] Secure bucket objects (SecretStore)" -ForegroundColor Yellow
+
+$secureCommands = @("Get-SecretInfo", "Get-Secret", "Set-Secret", "Remove-Secret", "Get-SecretVault")
+$missingSecureCommands = @($secureCommands | Where-Object { -not (Get-Command -Name $_ -ErrorAction SilentlyContinue) })
+
+if ($missingSecureCommands.Count -gt 0) {
+    Write-Host "  Skipped secure tests (missing command(s): $($missingSecureCommands -join ', '))" -ForegroundColor Yellow
+}
+else {
+    try {
+        $availableVaults = @(Get-SecretVault -ErrorAction Stop)
+        if ($availableVaults.Count -eq 0) {
+            Write-Host "  Skipped secure tests (no registered vault available)" -ForegroundColor Yellow
+        }
+        else {
+            $selectedVault = $availableVaults[0].Name
+            $testSecretPassword = $env:BUCKETS_TEST_SECRET_PASSWORD
+            if ([string]::IsNullOrWhiteSpace($testSecretPassword)) {
+                Write-Host "  Skipped secure tests (set BUCKETS_TEST_SECRET_PASSWORD to enable secure flow)" -ForegroundColor Yellow
+            }
+            else {
+                $secureItems = @(
+                    [PSCustomObject]@{ Name = "secure-user-1"; Role = "admin"; Token = "alpha-token" }
+                    [PSCustomObject]@{ Name = "secure-user-2"; Role = "user"; Token = "beta-token" }
+                )
+
+                $secureSaveParams = @{
+                    Bucket = "secure-users"
+                    InputObject = $secureItems
+                    Key = "Name"
+                    Secure = $true
+                    Vault = $selectedVault
+                }
+                $secureMixedParams = @{
+                    Bucket = "mixed"
+                    InputObject = @{ _Id = "m4"; Type = "secure"; Value = 4 }
+                    Key = "_Id"
+                    Secure = $true
+                    Vault = $selectedVault
+                }
+
+                $secureSaveParams.Pass = $testSecretPassword
+                $secureMixedParams.Pass = $testSecretPassword
+                Write-Host "  Using -Pass from BUCKETS_TEST_SECRET_PASSWORD" -ForegroundColor DarkGray
+
+                Save-BucketObject @secureSaveParams | Out-Null
+                Save-BucketObject @secureMixedParams | Out-Null
+
+                $secureAdmin = Get-BucketObject -Bucket secure-users -IncludeSecure -Filter { $_.Role -eq "admin" } | Select-Object -First 1
+                if ($secureAdmin) {
+                    Write-Host "  Retrieved secure object: $($secureAdmin.Name)" -ForegroundColor DarkGray
+                }
+
+                $secureToUpdate = Get-BucketObject -Bucket secure-users -IncludeSecure -Key "secure-user-1" | Select-Object -First 1
+                if ($secureToUpdate) {
+                    $secureToUpdate.Token = "alpha-token-rotated"
+                    $secureToUpdate.PSObject.Properties.Remove("_BucketName")
+                    $secureToUpdate.PSObject.Properties.Remove("_BucketKey")
+                    $secureToUpdate.PSObject.Properties.Remove("_BucketFile")
+                    Update-BucketObject -Bucket secure-users -Key "secure-user-1" -InputObject $secureToUpdate | Out-Null
+                }
+
+                Remove-BucketObject -Bucket secure-users -Key "secure-user-2"
+                $remainingSecureCount = @(Get-BucketObject -Bucket secure-users -IncludeSecure).Count
+                Write-Host "  Secure objects after update/remove: $remainingSecureCount" -ForegroundColor DarkGray
+            }
+        }
+    }
+    catch {
+        Write-Host "  Secure tests skipped due to SecretStore error: $($_.Exception.Message)" -ForegroundColor Yellow
+    }
+}
+
+# ============================================================
 # VERIFICATION
 # ============================================================
 Write-Host "`n========================================" -ForegroundColor Cyan
