@@ -7,7 +7,7 @@
 Remove-Module Buckets -ErrorAction SilentlyContinue
 Import-Module "$PSScriptRoot/../Buckets" -Force
 
-Remove-Bucket "*" -Force 2>$null
+Remove-Bucket "*" -Force -Confirm:$false 2>$null
 
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host " Buckets Module - Test Suite" -ForegroundColor Cyan
@@ -27,7 +27,7 @@ $users = @(
     @{ Name = "Diana"; Email = "diana@example.com"; Role = "manager"; Active = $true }
 )
 
-New-BucketObject -Bucket users -InputObject $users -Key Name
+New-BucketObject -Bucket users -InputObject $users -Key Name -Quiet
 Write-Host "  Saved $($users.Count) users (keyed by Name)" -ForegroundColor DarkGray
 
 # ============================================================
@@ -63,7 +63,7 @@ $orders = @(
     }
 )
 
-New-BucketObject -Bucket orders -InputObject $orders -Key OrderId
+New-BucketObject -Bucket orders -InputObject $orders -Key OrderId -Quiet
 Write-Host "  Saved $($orders.Count) orders" -ForegroundColor DarkGray
 
 # ============================================================
@@ -71,7 +71,7 @@ Write-Host "  Saved $($orders.Count) orders" -ForegroundColor DarkGray
 # ============================================================
 Write-Host "`n[3] System objects (FileInfo - auto binary fallback)" -ForegroundColor Yellow
 
-Get-ChildItem $PSScriptRoot | Where-Object { $_.Name -notmatch "^\." } | New-BucketObject -Bucket files -Key Name
+Get-ChildItem $PSScriptRoot | Where-Object { $_.Name -notmatch "^\." } | New-BucketObject -Bucket files -Key Name -Quiet
 Write-Host "  Saved directory listing (complex objects fallback to .dat)" -ForegroundColor DarkGray
 
 # ============================================================
@@ -86,7 +86,7 @@ $logEntries = @(
     @{ Id = "log-004"; Level = "ERROR"; Message = "Connection timeout" }
 )
 
-New-BucketObject -Bucket logs -InputObject $logEntries -Key Id
+New-BucketObject -Bucket logs -InputObject $logEntries -Key Id -Quiet
 Write-Host "  Saved $($logEntries.Count) log entries" -ForegroundColor DarkGray
 
 # ============================================================
@@ -102,7 +102,7 @@ $config = [PSCustomObject]@{
     Version = "2.1.0"
 }
 
-New-BucketObject -Bucket config -InputObject $config -Key _Id -AsJson
+New-BucketObject -Bucket config -InputObject $config -Key _Id -AsJson -Quiet
 Write-Host "  Saved config as JSON" -ForegroundColor DarkGray
 
 # ============================================================
@@ -119,7 +119,7 @@ $metrics = foreach ($hour in 0..23) {
     }
 }
 
-New-BucketObject -Bucket metrics -InputObject $metrics -Key Hour
+New-BucketObject -Bucket metrics -InputObject $metrics -Key Hour -Quiet
 Write-Host "  Saved 24 hourly records" -ForegroundColor DarkGray
 
 # ============================================================
@@ -127,9 +127,9 @@ Write-Host "  Saved 24 hourly records" -ForegroundColor DarkGray
 # ============================================================
 Write-Host "`n[7] Mixed formats in same bucket" -ForegroundColor Yellow
 
-New-BucketObject -Bucket mixed -InputObject @{ _Id = "m1"; Type = "json"; Value = 1 } -Key _Id -AsJson
-New-BucketObject -Bucket mixed -InputObject @{ _Id = "m2"; Type = "binary"; Value = 2 } -Key _Id
-New-BucketObject -Bucket mixed -InputObject @{ _Id = "m3"; Type = "json-fallback" } -Key _Id -AsJson
+New-BucketObject -Bucket mixed -InputObject @{ _Id = "m1"; Type = "json"; Value = 1 } -Key _Id -AsJson -Quiet
+New-BucketObject -Bucket mixed -InputObject @{ _Id = "m2"; Type = "binary"; Value = 2 } -Key _Id -Quiet
+New-BucketObject -Bucket mixed -InputObject @{ _Id = "m3"; Type = "json-fallback" } -Key _Id -AsJson -Quiet
 Write-Host "  Saved 3 objects (2 JSON, 1 binary)" -ForegroundColor DarkGray
 
 # ============================================================
