@@ -245,6 +245,7 @@ function Get-BucketObject {
 
         [string]$Path = $script:DefaultPath,
 
+        [Parameter(Position = 0)]
         [string]$Key,
 
         [hashtable]$Match,

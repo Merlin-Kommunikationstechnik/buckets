@@ -110,9 +110,9 @@ Retrieves objects from one or more buckets.
 
 ```powershell
 Get-BucketObject
+    [[-Key] <string>]
     [-Bucket <string[]>]
     [-Path <string>]
-    [-Key <string>]
     [-Match <hashtable>]
     [-Filter <scriptblock>]
     [<CommonParameters>]
@@ -120,9 +120,9 @@ Get-BucketObject
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
+| `-Key` | Object key to retrieve | All objects |
 | `-Bucket` | Bucket name(s) to search | All buckets |
 | `-Path` | Storage root directory | `$PWD/.buckets` |
-| `-Key` | Object key to retrieve | All objects |
 | `-Match` | Hashtable of exact-match filters | — |
 | `-Filter` | ScriptBlock for custom filtering | — |
 
@@ -141,7 +141,8 @@ Get-BucketObject -Bucket users
 Get-BucketObject -Bucket users, orders
 
 # By key
-Get-BucketObject -Bucket users -Key "Alice"
+Get-BucketObject "Alice"
+Get-BucketObject -Bucket users "Alice"
 
 # Hashtable filter (exact match)
 Get-BucketObject -Bucket users -Match @{ Role = "admin" }
