@@ -182,8 +182,8 @@ Updates an existing object in a bucket. Preserves the storage format.
 ```powershell
 Set-BucketObject
     [-InputObject] <PSObject>
-    [-Bucket] <string>
-    [-Key] <string>
+    [[-Bucket] <string>]
+    [[-Key] <string>]
     [[-Path] <string>]
     [-Depth <int>]
     [-BinaryDepth <int>]
@@ -193,9 +193,9 @@ Set-BucketObject
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
-| `-InputObject` | Updated object | Required, accepts pipeline |
-| `-Bucket` | Bucket name | Required |
-| `-Key` | Object key to update | Required |
+| `-InputObject` | Updated object. Pipeline input binds `_BucketName` and `_BucketKey` automatically | Required, accepts pipeline |
+| `-Bucket` | Bucket name (optional when piped from `Get-BucketObject`) | Bound from pipeline or required |
+| `-Key` | Object key (optional when piped from `Get-BucketObject`) | Bound from pipeline or required |
 | `-Path` | Storage root directory | `$PWD/.buckets` |
 | `-Depth` | JSON serialization depth | `20` |
 | `-BinaryDepth` | Binary serialization depth | `2` |
@@ -204,13 +204,13 @@ Set-BucketObject
 #### Examples
 
 ```powershell
-# Update via pipeline
+# Pipeline: modify and save back (auto-detects bucket/key from metadata)
 Get-BucketObject -Bucket users -Key "Alice" | ForEach-Object {
     $_.Age = 31
     $_
-} | Set-BucketObject -Bucket users -Key "Alice"
+} | Set-BucketObject
 
-# Update with explicit object
+# Explicit parameters
 $user = Get-BucketObject -Bucket users -Key "Alice"
 $user.Email = "alice@new.com"
 Set-BucketObject -Bucket users -Key "Alice" -InputObject $user
@@ -349,8 +349,8 @@ Get-BucketObject -Bucket users | Where-Object { $_.Age -gt 30 }
 # Retrieve, modify, update
 Get-BucketObject -Bucket users | ForEach-Object {
     $_.LastUpdated = Get-Date
-    Set-BucketObject -Bucket users -Key $_._BucketKey -InputObject $_
-}
+    $_
+} | Set-BucketObject
 ```
 
 ## Storage Structure

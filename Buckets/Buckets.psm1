@@ -374,21 +374,25 @@ function Set-BucketObject {
     .OUTPUTS
     PSCustomObject with Bucket, Key, and FilePath properties.
     .EXAMPLE
-    Get-BucketObject -Bucket users -Key "Alice" | ForEach-Object { $_.Age = 31; $_ } | Set-BucketObject -Bucket users -Key "Alice"
+    # Pipeline: modifies retrieved object and saves it back
+    Get-BucketObject -Bucket users -Key "Alice" | ForEach-Object { $_.Age = 31; $_ } | Set-BucketObject
     .EXAMPLE
+    # Explicit parameters
     $user = Get-BucketObject -Bucket users -Key "Alice"
     $user.Email = "alice@new.com"
     Set-BucketObject -Bucket users -Key "Alice" -InputObject $user
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
         [PSObject]$InputObject,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
+        [Alias("_BucketName")]
         [string]$Bucket,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter(ValueFromPipelineByPropertyName = $true)]
+        [Alias("_BucketKey")]
         [string]$Key,
 
         [string]$Path = $script:DefaultPath,
@@ -401,13 +405,28 @@ function Set-BucketObject {
     )
 
     begin {
-        $bucketPath = Get-BucketPath -Name $Bucket -Path $Path
-        if (-not (Test-Path $bucketPath)) {
-            throw "Bucket '$Bucket' not found at '$bucketPath'"
-        }
+        $bucketPath = $null
     }
 
     process {
+        if ([string]::IsNullOrWhiteSpace($Bucket) -or [string]::IsNullOrWhiteSpace($Key)) {
+            if ($InputObject.PSObject.Properties['_BucketName']) {
+                $Bucket = $InputObject._BucketName
+            }
+            if ($InputObject.PSObject.Properties['_BucketKey']) {
+                $Key = $InputObject._BucketKey
+            }
+            if ([string]::IsNullOrWhiteSpace($Bucket) -or [string]::IsNullOrWhiteSpace($Key)) {
+                throw "Cannot determine bucket and key. Use -Bucket and -Key parameters, or pipe an object from Get-BucketObject."
+            }
+        }
+
+        if ($null -eq $bucketPath) {
+            $bucketPath = Get-BucketPath -Name $Bucket -Path $Path
+            if (-not (Test-Path $bucketPath)) {
+                throw "Bucket '$Bucket' not found at '$bucketPath'"
+            }
+        }
         $jsonPath = Join-Path $bucketPath "$Key.json"
         $datPath = Join-Path $bucketPath "$Key.dat"
 
