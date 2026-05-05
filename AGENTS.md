@@ -6,7 +6,7 @@ PowerShell module for file-based PSObject storage using directory-backed "bucket
 ## Structure
 - `buckets/buckets.psm1` — module code (all cmdlets)
 - `buckets/buckets.psd1` — module manifest
-- `tests/test.ps1` — test suite
+- `.tests/test.ps1` — test suite
 - `README.md` — documentation
 
 ## Storage Conventions
@@ -23,15 +23,15 @@ PowerShell module for file-based PSObject storage using directory-backed "bucket
 | Cmdlet | Key Params |
 |--------|-----------|
 | `New-BucketObject` | `-InputObject` (pipeline), `-Bucket` (default "default"), `-Key`, `-AsJson`, `-AsTimestamp`, `-Depth`, `-BinaryDepth`, `-Quiet`, `-Overwrite` |
-| `Get-BucketObject` | `-Key` (positional 0), `-Bucket` (positional 1, wildcards ok, all if omitted), `-Match` (hashtable), `-Filter` (scriptblock with `$_`) |
-| `Set-BucketObject` | `-InputObject` (pipeline binds `_BucketName`/`_BucketKey`), `-Bucket`, `-Key`, `-AsJson` |
-| `Remove-BucketObject` | `-Bucket`, `-Key` or `-All` |
+| `Get-BucketObject` | `-Key` (positional 0), `-Bucket` (positional 1, wildcards ok, all if omitted), `-Match` (hashtable, supports $null), `-Filter` (scriptblock with `$_`) |
+| `Set-BucketObject` | `-InputObject` (pipeline binds `_BucketName`/`_BucketKey`), `-Bucket`, `-Key`, `-AsJson`, `-Quiet` |
+| `Remove-BucketObject` | `-Bucket`, `-Key` or `-All`, `-PassThru` |
 | `Get-Bucket` | `-Name` (positional 0, substring filter) |
 | `Get-BucketStats` | `-Bucket` (returns count, size, timestamps) |
-| `Remove-Bucket` | `-Bucket` (positional, wildcards ok), `-Force`, `-WhatIf` |
+| `Remove-Bucket` | `-Bucket` (positional, wildcards ok), `-Force`, `-Confirm` (SupportsShouldProcess) |
 
 ### Remove-Bucket Safety
-Only removes buckets containing exclusively `.dat`/`.json` files (or empty directories). Skips buckets with other file types with a warning.
+Only removes buckets containing exclusively `.dat`/`.json` files (or empty directories). Skips buckets with other file types with a warning. Uses standard `-Confirm` support (SupportsShouldProcess).
 
 ## Gotchas — Do NOT Do These
 - `Get-ChildItem -Include "*.json", "*.dat"` fails without `-Recurse` — use separate `-Filter` calls
@@ -52,3 +52,7 @@ Test script starts by cleaning all existing buckets. Tests: hashtables, nested o
 - All exported cmdlets need full comment-based help with examples
 - Binary format is the default (handles complex system objects)
 - `New-BucketObject` default: progress + summary; `-Verbose` for per-object details; `-Quiet` for silence
+- Default path resolves dynamically at call time via `Get-DefaultPath` (not at module load)
+- `Set-BucketObject` outputs result by default; use `-Quiet` for silence
+- Binary serialization auto-increments depth up to 5 if initial depth fails
+- `Remove-BucketObject -All` warns on empty bucket
