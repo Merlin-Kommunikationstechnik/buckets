@@ -391,9 +391,9 @@ function Get-ObjectFiles {
         return $null
     }
     else {
-        $jsonFiles = Get-ChildItem -Path $BucketPath -Filter "*.json" -ErrorAction SilentlyContinue
-        $datFiles = Get-ChildItem -Path $BucketPath -Filter "*.dat" -ErrorAction SilentlyContinue
-        return @($jsonFiles) + @($datFiles)
+        $jsonFiles = @(Get-ChildItem -Path $BucketPath -Filter "*.json" -ErrorAction SilentlyContinue)
+        $datFiles = @(Get-ChildItem -Path $BucketPath -Filter "*.dat" -ErrorAction SilentlyContinue)
+        return $jsonFiles + $datFiles
     }
 }
 
@@ -474,7 +474,7 @@ function Get-BucketObject {
 
         $files = Get-ObjectFiles -BucketPath $bucketPath -Key $Key
 
-        foreach ($file in $files) {
+        foreach ($file in @($files)) {
             $obj = Read-BucketFile -File $file
             if ($null -eq $obj) { continue }
 
@@ -827,9 +827,9 @@ function Remove-BucketObject {
     }
 
     if ($All) {
-        $jsonFiles = Get-ChildItem -Path $bucketPath -Filter "*.json" -ErrorAction SilentlyContinue
-        $datFiles = Get-ChildItem -Path $bucketPath -Filter "*.dat" -ErrorAction SilentlyContinue
-        $allFiles = @($jsonFiles) + @($datFiles)
+        $jsonFiles = @(Get-ChildItem -Path $bucketPath -Filter "*.json" -ErrorAction SilentlyContinue)
+        $datFiles = @(Get-ChildItem -Path $bucketPath -Filter "*.dat" -ErrorAction SilentlyContinue)
+        $allFiles = $jsonFiles + $datFiles
 
         if ($allFiles.Count -eq 0) {
             Write-Verbose "Bucket '$Bucket' is already empty"
@@ -928,13 +928,12 @@ function Get-Bucket {
     }
 
     $buckets | ForEach-Object {
-        $jsonCount = (Get-ChildItem -Path $_.FullName -Filter "*.json" -ErrorAction SilentlyContinue).Count
-        $datCount = (Get-ChildItem -Path $_.FullName -Filter "*.dat" -ErrorAction SilentlyContinue).Count
-        $count = $jsonCount + $datCount
+        $allFiles = @(Get-ChildItem -Path $_.FullName -File -ErrorAction SilentlyContinue)
+        $count = ($allFiles | Where-Object { $_.Extension -in '.json', '.dat' }).Count
         [PSCustomObject]@{
-            Name       = $_.Name
-            Path       = $_.FullName
-            ObjectCount = if ($count) { $count } else { 0 }
+            Name        = $_.Name
+            Path        = $_.FullName
+            ObjectCount = $count
         }
     }
 }
@@ -972,10 +971,7 @@ function Get-BucketStats {
         return
     }
 
-    $jsonFiles = Get-ChildItem -Path $bucketPath -Filter "*.json" -ErrorAction SilentlyContinue
-    $datFiles = Get-ChildItem -Path $bucketPath -Filter "*.dat" -ErrorAction SilentlyContinue
-    $files = @($jsonFiles) + @($datFiles)
-    $fileObjects = $files | ForEach-Object { $_ }
+    $fileObjects = @((Get-ChildItem -Path $bucketPath -Filter "*.dat" -ErrorAction SilentlyContinue)) + @((Get-ChildItem -Path $bucketPath -Filter "*.json" -ErrorAction SilentlyContinue))
 
     $totalSize = ($fileObjects | Measure-Object -Property Length -Sum).Sum
 
