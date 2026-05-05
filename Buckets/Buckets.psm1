@@ -390,16 +390,16 @@ function Get-ObjectFiles {
     )
 
     if (-not [string]::IsNullOrWhiteSpace($Key)) {
-        $jsonFile = Get-ChildItem -Path $BucketPath -Filter "$Key.json" -ErrorAction SilentlyContinue
-        if ($jsonFile) { return @($jsonFile)[0] }
-        $datFile = Get-ChildItem -Path $BucketPath -Filter "$Key.dat" -ErrorAction SilentlyContinue
-        if ($datFile) { return @($datFile)[0] }
+        $di = [System.IO.DirectoryInfo]::new($BucketPath)
+        $jsonFile = $di.GetFiles("$Key.json")
+        if ($jsonFile) { return $jsonFile[0] }
+        $datFile = $di.GetFiles("$Key.dat")
+        if ($datFile) { return $datFile[0] }
         return $null
     }
     else {
-        $jsonFiles = @(Get-ChildItem -Path $BucketPath -Filter "*.json" -ErrorAction SilentlyContinue)
-        $datFiles = @(Get-ChildItem -Path $BucketPath -Filter "*.dat" -ErrorAction SilentlyContinue)
-        return $jsonFiles + $datFiles
+        $di = [System.IO.DirectoryInfo]::new($BucketPath)
+        return @($di.GetFiles("*.json")) + @($di.GetFiles("*.dat"))
     }
 }
 
@@ -469,7 +469,7 @@ function Get-BucketObject {
     }
     else {
         if (Test-Path $Path) {
-            $bucketPaths += Get-ChildItem -Path $Path -Directory | ForEach-Object { $_.FullName }
+            $bucketPaths += [System.IO.DirectoryInfo]::new($Path).GetDirectories() | ForEach-Object { $_.FullName }
         }
     }
 
@@ -843,9 +843,8 @@ function Remove-BucketObject {
     }
 
     if ($All) {
-        $jsonFiles = @(Get-ChildItem -Path $bucketPath -Filter "*.json" -ErrorAction SilentlyContinue)
-        $datFiles = @(Get-ChildItem -Path $bucketPath -Filter "*.dat" -ErrorAction SilentlyContinue)
-        $allFiles = $jsonFiles + $datFiles
+        $di = [System.IO.DirectoryInfo]::new($bucketPath)
+        $allFiles = @($di.GetFiles("*.json")) + @($di.GetFiles("*.dat"))
 
         if ($allFiles.Count -eq 0) {
             Write-Verbose "Bucket '$Bucket' is already empty"
@@ -937,7 +936,7 @@ function Get-Bucket {
         return
     }
 
-    $buckets = @(Get-ChildItem -Path $Path -Directory)
+    $buckets = @([System.IO.DirectoryInfo]::new($Path).GetDirectories())
 
     if (-not [string]::IsNullOrWhiteSpace($Name)) {
         $buckets = $buckets | Where-Object { $_.Name -like "*$Name*" }
@@ -988,7 +987,10 @@ function Get-BucketStats {
         return
     }
 
-    $fileObjects = @((Get-ChildItem -Path $bucketPath -Filter "*.dat" -ErrorAction SilentlyContinue)) + @((Get-ChildItem -Path $bucketPath -Filter "*.json" -ErrorAction SilentlyContinue))
+    $di = [System.IO.DirectoryInfo]::new($bucketPath)
+    $datFiles = @($di.GetFiles("*.dat"))
+    $jsonFiles = @($di.GetFiles("*.json"))
+    $fileObjects = $datFiles + $jsonFiles
 
     $totalSize = ($fileObjects | Measure-Object -Property Length -Sum).Sum
 
@@ -1050,7 +1052,7 @@ function Remove-Bucket {
 
     $allBuckets = @()
     if (Test-Path $Path) {
-        $allBuckets = @(Get-ChildItem -Path $Path -Directory -ErrorAction SilentlyContinue) | ForEach-Object {
+        $allBuckets = @([System.IO.DirectoryInfo]::new($Path).GetDirectories()) | ForEach-Object {
             [PSCustomObject]@{
                 Name = $_.Name
                 Path = $_.FullName
@@ -1095,16 +1097,15 @@ function Remove-Bucket {
         }
 
         # Safety: reject if subdirectories exist
-        $subDirs = @(Get-ChildItem -Path $m.Path -Directory -ErrorAction SilentlyContinue)
+        $di = [System.IO.DirectoryInfo]::new($m.Path)
+        $subDirs = @($di.GetDirectories())
         if ($subDirs.Count -gt 0) {
             $skippedBuckets += [PSCustomObject]@{ Name = $m.Name; Reason = "contains subdirectories" }
             continue
         }
 
         # Safety: count files by type
-        $allFiles = @(Get-ChildItem -Path $m.Path -File -ErrorAction SilentlyContinue)
-        $datFiles = @($allFiles | Where-Object { $_.Extension -eq ".dat" })
-        $jsonFiles = @($allFiles | Where-Object { $_.Extension -eq ".json" })
+        $allFiles = @($di.GetFiles())
         $otherFiles = @($allFiles | Where-Object { $_.Extension -notin ".dat", ".json" })
 
         if ($otherFiles.Count -gt 0) {
@@ -1172,13 +1173,14 @@ function Remove-Bucket {
     $removedCount = 0
     foreach ($r in $removable) {
         # Final safety: re-verify no non-bucket files appeared between check and delete
-        $finalFiles = @(Get-ChildItem -Path $r.Path -File -ErrorAction SilentlyContinue)
+        $finalDi = [System.IO.DirectoryInfo]::new($r.Path)
+        $finalFiles = @($finalDi.GetFiles())
         $finalOther = @($finalFiles | Where-Object { $_.Extension -notin ".dat", ".json" })
         if ($finalOther.Count -gt 0) {
             Write-Warning "Bucket '$($r.Name)' now contains non-bucket files, aborting: $($finalOther.Name -join ', ')"
             continue
         }
-        $finalDirs = @(Get-ChildItem -Path $r.Path -Directory -ErrorAction SilentlyContinue)
+        $finalDirs = @($finalDi.GetDirectories())
         if ($finalDirs.Count -gt 0) {
             Write-Warning "Bucket '$($r.Name)' now contains subdirectories, aborting"
             continue
