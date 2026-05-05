@@ -1282,6 +1282,107 @@ function Rename-BucketObject {
     }
 }
 
+function Move-BucketObject {
+    <#
+    .SYNOPSIS
+    Moves an object within or between buckets.
+    .DESCRIPTION
+    Moves an object file from one bucket to another (or within the same bucket),
+    optionally changing the key. Deletes the source file after successful copy.
+    Preserves the original serialization format (JSON or binary).
+    .PARAMETER Bucket
+    Source bucket name.
+    .PARAMETER DestinationBucket
+    Destination bucket name. Defaults to the same as -Bucket if omitted.
+    .PARAMETER Path
+    Root directory for bucket storage. Default: $PWD/.buckets.
+    .PARAMETER Key
+    Source object key to move.
+    .PARAMETER DestinationKey
+    Destination object key. Defaults to the source key if omitted.
+    .PARAMETER PassThru
+    Return metadata for the moved object.
+    .PARAMETER Quiet
+    Suppress all output.
+    .EXAMPLE
+    Move-BucketObject -Bucket todos -Key 1 -DestinationBucket archive
+    .EXAMPLE
+    Move-BucketObject -Bucket todos -Key 5 -DestinationKey 5b
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Bucket,
+
+        [string]$DestinationBucket,
+
+        [string]$Path,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Key,
+
+        [string]$DestinationKey,
+
+        [switch]$PassThru,
+
+        [switch]$Quiet
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
+    $Path = Resolve-SafePath -Path $Path
+
+    $sourceBucketPath = Get-BucketPath -Name $Bucket -Path $Path
+    if (-not (Test-Path $sourceBucketPath)) {
+        throw "Source bucket '$Bucket' not found at '$sourceBucketPath'"
+    }
+
+    if ([string]::IsNullOrWhiteSpace($DestinationBucket)) {
+        $DestinationBucket = $Bucket
+    }
+    if ([string]::IsNullOrWhiteSpace($DestinationKey)) {
+        $DestinationKey = $Key
+    }
+
+    $safeDestKey = $DestinationKey -replace '[\\/:\*\?"<>\|\.\[\]]', '_'
+    if ([string]::IsNullOrWhiteSpace($safeDestKey) -or $safeDestKey -match '^_+$') {
+        throw "Destination key '$DestinationKey' is invalid after sanitization"
+    }
+
+    $jsonPath = Join-Path $sourceBucketPath "$Key.json"
+    $datPath = Join-Path $sourceBucketPath "$Key.dat"
+    if (Test-Path $jsonPath) { $sourceFile = $jsonPath }
+    elseif (Test-Path $datPath) { $sourceFile = $datPath }
+    else {
+        throw "Object with key '$Key' not found in bucket '$Bucket'"
+    }
+
+    $destBucketPath = Ensure-BucketExists -Name $DestinationBucket -Path $Path
+    $ext = [System.IO.Path]::GetExtension($sourceFile)
+    $destFile = Join-Path $destBucketPath "${safeDestKey}${ext}"
+
+    if (Test-Path $destFile) {
+        throw "Object with key '$safeDestKey' already exists in bucket '$DestinationBucket'. Use a different key."
+    }
+
+    Copy-Item -Path $sourceFile -Destination $destFile -Force
+    Remove-Item -Path $sourceFile -Force
+
+    Write-Verbose "Moved [$Bucket/$Key] to [$DestinationBucket/$safeDestKey]"
+
+    if ($PassThru) {
+        [PSCustomObject]@{
+            SourceBucket = $Bucket
+            SourceKey = $Key
+            DestinationBucket = $DestinationBucket
+            DestinationKey = $safeDestKey
+            FilePath = $destFile
+        }
+    }
+    elseif (-not $Quiet) {
+        Write-Host "Moved '$Key' from '$Bucket' to '$DestinationBucket/$safeDestKey'" -ForegroundColor Green
+    }
+}
+
 function Export-Bucket {
     <#
     .SYNOPSIS
@@ -1493,6 +1594,7 @@ Export-ModuleMember -Function @(
     'Remove-Bucket',
     'Copy-BucketObject',
     'Rename-BucketObject',
+    'Move-BucketObject',
     'Export-Bucket',
     'Import-Bucket'
 )
