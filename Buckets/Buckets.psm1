@@ -113,21 +113,24 @@ function New-BucketObject {
     By default, a progress indicator and summary are shown.
     Use -Verbose for per-object details. Use -Quiet for silent operation.
     .EXAMPLE
-    New-BucketObject -InputObject @{ Name = "Alice"; Age = 30 } -Key Name
+    # Save users with Name as the key
+    New-BucketObject -Bucket users -InputObject $users -Key Name
+
     .EXAMPLE
-    $users | New-BucketObject -Bucket users -Key Email -AsJson
+    # Save config as JSON
+    New-BucketObject -Bucket config -InputObject $config -Key _Id -AsJson
+
     .EXAMPLE
-    # Progress bar and summary (default)
-    Get-Process | New-BucketObject -Bucket processes -AsTimestamp
+    # Save metrics keyed by Hour
+    New-BucketObject -Bucket metrics -InputObject $metrics -Key Hour
+
     .EXAMPLE
-    # Per-object verbose output
-    Get-Process | New-BucketObject -Bucket processes -Verbose
-    .EXAMPLE
-    # Silent, no output
-    Get-Process | New-BucketObject -Bucket processes -Quiet
+    # Save logs with unique IDs, silent mode
+    New-BucketObject -Bucket logs -InputObject $logEntries -Key Id -Quiet
+
     .EXAMPLE
     # Overwrite existing object
-    New-BucketObject -Bucket users -InputObject @{ Name = "Alice"; Age = 31 } -Key Name -Overwrite
+    New-BucketObject -Bucket users -InputObject @{ Name = "Alice"; Email = "alice@new.com"; Role = "manager"; Active = $true } -Key Name -Overwrite
     #>
     [CmdletBinding()]
     param(
@@ -564,18 +567,17 @@ function Set-BucketObject {
     Suppress all output. No summary.
     .EXAMPLE
     # Full replacement: object has metadata from Get-BucketObject
-    Get-BucketObject -Bucket users -Key "Alice" | ForEach-Object { $_.Age = 31; $_ } | Set-BucketObject
-    .EXAMPLE
-    # Partial update: piped object has no metadata, only specified properties are merged
-    @{ Age = 32; Active = $true } | Set-BucketObject -Bucket users -Key "Alice"
-    .EXAMPLE
-    # Explicit full replacement
     $user = Get-BucketObject -Bucket users -Key "Alice"
-    $user.Email = "alice@new.com"
-    Set-BucketObject -Bucket users -Key "Alice" -InputObject $user
+    $user.Role = "manager"
+    $user | Set-BucketObject
+
+    .EXAMPLE
+    # Partial update: only specified properties are merged into the existing object
+    Set-BucketObject -InputObject @{ Role = "admin" } -Bucket users -Key Name
+
     .EXAMPLE
     # Quiet mode with no output
-    Get-BucketObject -Bucket users -Key "Alice" | ForEach-Object { $_.Age = 31; $_ } | Set-BucketObject -Quiet
+    Get-BucketObject -Bucket logs -Key "log-001" | ForEach-Object { $_.Level = "INFO"; $_ } | Set-BucketObject -Quiet
     #>
     [CmdletBinding()]
     param(
@@ -809,11 +811,16 @@ function Remove-BucketObject {
     .PARAMETER PassThru
     Return metadata for removed objects.
     .EXAMPLE
-    Remove-BucketObject -Bucket users -Key "Alice"
+    # Remove a single log entry by Id
+    Remove-BucketObject -Bucket logs -Key "log-003"
+
     .EXAMPLE
+    # Remove all objects from a bucket
     Remove-BucketObject -Bucket temp -All -PassThru
+
     .EXAMPLE
-    Remove-BucketObject -Bucket users -Key "Alice" -WhatIf
+    # Preview removal without executing
+    Remove-BucketObject -Bucket users -Key "Charlie" -WhatIf
     #>
     [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Medium', DefaultParameterSetName = 'ByKey')]
     param(
@@ -1402,9 +1409,12 @@ function Move-BucketObject {
     .PARAMETER Quiet
     Suppress all output.
     .EXAMPLE
-    Move-BucketObject -Bucket todos -Key 1 -DestinationBucket archive
+    # Archive a log entry to a backup bucket
+    Move-BucketObject -Bucket logs -Key "log-004" -DestinationBucket archive
+
     .EXAMPLE
-    Move-BucketObject -Bucket todos -Key 5 -DestinationKey 5b
+    # Rename an order within the same bucket
+    Move-BucketObject -Bucket orders -Key "ORD-001" -DestinationKey "ORD-legacy-001"
     #>
     [CmdletBinding()]
     param(
