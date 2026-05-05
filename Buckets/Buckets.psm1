@@ -10,9 +10,11 @@
 
 # Bucket path caching for session
 $script:BucketPathCache = @{}
+$script:LastPWD = $PWD.Path
 
 function Clear-BucketPathCache {
     $script:BucketPathCache.Clear()
+    $script:LastPWD = $PWD.Path
 }
 
 function Get-DefaultPath {
@@ -41,6 +43,10 @@ function Get-BucketPath {
         [string]$Name,
         [string]$Path
     )
+
+    if ($script:LastPWD -ne $PWD.Path) {
+        Clear-BucketPathCache
+    }
 
     if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
     $cacheKey = "${Path}|${Name}"
@@ -1462,5 +1468,17 @@ function Import-Bucket {
     }
 }
 
-Remove-Item -Path Alias:New-BucketObject -ErrorAction SilentlyContinue
-Remove-Item -Path Alias:Get-BucketObject -ErrorAction SilentlyContinue
+# Only export public cmdlets — internal functions remain private
+Export-ModuleMember -Function @(
+    'New-BucketObject',
+    'Get-BucketObject',
+    'Set-BucketObject',
+    'Remove-BucketObject',
+    'Get-Bucket',
+    'Get-BucketStats',
+    'Remove-Bucket',
+    'Copy-BucketObject',
+    'Rename-BucketObject',
+    'Export-Bucket',
+    'Import-Bucket'
+)
