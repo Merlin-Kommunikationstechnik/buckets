@@ -489,9 +489,10 @@ function Get-Bucket {
     #>
     [CmdletBinding()]
     param(
-        [string]$Path = $script:DefaultPath,
+        [Parameter(Position = 0)]
+        [string]$Name,
 
-        [string]$Name
+        [string]$Path = $script:DefaultPath
     )
 
     if (-not (Test-Path $Path)) {

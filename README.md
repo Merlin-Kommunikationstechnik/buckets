@@ -239,8 +239,8 @@ Lists available buckets with object counts.
 
 ```powershell
 Get-Bucket
-    [[-Path] <string>]
     [[-Name] <string>]
+    [-Path <string>]
     [<CommonParameters>]
 ```
 
@@ -251,7 +251,7 @@ Get-Bucket
 Get-Bucket
 
 # Filter by name pattern
-Get-Bucket -Name "user"
+Get-Bucket "user"
 ```
 
 ---

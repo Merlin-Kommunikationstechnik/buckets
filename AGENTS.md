@@ -26,7 +26,7 @@ PowerShell module for file-based PSObject storage using directory-backed "bucket
 | `Get-BucketObject` | `-Key` (positional 0), `-Bucket` (positional 1, wildcards ok, all if omitted), `-Match` (hashtable), `-Filter` (scriptblock with `$_`) |
 | `Update-BucketObject` | `-InputObject` (pipeline), `-Bucket`, `-Key`, `-AsJson` |
 | `Remove-BucketObject` | `-Bucket`, `-Key` or `-All` |
-| `Get-Bucket` | `-Name` (substring filter) |
+| `Get-Bucket` | `-Name` (positional 0, substring filter) |
 | `Get-BucketStats` | `-Bucket` (returns count, size, timestamps) |
 | `Remove-Bucket` | `-Bucket` (positional, wildcards ok), `-Force`, `-WhatIf` |
 
