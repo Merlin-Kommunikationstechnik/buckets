@@ -1016,7 +1016,7 @@ function Remove-Bucket {
     Deletes bucket directories and their contents. Supports exact names, multiple
     buckets, and wildcard patterns. Only removes directories containing .dat/.json
     files (or empty directories). Skips buckets with other file types.
-    Uses standard -Confirm support for confirmation prompts.
+    Prompts for confirmation before removal unless -Force is specified.
     .PARAMETER Bucket
     Bucket name(s) or wildcard patterns to remove. Supports glob-style wildcards (*, ?).
     .PARAMETER Path
@@ -1032,14 +1032,16 @@ function Remove-Bucket {
     .EXAMPLE
     Remove-Bucket * -WhatIf
     #>
-    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true, Position = 0, ValueFromRemainingArguments = $true)]
         [string[]]$Bucket,
 
         [string]$Path,
 
-        [switch]$Force
+        [switch]$Force,
+
+        [switch]$WhatIf
     )
 
     if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
@@ -1080,40 +1082,62 @@ function Remove-Bucket {
 
     if ($matched.Count -eq 0) { return }
 
+    $removable = @()
+    $skippedNames = @()
     foreach ($m in $matched) {
         $allFiles = Get-ChildItem -Path $m.Path -File -ErrorAction SilentlyContinue
         $otherFiles = $allFiles | Where-Object { $_.Extension -notin ".dat", ".json" }
         if ($otherFiles) {
-            Write-Warning "Bucket '$($m.Name)' contains non-bucket files, skipping:"
-            foreach ($f in $otherFiles) {
-                Write-Warning "  $($f.Name)"
-            }
+            $skippedNames += $m.Name
             continue
         }
-
         $stats = Get-BucketStats -Bucket $m.Name -Path $Path
-        $fileCount = if ($stats) { $stats.ObjectCount } else { 0 }
-
-        $target = "bucket '$($m.Name)' ($fileCount object(s)) at $($m.Path)"
-
-        if ($Force -or $PSCmdlet.ShouldProcess($target, "Remove-Bucket")) {
-            Write-Verbose "Removing bucket '$($m.Name)' ($fileCount object(s))"
-            Remove-Item -Path $m.Path -Recurse -Force
-            $cacheKeys = @($script:BucketPathCache.Keys) | Where-Object { $_ -like "*|$($m.Name)" }
-            foreach ($ck in $cacheKeys) { $script:BucketPathCache.Remove($ck) }
-            Write-Verbose "Bucket '$($m.Name)' removed"
+        $removable += [PSCustomObject]@{
+            Name       = $m.Name
+            Objects    = if ($stats) { $stats.ObjectCount } else { 0 }
+            Size       = if ($stats) { $stats.TotalSize } else { "0 KB" }
+            Path       = $m.Path
         }
     }
 
-    if (-not $WhatIfPreference) {
-        $removed = $matched | Where-Object { -not (Test-Path $_.Path -ErrorAction SilentlyContinue) } | Measure-Object | Select-Object -ExpandProperty Count
-        $skipped = $matched.Count - $removed
-        if ($removed -gt 0 -or $skipped -gt 0) {
-            Write-Host "$removed bucket(s) removed" -ForegroundColor Green
-            if ($skipped -gt 0) {
-                Write-Host "$skipped bucket(s) skipped (contains non-bucket files)" -ForegroundColor Yellow
-            }
+    if ($removable.Count -eq 0) { return }
+
+    if ($WhatIf) {
+        Write-Host "  What if: Remove the following bucket(s):" -ForegroundColor Yellow
+        foreach ($r in $removable) {
+            Write-Host "    $($r.Name) ($($r.Objects) objects, $($r.Size))" -ForegroundColor DarkGray
         }
+        if ($skippedNames.Count -gt 0) {
+            Write-Host "  Skipped (non-bucket files): $($skippedNames -join ', ')" -ForegroundColor Yellow
+        }
+        return
+    }
+
+    if (-not $Force) {
+        Write-Host "`n  Remove the following bucket(s):" -ForegroundColor Red
+        foreach ($r in $removable) {
+            Write-Host "    " -NoNewline
+            Write-Host $r.Name -ForegroundColor White -NoNewline
+            Write-Host " ($($r.Objects) objects, $($r.Size))" -ForegroundColor DarkGray
+        }
+        $confirm = Read-Host -Prompt "`n  Continue? (y/n)"
+        if ($confirm -ne "y") {
+            Write-Host "  Aborted." -ForegroundColor Yellow
+            return
+        }
+    }
+
+    $removedCount = 0
+    foreach ($r in $removable) {
+        Write-Verbose "Removing bucket '$($r.Name)' ($($r.Objects) object(s))"
+        Remove-Item -Path $r.Path -Recurse -Force
+        $cacheKeys = @($script:BucketPathCache.Keys) | Where-Object { $_ -like "*|$($r.Name)" }
+        foreach ($ck in $cacheKeys) { $script:BucketPathCache.Remove($ck) }
+        $removedCount++
+    }
+
+    if ($removedCount -gt 0) {
+        Write-Host "  Removed $removedCount bucket(s)" -ForegroundColor Green
     }
 }
 
