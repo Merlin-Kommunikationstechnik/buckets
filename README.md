@@ -140,6 +140,10 @@ Get-BucketObject -Bucket users
 # From multiple buckets
 Get-BucketObject -Bucket users, orders
 
+# Wildcard patterns
+Get-BucketObject -Bucket "user*"
+Get-BucketObject "Alice" "*_log"
+
 # By key
 Get-BucketObject "Alice"
 Get-BucketObject "Alice" users

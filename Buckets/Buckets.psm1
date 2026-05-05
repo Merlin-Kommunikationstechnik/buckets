@@ -254,14 +254,21 @@ function Get-BucketObject {
         [scriptblock]$Filter
     )
 
-    $bucketPaths = if ($Bucket -and $Bucket.Count -gt 0) {
+    $bucketPaths = @()
+    if ($Bucket -and $Bucket.Count -gt 0) {
         foreach ($b in $Bucket) {
-            Get-BucketPath -Name $b -Path $Path
+            if ($b -match '[\*\?]') {
+                $matched = Get-Bucket -Path $Path | Where-Object { $_.Name -like $b }
+                $bucketPaths += $matched | ForEach-Object { $_.Path }
+            }
+            else {
+                $bucketPaths += Get-BucketPath -Name $b -Path $Path
+            }
         }
     }
     else {
         if (Test-Path $Path) {
-            Get-ChildItem -Path $Path -Directory | ForEach-Object { $_.FullName }
+            $bucketPaths += Get-ChildItem -Path $Path -Directory | ForEach-Object { $_.FullName }
         }
     }
 
