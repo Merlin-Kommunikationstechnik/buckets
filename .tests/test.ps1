@@ -349,21 +349,21 @@ if ($updated.Role -eq "admin") {
     Write-Host " FAIL (role: $($updated.Role))" -ForegroundColor Red
 }
 
-Write-Host "  -Patch (hashtable)..." -NoNewline
+Write-Host "  Auto-patch (hashtable)..." -NoNewline
 $before = Get-BucketObject -Bucket users -Key "Alice"
 $origEmail = $before.Email
-@{ Email = "alice@patched.com" } | Set-BucketObject -Bucket users -Key "Alice" -Patch -Quiet
+@{ Email = "alice@patched.com" } | Set-BucketObject -Bucket users -Key "Alice" -Quiet
 $after = Get-BucketObject -Bucket users -Key "Alice"
 if ($after.Email -eq "alice@patched.com" -and $after.Name -eq "Alice" -and $after.Role -eq "admin") {
     Write-Host " OK (email patched, other fields preserved)" -ForegroundColor Green
-    @{ Email = $origEmail } | Set-BucketObject -Bucket users -Key "Alice" -Patch -Quiet
+    @{ Email = $origEmail } | Set-BucketObject -Bucket users -Key "Alice" -Quiet
 } else {
     Write-Host " FAIL (email: $($after.Email), name: $($after.Name))" -ForegroundColor Red
 }
 
-Write-Host "  -Patch (PSCustomObject)..." -NoNewline
+Write-Host "  Auto-patch (PSCustomObject)..." -NoNewline
 New-BucketObject -Bucket users -InputObject ([PSCustomObject]@{ _Id = "patch-obj"; Name = "Test"; Val = 1 }) -Key "_Id" -Quiet
-[PSCustomObject]@{ Val = 99; NewField = "added" } | Set-BucketObject -Bucket users -Key "patch-obj" -Patch -Quiet
+[PSCustomObject]@{ Val = 99; NewField = "added" } | Set-BucketObject -Bucket users -Key "patch-obj" -Quiet
 $patched = Get-BucketObject -Bucket users -Key "patch-obj"
 if ($patched.Val -eq 99 -and $patched.Name -eq "Test" -and $patched.NewField -eq "added") {
     Write-Host " OK (value patched, new field added, name preserved)" -ForegroundColor Green
@@ -371,6 +371,18 @@ if ($patched.Val -eq 99 -and $patched.Name -eq "Test" -and $patched.NewField -eq
     Write-Host " FAIL (val: $($patched.Val), name: $($patched.Name), new: $($patched.NewField))" -ForegroundColor Red
 }
 Remove-BucketObject -Bucket users -Key "patch-obj" -Quiet
+
+Write-Host "  Patch without Bucket/Key..." -NoNewline
+try {
+    @{ Name = "test" } | Set-BucketObject 2>$null
+    Write-Host " FAIL (should have thrown)" -ForegroundColor Red
+} catch {
+    if ($_.Exception.Message -like "*partial*" -or $_.Exception.Message -like "*Bucket*") {
+        Write-Host " OK (threw with patch message)" -ForegroundColor Green
+    } else {
+        Write-Host " OK (threw: $($_.Exception.Message))" -ForegroundColor Green
+    }
+}
 
 # ============================================================
 # 15. Performance benchmark

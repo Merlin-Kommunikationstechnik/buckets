@@ -522,20 +522,24 @@ function Set-BucketObject {
     .SYNOPSIS
     Updates an existing object in a bucket.
     .DESCRIPTION
-    Replaces an existing object file with new data. Preserves the storage format (JSON or binary)
-    of the existing file unless -AsJson forces a format change. If JSON serialization exceeds
-    the depth limit, the object automatically falls back to binary format.
+    Automatically detects whether the pipeline input is a full object replacement or a partial update.
 
-    With -Patch, applies partial updates from pipeline input to the existing object.
-    Only properties present in the pipeline input are modified; all others are preserved.
+    If the piped object contains _BucketName and _BucketKey metadata (from Get-BucketObject),
+    the entire object replaces the stored version. If the piped object lacks metadata, only
+    its properties are merged into the existing object (partial update).
+
+    Preserves the storage format (JSON or binary) of the existing file unless -AsJson forces
+    a format change. If JSON serialization exceeds the depth limit, the object automatically
+    falls back to binary format.
     .PARAMETER InputObject
-    The updated object to store (for full replacement). Accepts pipeline input. Pipeline objects with _BucketName and _BucketKey metadata auto-resolve bucket and key.
-    .PARAMETER Patch
-    Apply partial updates from pipeline input instead of full replacement. Only properties in the piped object are overwritten.
+    The object to store. Accepts pipeline input. If it has _BucketName and _BucketKey metadata,
+    bucket and key are auto-resolved. Otherwise -Bucket and -Key are required.
     .PARAMETER Bucket
     Name of the bucket containing the object. Auto-resolved from pipeline metadata if omitted.
+    Required when piping partial updates.
     .PARAMETER Key
     Object key to update. Auto-resolved from pipeline metadata if omitted.
+    Required when piping partial updates.
     .PARAMETER Path
     Root directory for bucket storage. Default: $PWD/.buckets.
     .PARAMETER Depth
@@ -548,35 +552,25 @@ function Set-BucketObject {
     Enable GZip compression for binary (.dat) files.
     .PARAMETER Quiet
     Suppress all output. No summary.
-    .PARAMETER PassThru
-    Return the updated object metadata. Default: $true.
-    .OUTPUTS
-    PSCustomObject with Bucket, Key, and FilePath properties (unless -Quiet is used).
     .EXAMPLE
-    # Pipeline: modifies retrieved object and saves it back (auto-detects bucket/key)
+    # Full replacement: object has metadata from Get-BucketObject
     Get-BucketObject -Bucket users -Key "Alice" | ForEach-Object { $_.Age = 31; $_ } | Set-BucketObject
     .EXAMPLE
-    # Explicit parameters
+    # Partial update: piped object has no metadata, only specified properties are merged
+    @{ Age = 32; Active = $true } | Set-BucketObject -Bucket users -Key "Alice"
+    .EXAMPLE
+    # Explicit full replacement
     $user = Get-BucketObject -Bucket users -Key "Alice"
     $user.Email = "alice@new.com"
     Set-BucketObject -Bucket users -Key "Alice" -InputObject $user
     .EXAMPLE
-    # Partial update: pipe only the properties you want to change
-    @{ Age = 32; Active = $true } | Set-BucketObject -Bucket users -Key "Alice" -Patch
-    .EXAMPLE
     # Quiet mode with no output
     Get-BucketObject -Bucket users -Key "Alice" | ForEach-Object { $_.Age = 31; $_ } | Set-BucketObject -Quiet
     #>
-    [CmdletBinding(DefaultParameterSetName = 'Replace')]
+    [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, ParameterSetName = 'Replace')]
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
         [PSObject]$InputObject,
-
-        [Parameter(ParameterSetName = 'Patch')]
-        [switch]$Patch,
-
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ParameterSetName = 'Patch')]
-        [PSObject]$PatchData,
 
         [Parameter(ValueFromPipelineByPropertyName = $true)]
         [Alias("_BucketName")]
@@ -609,17 +603,19 @@ function Set-BucketObject {
     }
 
     process {
-        $patchObject = $null
-        if ($PSCmdlet.ParameterSetName -eq 'Patch') {
-            $patchObject = $PatchData
-        }
+        $isPatch = -not ($InputObject.PSObject.Properties['_BucketName'] -and $InputObject.PSObject.Properties['_BucketKey'])
 
         if ($null -eq $bucketPath) {
             if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
             $Path = Resolve-SafePath -Path $Path
         }
 
-        if ($PSCmdlet.ParameterSetName -eq 'Replace') {
+        if ($isPatch) {
+            if ([string]::IsNullOrWhiteSpace($Bucket) -or [string]::IsNullOrWhiteSpace($Key)) {
+                throw "When piping partial updates, you must specify -Bucket and -Key explicitly."
+            }
+        }
+        else {
             if ([string]::IsNullOrWhiteSpace($Bucket) -or [string]::IsNullOrWhiteSpace($Key)) {
                 if ($InputObject.PSObject.Properties['_BucketName']) {
                     $Bucket = $InputObject._BucketName
@@ -630,11 +626,6 @@ function Set-BucketObject {
                 if ([string]::IsNullOrWhiteSpace($Bucket) -or [string]::IsNullOrWhiteSpace($Key)) {
                     throw "Cannot determine bucket and key. Use -Bucket and -Key parameters, or pipe an object from Get-BucketObject."
                 }
-            }
-        }
-        else {
-            if ([string]::IsNullOrWhiteSpace($Bucket) -or [string]::IsNullOrWhiteSpace($Key)) {
-                throw "When using -Patch, you must specify -Bucket and -Key explicitly."
             }
         }
 
@@ -656,19 +647,19 @@ function Set-BucketObject {
 
         $useJson = $filePath -like "*.json" -or $AsJson
 
-        if ($PSCmdlet.ParameterSetName -eq 'Patch') {
+        if ($isPatch) {
             $existing = Read-BucketFile -File ([System.IO.FileInfo]::new($filePath))
             if ($null -eq $existing) {
                 throw "Failed to read existing object '$Key' in bucket '$Bucket'"
             }
-            if ($patchObject -is [hashtable]) {
+            if ($InputObject -is [hashtable]) {
                 if ($existing -is [hashtable]) {
-                    foreach ($kvp in $patchObject.GetEnumerator()) {
+                    foreach ($kvp in $InputObject.GetEnumerator()) {
                         $existing[$kvp.Key] = $kvp.Value
                     }
                 }
                 else {
-                    foreach ($kvp in $patchObject.GetEnumerator()) {
+                    foreach ($kvp in $InputObject.GetEnumerator()) {
                         if ($existing.PSObject.Properties[$kvp.Key]) {
                             $existing.PSObject.Properties[$kvp.Key].Value = $kvp.Value
                         }
@@ -679,7 +670,7 @@ function Set-BucketObject {
                 }
             }
             else {
-                foreach ($prop in $patchObject.PSObject.Properties) {
+                foreach ($prop in $InputObject.PSObject.Properties) {
                     if ($prop.IsSettable) {
                         if ($existing -is [hashtable]) {
                             $existing[$prop.Name] = $prop.Value
