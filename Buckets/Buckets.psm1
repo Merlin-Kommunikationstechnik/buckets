@@ -639,6 +639,14 @@ function Set-BucketObject {
             }
         }
 
+        # Extract key value from property name (consistent with New-BucketObject)
+        if ($InputObject.PSObject.Properties[$Key]) {
+            $resolvedKey = $InputObject.$Key
+            if ($null -ne $resolvedKey) {
+                $Key = $resolvedKey -replace '[\\/:\*\?"<>\|\.\[\]]', '_'
+            }
+        }
+
         if ($null -eq $bucketPath) {
             $bucketPath = Get-BucketPath -Name $Bucket -Path $Path
             if (-not (Test-Path $bucketPath)) {
@@ -820,7 +828,9 @@ function Remove-BucketObject {
         [Parameter(ParameterSetName = 'All')]
         [switch]$All,
 
-        [switch]$PassThru
+        [switch]$PassThru,
+
+        [switch]$Quiet
     )
 
     if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
@@ -1135,7 +1145,9 @@ function Copy-BucketObject {
 
         [string]$DestinationKey,
 
-        [switch]$PassThru
+        [switch]$PassThru,
+
+        [switch]$Quiet
     )
 
     if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
@@ -1185,7 +1197,7 @@ function Copy-BucketObject {
             FilePath = $destFile
         }
     }
-    else {
+    elseif (-not $Quiet) {
         Write-Host "Copied '$Key' from '$Bucket' to '$DestinationBucket/$safeDestKey'" -ForegroundColor Green
     }
 }
@@ -1223,7 +1235,9 @@ function Rename-BucketObject {
         [Parameter(Mandatory = $true)]
         [string]$NewKey,
 
-        [switch]$PassThru
+        [switch]$PassThru,
+
+        [switch]$Quiet
     )
 
     if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
@@ -1263,7 +1277,7 @@ function Rename-BucketObject {
             FilePath = $destFile
         }
     }
-    else {
+    elseif (-not $Quiet) {
         Write-Host "Renamed '$Key' to '$safeNewKey' in bucket '$Bucket'" -ForegroundColor Green
     }
 }
