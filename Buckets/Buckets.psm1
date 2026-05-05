@@ -229,13 +229,12 @@ function New-BucketObject {
                             $cs = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionLevel]::Optimal)
                             $cs.Write($rawBytes, 0, $rawBytes.Length)
                             $cs.Close()
-                            $encoded = [System.Convert]::ToBase64String($ms.ToArray())
+                            [System.IO.File]::WriteAllBytes($filePath, $ms.ToArray())
                         }
                         else {
-                            $encoded = [System.Convert]::ToBase64String($rawBytes)
+                            [System.IO.File]::WriteAllBytes($filePath, $rawBytes)
                         }
                         $filePath = [System.IO.Path]::ChangeExtension($filePath, ".dat")
-                        [System.IO.File]::WriteAllText($filePath, $encoded, [System.Text.Encoding]::UTF8)
                         Write-Verbose "Object '$([System.IO.Path]::GetFileNameWithoutExtension($filename))' exceeds JSON depth $Depth, saved as binary (.dat)"
                         $autoDepthCount++
                         $writeSuccess = $true
@@ -262,12 +261,11 @@ function New-BucketObject {
                             $cs = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionLevel]::Optimal)
                             $cs.Write($rawBytes, 0, $rawBytes.Length)
                             $cs.Close()
-                            $encoded = [System.Convert]::ToBase64String($ms.ToArray())
+                            [System.IO.File]::WriteAllBytes($filePath, $ms.ToArray())
                         }
                         else {
-                            $encoded = [System.Convert]::ToBase64String($rawBytes)
+                            [System.IO.File]::WriteAllBytes($filePath, $rawBytes)
                         }
-                        [System.IO.File]::WriteAllText($filePath, $encoded, [System.Text.Encoding]::UTF8)
                         $serialized = $true
                         if ($currentDepth -gt $BinaryDepth) {
                             Write-Verbose "Binary serialization required depth $currentDepth (default: $BinaryDepth)"
@@ -331,11 +329,10 @@ function Read-BucketFile {
     )
 
     $extension = $File.Extension
-    $content = [System.IO.File]::ReadAllText($File.FullName, [System.Text.Encoding]::UTF8)
+    $rawBytes = [System.IO.File]::ReadAllBytes($File.FullName)
 
     if ($extension -eq ".dat") {
         try {
-            $rawBytes = [System.Convert]::FromBase64String($content)
             $decoded = $null
             $isCompressed = $rawBytes.Length -ge 2 -and $rawBytes[0] -eq 0x1F -and $rawBytes[1] -eq 0x8B
             if ($isCompressed) {
@@ -354,6 +351,9 @@ function Read-BucketFile {
             }
             else {
                 $decoded = [System.Text.Encoding]::UTF8.GetString($rawBytes)
+                if (-not $decoded.StartsWith('<Objs') -and -not $decoded.StartsWith('<?xml')) {
+                    $decoded = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($decoded))
+                }
             }
             return [System.Management.Automation.PSSerializer]::Deserialize($decoded)
         }
@@ -364,6 +364,10 @@ function Read-BucketFile {
     }
     else {
         try {
+            $content = [System.Text.Encoding]::UTF8.GetString($rawBytes)
+            if ($content.StartsWith([char]0xFEFF)) {
+                $content = $content.Substring(1)
+            }
             return $content | ConvertFrom-Json
         }
         catch {
@@ -700,13 +704,12 @@ function Set-BucketObject {
                         $cs = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionLevel]::Optimal)
                         $cs.Write($rawBytes, 0, $rawBytes.Length)
                         $cs.Close()
-                        $encoded = [System.Convert]::ToBase64String($ms.ToArray())
+                        [System.IO.File]::WriteAllBytes($filePath, $ms.ToArray())
                     }
                     else {
-                        $encoded = [System.Convert]::ToBase64String($rawBytes)
+                        [System.IO.File]::WriteAllBytes($filePath, $rawBytes)
                     }
                     $filePath = [System.IO.Path]::ChangeExtension($filePath, ".dat")
-                    [System.IO.File]::WriteAllText($filePath, $encoded, [System.Text.Encoding]::UTF8)
                     Write-Verbose "Object '$Key' exceeds JSON depth $Depth, saved as binary (.dat)"
                     $writeSuccess = $true
                 }
@@ -731,12 +734,11 @@ function Set-BucketObject {
                         $cs = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionLevel]::Optimal)
                         $cs.Write($rawBytes, 0, $rawBytes.Length)
                         $cs.Close()
-                        $encoded = [System.Convert]::ToBase64String($ms.ToArray())
+                        [System.IO.File]::WriteAllBytes($filePath, $ms.ToArray())
                     }
                     else {
-                        $encoded = [System.Convert]::ToBase64String($rawBytes)
+                        [System.IO.File]::WriteAllBytes($filePath, $rawBytes)
                     }
-                    [System.IO.File]::WriteAllText($filePath, $encoded, [System.Text.Encoding]::UTF8)
                     $serialized = $true
                     if ($currentDepth -gt $BinaryDepth) {
                         Write-Verbose "Binary serialization required depth $currentDepth (default: $BinaryDepth)"
@@ -1333,7 +1335,8 @@ function Export-Bucket {
     }
     else {
         $xml = [System.Management.Automation.PSSerializer]::Serialize($allObjects, 5)
-        [System.IO.File]::WriteAllText($OutputFile, $xml, [System.Text.Encoding]::UTF8)
+        $rawBytes = [System.Text.Encoding]::UTF8.GetBytes($xml)
+        [System.IO.File]::WriteAllBytes($OutputFile, $rawBytes)
     }
 
     if (-not $Quiet) {
@@ -1389,14 +1392,26 @@ function Import-Bucket {
         throw "Input file '$InputFile' not found"
     }
 
-    $content = [System.IO.File]::ReadAllText($InputFile, [System.Text.Encoding]::UTF8)
+    $rawBytes = [System.IO.File]::ReadAllBytes($InputFile)
     $useJson = $AsJson -or $InputFile -like "*.json"
 
     if ($useJson) {
+        $content = [System.Text.Encoding]::UTF8.GetString($rawBytes)
         $objects = $content | ConvertFrom-Json
     }
     else {
-        $objects = [System.Management.Automation.PSSerializer]::Deserialize($content)
+        try {
+            $objects = [System.Management.Automation.PSSerializer]::Deserialize([System.Text.Encoding]::UTF8.GetString($rawBytes))
+        }
+        catch {
+            try {
+                $content = [System.Text.Encoding]::UTF8.GetString($rawBytes)
+                $objects = [System.Management.Automation.PSSerializer]::Deserialize($content)
+            }
+            catch {
+                throw "Failed to deserialize archive file '$InputFile': $_"
+            }
+        }
     }
 
     if ($null -eq $objects) {
@@ -1435,9 +1450,9 @@ function Import-Bucket {
             [System.IO.File]::WriteAllText($finalPath, $json, [System.Text.Encoding]::UTF8)
         }
         else {
-            $bytes = [System.Management.Automation.PSSerializer]::Serialize($obj, 5)
-            $encoded = [System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($bytes))
-            [System.IO.File]::WriteAllText($finalPath, $encoded, [System.Text.Encoding]::UTF8)
+            $xml = [System.Management.Automation.PSSerializer]::Serialize($obj, 5)
+            $rawBytes = [System.Text.Encoding]::UTF8.GetBytes($xml)
+            [System.IO.File]::WriteAllBytes($finalPath, $rawBytes)
         }
 
         $importedCount++
