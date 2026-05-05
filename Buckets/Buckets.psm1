@@ -1740,6 +1740,26 @@ $script:CompleterBlock = {
     }
 }
 
+# Tab completion for -Key parameter (requires -Bucket to be specified)
+$script:KeyCompleterBlock = {
+    param($commandName, $parameterName, $wordToComplete, $commandAst, $fakeBoundParameters)
+
+    $bucket = $fakeBoundParameters['Bucket']
+    if (-not $bucket) { return }
+
+    $path = if ($fakeBoundParameters.ContainsKey('Path')) { $fakeBoundParameters['Path'] } else { Join-Path $PWD.Path ".buckets" }
+    $bucketPath = Join-Path $path $bucket
+    if (-not [System.IO.Directory]::Exists($bucketPath)) { return }
+
+    $di = [System.IO.DirectoryInfo]::new($bucketPath)
+    $files = $di.GetFiles("$wordToComplete*.dat") + $di.GetFiles("$wordToComplete*.json")
+
+    $files | ForEach-Object {
+        $key = [System.IO.Path]::GetFileNameWithoutExtension($_.Name)
+        [System.Management.Automation.CompletionResult]::new($key, $key, 'ParameterValue', "$($_.Extension.TrimStart('.')) key")
+    }
+}
+
 @('New-BucketObject', 'Get-BucketObject', 'Set-BucketObject', 'Remove-BucketObject',
   'Get-BucketStats', 'Remove-Bucket', 'Copy-BucketObject', 'Rename-BucketObject',
   'Move-BucketObject', 'Export-Bucket', 'Import-Bucket') | ForEach-Object {
@@ -1748,3 +1768,9 @@ $script:CompleterBlock = {
 
 Register-ArgumentCompleter -CommandName Copy-BucketObject -ParameterName DestinationBucket -ScriptBlock $script:CompleterBlock
 Register-ArgumentCompleter -CommandName Move-BucketObject -ParameterName DestinationBucket -ScriptBlock $script:CompleterBlock
+
+# Key completion for cmdlets that take a -Key
+@('Get-BucketObject', 'Set-BucketObject', 'Remove-BucketObject',
+  'Copy-BucketObject', 'Rename-BucketObject', 'Move-BucketObject') | ForEach-Object {
+    Register-ArgumentCompleter -CommandName $_ -ParameterName Key -ScriptBlock $script:KeyCompleterBlock
+}
