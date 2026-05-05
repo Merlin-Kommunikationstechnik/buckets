@@ -338,6 +338,46 @@ if ($null -eq $retrieved -and $cWarn) {
 }
 Remove-Item $corruptPath -Force
 
+Write-Host "  Get-BucketObject -Key across multiple buckets (no null-file crash)..." -NoNewline
+try {
+    $errorsBefore = $Error.Count
+    New-BucketObject -Bucket bucket-a -InputObject @{ X = 1; _Id = "only-in-a" } -Key "_Id" -Quiet
+    New-BucketObject -Bucket bucket-b -InputObject @{ Y = 2; _Id = "only-in-b" } -Key "_Id" -Quiet
+    New-BucketObject -Bucket bucket-c -InputObject @{ Z = 3; _Id = "only-in-c" } -Key "_Id" -Quiet
+    $result = Get-BucketObject -Key "only-in-a" -WarningAction SilentlyContinue 2>$null
+    $newErrors = $Error.Count - $errorsBefore
+    if ($null -eq $result -or $result.X -eq 1) {
+        if ($newErrors -eq 0 -and $result.X -eq 1) {
+            Write-Host " OK (found in bucket-a, zero errors across all buckets)" -ForegroundColor Green
+        } else {
+            Write-Host " FAIL (errors: $newErrors, result: $($result.X))" -ForegroundColor Red
+        }
+    } else {
+        Write-Host " FAIL (wrong result or errors occurred)" -ForegroundColor Red
+    }
+    Remove-Bucket -Bucket bucket-a -Force -Confirm:$false
+    Remove-Bucket -Bucket bucket-b -Force -Confirm:$false
+    Remove-Bucket -Bucket bucket-c -Force -Confirm:$false
+} catch {
+    Write-Host " FAIL: $_" -ForegroundColor Red
+}
+
+Write-Host "  Get-BucketObject -Key with case mismatch..." -NoNewline
+try {
+    $errorsBefore = $Error.Count
+    New-BucketObject -Bucket casetest -InputObject @{ Val = 42; _Id = "MixedCase-Key" } -Key "_Id" -Quiet
+    $result = Get-BucketObject -Bucket casetest -Key "mixedcase-key" -WarningAction SilentlyContinue 2>$null
+    $newErrors = $Error.Count - $errorsBefore
+    if ($null -ne $result -and $result.Val -eq 42 -and $newErrors -eq 0) {
+        Write-Host " OK (case-insensitive match, zero errors)" -ForegroundColor Green
+    } else {
+        Write-Host " FAIL (result: $($result.Val), errors: $newErrors)" -ForegroundColor Red
+    }
+    Remove-Bucket -Bucket casetest -Force -Confirm:$false
+} catch {
+    Write-Host " FAIL: $_" -ForegroundColor Red
+}
+
 Write-Host "  Set-BucketObject pipeline round-trip..." -NoNewline
 $user = Get-BucketObject -Bucket users -Key "Bob"
 $user.Role = "admin"
