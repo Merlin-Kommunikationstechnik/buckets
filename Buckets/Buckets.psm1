@@ -937,19 +937,20 @@ function Get-Bucket {
         return
     }
 
-    $buckets = Get-ChildItem -Path $Path -Directory
+    $buckets = @(Get-ChildItem -Path $Path -Directory)
 
     if (-not [string]::IsNullOrWhiteSpace($Name)) {
         $buckets = $buckets | Where-Object { $_.Name -like "*$Name*" }
     }
 
     $buckets | ForEach-Object {
-        $allFiles = @(Get-ChildItem -Path $_.FullName -File -ErrorAction SilentlyContinue)
-        $count = ($allFiles | Where-Object { $_.Extension -in '.json', '.dat' }).Count
+        $bucketDir = $_
+        $datFiles = [System.IO.Directory]::GetFiles($bucketDir.FullName, "*.dat")
+        $jsonFiles = [System.IO.Directory]::GetFiles($bucketDir.FullName, "*.json")
         [PSCustomObject]@{
-            Name        = $_.Name
-            Path        = $_.FullName
-            ObjectCount = $count
+            Name        = $bucketDir.Name
+            Path        = $bucketDir.FullName
+            ObjectCount = $datFiles.Length + $jsonFiles.Length
         }
     }
 }
