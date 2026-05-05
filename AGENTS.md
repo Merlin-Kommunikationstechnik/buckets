@@ -4,8 +4,8 @@
 PowerShell module for file-based PSObject storage using directory-backed "buckets".
 
 ## Structure
-- `Buckets/Buckets.psm1` — module code (all cmdlets)
-- `Buckets/Buckets.psd1` — module manifest
+- `buckets/buckets.psm1` — module code (all cmdlets)
+- `buckets/buckets.psd1` — module manifest
 - `tests/test.ps1` — test suite
 - `README.md` — documentation
 
@@ -42,7 +42,7 @@ Only removes buckets containing exclusively `.dat`/`.json` files (or empty direc
 
 ## Testing
 ```bash
-pwsh -NoProfile -ExecutionPolicy Bypass -File tests/test.ps1
+pwsh -NoProfile -ExecutionPolicy Bypass -File .tests/test.ps1
 ```
 Test script starts by cleaning all existing buckets. Tests: hashtables, nested objects, FileInfo (binary fallback), logs, JSON config, metrics, mixed formats.
 

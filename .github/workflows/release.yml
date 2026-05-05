@@ -31,26 +31,22 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
 
-          $versionTablePath = ".github/.versiontable.json"
           $manifestPath = "Buckets/Buckets.psd1"
-
-          if (!(Test-Path $versionTablePath)) {
-            throw "Version table not found at '$versionTablePath'."
-          }
 
           if (!(Test-Path $manifestPath)) {
             throw "Module manifest not found at '$manifestPath'."
           }
 
-          $versionData = Get-Content -Path $versionTablePath -Raw | ConvertFrom-Json
+          $manifestMetadata = Test-ModuleManifest -Path $manifestPath
+          $currentVersion = [string]$manifestMetadata.Version
 
-          if ($null -eq $versionData.version -or [string]::IsNullOrWhiteSpace([string]$versionData.version)) {
-            throw "Version table does not contain a valid 'version' value."
+          if ([string]::IsNullOrWhiteSpace($currentVersion)) {
+            throw "Module manifest '$manifestPath' does not contain a valid Version value."
           }
 
-          $match = [regex]::Match([string]$versionData.version, '^(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)$')
+          $match = [regex]::Match($currentVersion, '^(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)$')
           if (!$match.Success) {
-            throw "Current version '$($versionData.version)' is not valid semver (major.minor.patch)."
+            throw "Current version '$currentVersion' is not valid semver (major.minor.patch)."
           }
 
           $major = [int]$match.Groups["major"].Value
@@ -77,9 +73,6 @@ jobs:
           }
 
           $newVersion = "$major.$minor.$patch"
-          $versionData.version = $newVersion
-          $versionData | ConvertTo-Json | Set-Content -Path $versionTablePath -Encoding UTF8
-
           $manifestContent = Get-Content -Path $manifestPath -Raw
           $updatedManifestContent = [regex]::Replace(
             $manifestContent,
@@ -124,7 +117,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add .github/.versiontable.json Buckets/Buckets.psd1
+          git add Buckets/Buckets.psd1
 
           if git diff --cached --quiet; then
             echo "No version changes to commit."
