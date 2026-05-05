@@ -525,8 +525,13 @@ function Set-BucketObject {
     Replaces an existing object file with new data. Preserves the storage format (JSON or binary)
     of the existing file unless -AsJson forces a format change. If JSON serialization exceeds
     the depth limit, the object automatically falls back to binary format.
+
+    With -Patch, applies partial updates from pipeline input to the existing object.
+    Only properties present in the pipeline input are modified; all others are preserved.
     .PARAMETER InputObject
-    The updated object to store. Accepts pipeline input. Pipeline objects with _BucketName and _BucketKey metadata auto-resolve bucket and key.
+    The updated object to store (for full replacement). Accepts pipeline input. Pipeline objects with _BucketName and _BucketKey metadata auto-resolve bucket and key.
+    .PARAMETER Patch
+    Apply partial updates from pipeline input instead of full replacement. Only properties in the piped object are overwritten.
     .PARAMETER Bucket
     Name of the bucket containing the object. Auto-resolved from pipeline metadata if omitted.
     .PARAMETER Key
@@ -556,13 +561,22 @@ function Set-BucketObject {
     $user.Email = "alice@new.com"
     Set-BucketObject -Bucket users -Key "Alice" -InputObject $user
     .EXAMPLE
+    # Partial update: pipe only the properties you want to change
+    @{ Age = 32; Active = $true } | Set-BucketObject -Bucket users -Key "Alice" -Patch
+    .EXAMPLE
     # Quiet mode with no output
     Get-BucketObject -Bucket users -Key "Alice" | ForEach-Object { $_.Age = 31; $_ } | Set-BucketObject -Quiet
     #>
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = 'Replace')]
     param(
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, ParameterSetName = 'Replace')]
         [PSObject]$InputObject,
+
+        [Parameter(ParameterSetName = 'Patch')]
+        [switch]$Patch,
+
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ParameterSetName = 'Patch')]
+        [PSObject]$PatchData,
 
         [Parameter(ValueFromPipelineByPropertyName = $true)]
         [Alias("_BucketName")]
@@ -595,23 +609,36 @@ function Set-BucketObject {
     }
 
     process {
-        if ([string]::IsNullOrWhiteSpace($Bucket) -or [string]::IsNullOrWhiteSpace($Key)) {
-            if ($InputObject.PSObject.Properties['_BucketName']) {
-                $Bucket = $InputObject._BucketName
-            }
-            if ($InputObject.PSObject.Properties['_BucketKey']) {
-                $Key = $InputObject._BucketKey
-            }
+        $patchObject = $null
+        if ($PSCmdlet.ParameterSetName -eq 'Patch') {
+            $patchObject = $PatchData
+        }
+
+        if ($null -eq $bucketPath) {
+            if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
+            $Path = Resolve-SafePath -Path $Path
+        }
+
+        if ($PSCmdlet.ParameterSetName -eq 'Replace') {
             if ([string]::IsNullOrWhiteSpace($Bucket) -or [string]::IsNullOrWhiteSpace($Key)) {
-                throw "Cannot determine bucket and key. Use -Bucket and -Key parameters, or pipe an object from Get-BucketObject."
+                if ($InputObject.PSObject.Properties['_BucketName']) {
+                    $Bucket = $InputObject._BucketName
+                }
+                if ($InputObject.PSObject.Properties['_BucketKey']) {
+                    $Key = $InputObject._BucketKey
+                }
+                if ([string]::IsNullOrWhiteSpace($Bucket) -or [string]::IsNullOrWhiteSpace($Key)) {
+                    throw "Cannot determine bucket and key. Use -Bucket and -Key parameters, or pipe an object from Get-BucketObject."
+                }
+            }
+        }
+        else {
+            if ([string]::IsNullOrWhiteSpace($Bucket) -or [string]::IsNullOrWhiteSpace($Key)) {
+                throw "When using -Patch, you must specify -Bucket and -Key explicitly."
             }
         }
 
         if ($null -eq $bucketPath) {
-    if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
-    $Path = Resolve-SafePath -Path $Path
-
-    $allBuckets = Get-Bucket -Path $Path
             $bucketPath = Get-BucketPath -Name $Bucket -Path $Path
             if (-not (Test-Path $bucketPath)) {
                 throw "Bucket '$Bucket' not found at '$bucketPath'"
@@ -628,6 +655,46 @@ function Set-BucketObject {
         }
 
         $useJson = $filePath -like "*.json" -or $AsJson
+
+        if ($PSCmdlet.ParameterSetName -eq 'Patch') {
+            $existing = Read-BucketFile -File ([System.IO.FileInfo]::new($filePath))
+            if ($null -eq $existing) {
+                throw "Failed to read existing object '$Key' in bucket '$Bucket'"
+            }
+            if ($patchObject -is [hashtable]) {
+                if ($existing -is [hashtable]) {
+                    foreach ($kvp in $patchObject.GetEnumerator()) {
+                        $existing[$kvp.Key] = $kvp.Value
+                    }
+                }
+                else {
+                    foreach ($kvp in $patchObject.GetEnumerator()) {
+                        if ($existing.PSObject.Properties[$kvp.Key]) {
+                            $existing.PSObject.Properties[$kvp.Key].Value = $kvp.Value
+                        }
+                        else {
+                            $existing | Add-Member -NotePropertyName $kvp.Key -NotePropertyValue $kvp.Value
+                        }
+                    }
+                }
+            }
+            else {
+                foreach ($prop in $patchObject.PSObject.Properties) {
+                    if ($prop.IsSettable) {
+                        if ($existing -is [hashtable]) {
+                            $existing[$prop.Name] = $prop.Value
+                        }
+                        elseif ($existing.PSObject.Properties[$prop.Name]) {
+                            $existing.PSObject.Properties[$prop.Name].Value = $prop.Value
+                        }
+                        else {
+                            $existing | Add-Member -NotePropertyName $prop.Name -NotePropertyValue $prop.Value
+                        }
+                    }
+                }
+            }
+            $InputObject = $existing
+        }
 
         $writeSuccess = $false
         if ($useJson) {

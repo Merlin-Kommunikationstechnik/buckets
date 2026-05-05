@@ -349,6 +349,29 @@ if ($updated.Role -eq "admin") {
     Write-Host " FAIL (role: $($updated.Role))" -ForegroundColor Red
 }
 
+Write-Host "  -Patch (hashtable)..." -NoNewline
+$before = Get-BucketObject -Bucket users -Key "Alice"
+$origEmail = $before.Email
+@{ Email = "alice@patched.com" } | Set-BucketObject -Bucket users -Key "Alice" -Patch -Quiet
+$after = Get-BucketObject -Bucket users -Key "Alice"
+if ($after.Email -eq "alice@patched.com" -and $after.Name -eq "Alice" -and $after.Role -eq "admin") {
+    Write-Host " OK (email patched, other fields preserved)" -ForegroundColor Green
+    @{ Email = $origEmail } | Set-BucketObject -Bucket users -Key "Alice" -Patch -Quiet
+} else {
+    Write-Host " FAIL (email: $($after.Email), name: $($after.Name))" -ForegroundColor Red
+}
+
+Write-Host "  -Patch (PSCustomObject)..." -NoNewline
+New-BucketObject -Bucket users -InputObject ([PSCustomObject]@{ _Id = "patch-obj"; Name = "Test"; Val = 1 }) -Key "_Id" -Quiet
+[PSCustomObject]@{ Val = 99; NewField = "added" } | Set-BucketObject -Bucket users -Key "patch-obj" -Patch -Quiet
+$patched = Get-BucketObject -Bucket users -Key "patch-obj"
+if ($patched.Val -eq 99 -and $patched.Name -eq "Test" -and $patched.NewField -eq "added") {
+    Write-Host " OK (value patched, new field added, name preserved)" -ForegroundColor Green
+} else {
+    Write-Host " FAIL (val: $($patched.Val), name: $($patched.Name), new: $($patched.NewField))" -ForegroundColor Red
+}
+Remove-BucketObject -Bucket users -Key "patch-obj" -Quiet
+
 # ============================================================
 # 15. Performance benchmark
 # ============================================================
