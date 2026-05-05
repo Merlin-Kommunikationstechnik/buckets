@@ -485,3 +485,150 @@ else {
         Write-Host "  FAIL: Nested data integrity issue" -ForegroundColor Red
     }
 }
+
+# ============================================================
+# 18. Performance benchmark JSON (1,000 objects)
+# ============================================================
+Write-Host "`n[18] Performance benchmark JSON (1,000 objects)" -ForegroundColor Yellow
+Remove-Bucket "perf-json-1k" -Force -Confirm:$false -WarningAction SilentlyContinue
+$perfJsonBench = [System.Diagnostics.Stopwatch]::StartNew()
+$perfJsonObjects = 1..1000 | ForEach-Object {
+    [PSCustomObject]@{
+        Id = $_
+        Name = "item-$_"
+        Value = (Get-Random)
+        Timestamp = [DateTimeOffset]::Now
+    }
+}
+$perfJsonObjects | New-BucketObject -Bucket perf-json-1k -Key Id -AsJson -Quiet
+$jsonWriteTime = $perfJsonBench.ElapsedMilliseconds
+
+$perfJsonBench.Restart()
+$jsonRetrieved = Get-BucketObject -Bucket perf-json-1k
+$jsonReadTime = $perfJsonBench.ElapsedMilliseconds
+
+Write-Host "  Write: ${jsonWriteTime}ms, Read: ${jsonReadTime}ms, Objects: $($jsonRetrieved.Count)" -ForegroundColor DarkGray
+if ($jsonRetrieved.Count -ne 1000) {
+    Write-Host "  FAIL: Expected 1000 objects, got $($jsonRetrieved.Count)" -ForegroundColor Red
+}
+
+# ============================================================
+# 19. Performance benchmark JSON (10,000 objects)
+# ============================================================
+Write-Host "`n[19] Performance benchmark JSON (10,000 objects)" -ForegroundColor Yellow
+Remove-Bucket "perf-json-10k" -Force -Confirm:$false -WarningAction SilentlyContinue
+$perfJson10kBench = [System.Diagnostics.Stopwatch]::StartNew()
+$perfJson10kObjects = 1..10000 | ForEach-Object {
+    [PSCustomObject]@{
+        Id = $_
+        Name = "obj-$_"
+        Value = (Get-Random)
+        Tags = @("tag-$_", "group-$($_ % 100)")
+    }
+}
+$perfJson10kObjects | New-BucketObject -Bucket perf-json-10k -Key Id -AsJson -Quiet
+$jsonWriteTime10k = $perfJson10kBench.ElapsedMilliseconds
+
+$perfJson10kBench.Restart()
+$jsonRetrieved10k = Get-BucketObject -Bucket perf-json-10k
+$jsonReadTime10k = $perfJson10kBench.ElapsedMilliseconds
+
+Write-Host "  Write: ${jsonWriteTime10k}ms, Read: ${jsonReadTime10k}ms, Objects: $($jsonRetrieved10k.Count)" -ForegroundColor DarkGray
+if ($jsonRetrieved10k.Count -ne 10000) {
+    Write-Host "  FAIL: Expected 10000 objects, got $($jsonRetrieved10k.Count)" -ForegroundColor Red
+}
+
+# ============================================================
+# 20. Performance benchmark JSON (10,000 complex objects)
+# ============================================================
+Write-Host "`n[20] Performance benchmark JSON (10,000 complex objects)" -ForegroundColor Yellow
+Remove-Bucket "perf-json-complex" -Force -Confirm:$false -WarningAction SilentlyContinue
+$perfJsonCBench = [System.Diagnostics.Stopwatch]::StartNew()
+$perfJsonCObjects = 1..10000 | ForEach-Object {
+    [PSCustomObject]@{
+        Id = $_
+        Profile = [PSCustomObject]@{
+            Name = "User-$_"
+            Email = "user-$_@example.com"
+            Preferences = [PSCustomObject]@{
+                Theme = @("dark", "light", "auto")[$_ % 3]
+                Language = @("en", "de", "fr")[$_ % 3]
+                Notifications = @{ Email = ($true, $false)[$_ % 2]; Push = ($true, $false)[($_ + 1) % 2] }
+            }
+        }
+        Orders = @(
+            [PSCustomObject]@{ OrderId = "ORD-$($_)-1"; Total = (Get-Random -Min 10 -Max 500); Status = @("pending", "shipped", "delivered")[$_ % 3] }
+            [PSCustomObject]@{ OrderId = "ORD-$($_)-2"; Total = (Get-Random -Min 5 -Max 200); Status = @("pending", "cancelled")[$_ % 2] }
+        )
+        Metadata = [PSCustomObject]@{
+            Created = [DateTimeOffset]::Now
+            Updated = [DateTimeOffset]::Now
+            Tags = @("tag-$_", "group-$($_ % 50)", "region-$($_ % 10)")
+        }
+    }
+}
+$perfJsonCObjects | New-BucketObject -Bucket perf-json-complex -Key Id -AsJson -Quiet
+$jsonWriteTimeC = $perfJsonCBench.ElapsedMilliseconds
+
+$perfJsonCBench.Restart()
+$jsonRetrievedC = Get-BucketObject -Bucket perf-json-complex
+$jsonReadTimeC = $perfJsonCBench.ElapsedMilliseconds
+
+Write-Host "  Write: ${jsonWriteTimeC}ms, Read: ${jsonReadTimeC}ms, Objects: $($jsonRetrievedC.Count)" -ForegroundColor DarkGray
+if ($jsonRetrievedC.Count -ne 10000) {
+    Write-Host "  FAIL: Expected 10000 objects, got $($jsonRetrievedC.Count)" -ForegroundColor Red
+}
+else {
+    $sample = $jsonRetrievedC[0]
+    if ($sample.Profile.Preferences.Theme -and $sample.Orders.Count -eq 2 -and $sample.Metadata.Tags.Count -eq 3) {
+        Write-Host "  Integrity: OK (nested data preserved)" -ForegroundColor Green
+    }
+    else {
+        Write-Host "  FAIL: Nested data integrity issue" -ForegroundColor Red
+    }
+}
+Remove-Bucket "perf-10k-complex" -Force -Confirm:$false -WarningAction SilentlyContinue
+$perfBench10kC = [System.Diagnostics.Stopwatch]::StartNew()
+$perf10kCObjects = 1..10000 | ForEach-Object {
+    [PSCustomObject]@{
+        Id = $_
+        Profile = [PSCustomObject]@{
+            Name = "User-$_"
+            Email = "user-$_@example.com"
+            Preferences = [PSCustomObject]@{
+                Theme = @("dark", "light", "auto")[$_ % 3]
+                Language = @("en", "de", "fr")[$_ % 3]
+                Notifications = @{ Email = ($true, $false)[$_ % 2]; Push = ($true, $false)[($_ + 1) % 2] }
+            }
+        }
+        Orders = @(
+            [PSCustomObject]@{ OrderId = "ORD-$($_)-1"; Total = (Get-Random -Min 10 -Max 500); Status = @("pending", "shipped", "delivered")[$_ % 3] }
+            [PSCustomObject]@{ OrderId = "ORD-$($_)-2"; Total = (Get-Random -Min 5 -Max 200); Status = @("pending", "cancelled")[$_ % 2] }
+        )
+        Metadata = [PSCustomObject]@{
+            Created = [DateTimeOffset]::Now
+            Updated = [DateTimeOffset]::Now
+            Tags = @("tag-$_", "group-$($_ % 50)", "region-$($_ % 10)")
+        }
+    }
+}
+$perf10kCObjects | New-BucketObject -Bucket perf-10k-complex -Key Id -Quiet
+$writeTime10kC = $perfBench10kC.ElapsedMilliseconds
+
+$perfBench10kC.Restart()
+$retrieved10kC = Get-BucketObject -Bucket perf-10k-complex
+$readTime10kC = $perfBench10kC.ElapsedMilliseconds
+
+Write-Host "  Write: ${writeTime10kC}ms, Read: ${readTime10kC}ms, Objects: $($retrieved10kC.Count)" -ForegroundColor DarkGray
+if ($retrieved10kC.Count -ne 10000) {
+    Write-Host "  FAIL: Expected 10000 objects, got $($retrieved10kC.Count)" -ForegroundColor Red
+}
+else {
+    $sample = $retrieved10kC[0]
+    if ($sample.Profile.Preferences.Theme -and $sample.Orders.Count -eq 2 -and $sample.Metadata.Tags.Count -eq 3) {
+        Write-Host "  Integrity: OK (nested data preserved)" -ForegroundColor Green
+    }
+    else {
+        Write-Host "  FAIL: Nested data integrity issue" -ForegroundColor Red
+    }
+}
