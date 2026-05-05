@@ -1045,6 +1045,16 @@ function Remove-Bucket {
     if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
     $Path = Resolve-SafePath -Path $Path
 
+    $allBuckets = @()
+    if (Test-Path $Path) {
+        $allBuckets = @(Get-ChildItem -Path $Path -Directory -ErrorAction SilentlyContinue) | ForEach-Object {
+            [PSCustomObject]@{
+                Name = $_.Name
+                Path = $_.FullName
+            }
+        }
+    }
+
     $matched = @()
     foreach ($pattern in $Bucket) {
         if ($pattern -match '[\*\?]') {
