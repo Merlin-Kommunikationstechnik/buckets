@@ -72,8 +72,8 @@ function Ensure-BucketExists {
     if (-not $bucketPath.StartsWith($rootPath, [System.StringComparison]::OrdinalIgnoreCase)) {
         throw "Bucket path '$bucketPath' resolves outside of root '$rootPath'. Path traversal not allowed."
     }
-    if (-not (Test-Path $bucketPath)) {
-        $null = New-Item -Path $bucketPath -ItemType Directory -Force
+    if (-not [System.IO.Directory]::Exists($bucketPath)) {
+        $null = [System.IO.Directory]::CreateDirectory($bucketPath)
     }
     return $bucketPath
 }
@@ -215,7 +215,7 @@ function New-BucketObject {
 
             $filePath = Join-Path $bucketPath $filename
 
-            if ((Test-Path $filePath) -and -not $Overwrite) {
+            if ([System.IO.File]::Exists($filePath) -and -not $Overwrite) {
                 Write-Verbose "Object with key '$([System.IO.Path]::GetFileNameWithoutExtension($filename))' already exists in bucket '$Bucket'. Use -Overwrite to replace."
                 $skippedCount++
                 $index++
@@ -468,13 +468,13 @@ function Get-BucketObject {
         }
     }
     else {
-        if (Test-Path $Path) {
+        if ([System.IO.Directory]::Exists($Path)) {
             $bucketPaths += [System.IO.DirectoryInfo]::new($Path).GetDirectories() | ForEach-Object { $_.FullName }
         }
     }
 
     foreach ($bucketPath in $bucketPaths) {
-        if (-not (Test-Path $bucketPath)) { continue }
+        if (-not [System.IO.Directory]::Exists($bucketPath)) { continue }
 
         $bucketName = Split-Path $bucketPath -Leaf
 
@@ -649,7 +649,7 @@ function Set-BucketObject {
 
         if ($null -eq $bucketPath) {
             $bucketPath = Get-BucketPath -Name $Bucket -Path $Path
-            if (-not (Test-Path $bucketPath)) {
+            if (-not [System.IO.Directory]::Exists($bucketPath)) {
                 throw "Bucket '$Bucket' not found at '$bucketPath'"
             }
         }
@@ -657,8 +657,8 @@ function Set-BucketObject {
         $jsonPath = Join-Path $bucketPath "$Key.json"
         $datPath = Join-Path $bucketPath "$Key.dat"
 
-        $filePath = if (Test-Path $jsonPath) { $jsonPath }
-        elseif (Test-Path $datPath) { $datPath }
+        $filePath = if ([System.IO.File]::Exists($jsonPath)) { $jsonPath }
+        elseif ([System.IO.File]::Exists($datPath)) { $datPath }
         else {
             throw "Object with key '$Key' not found in bucket '$Bucket'"
         }
@@ -837,7 +837,7 @@ function Remove-BucketObject {
     $Path = Resolve-SafePath -Path $Path
     $bucketPath = Get-BucketPath -Name $Bucket -Path $Path
 
-    if (-not (Test-Path $bucketPath)) {
+    if (-not [System.IO.Directory]::Exists($bucketPath)) {
         Write-Verbose "Bucket '$Bucket' not found at '$bucketPath'"
         return
     }
@@ -853,7 +853,7 @@ function Remove-BucketObject {
 
         $target = "$($allFiles.Count) object(s) from bucket '$Bucket'"
         if ($PSCmdlet.ShouldProcess($target, "Remove-BucketObject")) {
-            $allFiles | Remove-Item -Force
+            $allFiles | ForEach-Object { [System.IO.File]::Delete($_.FullName) }
         }
 
         if ($PassThru) {
@@ -875,11 +875,11 @@ function Remove-BucketObject {
 
         $found = $false
         $foundPath = $null
-        if (Test-Path $jsonPath) {
+        if ([System.IO.File]::Exists($jsonPath)) {
             $found = $true
             $foundPath = $jsonPath
         }
-        elseif (Test-Path $datPath) {
+        elseif ([System.IO.File]::Exists($datPath)) {
             $found = $true
             $foundPath = $datPath
         }
@@ -895,7 +895,7 @@ function Remove-BucketObject {
                     FilePath = $foundPath
                 }
             }
-            Remove-Item -Path $foundPath -Force
+            [System.IO.File]::Delete($foundPath)
         }
     }
     else {
@@ -932,7 +932,7 @@ function Get-Bucket {
     if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
     $Path = Resolve-SafePath -Path $Path
 
-    if (-not (Test-Path $Path)) {
+    if (-not [System.IO.Directory]::Exists($Path)) {
         return
     }
 
@@ -982,7 +982,7 @@ function Get-BucketStats {
     $Path = Resolve-SafePath -Path $Path
     $bucketPath = Get-BucketPath -Name $Bucket -Path $Path
 
-    if (-not (Test-Path $bucketPath)) {
+    if (-not [System.IO.Directory]::Exists($bucketPath)) {
         Write-Warning "Bucket '$Bucket' not found at '$bucketPath'"
         return
     }
@@ -1051,7 +1051,7 @@ function Remove-Bucket {
     $Path = Resolve-SafePath -Path $Path
 
     $allBuckets = @()
-    if (Test-Path $Path) {
+    if ([System.IO.Directory]::Exists($Path)) {
         $allBuckets = @([System.IO.DirectoryInfo]::new($Path).GetDirectories()) | ForEach-Object {
             [PSCustomObject]@{
                 Name = $_.Name
@@ -1187,7 +1187,7 @@ function Remove-Bucket {
         }
 
         Write-Verbose "Removing bucket '$($r.Name)' ($($r.Objects) object(s))"
-        Remove-Item -Path $r.Path -Recurse -Force
+        [System.IO.Directory]::Delete($r.Path, $true)
         $cacheKeys = @($script:BucketPathCache.Keys) | Where-Object { $_ -like "*|$($r.Name)" }
         foreach ($ck in $cacheKeys) { $script:BucketPathCache.Remove($ck) }
         $removedCount++
@@ -1244,7 +1244,7 @@ function Copy-BucketObject {
     if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
     $Path = Resolve-SafePath -Path $Path
     $sourceBucketPath = Get-BucketPath -Name $Bucket -Path $Path
-    if (-not (Test-Path $sourceBucketPath)) {
+    if (-not [System.IO.Directory]::Exists($sourceBucketPath)) {
         throw "Source bucket '$Bucket' not found at '$sourceBucketPath'"
     }
 
@@ -1262,8 +1262,8 @@ function Copy-BucketObject {
 
     $jsonPath = Join-Path $sourceBucketPath "$Key.json"
     $datPath = Join-Path $sourceBucketPath "$Key.dat"
-    if (Test-Path $jsonPath) { $sourceFile = $jsonPath }
-    elseif (Test-Path $datPath) { $sourceFile = $datPath }
+    if ([System.IO.File]::Exists($jsonPath)) { $sourceFile = $jsonPath }
+    elseif ([System.IO.File]::Exists($datPath)) { $sourceFile = $datPath }
     else {
         throw "Object with key '$Key' not found in bucket '$Bucket'"
     }
@@ -1272,14 +1272,14 @@ function Copy-BucketObject {
     $destJsonPath = Join-Path $destBucketPath "${safeDestKey}.json"
     $destDatPath = Join-Path $destBucketPath "${safeDestKey}.dat"
 
-    if ((Test-Path $destJsonPath) -or (Test-Path $destDatPath)) {
+    if ([System.IO.File]::Exists($destJsonPath) -or [System.IO.File]::Exists($destDatPath)) {
         throw "Object with key '$safeDestKey' already exists in bucket '$DestinationBucket'. Use a different key."
     }
 
     $ext = [System.IO.Path]::GetExtension($sourceFile)
     $destFile = Join-Path $destBucketPath "${safeDestKey}${ext}"
 
-    Copy-Item -Path $sourceFile -Destination $destFile -Force
+    [System.IO.File]::Copy($sourceFile, $destFile)
     Write-Verbose "Copied [$Bucket/$Key] to [$DestinationBucket/$safeDestKey]"
 
     if ($PassThru) {
@@ -1337,7 +1337,7 @@ function Rename-BucketObject {
     if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
     $Path = Resolve-SafePath -Path $Path
     $bucketPath = Get-BucketPath -Name $Bucket -Path $Path
-    if (-not (Test-Path $bucketPath)) {
+    if (-not [System.IO.Directory]::Exists($bucketPath)) {
         throw "Bucket '$Bucket' not found at '$bucketPath'"
     }
 
@@ -1348,8 +1348,8 @@ function Rename-BucketObject {
 
     $jsonPath = Join-Path $bucketPath "$Key.json"
     $datPath = Join-Path $bucketPath "$Key.dat"
-    if (Test-Path $jsonPath) { $sourceFile = $jsonPath }
-    elseif (Test-Path $datPath) { $sourceFile = $datPath }
+    if ([System.IO.File]::Exists($jsonPath)) { $sourceFile = $jsonPath }
+    elseif ([System.IO.File]::Exists($datPath)) { $sourceFile = $datPath }
     else {
         throw "Object with key '$Key' not found in bucket '$Bucket'"
     }
@@ -1357,13 +1357,13 @@ function Rename-BucketObject {
     $ext = [System.IO.Path]::GetExtension($sourceFile)
     $destJsonPath = Join-Path $bucketPath "${safeNewKey}.json"
     $destDatPath = Join-Path $bucketPath "${safeNewKey}.dat"
-    if ((Test-Path $destJsonPath) -or (Test-Path $destDatPath)) {
+    if ([System.IO.File]::Exists($destJsonPath) -or [System.IO.File]::Exists($destDatPath)) {
         throw "Object with key '$safeNewKey' already exists in bucket '$Bucket'"
     }
 
     $destFile = Join-Path $bucketPath "${safeNewKey}${ext}"
 
-    Move-Item -Path $sourceFile -Destination $destFile -Force
+    [System.IO.File]::Move($sourceFile, $destFile)
     Write-Verbose "Renamed [$Bucket/$Key] to [$Bucket/$safeNewKey]"
 
     if ($PassThru) {
@@ -1429,7 +1429,7 @@ function Move-BucketObject {
     $Path = Resolve-SafePath -Path $Path
 
     $sourceBucketPath = Get-BucketPath -Name $Bucket -Path $Path
-    if (-not (Test-Path $sourceBucketPath)) {
+    if (-not [System.IO.Directory]::Exists($sourceBucketPath)) {
         throw "Source bucket '$Bucket' not found at '$sourceBucketPath'"
     }
 
@@ -1447,8 +1447,8 @@ function Move-BucketObject {
 
     $jsonPath = Join-Path $sourceBucketPath "$Key.json"
     $datPath = Join-Path $sourceBucketPath "$Key.dat"
-    if (Test-Path $jsonPath) { $sourceFile = $jsonPath }
-    elseif (Test-Path $datPath) { $sourceFile = $datPath }
+    if ([System.IO.File]::Exists($jsonPath)) { $sourceFile = $jsonPath }
+    elseif ([System.IO.File]::Exists($datPath)) { $sourceFile = $datPath }
     else {
         throw "Object with key '$Key' not found in bucket '$Bucket'"
     }
@@ -1457,15 +1457,15 @@ function Move-BucketObject {
     $destJsonPath = Join-Path $destBucketPath "${safeDestKey}.json"
     $destDatPath = Join-Path $destBucketPath "${safeDestKey}.dat"
 
-    if ((Test-Path $destJsonPath) -or (Test-Path $destDatPath)) {
+    if ([System.IO.File]::Exists($destJsonPath) -or [System.IO.File]::Exists($destDatPath)) {
         throw "Object with key '$safeDestKey' already exists in bucket '$DestinationBucket'. Use a different key."
     }
 
     $ext = [System.IO.Path]::GetExtension($sourceFile)
     $destFile = Join-Path $destBucketPath "${safeDestKey}${ext}"
 
-    Copy-Item -Path $sourceFile -Destination $destFile -Force
-    Remove-Item -Path $sourceFile -Force
+    [System.IO.File]::Copy($sourceFile, $destFile)
+    [System.IO.File]::Delete($sourceFile)
 
     Write-Verbose "Moved [$Bucket/$Key] to [$DestinationBucket/$safeDestKey]"
 
@@ -1542,8 +1542,8 @@ function Export-Bucket {
     }
 
     $outputDir = [System.IO.Path]::GetDirectoryName((Resolve-SafePath -Path $OutputFile))
-    if (-not (Test-Path $outputDir)) {
-        $null = New-Item -Path $outputDir -ItemType Directory -Force
+    if (-not [System.IO.Directory]::Exists($outputDir)) {
+        $null = [System.IO.Directory]::CreateDirectory($outputDir)
     }
 
     if ($AsJson) {
@@ -1605,7 +1605,7 @@ function Import-Bucket {
     if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
     $Path = Resolve-SafePath -Path $Path
 
-    if (-not (Test-Path $InputFile)) {
+    if (-not [System.IO.File]::Exists($InputFile)) {
         throw "Input file '$InputFile' not found"
     }
 
@@ -1651,7 +1651,9 @@ function Import-Bucket {
 
         $jsonPath = Join-Path $bucketPath "${safeKey}.json"
         $datPath = Join-Path $bucketPath "${safeKey}.dat"
-        $filePath = if (Test-Path $jsonPath) { $jsonPath } elseif (Test-Path $datPath) { $datPath } else { $null }
+        $filePath = $null
+        if ([System.IO.File]::Exists($jsonPath)) { $filePath = $jsonPath }
+        elseif ([System.IO.File]::Exists($datPath)) { $filePath = $datPath }
 
         if ($filePath -and -not $Overwrite) {
             Write-Verbose "Object with key '$safeKey' already exists in bucket '$Bucket'. Use -Overwrite to replace."
