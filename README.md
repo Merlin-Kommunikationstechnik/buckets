@@ -111,7 +111,7 @@ Retrieves objects from one or more buckets.
 ```powershell
 Get-BucketObject
     [[-Key] <string>]
-    [-Bucket <string[]>]
+    [[-Bucket] <string[]>]
     [-Path <string>]
     [-Match <hashtable>]
     [-Filter <scriptblock>]
@@ -142,7 +142,7 @@ Get-BucketObject -Bucket users, orders
 
 # By key
 Get-BucketObject "Alice"
-Get-BucketObject -Bucket users "Alice"
+Get-BucketObject "Alice" users
 
 # Hashtable filter (exact match)
 Get-BucketObject -Bucket users -Match @{ Role = "admin" }

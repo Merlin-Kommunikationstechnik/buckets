@@ -241,6 +241,7 @@ function Get-BucketObject {
     #>
     [CmdletBinding()]
     param(
+        [Parameter(Position = 1)]
         [string[]]$Bucket,
 
         [string]$Path = $script:DefaultPath,
