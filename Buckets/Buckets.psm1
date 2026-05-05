@@ -1178,12 +1178,15 @@ function Copy-BucketObject {
     }
 
     $destBucketPath = Ensure-BucketExists -Name $DestinationBucket -Path $Path
-    $ext = [System.IO.Path]::GetExtension($sourceFile)
-    $destFile = Join-Path $destBucketPath "${safeDestKey}${ext}"
+    $destJsonPath = Join-Path $destBucketPath "${safeDestKey}.json"
+    $destDatPath = Join-Path $destBucketPath "${safeDestKey}.dat"
 
-    if (Test-Path $destFile) {
+    if ((Test-Path $destJsonPath) -or (Test-Path $destDatPath)) {
         throw "Object with key '$safeDestKey' already exists in bucket '$DestinationBucket'. Use a different key."
     }
+
+    $ext = [System.IO.Path]::GetExtension($sourceFile)
+    $destFile = Join-Path $destBucketPath "${safeDestKey}${ext}"
 
     Copy-Item -Path $sourceFile -Destination $destFile -Force
     Write-Verbose "Copied [$Bucket/$Key] to [$DestinationBucket/$safeDestKey]"
@@ -1261,10 +1264,13 @@ function Rename-BucketObject {
     }
 
     $ext = [System.IO.Path]::GetExtension($sourceFile)
-    $destFile = Join-Path $bucketPath "${safeNewKey}${ext}"
-    if (Test-Path $destFile) {
+    $destJsonPath = Join-Path $bucketPath "${safeNewKey}.json"
+    $destDatPath = Join-Path $bucketPath "${safeNewKey}.dat"
+    if ((Test-Path $destJsonPath) -or (Test-Path $destDatPath)) {
         throw "Object with key '$safeNewKey' already exists in bucket '$Bucket'"
     }
+
+    $destFile = Join-Path $bucketPath "${safeNewKey}${ext}"
 
     Move-Item -Path $sourceFile -Destination $destFile -Force
     Write-Verbose "Renamed [$Bucket/$Key] to [$Bucket/$safeNewKey]"
@@ -1357,12 +1363,15 @@ function Move-BucketObject {
     }
 
     $destBucketPath = Ensure-BucketExists -Name $DestinationBucket -Path $Path
-    $ext = [System.IO.Path]::GetExtension($sourceFile)
-    $destFile = Join-Path $destBucketPath "${safeDestKey}${ext}"
+    $destJsonPath = Join-Path $destBucketPath "${safeDestKey}.json"
+    $destDatPath = Join-Path $destBucketPath "${safeDestKey}.dat"
 
-    if (Test-Path $destFile) {
+    if ((Test-Path $destJsonPath) -or (Test-Path $destDatPath)) {
         throw "Object with key '$safeDestKey' already exists in bucket '$DestinationBucket'. Use a different key."
     }
+
+    $ext = [System.IO.Path]::GetExtension($sourceFile)
+    $destFile = Join-Path $destBucketPath "${safeDestKey}${ext}"
 
     Copy-Item -Path $sourceFile -Destination $destFile -Force
     Remove-Item -Path $sourceFile -Force
