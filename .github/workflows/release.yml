@@ -1,0 +1,135 @@
+name: Release Buckets
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: Select semantic version bump
+        required: true
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Bump module version
+        id: bump
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $versionTablePath = ".github/.versiontable.json"
+          $manifestPath = "Buckets/Buckets.psd1"
+
+          if (!(Test-Path $versionTablePath)) {
+            throw "Version table not found at '$versionTablePath'."
+          }
+
+          if (!(Test-Path $manifestPath)) {
+            throw "Module manifest not found at '$manifestPath'."
+          }
+
+          $versionData = Get-Content -Path $versionTablePath -Raw | ConvertFrom-Json
+
+          if ($null -eq $versionData.version -or [string]::IsNullOrWhiteSpace([string]$versionData.version)) {
+            throw "Version table does not contain a valid 'version' value."
+          }
+
+          $match = [regex]::Match([string]$versionData.version, '^(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)$')
+          if (!$match.Success) {
+            throw "Current version '$($versionData.version)' is not valid semver (major.minor.patch)."
+          }
+
+          $major = [int]$match.Groups["major"].Value
+          $minor = [int]$match.Groups["minor"].Value
+          $patch = [int]$match.Groups["patch"].Value
+
+          $releaseType = "${{ github.event.inputs.release_type }}"
+          switch ($releaseType) {
+            "major" {
+              $major++
+              $minor = 0
+              $patch = 0
+            }
+            "minor" {
+              $minor++
+              $patch = 0
+            }
+            "patch" {
+              $patch++
+            }
+            default {
+              throw "Unsupported release type '$releaseType'."
+            }
+          }
+
+          $newVersion = "$major.$minor.$patch"
+          $versionData.version = $newVersion
+          $versionData | ConvertTo-Json | Set-Content -Path $versionTablePath -Encoding UTF8
+
+          $manifestContent = Get-Content -Path $manifestPath -Raw
+          $updatedManifestContent = [regex]::Replace(
+            $manifestContent,
+            "(?m)^ModuleVersion\s*=\s*'[^']+'",
+            "ModuleVersion = '$newVersion'"
+          )
+
+          if ($manifestContent -eq $updatedManifestContent) {
+            throw "Could not update ModuleVersion in '$manifestPath'."
+          }
+
+          Set-Content -Path $manifestPath -Value $updatedManifestContent -Encoding UTF8
+
+          "new_version=$newVersion" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Publish module to PowerShell Gallery
+        shell: pwsh
+        env:
+          PWSH_GALLERY_TOKEN: ${{ secrets.PWSH_GALLERY_TOKEN }}
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          if ([string]::IsNullOrWhiteSpace($env:PWSH_GALLERY_TOKEN)) {
+            throw "Missing secret 'PWSH_GALLERY_TOKEN'."
+          }
+
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Publish-Module -Path "./Buckets" -NuGetApiKey $env:PWSH_GALLERY_TOKEN
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.bump.outputs.new_version }}
+          name: Buckets v${{ steps.bump.outputs.new_version }}
+          generate_release_notes: true
+
+      - name: Commit bumped version files
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add .github/.versiontable.json Buckets/Buckets.psd1
+
+          if git diff --cached --quiet; then
+            echo "No version changes to commit."
+            exit 0
+          fi
+
+          git commit -m "chore(release): bump Buckets to ${{ steps.bump.outputs.new_version }}"
+          git push
