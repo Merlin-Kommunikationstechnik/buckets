@@ -12,7 +12,7 @@
 RootModule = 'Buckets.psm1'
 
 # Version number of this module.
-ModuleVersion = '0.1.5'
+ModuleVersion = '0.1.6'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -110,7 +110,7 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-        # ReleaseNotes = ''
+        ReleaseNotes = 'Fixed Get-BucketObject errors when searching multiple buckets with -Key. Get-ObjectFiles now returns empty array instead of $null when no key match found. Added case-insensitive key lookups. Performance improvements via direct .NET I/O calls.'
 
         # Prerelease string of this module
         # Prerelease = ''

@@ -280,7 +280,7 @@ function New-BucketObject {
             else {
                 $currentDepth = $BinaryDepth
                 $serialized = $false
-                while (-not $serialized -and $currentDepth -le 5) {
+                while (-not $serialized -and $currentDepth -le 10) {
                     try {
                         $xml = [System.Management.Automation.PSSerializer]::Serialize($item, $currentDepth)
                         $rawBytes = [System.Text.Encoding]::UTF8.GetBytes($xml)
@@ -356,6 +356,8 @@ function Read-BucketFile {
         [System.IO.FileInfo]$File
     )
 
+    if ($null -eq $File -or -not [System.IO.File]::Exists($File.FullName)) { return $null }
+
     $extension = $File.Extension
     $rawBytes = [System.IO.File]::ReadAllBytes($File.FullName)
 
@@ -413,16 +415,57 @@ function Get-ObjectFiles {
 
     if (-not [string]::IsNullOrWhiteSpace($Key)) {
         $di = [System.IO.DirectoryInfo]::new($BucketPath)
-        $jsonFile = $di.GetFiles("$Key.json")
-        if ($jsonFile) { return $jsonFile[0] }
-        $datFile = $di.GetFiles("$Key.dat")
-        if ($datFile) { return $datFile[0] }
-        return $null
+        $target = $Key.ToLowerInvariant()
+        foreach ($f in @($di.GetFiles("*.json")) + @($di.GetFiles("*.dat"))) {
+            $base = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
+            if ($base.ToLowerInvariant() -eq $target) { return @($f) }
+        }
+        return @()
     }
     else {
         $di = [System.IO.DirectoryInfo]::new($BucketPath)
         return @($di.GetFiles("*.json")) + @($di.GetFiles("*.dat"))
     }
+}
+
+function Find-ObjectFile {
+    param(
+        [string]$BucketPath,
+        [string]$Key
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Key) -or -not [System.IO.Directory]::Exists($BucketPath)) { return $null }
+
+    $di = [System.IO.DirectoryInfo]::new($BucketPath)
+    $target = $Key.ToLowerInvariant()
+    foreach ($f in @($di.GetFiles("*.json")) + @($di.GetFiles("*.dat"))) {
+        $base = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
+        if ($base.ToLowerInvariant() -eq $target) { return $f }
+    }
+    return $null
+}
+
+function Get-ObjectProperty {
+    param(
+        [PSObject]$Object,
+        [string]$PropertyName
+    )
+
+    $hasValue = $false
+    $value = $null
+
+    if ($Object -is [hashtable]) {
+        if ($Object.ContainsKey($PropertyName)) {
+            $hasValue = $true
+            $value = $Object[$PropertyName]
+        }
+    }
+    elseif ($null -ne $Object.PSObject.Properties[$PropertyName]) {
+        $hasValue = $true
+        $value = $Object.$PropertyName
+    }
+
+    return @{ HasValue = $hasValue; Value = $value }
 }
 
 function Get-BucketObject {
@@ -439,11 +482,15 @@ function Get-BucketObject {
     .PARAMETER Path
     Root directory for bucket storage. Default: $PWD/.buckets.
     .PARAMETER Key
-    Specific object key to retrieve. Looks for both .json and .dat files.
+    Specific object key to retrieve. Looks for both .json and .dat files. Case-insensitive.
     .PARAMETER Match
     Hashtable of property-value pairs for exact-match filtering. All pairs must match. Supports $null values.
     .PARAMETER Filter
     ScriptBlock for custom filtering. Use $_ to reference object properties (e.g., { $_.Age -gt 30 }).
+    .PARAMETER First
+    Return only the first N objects.
+    .PARAMETER Skip
+    Skip the first N objects before returning results.
     .OUTPUTS
     Deserialized PSObjects with _BucketName, _BucketKey, and _BucketFile metadata.
     .EXAMPLE
@@ -454,6 +501,8 @@ function Get-BucketObject {
     Get-BucketObject -Filter { $_.Status -eq "shipped" -and $_.Shipping.Method -eq "Express" }
     .EXAMPLE
     Get-BucketObject -Bucket users, orders
+    .EXAMPLE
+    Get-BucketObject -First 10 -Skip 20
     #>
     [CmdletBinding()]
     param(
@@ -467,7 +516,11 @@ function Get-BucketObject {
 
         [hashtable]$Match,
 
-        [scriptblock]$Filter
+        [scriptblock]$Filter,
+
+        [int]$First,
+
+        [int]$Skip
     )
 
     if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
@@ -495,14 +548,20 @@ function Get-BucketObject {
         }
     }
 
+    $emitted = 0
+    $skipped = 0
+
     foreach ($bucketPath in $bucketPaths) {
         if (-not [System.IO.Directory]::Exists($bucketPath)) { continue }
+        if ($First -gt 0 -and $emitted -ge $First) { break }
 
         $bucketName = Split-Path $bucketPath -Leaf
 
         $files = Get-ObjectFiles -BucketPath $bucketPath -Key $Key
 
-        foreach ($file in @($files)) {
+        foreach ($file in $files) {
+            if ($First -gt 0 -and $emitted -ge $First) { break }
+
             $obj = Read-BucketFile -File $file
             if ($null -eq $obj) { continue }
 
@@ -511,22 +570,16 @@ function Get-BucketObject {
                 foreach ($kvp in $Match.GetEnumerator()) {
                     $propName = $kvp.Name
                     $expectedValue = $kvp.Value
-                    $hasProperty = $null -ne $obj.PSObject.Properties[$propName]
-                    if ($hasProperty) {
-                        $actualValue = $obj.$propName
-                    }
-                    else {
-                        $actualValue = $null
-                    }
+                    $prop = Get-ObjectProperty -Object $obj -PropertyName $propName
 
                     $matchesValue = if ($null -eq $expectedValue) {
-                        $null -eq $actualValue
+                        -not $prop.HasValue
                     }
-                    elseif ($null -eq $actualValue) {
+                    elseif (-not $prop.HasValue) {
                         $false
                     }
                     else {
-                        $actualValue -eq $expectedValue
+                        $prop.Value -eq $expectedValue
                     }
 
                     if (-not $matchesValue) {
@@ -541,10 +594,16 @@ function Get-BucketObject {
                 if ($null -eq ($obj | Where-Object $Filter)) { continue }
             }
 
+            if ($Skip -gt 0 -and $skipped -lt $Skip) {
+                $skipped++
+                continue
+            }
+
             $obj | Add-Member -NotePropertyName "_BucketName" -NotePropertyValue $bucketName -Force
             $obj | Add-Member -NotePropertyName "_BucketKey" -NotePropertyValue ([System.IO.Path]::GetFileNameWithoutExtension($file.Name)) -Force
             $obj | Add-Member -NotePropertyName "_BucketFile" -NotePropertyValue $file.FullName -Force
             Write-Output $obj
+            $emitted++
         }
     }
 }
@@ -675,16 +734,13 @@ function Set-BucketObject {
             }
         }
 
-        $jsonPath = Join-Path $bucketPath "$Key.json"
-        $datPath = Join-Path $bucketPath "$Key.dat"
-
-        $filePath = if ([System.IO.File]::Exists($jsonPath)) { $jsonPath }
-        elseif ([System.IO.File]::Exists($datPath)) { $datPath }
-        else {
+        $file = Find-ObjectFile -BucketPath $bucketPath -Key $Key
+        if ($null -eq $file) {
             throw "Object with key '$Key' not found in bucket '$Bucket'"
         }
 
-        $useJson = $filePath -like "*.json" -or $AsJson
+        $filePath = $file.FullName
+        $useJson = $file.Extension -eq ".json" -or $AsJson
 
         if ($isPatch) {
             $existing = Read-BucketFile -File ([System.IO.FileInfo]::new($filePath))
@@ -818,15 +874,19 @@ function Remove-BucketObject {
     Removes an object from a bucket.
     .DESCRIPTION
     Deletes a specific object file from a bucket directory. Use -Key to remove a single
-    object or -All to clear the entire bucket.
+    object, -All to clear the entire bucket, or -Match/-Filter for bulk deletion.
     .PARAMETER Bucket
     Name of the bucket containing the object(s) to remove.
     .PARAMETER Path
     Root directory for bucket storage. Default: $PWD/.buckets.
     .PARAMETER Key
-    Object key to remove. Looks for both .json and .dat files.
+    Object key to remove. Looks for both .json and .dat files. Case-insensitive.
     .PARAMETER All
     Remove all objects from the bucket.
+    .PARAMETER Match
+    Hashtable of property-value pairs for bulk deletion. All pairs must match. Supports $null values.
+    .PARAMETER Filter
+    ScriptBlock for custom bulk deletion. Use $_ to reference object properties.
     .PARAMETER PassThru
     Return metadata for removed objects.
     .EXAMPLE
@@ -836,6 +896,14 @@ function Remove-BucketObject {
     .EXAMPLE
     # Remove all objects from a bucket
     Remove-BucketObject -Bucket temp -All -PassThru
+
+    .EXAMPLE
+    # Remove all inactive users
+    Remove-BucketObject -Bucket users -Match @{ Active = $false } -PassThru
+
+    .EXAMPLE
+    # Remove objects matching a scriptblock
+    Remove-BucketObject -Bucket orders -Filter { $_.Status -eq "cancelled" }
 
     .EXAMPLE
     # Preview removal without executing
@@ -853,6 +921,12 @@ function Remove-BucketObject {
 
         [Parameter(ParameterSetName = 'All')]
         [switch]$All,
+
+        [Parameter(ParameterSetName = 'ByFilter')]
+        [hashtable]$Match,
+
+        [Parameter(ParameterSetName = 'ByFilter')]
+        [scriptblock]$Filter,
 
         [switch]$PassThru,
 
@@ -896,21 +970,9 @@ function Remove-BucketObject {
         }
     }
     elseif (-not [string]::IsNullOrWhiteSpace($Key)) {
-        $jsonPath = Join-Path $bucketPath "$Key.json"
-        $datPath = Join-Path $bucketPath "$Key.dat"
+        $file = Find-ObjectFile -BucketPath $bucketPath -Key $Key
 
-        $found = $false
-        $foundPath = $null
-        if ([System.IO.File]::Exists($jsonPath)) {
-            $found = $true
-            $foundPath = $jsonPath
-        }
-        elseif ([System.IO.File]::Exists($datPath)) {
-            $found = $true
-            $foundPath = $datPath
-        }
-
-        if (-not $found) {
+        if ($null -eq $file) {
             Write-Warning "Object with key '$Key' not found in bucket '$Bucket'"
         }
         elseif ($PSCmdlet.ShouldProcess("object '$Key' from bucket '$Bucket'", "Remove-BucketObject")) {
@@ -918,14 +980,156 @@ function Remove-BucketObject {
                 [PSCustomObject]@{
                     Bucket   = $Bucket
                     Key      = $Key
-                    FilePath = $foundPath
+                    FilePath = $file.FullName
                 }
             }
-            [System.IO.File]::Delete($foundPath)
+            [System.IO.File]::Delete($file.FullName)
+        }
+    }
+    elseif ($PSCmdlet.ParameterSetName -eq 'ByFilter') {
+        $di = [System.IO.DirectoryInfo]::new($bucketPath)
+        $allFiles = @($di.GetFiles("*.json")) + @($di.GetFiles("*.dat"))
+
+        if ($allFiles.Count -eq 0) {
+            Write-Verbose "Bucket '$Bucket' is already empty"
+            return
+        }
+
+        $matchedFiles = @()
+        foreach ($file in $allFiles) {
+            $obj = Read-BucketFile -File $file
+            if ($null -eq $obj) { continue }
+
+            if ($Match) {
+                $hit = $true
+                foreach ($kvp in $Match.GetEnumerator()) {
+                    $propName = $kvp.Name
+                    $expectedValue = $kvp.Value
+                    $prop = Get-ObjectProperty -Object $obj -PropertyName $propName
+
+                    $matchesValue = if ($null -eq $expectedValue) {
+                        -not $prop.HasValue
+                    }
+                    elseif (-not $prop.HasValue) {
+                        $false
+                    }
+                    else {
+                        $prop.Value -eq $expectedValue
+                    }
+
+                    if (-not $matchesValue) {
+                        $hit = $false
+                        break
+                    }
+                }
+                if (-not $hit) { continue }
+            }
+
+            if ($Filter) {
+                if ($null -eq ($obj | Where-Object $Filter)) { continue }
+            }
+
+            $matchedFiles += $file
+        }
+
+        if ($matchedFiles.Count -eq 0) {
+            Write-Verbose "No objects matched the filter criteria in bucket '$Bucket'"
+            return
+        }
+
+        $target = "$($matchedFiles.Count) matching object(s) from bucket '$Bucket'"
+        if ($PSCmdlet.ShouldProcess($target, "Remove-BucketObject")) {
+            foreach ($f in $matchedFiles) {
+                if ($PassThru) {
+                    [PSCustomObject]@{
+                        Bucket   = $Bucket
+                        Key      = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
+                        FilePath = $f.FullName
+                    }
+                }
+                [System.IO.File]::Delete($f.FullName)
+            }
+        }
+        elseif (-not $WhatIfPreference) {
+            Write-Verbose "Would remove $($matchedFiles.Count) object(s) from bucket '$Bucket'"
         }
     }
     else {
-        throw "Specify either -Key or -All"
+        throw "Specify either -Key, -All, or -Match/-Filter"
+    }
+}
+
+function Get-BucketKeys {
+    <#
+    .SYNOPSIS
+    Lists object keys in a bucket without deserializing objects.
+    .DESCRIPTION
+    Fast key enumeration that reads filenames only, avoiding the overhead of
+    deserializing object data. Returns keys with their file format and size.
+    .PARAMETER Bucket
+    Bucket name to scan. If omitted, scans all buckets under -Path. Supports wildcards.
+    .PARAMETER Path
+    Root directory for bucket storage. Default: $PWD/.buckets.
+    .PARAMETER Match
+    Filter keys by pattern (wildcard). Case-insensitive.
+    .OUTPUTS
+    PSCustomObject with Bucket, Key, Format, and Size properties.
+    .EXAMPLE
+    Get-BucketKeys -Bucket users
+    .EXAMPLE
+    Get-BucketKeys -Match "*admin*"
+    .EXAMPLE
+    Get-BucketKeys | Where-Object { $_.Format -eq "json" }
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Position = 0)]
+        [string]$Bucket,
+
+        [string]$Path,
+
+        [string]$Match
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
+    $Path = Resolve-SafePath -Path $Path
+
+    $bucketPaths = @()
+    if (-not [string]::IsNullOrWhiteSpace($Bucket)) {
+        if ($Bucket -match '[\*\?]') {
+            $cachedBuckets = Get-Bucket -Path $Path
+            $matched = $cachedBuckets | Where-Object { $_.Name -like $Bucket }
+            $bucketPaths += $matched | ForEach-Object { $_.Path }
+        }
+        else {
+            $bucketPaths += Get-BucketPath -Name $Bucket -Path $Path
+        }
+    }
+    else {
+        if ([System.IO.Directory]::Exists($Path)) {
+            $bucketPaths += [System.IO.DirectoryInfo]::new($Path).GetDirectories() | ForEach-Object { $_.FullName }
+        }
+    }
+
+    foreach ($bucketPath in $bucketPaths) {
+        if (-not [System.IO.Directory]::Exists($bucketPath)) { continue }
+
+        $bucketName = Split-Path $bucketPath -Leaf
+        $di = [System.IO.DirectoryInfo]::new($bucketPath)
+        $files = @($di.GetFiles("*.json")) + @($di.GetFiles("*.dat"))
+
+        foreach ($f in $files) {
+            $key = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
+
+            if (-not [string]::IsNullOrWhiteSpace($Match) -and $key -notlike $Match) { continue }
+
+            [PSCustomObject]@{
+                Bucket = $bucketName
+                Key    = $key
+                Format = if ($f.Extension -eq ".json") { "json" } else { "dat" }
+                Size   = $f.Length
+            }
+        }
     }
 }
 
@@ -1045,32 +1249,32 @@ function Remove-Bucket {
     Deletes bucket directories and their contents. Supports exact names, multiple
     buckets, and wildcard patterns. Only removes directories containing .dat/.json
     files (or empty directories). Skips buckets with other file types.
-    Prompts for confirmation before removal unless -Force is specified.
+    Uses standard -Confirm/-WhatIf support (SupportsShouldProcess).
+    -Confirm:$false skips the confirmation prompt.
     .PARAMETER Bucket
     Bucket name(s) or wildcard patterns to remove. Supports glob-style wildcards (*, ?).
     .PARAMETER Path
     Root directory for bucket storage. Default: $PWD/.buckets.
-    .PARAMETER Force
-    Skip confirmation prompt.
     .PARAMETER WhatIf
     Preview which buckets would be removed without actually deleting them.
+    .PARAMETER Confirm
+    Prompt for confirmation before removal. Default: prompts (ConfirmImpact = High).
+    Use -Confirm:$false to skip.
     .EXAMPLE
     Remove-Bucket -Bucket users
     .EXAMPLE
-    Remove-Bucket -Bucket "temp*" -Force
+    Remove-Bucket -Bucket "temp*" -Confirm:$false
     .EXAMPLE
     Remove-Bucket * -WhatIf
     #>
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
     param(
         [Parameter(Mandatory = $true, Position = 0, ValueFromRemainingArguments = $true)]
         [string[]]$Bucket,
 
         [string]$Path,
 
-        [switch]$Force,
-
-        [switch]$WhatIf
+        [switch]$Force
     )
 
     if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
@@ -1114,7 +1318,6 @@ function Remove-Bucket {
     $removable = @()
     $skippedBuckets = @()
     foreach ($m in $matched) {
-        # Safety: verify bucket is actually under the root path
         $resolvedRoot = Resolve-SafePath -Path $Path
         $resolvedBucket = Resolve-SafePath -Path $m.Path
         if (-not $resolvedBucket.StartsWith($resolvedRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
@@ -1122,7 +1325,6 @@ function Remove-Bucket {
             continue
         }
 
-        # Safety: reject if subdirectories exist
         $di = [System.IO.DirectoryInfo]::new($m.Path)
         $subDirs = @($di.GetDirectories())
         if ($subDirs.Count -gt 0) {
@@ -1130,7 +1332,6 @@ function Remove-Bucket {
             continue
         }
 
-        # Safety: count files by type
         $allFiles = @($di.GetFiles())
         $otherFiles = @($allFiles | Where-Object { $_.Extension -notin ".dat", ".json" })
 
@@ -1142,20 +1343,20 @@ function Remove-Bucket {
             continue
         }
 
+        $datFiles = @($di.GetFiles("*.dat"))
+        $jsonFiles = @($di.GetFiles("*.json"))
         $stats = Get-BucketStats -Bucket $m.Name -Path $Path
         $removable += [PSCustomObject]@{
             Name       = $m.Name
             Objects    = if ($stats) { $stats.ObjectCount } else { 0 }
             Size       = if ($stats) { $stats.TotalSize } else { "0 KB" }
             Path       = $m.Path
-            DatCount   = $datFiles.Count
-            JsonCount  = $jsonFiles.Count
         }
     }
 
     if ($removable.Count -eq 0 -and $skippedBuckets.Count -eq 0) { return }
 
-    if ($WhatIf) {
+    if ($WhatIfPreference) {
         if ($removable.Count -gt 0) {
             Write-Host "  What if: Remove the following bucket(s):" -ForegroundColor Yellow
             foreach ($r in $removable) {
@@ -1173,32 +1374,8 @@ function Remove-Bucket {
 
     if ($removable.Count -eq 0 -and $skippedBuckets.Count -eq 0) { return }
 
-    if ($removable.Count -gt 0) {
-        Write-Host "`n  Remove the following bucket(s):" -ForegroundColor Red
-        foreach ($r in $removable) {
-            Write-Host "    " -NoNewline
-            Write-Host $r.Name -ForegroundColor White -NoNewline
-            Write-Host " ($($r.Objects) objects, $($r.Size))" -ForegroundColor DarkGray
-        }
-    }
-    if ($skippedBuckets.Count -gt 0) {
-        Write-Host "`n  Skipped:" -ForegroundColor Yellow
-        foreach ($s in $skippedBuckets) {
-            Write-Host "    $($s.Name) — $($s.Reason)" -ForegroundColor Red
-        }
-    }
-
-    if ($removable.Count -gt 0 -and -not $Force) {
-        $confirm = Read-Host -Prompt "`n  Continue? (y/n)"
-        if ($confirm -ne "y") {
-            Write-Host "  Aborted." -ForegroundColor Yellow
-            return
-        }
-    }
-
     $removedCount = 0
     foreach ($r in $removable) {
-        # Final safety: re-verify no non-bucket files appeared between check and delete
         $finalDi = [System.IO.DirectoryInfo]::new($r.Path)
         $finalFiles = @($finalDi.GetFiles())
         $finalOther = @($finalFiles | Where-Object { $_.Extension -notin ".dat", ".json" })
@@ -1212,15 +1389,24 @@ function Remove-Bucket {
             continue
         }
 
-        Write-Verbose "Removing bucket '$($r.Name)' ($($r.Objects) object(s))"
-        [System.IO.Directory]::Delete($r.Path, $true)
-        $cacheKeys = @($script:BucketPathCache.Keys) | Where-Object { $_ -like "*|$($r.Name)" }
-        foreach ($ck in $cacheKeys) { $script:BucketPathCache.Remove($ck) }
-        $removedCount++
+        $target = "bucket '$($r.Name)' ($($r.Objects) object(s), $($r.Size))"
+        if ($PSCmdlet.ShouldProcess($target, "Remove-Bucket")) {
+            Write-Verbose "Removing bucket '$($r.Name)' ($($r.Objects) object(s))"
+            [System.IO.Directory]::Delete($r.Path, $true)
+            $cacheKeys = @($script:BucketPathCache.Keys) | Where-Object { $_ -like "*|$($r.Name)" }
+            foreach ($ck in $cacheKeys) { $script:BucketPathCache.Remove($ck) }
+            $removedCount++
+        }
     }
 
     if ($removedCount -gt 0) {
         Write-Host "  Removed $removedCount bucket(s)" -ForegroundColor Green
+    }
+    if ($skippedBuckets.Count -gt 0) {
+        Write-Host "`n  Skipped:" -ForegroundColor Yellow
+        foreach ($s in $skippedBuckets) {
+            Write-Host "    $($s.Name) — $($s.Reason)" -ForegroundColor Red
+        }
     }
 }
 
@@ -1286,11 +1472,8 @@ function Copy-BucketObject {
         throw "Destination key '$DestinationKey' is invalid after sanitization"
     }
 
-    $jsonPath = Join-Path $sourceBucketPath "$Key.json"
-    $datPath = Join-Path $sourceBucketPath "$Key.dat"
-    if ([System.IO.File]::Exists($jsonPath)) { $sourceFile = $jsonPath }
-    elseif ([System.IO.File]::Exists($datPath)) { $sourceFile = $datPath }
-    else {
+    $sourceFile = Find-ObjectFile -BucketPath $sourceBucketPath -Key $Key
+    if ($null -eq $sourceFile) {
         throw "Object with key '$Key' not found in bucket '$Bucket'"
     }
 
@@ -1302,7 +1485,7 @@ function Copy-BucketObject {
         throw "Object with key '$safeDestKey' already exists in bucket '$DestinationBucket'. Use a different key."
     }
 
-    $ext = [System.IO.Path]::GetExtension($sourceFile)
+    $ext = $sourceFile.Extension
     $destFile = Join-Path $destBucketPath "${safeDestKey}${ext}"
 
     [System.IO.File]::Copy($sourceFile, $destFile)
@@ -1372,15 +1555,12 @@ function Rename-BucketObject {
         throw "New key '$NewKey' is invalid after sanitization"
     }
 
-    $jsonPath = Join-Path $bucketPath "$Key.json"
-    $datPath = Join-Path $bucketPath "$Key.dat"
-    if ([System.IO.File]::Exists($jsonPath)) { $sourceFile = $jsonPath }
-    elseif ([System.IO.File]::Exists($datPath)) { $sourceFile = $datPath }
-    else {
+    $sourceFile = Find-ObjectFile -BucketPath $bucketPath -Key $Key
+    if ($null -eq $sourceFile) {
         throw "Object with key '$Key' not found in bucket '$Bucket'"
     }
 
-    $ext = [System.IO.Path]::GetExtension($sourceFile)
+    $ext = $sourceFile.Extension
     $destJsonPath = Join-Path $bucketPath "${safeNewKey}.json"
     $destDatPath = Join-Path $bucketPath "${safeNewKey}.dat"
     if ([System.IO.File]::Exists($destJsonPath) -or [System.IO.File]::Exists($destDatPath)) {
@@ -1474,11 +1654,8 @@ function Move-BucketObject {
         throw "Destination key '$DestinationKey' is invalid after sanitization"
     }
 
-    $jsonPath = Join-Path $sourceBucketPath "$Key.json"
-    $datPath = Join-Path $sourceBucketPath "$Key.dat"
-    if ([System.IO.File]::Exists($jsonPath)) { $sourceFile = $jsonPath }
-    elseif ([System.IO.File]::Exists($datPath)) { $sourceFile = $datPath }
-    else {
+    $sourceFile = Find-ObjectFile -BucketPath $sourceBucketPath -Key $Key
+    if ($null -eq $sourceFile) {
         throw "Object with key '$Key' not found in bucket '$Bucket'"
     }
 
@@ -1490,7 +1667,7 @@ function Move-BucketObject {
         throw "Object with key '$safeDestKey' already exists in bucket '$DestinationBucket'. Use a different key."
     }
 
-    $ext = [System.IO.Path]::GetExtension($sourceFile)
+    $ext = $sourceFile.Extension
     $destFile = Join-Path $destBucketPath "${safeDestKey}${ext}"
 
     [System.IO.File]::Copy($sourceFile, $destFile)
@@ -1527,6 +1704,8 @@ function Export-Bucket {
     Path to the output archive file.
     .PARAMETER AsJson
     Export as JSON archive (default is CLIXML/PSSerializer).
+    .PARAMETER Compress
+    Enable GZip compression for CLIXML archives.
     .PARAMETER Quiet
     Suppress all output.
     .EXAMPLE
@@ -1545,6 +1724,8 @@ function Export-Bucket {
         [string]$OutputFile,
 
         [switch]$AsJson,
+
+        [switch]$Compress,
 
         [switch]$Quiet
     )
@@ -1580,9 +1761,18 @@ function Export-Bucket {
         [System.IO.File]::WriteAllText($OutputFile, $json, [System.Text.Encoding]::UTF8)
     }
     else {
-        $xml = [System.Management.Automation.PSSerializer]::Serialize($allObjects, 5)
+        $xml = [System.Management.Automation.PSSerializer]::Serialize($allObjects, 10)
         $rawBytes = [System.Text.Encoding]::UTF8.GetBytes($xml)
-        [System.IO.File]::WriteAllBytes($OutputFile, $rawBytes)
+        if ($Compress) {
+            $ms = [System.IO.MemoryStream]::new()
+            $cs = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionLevel]::Optimal)
+            $cs.Write($rawBytes, 0, $rawBytes.Length)
+            $cs.Close()
+            [System.IO.File]::WriteAllBytes($OutputFile, $ms.ToArray())
+        }
+        else {
+            [System.IO.File]::WriteAllBytes($OutputFile, $rawBytes)
+        }
     }
 
     if (-not $Quiet) {
@@ -1645,16 +1835,22 @@ function Import-Bucket {
     }
     else {
         try {
-            $objects = [System.Management.Automation.PSSerializer]::Deserialize([System.Text.Encoding]::UTF8.GetString($rawBytes))
-        }
-        catch {
-            try {
-                $content = [System.Text.Encoding]::UTF8.GetString($rawBytes)
+            $isCompressed = $rawBytes.Length -ge 2 -and $rawBytes[0] -eq 0x1F -and $rawBytes[1] -eq 0x8B
+            if ($isCompressed) {
+                $ms = [System.IO.MemoryStream]::new($rawBytes)
+                $decompressed = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionMode]::Decompress)
+                $reader = [System.IO.StreamReader]::new($decompressed)
+                $content = $reader.ReadToEnd()
+                $reader.Close()
+                $decompressed.Close()
                 $objects = [System.Management.Automation.PSSerializer]::Deserialize($content)
             }
-            catch {
-                throw "Failed to deserialize archive file '$InputFile': $_"
+            else {
+                $objects = [System.Management.Automation.PSSerializer]::Deserialize([System.Text.Encoding]::UTF8.GetString($rawBytes))
             }
+        }
+        catch {
+            throw "Failed to deserialize archive file '$InputFile': $_"
         }
     }
 
@@ -1720,6 +1916,7 @@ Export-ModuleMember -Function @(
     'Remove-BucketObject',
     'Get-Bucket',
     'Get-BucketStats',
+    'Get-BucketKeys',
     'Remove-Bucket',
     'Copy-BucketObject',
     'Rename-BucketObject',
