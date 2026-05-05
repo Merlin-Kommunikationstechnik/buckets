@@ -8,8 +8,30 @@
     limits are exceeded.
 #>
 
+# Bucket path caching for session
+$script:BucketPathCache = @{}
+
+function Clear-BucketPathCache {
+    $script:BucketPathCache.Clear()
+}
+
 function Get-DefaultPath {
     return Join-Path $PWD.Path ".buckets"
+}
+
+function Resolve-SafePath {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+    try {
+        $resolved = [System.IO.Path]::GetFullPath($Path)
+        return $resolved
+    }
+    catch {
+        throw "Invalid path '$Path': $_"
+    }
 }
 
 function Get-BucketPath {
@@ -17,12 +39,17 @@ function Get-BucketPath {
     param(
         [Parameter(Mandatory = $true)]
         [string]$Name,
-
         [string]$Path
     )
 
     if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
-    return Join-Path $Path $Name
+    $cacheKey = "${Path}|${Name}"
+    if ($script:BucketPathCache.ContainsKey($cacheKey)) {
+        return $script:BucketPathCache[$cacheKey]
+    }
+    $bucketPath = Resolve-SafePath -Path (Join-Path $Path $Name)
+    $script:BucketPathCache[$cacheKey] = $bucketPath
+    return $bucketPath
 }
 
 function Ensure-BucketExists {
@@ -30,12 +57,15 @@ function Ensure-BucketExists {
     param(
         [Parameter(Mandatory = $true)]
         [string]$Name,
-
         [string]$Path
     )
 
     if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
-    $bucketPath = Get-BucketPath -Name $Name -Path $Path
+    $rootPath = Resolve-SafePath -Path $Path
+    $bucketPath = Get-BucketPath -Name $Name -Path $rootPath
+    if (-not $bucketPath.StartsWith($rootPath, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "Bucket path '$bucketPath' resolves outside of root '$rootPath'. Path traversal not allowed."
+    }
     if (-not (Test-Path $bucketPath)) {
         $null = New-Item -Path $bucketPath -ItemType Directory -Force
     }
@@ -67,6 +97,8 @@ function New-BucketObject {
     Use a timestamp-based filename (yyyyMMddHHmmssfff_index) instead of a GUID. Ignored if -Key is also specified.
     .PARAMETER AsJson
     Store objects as JSON (.json) instead of binary (.dat).
+    .PARAMETER Compress
+    Enable GZip compression for binary (.dat) files to reduce disk usage.
     .PARAMETER Quiet
     Suppress all output. No progress indicator, no summary.
     .PARAMETER Overwrite
@@ -102,13 +134,17 @@ function New-BucketObject {
 
         [string]$Key,
 
+        [ValidateRange(1, 100)]
         [int]$Depth = 20,
 
+        [ValidateRange(1, 10)]
         [int]$BinaryDepth = 2,
 
         [switch]$AsTimestamp,
 
         [switch]$AsJson,
+
+        [switch]$Compress,
 
         [switch]$Overwrite,
 
@@ -119,7 +155,9 @@ function New-BucketObject {
         $bucketPath = Ensure-BucketExists -Name $Bucket -Path $Path
         $extension = if ($AsJson) { ".json" } else { ".dat" }
         $savedCount = 0
-        $warningCount = 0
+        $skippedCount = 0
+        $autoDepthCount = 0
+        $failedCount = 0
         $totalCount = 0
         $useVerbose = $VerbosePreference -eq 'Continue'
         $useQuiet = $Quiet.IsPresent
@@ -149,11 +187,17 @@ function New-BucketObject {
                 $keyValue = $item.$Key
                 if ($null -eq $keyValue) {
                     Write-Verbose "Property '$Key' not found on object, skipping"
-                    $warningCount++
+                    $skippedCount++
                     $index++
                     continue
                 }
                 $safeKey = $keyValue -replace '[\\/:\*\?"<>\|\.\[\]]', '_'
+                if ([string]::IsNullOrWhiteSpace($safeKey) -or $safeKey -match '^_+$') {
+                    Write-Verbose "Key for object is empty after sanitization ('$keyValue' -> '$safeKey'), skipping"
+                    $skippedCount++
+                    $index++
+                    continue
+                }
                 $filename = "${safeKey}${extension}"
             }
             elseif ($AsTimestamp) {
@@ -167,7 +211,7 @@ function New-BucketObject {
 
             if ((Test-Path $filePath) -and -not $Overwrite) {
                 Write-Verbose "Object with key '$([System.IO.Path]::GetFileNameWithoutExtension($filename))' already exists in bucket '$Bucket'. Use -Overwrite to replace."
-                $warningCount++
+                $skippedCount++
                 $index++
                 continue
             }
@@ -178,17 +222,27 @@ function New-BucketObject {
                 $json = ConvertTo-Json -InputObject $item -Depth $Depth -Compress -WarningAction SilentlyContinue -WarningVariable warnVar
                 if ($warnVar -and $warnVar[0] -like "*truncated*") {
                     try {
-                        $bytes = [System.Management.Automation.PSSerializer]::Serialize($item, $BinaryDepth)
-                        $encoded = [System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($bytes))
+                        $xml = [System.Management.Automation.PSSerializer]::Serialize($item, $BinaryDepth)
+                        $rawBytes = [System.Text.Encoding]::UTF8.GetBytes($xml)
+                        if ($Compress) {
+                            $ms = [System.IO.MemoryStream]::new()
+                            $cs = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionLevel]::Optimal)
+                            $cs.Write($rawBytes, 0, $rawBytes.Length)
+                            $cs.Close()
+                            $encoded = [System.Convert]::ToBase64String($ms.ToArray())
+                        }
+                        else {
+                            $encoded = [System.Convert]::ToBase64String($rawBytes)
+                        }
                         $filePath = [System.IO.Path]::ChangeExtension($filePath, ".dat")
                         [System.IO.File]::WriteAllText($filePath, $encoded, [System.Text.Encoding]::UTF8)
                         Write-Verbose "Object '$([System.IO.Path]::GetFileNameWithoutExtension($filename))' exceeds JSON depth $Depth, saved as binary (.dat)"
-                        $warningCount++
+                        $autoDepthCount++
                         $writeSuccess = $true
                     }
                     catch {
                         Write-Verbose "Failed to serialize object '$([System.IO.Path]::GetFileNameWithoutExtension($filename))' as binary: $_"
-                        $warningCount++
+                        $failedCount++
                     }
                 }
                 else {
@@ -201,13 +255,23 @@ function New-BucketObject {
                 $serialized = $false
                 while (-not $serialized -and $currentDepth -le 5) {
                     try {
-                        $bytes = [System.Management.Automation.PSSerializer]::Serialize($item, $currentDepth)
-                        $encoded = [System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($bytes))
+                        $xml = [System.Management.Automation.PSSerializer]::Serialize($item, $currentDepth)
+                        $rawBytes = [System.Text.Encoding]::UTF8.GetBytes($xml)
+                        if ($Compress) {
+                            $ms = [System.IO.MemoryStream]::new()
+                            $cs = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionLevel]::Optimal)
+                            $cs.Write($rawBytes, 0, $rawBytes.Length)
+                            $cs.Close()
+                            $encoded = [System.Convert]::ToBase64String($ms.ToArray())
+                        }
+                        else {
+                            $encoded = [System.Convert]::ToBase64String($rawBytes)
+                        }
                         [System.IO.File]::WriteAllText($filePath, $encoded, [System.Text.Encoding]::UTF8)
                         $serialized = $true
                         if ($currentDepth -gt $BinaryDepth) {
                             Write-Verbose "Binary serialization required depth $currentDepth (default: $BinaryDepth)"
-                            $warningCount++
+                            $autoDepthCount++
                         }
                     }
                     catch {
@@ -216,7 +280,7 @@ function New-BucketObject {
                 }
                 if (-not $serialized) {
                     Write-Verbose "Failed to serialize object with key '$([System.IO.Path]::GetFileNameWithoutExtension($filename))' at any depth"
-                    $warningCount++
+                    $failedCount++
                 }
                 else {
                     $writeSuccess = $true
@@ -245,9 +309,17 @@ function New-BucketObject {
     end {
         if ($showProgress) {
             Write-Progress -Activity "Saving to '$Bucket'" -Completed
-            Write-Host "Saved $savedCount object(s) to '$Bucket'" -ForegroundColor Green
-            if ($warningCount -gt 0) {
-                Write-Host "  $warningCount warning(s)" -ForegroundColor Yellow
+            $summary = "Saved $savedCount object(s) to '$Bucket'"
+            if ($Compress) { $summary += " (compressed)" }
+            Write-Host $summary -ForegroundColor Green
+            if ($skippedCount -gt 0) {
+                Write-Host "  $skippedCount skipped (existing or missing key)" -ForegroundColor Yellow
+            }
+            if ($autoDepthCount -gt 0) {
+                Write-Host "  $autoDepthCount required auto-incremented depth" -ForegroundColor DarkYellow
+            }
+            if ($failedCount -gt 0) {
+                Write-Host "  $failedCount failed to serialize" -ForegroundColor Red
             }
         }
     }
@@ -262,26 +334,57 @@ function Read-BucketFile {
     $content = [System.IO.File]::ReadAllText($File.FullName, [System.Text.Encoding]::UTF8)
 
     if ($extension -eq ".dat") {
-        $bytes = [System.Convert]::FromBase64String($content)
-        $xml = [System.Text.Encoding]::UTF8.GetString($bytes)
-        return [System.Management.Automation.PSSerializer]::Deserialize($xml)
+        try {
+            $rawBytes = [System.Convert]::FromBase64String($content)
+            $decoded = $null
+            $isCompressed = $rawBytes.Length -ge 2 -and $rawBytes[0] -eq 0x1F -and $rawBytes[1] -eq 0x8B
+            if ($isCompressed) {
+                try {
+                    $ms = [System.IO.MemoryStream]::new($rawBytes)
+                    $decompressed = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionMode]::Decompress)
+                    $reader = [System.IO.StreamReader]::new($decompressed)
+                    $decoded = $reader.ReadToEnd()
+                    $reader.Close()
+                    $decompressed.Close()
+                }
+                catch {
+                    Write-Warning "Failed to decompress '$($File.Name)': $_"
+                    return $null
+                }
+            }
+            else {
+                $decoded = [System.Text.Encoding]::UTF8.GetString($rawBytes)
+            }
+            return [System.Management.Automation.PSSerializer]::Deserialize($decoded)
+        }
+        catch {
+            Write-Warning "Failed to deserialize '$($File.Name)': $_"
+            return $null
+        }
     }
     else {
-        return $content | ConvertFrom-Json
+        try {
+            return $content | ConvertFrom-Json
+        }
+        catch {
+            Write-Warning "Failed to parse JSON '$($File.Name)': $_"
+            return $null
+        }
     }
 }
 
 function Get-ObjectFiles {
     param(
         [string]$BucketPath,
-
         [string]$Key
     )
 
     if (-not [string]::IsNullOrWhiteSpace($Key)) {
         $jsonFile = Get-ChildItem -Path $BucketPath -Filter "$Key.json" -ErrorAction SilentlyContinue
-        if ($jsonFile) { return $jsonFile }
-        return Get-ChildItem -Path $BucketPath -Filter "$Key.dat" -ErrorAction SilentlyContinue
+        if ($jsonFile) { return @($jsonFile)[0] }
+        $datFile = Get-ChildItem -Path $BucketPath -Filter "$Key.dat" -ErrorAction SilentlyContinue
+        if ($datFile) { return @($datFile)[0] }
+        return $null
     }
     else {
         $jsonFiles = Get-ChildItem -Path $BucketPath -Filter "*.json" -ErrorAction SilentlyContinue
@@ -336,6 +439,7 @@ function Get-BucketObject {
     )
 
     if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
+    $Path = Resolve-SafePath -Path $Path
 
     $bucketPaths = @()
     if ($Bucket -and $Bucket.Count -gt 0) {
@@ -368,6 +472,7 @@ function Get-BucketObject {
 
         foreach ($file in $files) {
             $obj = Read-BucketFile -File $file
+            if ($null -eq $obj) { continue }
 
             if ($Match) {
                 $hit = $true
@@ -434,6 +539,8 @@ function Set-BucketObject {
     Maximum depth for binary (PSSerializer) serialization. Default: 2.
     .PARAMETER AsJson
     Force JSON format for the updated file.
+    .PARAMETER Compress
+    Enable GZip compression for binary (.dat) files.
     .PARAMETER Quiet
     Suppress all output. No summary.
     .PARAMETER PassThru
@@ -467,11 +574,15 @@ function Set-BucketObject {
 
         [string]$Path,
 
+        [ValidateRange(1, 100)]
         [int]$Depth = 20,
 
+        [ValidateRange(1, 10)]
         [int]$BinaryDepth = 2,
 
         [switch]$AsJson,
+
+        [switch]$Compress,
 
         [switch]$Quiet
     )
@@ -497,7 +608,10 @@ function Set-BucketObject {
         }
 
         if ($null -eq $bucketPath) {
-            if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
+    if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
+    $Path = Resolve-SafePath -Path $Path
+
+    $allBuckets = Get-Bucket -Path $Path
             $bucketPath = Get-BucketPath -Name $Bucket -Path $Path
             if (-not (Test-Path $bucketPath)) {
                 throw "Bucket '$Bucket' not found at '$bucketPath'"
@@ -521,8 +635,18 @@ function Set-BucketObject {
             $json = ConvertTo-Json -InputObject $InputObject -Depth $Depth -Compress -WarningAction SilentlyContinue -WarningVariable warnVar
             if ($warnVar -and $warnVar[0] -like "*truncated*") {
                 try {
-                    $bytes = [System.Management.Automation.PSSerializer]::Serialize($InputObject, $BinaryDepth)
-                    $encoded = [System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($bytes))
+                    $xml = [System.Management.Automation.PSSerializer]::Serialize($InputObject, $BinaryDepth)
+                    $rawBytes = [System.Text.Encoding]::UTF8.GetBytes($xml)
+                    if ($Compress) {
+                        $ms = [System.IO.MemoryStream]::new()
+                        $cs = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionLevel]::Optimal)
+                        $cs.Write($rawBytes, 0, $rawBytes.Length)
+                        $cs.Close()
+                        $encoded = [System.Convert]::ToBase64String($ms.ToArray())
+                    }
+                    else {
+                        $encoded = [System.Convert]::ToBase64String($rawBytes)
+                    }
                     $filePath = [System.IO.Path]::ChangeExtension($filePath, ".dat")
                     [System.IO.File]::WriteAllText($filePath, $encoded, [System.Text.Encoding]::UTF8)
                     Write-Verbose "Object '$Key' exceeds JSON depth $Depth, saved as binary (.dat)"
@@ -542,8 +666,18 @@ function Set-BucketObject {
             $serialized = $false
             while (-not $serialized -and $currentDepth -le 5) {
                 try {
-                    $bytes = [System.Management.Automation.PSSerializer]::Serialize($InputObject, $currentDepth)
-                    $encoded = [System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($bytes))
+                    $xml = [System.Management.Automation.PSSerializer]::Serialize($InputObject, $currentDepth)
+                    $rawBytes = [System.Text.Encoding]::UTF8.GetBytes($xml)
+                    if ($Compress) {
+                        $ms = [System.IO.MemoryStream]::new()
+                        $cs = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionLevel]::Optimal)
+                        $cs.Write($rawBytes, 0, $rawBytes.Length)
+                        $cs.Close()
+                        $encoded = [System.Convert]::ToBase64String($ms.ToArray())
+                    }
+                    else {
+                        $encoded = [System.Convert]::ToBase64String($rawBytes)
+                    }
                     [System.IO.File]::WriteAllText($filePath, $encoded, [System.Text.Encoding]::UTF8)
                     $serialized = $true
                     if ($currentDepth -gt $BinaryDepth) {
@@ -604,22 +738,27 @@ function Remove-BucketObject {
     Remove-BucketObject -Bucket users -Key "Alice"
     .EXAMPLE
     Remove-BucketObject -Bucket temp -All -PassThru
+    .EXAMPLE
+    Remove-BucketObject -Bucket users -Key "Alice" -WhatIf
     #>
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Medium', DefaultParameterSetName = 'ByKey')]
     param(
         [Parameter(Mandatory = $true)]
         [string]$Bucket,
 
         [string]$Path,
 
+        [Parameter(ParameterSetName = 'ByKey')]
         [string]$Key,
 
+        [Parameter(ParameterSetName = 'All')]
         [switch]$All,
 
         [switch]$PassThru
     )
 
     if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
+    $Path = Resolve-SafePath -Path $Path
     $bucketPath = Get-BucketPath -Name $Bucket -Path $Path
 
     if (-not (Test-Path $bucketPath)) {
@@ -637,7 +776,10 @@ function Remove-BucketObject {
             return
         }
 
-        $allFiles | Remove-Item -Force
+        $target = "$($allFiles.Count) object(s) from bucket '$Bucket'"
+        if ($PSCmdlet.ShouldProcess($target, "Remove-BucketObject")) {
+            $allFiles | Remove-Item -Force
+        }
 
         if ($PassThru) {
             foreach ($f in $allFiles) {
@@ -648,7 +790,7 @@ function Remove-BucketObject {
                 }
             }
         }
-        else {
+        elseif (-not $WhatIfPreference) {
             Write-Verbose "Removed $($allFiles.Count) object(s) from bucket '$Bucket'"
         }
     }
@@ -657,31 +799,28 @@ function Remove-BucketObject {
         $datPath = Join-Path $bucketPath "$Key.dat"
 
         $found = $false
+        $foundPath = $null
         if (Test-Path $jsonPath) {
-            if ($PassThru) {
-                [PSCustomObject]@{
-                    Bucket   = $Bucket
-                    Key      = $Key
-                    FilePath = $jsonPath
-                }
-            }
-            Remove-Item -Path $jsonPath -Force
             $found = $true
+            $foundPath = $jsonPath
         }
         elseif (Test-Path $datPath) {
-            if ($PassThru) {
-                [PSCustomObject]@{
-                    Bucket   = $Bucket
-                    Key      = $Key
-                    FilePath = $datPath
-                }
-            }
-            Remove-Item -Path $datPath -Force
             $found = $true
+            $foundPath = $datPath
         }
 
         if (-not $found) {
             Write-Warning "Object with key '$Key' not found in bucket '$Bucket'"
+        }
+        elseif ($PSCmdlet.ShouldProcess("object '$Key' from bucket '$Bucket'", "Remove-BucketObject")) {
+            if ($PassThru) {
+                [PSCustomObject]@{
+                    Bucket   = $Bucket
+                    Key      = $Key
+                    FilePath = $foundPath
+                }
+            }
+            Remove-Item -Path $foundPath -Force
         }
     }
     else {
@@ -716,6 +855,7 @@ function Get-Bucket {
     )
 
     if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
+    $Path = Resolve-SafePath -Path $Path
 
     if (-not (Test-Path $Path)) {
         return
@@ -764,6 +904,7 @@ function Get-BucketStats {
     )
 
     if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
+    $Path = Resolve-SafePath -Path $Path
     $bucketPath = Get-BucketPath -Name $Bucket -Path $Path
 
     if (-not (Test-Path $bucketPath)) {
@@ -778,13 +919,20 @@ function Get-BucketStats {
 
     $totalSize = ($fileObjects | Measure-Object -Property Length -Sum).Sum
 
+    $oldest = $null
+    $newest = $null
+    foreach ($f in $fileObjects) {
+        if ($null -eq $oldest -or $f.CreationTime -lt $oldest) { $oldest = $f.CreationTime }
+        if ($null -eq $newest -or $f.CreationTime -gt $newest) { $newest = $f.CreationTime }
+    }
+
     [PSCustomObject]@{
         Name         = $Bucket
         Path         = $bucketPath
         ObjectCount  = $fileObjects.Count
         TotalSize    = if ($totalSize) { "$([math]::Round($totalSize / 1KB, 2)) KB" } else { "0 KB" }
-        OldestObject = if ($fileObjects) { ($fileObjects | Sort-Object CreationTime | Select-Object -First 1).CreationTime } else { $null }
-        NewestObject = if ($fileObjects) { ($fileObjects | Sort-Object CreationTime -Descending | Select-Object -First 1).CreationTime } else { $null }
+        OldestObject = $oldest
+        NewestObject = $newest
     }
 }
 
@@ -823,8 +971,7 @@ function Remove-Bucket {
     )
 
     if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
-
-    $allBuckets = Get-Bucket -Path $Path
+    $Path = Resolve-SafePath -Path $Path
 
     $matched = @()
     foreach ($pattern in $Bucket) {
@@ -870,6 +1017,8 @@ function Remove-Bucket {
         if ($Force -or $PSCmdlet.ShouldProcess($target, "Remove-Bucket")) {
             Write-Verbose "Removing bucket '$($m.Name)' ($fileCount object(s))"
             Remove-Item -Path $m.Path -Recurse -Force
+            $cacheKeys = @($script:BucketPathCache.Keys) | Where-Object { $_ -like "*|$($m.Name)" }
+            foreach ($ck in $cacheKeys) { $script:BucketPathCache.Remove($ck) }
             Write-Verbose "Bucket '$($m.Name)' removed"
         }
     }
@@ -882,6 +1031,364 @@ function Remove-Bucket {
             if ($skipped -gt 0) {
                 Write-Host "$skipped bucket(s) skipped (contains non-bucket files)" -ForegroundColor Yellow
             }
+        }
+    }
+}
+
+function Copy-BucketObject {
+    <#
+    .SYNOPSIS
+    Copies an object within or between buckets.
+    .DESCRIPTION
+    Duplicates an object file from one bucket to another, optionally changing the key.
+    Preserves the original serialization format (JSON or binary).
+    .PARAMETER Bucket
+    Source bucket name.
+    .PARAMETER DestinationBucket
+    Destination bucket name. Defaults to the same as -Bucket if omitted.
+    .PARAMETER Path
+    Root directory for bucket storage. Default: $PWD/.buckets.
+    .PARAMETER Key
+    Source object key to copy.
+    .PARAMETER DestinationKey
+    Destination object key. Defaults to the source key if omitted.
+    .PARAMETER PassThru
+    Return metadata for the copied object.
+    .EXAMPLE
+    Copy-BucketObject -Bucket users -Key "Alice" -DestinationBucket archive
+    .EXAMPLE
+    Copy-BucketObject -Bucket config -Key "app-config" -DestinationKey "app-config-backup"
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Bucket,
+
+        [string]$DestinationBucket,
+
+        [string]$Path,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Key,
+
+        [string]$DestinationKey,
+
+        [switch]$PassThru
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
+    $Path = Resolve-SafePath -Path $Path
+    $sourceBucketPath = Get-BucketPath -Name $Bucket -Path $Path
+    if (-not (Test-Path $sourceBucketPath)) {
+        throw "Source bucket '$Bucket' not found at '$sourceBucketPath'"
+    }
+
+    if ([string]::IsNullOrWhiteSpace($DestinationBucket)) {
+        $DestinationBucket = $Bucket
+    }
+    if ([string]::IsNullOrWhiteSpace($DestinationKey)) {
+        $DestinationKey = $Key
+    }
+
+    $safeDestKey = $DestinationKey -replace '[\\/:\*\?"<>\|\.\[\]]', '_'
+    if ([string]::IsNullOrWhiteSpace($safeDestKey) -or $safeDestKey -match '^_+$') {
+        throw "Destination key '$DestinationKey' is invalid after sanitization"
+    }
+
+    $jsonPath = Join-Path $sourceBucketPath "$Key.json"
+    $datPath = Join-Path $sourceBucketPath "$Key.dat"
+    if (Test-Path $jsonPath) { $sourceFile = $jsonPath }
+    elseif (Test-Path $datPath) { $sourceFile = $datPath }
+    else {
+        throw "Object with key '$Key' not found in bucket '$Bucket'"
+    }
+
+    $destBucketPath = Ensure-BucketExists -Name $DestinationBucket -Path $Path
+    $ext = [System.IO.Path]::GetExtension($sourceFile)
+    $destFile = Join-Path $destBucketPath "${safeDestKey}${ext}"
+
+    if (Test-Path $destFile) {
+        throw "Object with key '$safeDestKey' already exists in bucket '$DestinationBucket'. Use a different key."
+    }
+
+    Copy-Item -Path $sourceFile -Destination $destFile -Force
+    Write-Verbose "Copied [$Bucket/$Key] to [$DestinationBucket/$safeDestKey]"
+
+    if ($PassThru) {
+        [PSCustomObject]@{
+            SourceBucket = $Bucket
+            SourceKey = $Key
+            DestinationBucket = $DestinationBucket
+            DestinationKey = $safeDestKey
+            FilePath = $destFile
+        }
+    }
+    else {
+        Write-Host "Copied '$Key' from '$Bucket' to '$DestinationBucket/$safeDestKey'" -ForegroundColor Green
+    }
+}
+
+function Rename-BucketObject {
+    <#
+    .SYNOPSIS
+    Renames an object key within a bucket.
+    .DESCRIPTION
+    Moves an object file to a new key within the same bucket without re-serialization.
+    Preserves the original format (JSON or binary).
+    .PARAMETER Bucket
+    Bucket name.
+    .PARAMETER Path
+    Root directory for bucket storage. Default: $PWD/.buckets.
+    .PARAMETER Key
+    Current object key.
+    .PARAMETER NewKey
+    New object key.
+    .PARAMETER PassThru
+    Return metadata for the renamed object.
+    .EXAMPLE
+    Rename-BucketObject -Bucket users -Key "Alice" -NewKey "alice-smith"
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Bucket,
+
+        [string]$Path,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Key,
+
+        [Parameter(Mandatory = $true)]
+        [string]$NewKey,
+
+        [switch]$PassThru
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
+    $Path = Resolve-SafePath -Path $Path
+    $bucketPath = Get-BucketPath -Name $Bucket -Path $Path
+    if (-not (Test-Path $bucketPath)) {
+        throw "Bucket '$Bucket' not found at '$bucketPath'"
+    }
+
+    $safeNewKey = $NewKey -replace '[\\/:\*\?"<>\|\.\[\]]', '_'
+    if ([string]::IsNullOrWhiteSpace($safeNewKey) -or $safeNewKey -match '^_+$') {
+        throw "New key '$NewKey' is invalid after sanitization"
+    }
+
+    $jsonPath = Join-Path $bucketPath "$Key.json"
+    $datPath = Join-Path $bucketPath "$Key.dat"
+    if (Test-Path $jsonPath) { $sourceFile = $jsonPath }
+    elseif (Test-Path $datPath) { $sourceFile = $datPath }
+    else {
+        throw "Object with key '$Key' not found in bucket '$Bucket'"
+    }
+
+    $ext = [System.IO.Path]::GetExtension($sourceFile)
+    $destFile = Join-Path $bucketPath "${safeNewKey}${ext}"
+    if (Test-Path $destFile) {
+        throw "Object with key '$safeNewKey' already exists in bucket '$Bucket'"
+    }
+
+    Move-Item -Path $sourceFile -Destination $destFile -Force
+    Write-Verbose "Renamed [$Bucket/$Key] to [$Bucket/$safeNewKey]"
+
+    if ($PassThru) {
+        [PSCustomObject]@{
+            Bucket = $Bucket
+            OldKey = $Key
+            NewKey = $safeNewKey
+            FilePath = $destFile
+        }
+    }
+    else {
+        Write-Host "Renamed '$Key' to '$safeNewKey' in bucket '$Bucket'" -ForegroundColor Green
+    }
+}
+
+function Export-Bucket {
+    <#
+    .SYNOPSIS
+    Exports a bucket to a single archive file.
+    .DESCRIPTION
+    Serializes all objects in a bucket to a single JSON or CLIXML archive file.
+    Includes object metadata (_BucketName, _BucketKey) for easy restoration.
+    .PARAMETER Bucket
+    Bucket name to export. Supports wildcards.
+    .PARAMETER Path
+    Root directory for bucket storage. Default: $PWD/.buckets.
+    .PARAMETER OutputFile
+    Path to the output archive file.
+    .PARAMETER AsJson
+    Export as JSON archive (default is CLIXML/PSSerializer).
+    .PARAMETER Quiet
+    Suppress all output.
+    .EXAMPLE
+    Export-Bucket -Bucket users -OutputFile "./users-backup.clixml"
+    .EXAMPLE
+    Export-Bucket -Bucket "config*" -OutputFile "./config-backup.json" -AsJson
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string[]]$Bucket,
+
+        [string]$Path,
+
+        [Parameter(Mandatory = $true)]
+        [string]$OutputFile,
+
+        [switch]$AsJson,
+
+        [switch]$Quiet
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
+    $Path = Resolve-SafePath -Path $Path
+
+    $allObjects = @()
+    $exportedBuckets = 0
+    $exportedObjects = 0
+
+    foreach ($b in $Bucket) {
+        $objects = Get-BucketObject -Bucket $b -Path $Path
+        if ($objects) {
+            $allObjects += $objects
+            $exportedBuckets++
+            $exportedObjects += @($objects).Count
+        }
+    }
+
+    if ($allObjects.Count -eq 0) {
+        Write-Warning "No objects found to export for buckets: $($Bucket -join ', ')"
+        return
+    }
+
+    $outputDir = [System.IO.Path]::GetDirectoryName((Resolve-SafePath -Path $OutputFile))
+    if (-not (Test-Path $outputDir)) {
+        $null = New-Item -Path $outputDir -ItemType Directory -Force
+    }
+
+    if ($AsJson) {
+        $json = ConvertTo-Json -InputObject $allObjects -Depth 20 -Compress
+        [System.IO.File]::WriteAllText($OutputFile, $json, [System.Text.Encoding]::UTF8)
+    }
+    else {
+        $xml = [System.Management.Automation.PSSerializer]::Serialize($allObjects, 5)
+        [System.IO.File]::WriteAllText($OutputFile, $xml, [System.Text.Encoding]::UTF8)
+    }
+
+    if (-not $Quiet) {
+        Write-Host "Exported $exportedObjects object(s) from $exportedBuckets bucket(s) to '$OutputFile'" -ForegroundColor Green
+    }
+}
+
+function Import-Bucket {
+    <#
+    .SYNOPSIS
+    Imports objects from an archive file into a bucket.
+    .DESCRIPTION
+    Reads objects from a CLIXML or JSON archive file and stores them in a bucket.
+    Preserves original keys if objects have _BucketKey metadata; otherwise generates new keys.
+    .PARAMETER Bucket
+    Destination bucket name. Creates the bucket if it doesn't exist.
+    .PARAMETER Path
+    Root directory for bucket storage. Default: $PWD/.buckets.
+    .PARAMETER InputFile
+    Path to the archive file to import.
+    .PARAMETER AsJson
+    Force import from JSON format (auto-detected by file extension if omitted).
+    .PARAMETER Overwrite
+    Overwrite existing objects with the same key.
+    .PARAMETER Quiet
+    Suppress all output.
+    .EXAMPLE
+    Import-Bucket -Bucket users -InputFile "./users-backup.clixml"
+    .EXAMPLE
+    Import-Bucket -Bucket config -InputFile "./config-backup.json" -Overwrite
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Bucket,
+
+        [string]$Path,
+
+        [Parameter(Mandatory = $true)]
+        [string]$InputFile,
+
+        [switch]$AsJson,
+
+        [switch]$Overwrite,
+
+        [switch]$Quiet
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
+    $Path = Resolve-SafePath -Path $Path
+
+    if (-not (Test-Path $InputFile)) {
+        throw "Input file '$InputFile' not found"
+    }
+
+    $content = [System.IO.File]::ReadAllText($InputFile, [System.Text.Encoding]::UTF8)
+    $useJson = $AsJson -or $InputFile -like "*.json"
+
+    if ($useJson) {
+        $objects = $content | ConvertFrom-Json
+    }
+    else {
+        $objects = [System.Management.Automation.PSSerializer]::Deserialize($content)
+    }
+
+    if ($null -eq $objects) {
+        throw "Failed to deserialize archive file '$InputFile'"
+    }
+
+    $objectArray = @($objects)
+    Write-Verbose "Loaded $($objectArray.Count) objects from '$InputFile'"
+
+    $bucketPath = Ensure-BucketExists -Name $Bucket -Path $Path
+    $importedCount = 0
+    $skippedCount = 0
+
+    foreach ($obj in $objectArray) {
+        $key = if ($obj.PSObject.Properties['_BucketKey']) { $obj._BucketKey } else { [Guid]::NewGuid().ToString() }
+        $safeKey = $key -replace '[\\/:\*\?"<>\|\.\[\]]', '_'
+        if ([string]::IsNullOrWhiteSpace($safeKey) -or $safeKey -match '^_+$') {
+            $safeKey = [Guid]::NewGuid().ToString()
+        }
+
+        $jsonPath = Join-Path $bucketPath "${safeKey}.json"
+        $datPath = Join-Path $bucketPath "${safeKey}.dat"
+        $filePath = if (Test-Path $jsonPath) { $jsonPath } elseif (Test-Path $datPath) { $datPath } else { $null }
+
+        if ($filePath -and -not $Overwrite) {
+            Write-Verbose "Object with key '$safeKey' already exists in bucket '$Bucket'. Use -Overwrite to replace."
+            $skippedCount++
+            continue
+        }
+
+        $ext = if ($filePath) { [System.IO.Path]::GetExtension($filePath) } else { ".dat" }
+        $finalPath = Join-Path $bucketPath "${safeKey}${ext}"
+
+        if ($ext -eq ".json") {
+            $json = ConvertTo-Json -InputObject $obj -Depth 20 -Compress
+            [System.IO.File]::WriteAllText($finalPath, $json, [System.Text.Encoding]::UTF8)
+        }
+        else {
+            $bytes = [System.Management.Automation.PSSerializer]::Serialize($obj, 5)
+            $encoded = [System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($bytes))
+            [System.IO.File]::WriteAllText($finalPath, $encoded, [System.Text.Encoding]::UTF8)
+        }
+
+        $importedCount++
+    }
+
+    if (-not $Quiet) {
+        Write-Host "Imported $importedCount object(s) into '$Bucket'" -ForegroundColor Green
+        if ($skippedCount -gt 0) {
+            Write-Host "  $skippedCount skipped (existing keys)" -ForegroundColor Yellow
         }
     }
 }

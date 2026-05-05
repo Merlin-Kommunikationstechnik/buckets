@@ -7,7 +7,8 @@
 Remove-Module Buckets -ErrorAction SilentlyContinue
 Import-Module "$PSScriptRoot/../Buckets" -Force
 
-Remove-Bucket "*" -Force -Confirm:$false 2>$null
+$bucketDir = Join-Path $PWD.Path ".buckets"
+if (Test-Path $bucketDir) { Remove-Item $bucketDir -Recurse -Force }
 
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host " Buckets Module - Test Suite" -ForegroundColor Cyan
@@ -179,3 +180,197 @@ foreach ($b in (Get-Bucket)) {
 
 $elapsed = $sw.ElapsedMilliseconds
 Write-Host "`nTotal time: ${elapsed}ms" -ForegroundColor Cyan
+
+# ============================================================
+# NEW CMDLETS & FEATURES
+# ============================================================
+Write-Host "`n========================================" -ForegroundColor Cyan
+Write-Host " New Features" -ForegroundColor Cyan
+Write-Host "========================================`n" -ForegroundColor Cyan
+
+# ============================================================
+# 8. Copy-BucketObject
+# ============================================================
+Write-Host "[8] Copy-BucketObject" -ForegroundColor Yellow
+Remove-Bucket "archive" -Force -Confirm:$false 2>$null
+Copy-BucketObject -Bucket users -Key "Alice" -DestinationBucket archive -PassThru | Format-Table
+Copy-BucketObject -Bucket config -Key "app-config" -DestinationKey "app-config-backup" -PassThru | Format-Table
+$archived = Get-BucketObject -Bucket archive -Key "Alice"
+Write-Host "  Archived user: $($archived.Name) ($($archived.Email))" -ForegroundColor DarkGray
+$backup = Get-BucketObject -Bucket config -Key "app-config-backup"
+Write-Host "  Backed up config version: $($backup.Version)" -ForegroundColor DarkGray
+
+# ============================================================
+# 9. Rename-BucketObject
+# ============================================================
+Write-Host "`n[9] Rename-BucketObject" -ForegroundColor Yellow
+Rename-BucketObject -Bucket archive -Key "Alice" -NewKey "alice-admin" -PassThru | Format-Table
+$renamed = Get-BucketObject -Bucket archive -Key "alice-admin"
+Write-Host "  Renamed user: $($renamed.Name) (key: alice-admin)" -ForegroundColor DarkGray
+
+# ============================================================
+# 10. Export-Bucket & Import-Bucket
+# ============================================================
+Write-Host "`n[10] Export/Import bucket" -ForegroundColor Yellow
+$exportPath = Join-Path $PSScriptRoot "test-export.clixml"
+$exportJson = Join-Path $PSScriptRoot "test-export.json"
+Export-Bucket -Bucket users -OutputFile $exportPath
+Export-Bucket -Bucket logs -OutputFile $exportJson -AsJson
+Remove-Bucket "import-test" -Force -Confirm:$false 2>$null
+Import-Bucket -Bucket import-test -InputFile $exportPath
+$imported = Get-BucketObject -Bucket import-test
+Write-Host "  Imported $($imported.Count) users from CLIXML archive" -ForegroundColor DarkGray
+Remove-Item $exportPath, $exportJson -Force
+
+# ============================================================
+# 11. -Compress switch
+# ============================================================
+Write-Host "`n[11] Binary compression (-Compress)" -ForegroundColor Yellow
+Remove-Bucket "compressed" -Force -Confirm:$false 2>$null
+New-BucketObject -Bucket compressed -InputObject @{ _Id = "comp"; Data = "x" * 5000; Type = "compressed" } -Key "_Id" -Compress -Quiet
+New-BucketObject -Bucket compressed -InputObject @{ _Id = "uncomp"; Data = "x" * 5000; Type = "uncompressed" } -Key "_Id" -Quiet
+$basePath = Join-Path $PWD.Path ".buckets"
+$compPath = Join-Path $basePath "compressed"
+$compSize = (Get-ChildItem $compPath -Filter "comp.dat").Length
+$uncompSize = (Get-ChildItem $compPath -Filter "uncomp.dat").Length
+$ratio = [math]::Round((1 - $compSize/$uncompSize) * 100)
+Write-Host "  Uncompressed: ${uncompSize} bytes, Compressed: ${compSize} bytes (${ratio}% smaller)" -ForegroundColor DarkGray
+$decompressed = Get-BucketObject -Bucket compressed -Key "comp"
+Write-Host "  Decompressed data length: $($decompressed.Data.Length) chars" -ForegroundColor DarkGray
+
+# ============================================================
+# 12. -WhatIf support
+# ============================================================
+Write-Host "`n[12] -WhatIf support" -ForegroundColor Yellow
+Remove-BucketObject -Bucket users -Key "Bob" -WhatIf
+Remove-Bucket "users" -WhatIf -Force 2>&1 | ForEach-Object { Write-Host "  $_" -ForegroundColor DarkGray }
+$remaining = Get-BucketObject -Bucket users
+Write-Host "  Objects in 'users' after -WhatIf: $($remaining.Count) (unchanged)" -ForegroundColor DarkGray
+
+# ============================================================
+# 13. Round-trip integrity
+# ============================================================
+Write-Host "`n[13] Round-trip integrity" -ForegroundColor Yellow
+Remove-Bucket "roundtrip" -Force -Confirm:$false 2>$null
+$roundTrip = [PSCustomObject]@{
+    _Id = "test"
+    String = "Hello, World!"
+    Number = 42.5
+    Bool = $true
+    Null = $null
+    Array = @(1, 2, 3, "four")
+    Nested = [PSCustomObject]@{ Level1 = [PSCustomObject]@{ Level2 = [PSCustomObject]@{ Level3 = "deep" } } }
+    SpecialChars = '!@#$%^&*()'
+    EmptyString = ""
+    Zero = 0
+    Negative = -100
+}
+New-BucketObject -Bucket roundtrip -InputObject $roundTrip -Key "_Id" -Quiet
+$retrieved = Get-BucketObject -Bucket roundtrip -Key "test"
+if ($null -eq $retrieved) {
+    Write-Host "  FAIL: Object not retrieved (null)" -ForegroundColor Red
+    $passed = 0; $failed = 10
+} else {
+    Write-Host "  Retrieved type: $($retrieved.GetType().Name)" -ForegroundColor DarkGray
+    $passed = 0
+    $failed = 0
+    if ($retrieved.String -eq "Hello, World!") { $passed++ } else { Write-Host "  FAIL: String ($($retrieved.String))" -ForegroundColor Red; $failed++ }
+    if ($retrieved.Number -eq 42.5) { $passed++ } else { Write-Host "  FAIL: Number ($($retrieved.Number))" -ForegroundColor Red; $failed++ }
+    if ($retrieved.Bool -eq $true) { $passed++ } else { Write-Host "  FAIL: Bool ($($retrieved.Bool))" -ForegroundColor Red; $failed++ }
+    if ($null -eq $retrieved.Null) { $passed++ } else { Write-Host "  FAIL: Null" -ForegroundColor Red; $failed++ }
+    if ($retrieved.Array.Count -eq 4 -and $retrieved.Array[3] -eq "four") { $passed++ } else { Write-Host "  FAIL: Array ($($retrieved.Array.Count))" -ForegroundColor Red; $failed++ }
+    if ($retrieved.Nested.Level1.Level2.Level3 -eq "deep") { $passed++ } else { Write-Host "  FAIL: Nested" -ForegroundColor Red; $failed++ }
+    if ($retrieved.SpecialChars -eq '!@#$%^&*()') { $passed++ } else { Write-Host "  FAIL: SpecialChars" -ForegroundColor Red; $failed++ }
+    if ($retrieved.EmptyString -eq "") { $passed++ } else { Write-Host "  FAIL: EmptyString" -ForegroundColor Red; $failed++ }
+    if ($retrieved.Zero -eq 0) { $passed++ } else { Write-Host "  FAIL: Zero" -ForegroundColor Red; $failed++ }
+    if ($retrieved.Negative -eq -100) { $passed++ } else { Write-Host "  FAIL: Negative" -ForegroundColor Red; $failed++ }
+    Write-Host "  Round-trip: $passed/10 passed" -ForegroundColor $(if ($failed -eq 0) { "Green" } else { "Red" })
+}
+
+# ============================================================
+# 14. Error condition tests
+# ============================================================
+Write-Host "`n[14] Error conditions" -ForegroundColor Yellow
+
+Write-Host "  Missing bucket key..." -NoNewline
+try {
+    Get-BucketObject -Bucket nonexistent-bucket-xyz -Key "missing" 2>$null
+    Write-Host " OK (returns empty)" -ForegroundColor Green
+} catch {
+    Write-Host " FAIL: $_" -ForegroundColor Red
+}
+
+Write-Host "  Remove non-existent key..." -NoNewline
+try {
+    Remove-BucketObject -Bucket users -Key "nonexistent-key" -WarningVariable warn -WarningAction SilentlyContinue 2>$null
+    if ($warn) { Write-Host " OK (warning issued)" -ForegroundColor Green } else { Write-Host " FAIL (no warning)" -ForegroundColor Red }
+} catch {
+    Write-Host " FAIL: $_" -ForegroundColor Red
+}
+
+Write-Host "  Remove without -Key or -All..." -NoNewline
+try {
+    Remove-BucketObject -Bucket users 2>$null
+    Write-Host " FAIL (should have thrown)" -ForegroundColor Red
+} catch {
+    Write-Host " OK (threw: $($_.Exception.Message))" -ForegroundColor Green
+}
+
+Write-Host "  Set-BucketObject without bucket/key..." -NoNewline
+try {
+    @{ Name = "test" } | Set-BucketObject 2>$null
+    Write-Host " FAIL (should have thrown)" -ForegroundColor Red
+} catch {
+    Write-Host " OK (threw)" -ForegroundColor Green
+}
+
+Write-Host "  Corrupted file handling..." -NoNewline
+$basePath = Join-Path $PWD.Path ".buckets"
+$usersPath = Join-Path $basePath "users"
+$corruptPath = Join-Path $usersPath "corrupt.dat"
+[System.IO.File]::WriteAllText($corruptPath, "THIS_IS_NOT_VALID_BASE64!!!", [System.Text.Encoding]::UTF8)
+$beforeCount = (Get-BucketObject -Bucket users).Count
+$retrieved = Get-BucketObject -Bucket users -Key "corrupt" -WarningVariable cWarn -WarningAction SilentlyContinue
+if ($null -eq $retrieved -and $cWarn) {
+    Write-Host " OK (warning issued, null returned)" -ForegroundColor Green
+} else {
+    Write-Host " WARN (retrieved: $retrieved, warnings: $($cWarn.Count))" -ForegroundColor Yellow
+}
+Remove-Item $corruptPath -Force
+
+Write-Host "  Set-BucketObject pipeline round-trip..." -NoNewline
+$user = Get-BucketObject -Bucket users -Key "Bob"
+$user.Role = "admin"
+$user | Set-BucketObject -Quiet
+$updated = Get-BucketObject -Bucket users -Key "Bob"
+if ($updated.Role -eq "admin") {
+    Write-Host " OK (role updated to admin)" -ForegroundColor Green
+} else {
+    Write-Host " FAIL (role: $($updated.Role))" -ForegroundColor Red
+}
+
+# ============================================================
+# 15. Performance benchmark
+# ============================================================
+Write-Host "`n[15] Performance benchmark (1000 objects)" -ForegroundColor Yellow
+Remove-Bucket "perf-test" -Force -Confirm:$false 2>$null
+$perfBench = [System.Diagnostics.Stopwatch]::StartNew()
+$perfObjects = 1..1000 | ForEach-Object {
+    [PSCustomObject]@{
+        Id = $_
+        Name = "item-$_"
+        Value = (Get-Random)
+        Timestamp = [DateTimeOffset]::Now
+    }
+}
+$perfObjects | New-BucketObject -Bucket perf-test -Key Id -Quiet
+$writeTime = $perfBench.ElapsedMilliseconds
+
+$perfBench.Restart()
+$retrieved = Get-BucketObject -Bucket perf-test
+$readTime = $perfBench.ElapsedMilliseconds
+
+Write-Host "  Write: ${writeTime}ms, Read: ${readTime}ms, Objects: $($retrieved.Count)" -ForegroundColor DarkGray
+if ($retrieved.Count -ne 1000) {
+    Write-Host "  FAIL: Expected 1000 objects, got $($retrieved.Count)" -ForegroundColor Red
+}
