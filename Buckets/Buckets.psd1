@@ -69,7 +69,7 @@ PowerShellVersion = '7.0'
 # NestedModules = @()
 
 # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
-FunctionsToExport = 'New-BucketObject', 'Get-BucketObject', 'Update-BucketObject', 
+FunctionsToExport = 'New-BucketObject', 'Get-BucketObject', 'Set-BucketObject', 
                'Remove-BucketObject', 'Get-Bucket', 'Get-BucketStats', 
                'Remove-Bucket'
 

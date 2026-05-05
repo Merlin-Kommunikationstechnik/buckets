@@ -349,7 +349,7 @@ function Get-BucketObject {
     }
 }
 
-function Update-BucketObject {
+function Set-BucketObject {
     <#
     .SYNOPSIS
     Updates an existing object in a bucket.
@@ -374,11 +374,11 @@ function Update-BucketObject {
     .OUTPUTS
     PSCustomObject with Bucket, Key, and FilePath properties.
     .EXAMPLE
-    Get-BucketObject -Bucket users -Key "Alice" | ForEach-Object { $_.Age = 31; $_ } | Update-BucketObject -Bucket users -Key "Alice"
+    Get-BucketObject -Bucket users -Key "Alice" | ForEach-Object { $_.Age = 31; $_ } | Set-BucketObject -Bucket users -Key "Alice"
     .EXAMPLE
     $user = Get-BucketObject -Bucket users -Key "Alice"
     $user.Email = "alice@new.com"
-    Update-BucketObject -Bucket users -Key "Alice" -InputObject $user
+    Set-BucketObject -Bucket users -Key "Alice" -InputObject $user
     #>
     [CmdletBinding()]
     param(

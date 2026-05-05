@@ -175,12 +175,12 @@ Get-BucketObject -Key "special-item"
 
 ---
 
-### Update-BucketObject
+### Set-BucketObject
 
 Updates an existing object in a bucket. Preserves the storage format.
 
 ```powershell
-Update-BucketObject
+Set-BucketObject
     [-InputObject] <PSObject>
     [-Bucket] <string>
     [-Key] <string>
@@ -208,12 +208,12 @@ Update-BucketObject
 Get-BucketObject -Bucket users -Key "Alice" | ForEach-Object {
     $_.Age = 31
     $_
-} | Update-BucketObject -Bucket users -Key "Alice"
+} | Set-BucketObject -Bucket users -Key "Alice"
 
 # Update with explicit object
 $user = Get-BucketObject -Bucket users -Key "Alice"
 $user.Email = "alice@new.com"
-Update-BucketObject -Bucket users -Key "Alice" -InputObject $user
+Set-BucketObject -Bucket users -Key "Alice" -InputObject $user
 ```
 
 ---
@@ -349,7 +349,7 @@ Get-BucketObject -Bucket users | Where-Object { $_.Age -gt 30 }
 # Retrieve, modify, update
 Get-BucketObject -Bucket users | ForEach-Object {
     $_.LastUpdated = Get-Date
-    Update-BucketObject -Bucket users -Key $_._BucketKey -InputObject $_
+    Set-BucketObject -Bucket users -Key $_._BucketKey -InputObject $_
 }
 ```
 
