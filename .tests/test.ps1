@@ -28,7 +28,7 @@ $users = @(
     @{ Name = "Diana"; Email = "diana@example.com"; Role = "manager"; Active = $true }
 )
 
-New-BucketObject -Bucket users -InputObject $users -Key Name -Quiet
+New-BucketObject -Bucket users -InputObject $users -KeyProperty Name -Quiet
 Write-Host "  Saved $($users.Count) users (keyed by Name)" -ForegroundColor DarkGray
 
 # ============================================================
@@ -64,7 +64,7 @@ $orders = @(
     }
 )
 
-New-BucketObject -Bucket orders -InputObject $orders -Key OrderId -Quiet
+New-BucketObject -Bucket orders -InputObject $orders -KeyProperty OrderId -Quiet
 Write-Host "  Saved $($orders.Count) orders" -ForegroundColor DarkGray
 
 # ============================================================
@@ -72,7 +72,7 @@ Write-Host "  Saved $($orders.Count) orders" -ForegroundColor DarkGray
 # ============================================================
 Write-Host "`n[3] System objects (FileInfo — complex objects auto-fallback to binary)" -ForegroundColor Yellow
 
-Get-ChildItem $PSScriptRoot | Where-Object { $_.Name -notmatch "^\." } | New-BucketObject -Bucket files -Key Name -Quiet
+Get-ChildItem $PSScriptRoot | Where-Object { $_.Name -notmatch "^\." } | New-BucketObject -Bucket files -KeyProperty Name -Quiet
 Write-Host "  Saved directory listing (complex objects fallback to .dat)" -ForegroundColor DarkGray
 
 # ============================================================
@@ -87,7 +87,7 @@ $logEntries = @(
     @{ Id = "log-004"; Level = "ERROR"; Message = "Connection timeout" }
 )
 
-New-BucketObject -Bucket logs -InputObject $logEntries -Key Id -Quiet
+New-BucketObject -Bucket logs -InputObject $logEntries -KeyProperty Id -Quiet
 Write-Host "  Saved $($logEntries.Count) log entries" -ForegroundColor DarkGray
 
 # ============================================================
@@ -103,7 +103,7 @@ $config = [PSCustomObject]@{
     Version = "2.1.0"
 }
 
-New-BucketObject -Bucket config -InputObject $config -Key _Id -AsJson -Quiet
+New-BucketObject -Bucket config -InputObject $config -KeyProperty _Id -AsJson -Quiet
 Write-Host "  Saved config as JSON" -ForegroundColor DarkGray
 
 # ============================================================
@@ -120,7 +120,7 @@ $metrics = foreach ($hour in 0..23) {
     }
 }
 
-New-BucketObject -Bucket metrics -InputObject $metrics -Key Hour -Quiet
+New-BucketObject -Bucket metrics -InputObject $metrics -KeyProperty Hour -Quiet
 Write-Host "  Saved 24 hourly records" -ForegroundColor DarkGray
 
 # ============================================================
@@ -128,9 +128,9 @@ Write-Host "  Saved 24 hourly records" -ForegroundColor DarkGray
 # ============================================================
 Write-Host "`n[7] Mixed formats (JSON + binary in same bucket)" -ForegroundColor Yellow
 
-New-BucketObject -Bucket mixed -InputObject @{ _Id = "m1"; Type = "json"; Value = 1 } -Key _Id -AsJson -Quiet
-New-BucketObject -Bucket mixed -InputObject @{ _Id = "m2"; Type = "binary"; Value = 2 } -Key _Id -Quiet
-New-BucketObject -Bucket mixed -InputObject @{ _Id = "m3"; Type = "json-fallback" } -Key _Id -AsJson -Quiet
+New-BucketObject -Bucket mixed -InputObject @{ _Id = "m1"; Type = "json"; Value = 1 } -KeyProperty _Id -AsJson -Quiet
+New-BucketObject -Bucket mixed -InputObject @{ _Id = "m2"; Type = "binary"; Value = 2 } -KeyProperty _Id -Quiet
+New-BucketObject -Bucket mixed -InputObject @{ _Id = "m3"; Type = "json-fallback" } -KeyProperty _Id -AsJson -Quiet
 Write-Host "  Saved 3 objects (2 JSON, 1 binary)" -ForegroundColor DarkGray
 
 # ============================================================
@@ -227,8 +227,8 @@ Remove-Item $exportPath, $exportJson -Force
 # ============================================================
 Write-Host "`n[11] Binary compression (-Compress — GZip reduces repetitive data)" -ForegroundColor Yellow
 Remove-Bucket "compressed" -Force -Confirm:$false -WarningAction SilentlyContinue
-New-BucketObject -Bucket compressed -InputObject @{ _Id = "comp"; Data = "x" * 5000; Type = "compressed" } -Key "_Id" -Compress -Quiet
-New-BucketObject -Bucket compressed -InputObject @{ _Id = "uncomp"; Data = "x" * 5000; Type = "uncompressed" } -Key "_Id" -Quiet
+New-BucketObject -Bucket compressed -InputObject @{ _Id = "comp"; Data = "x" * 5000; Type = "compressed" } -KeyProperty "_Id" -Compress -Quiet
+New-BucketObject -Bucket compressed -InputObject @{ _Id = "uncomp"; Data = "x" * 5000; Type = "uncompressed" } -KeyProperty "_Id" -Quiet
 $basePath = Join-Path $PWD.Path ".buckets"
 $compPath = Join-Path $basePath "compressed"
 $compSize = (Get-ChildItem $compPath -Filter "comp.dat").Length
@@ -265,7 +265,7 @@ $roundTrip = [PSCustomObject]@{
     Zero = 0
     Negative = -100
 }
-New-BucketObject -Bucket roundtrip -InputObject $roundTrip -Key "_Id" -Quiet
+New-BucketObject -Bucket roundtrip -InputObject $roundTrip -KeyProperty "_Id" -Quiet
 $retrieved = Get-BucketObject -Bucket roundtrip -Key "test"
 if ($null -eq $retrieved) {
     Write-Host "  FAIL: Object not retrieved (null)" -ForegroundColor Red
@@ -341,9 +341,9 @@ Remove-Item $corruptPath -Force
 Write-Host "  Get-BucketObject -Key across multiple buckets (no null-file crash)..." -NoNewline
 try {
     $errorsBefore = $Error.Count
-    New-BucketObject -Bucket bucket-a -InputObject @{ X = 1; _Id = "only-in-a" } -Key "_Id" -Quiet
-    New-BucketObject -Bucket bucket-b -InputObject @{ Y = 2; _Id = "only-in-b" } -Key "_Id" -Quiet
-    New-BucketObject -Bucket bucket-c -InputObject @{ Z = 3; _Id = "only-in-c" } -Key "_Id" -Quiet
+    New-BucketObject -Bucket bucket-a -InputObject @{ X = 1; _Id = "only-in-a" } -KeyProperty "_Id" -Quiet
+    New-BucketObject -Bucket bucket-b -InputObject @{ Y = 2; _Id = "only-in-b" } -KeyProperty "_Id" -Quiet
+    New-BucketObject -Bucket bucket-c -InputObject @{ Z = 3; _Id = "only-in-c" } -KeyProperty "_Id" -Quiet
     $result = Get-BucketObject -Key "only-in-a" -WarningAction SilentlyContinue 2>$null
     $newErrors = $Error.Count - $errorsBefore
     if ($null -eq $result -or $result.X -eq 1) {
@@ -365,7 +365,7 @@ try {
 Write-Host "  Get-BucketObject -Key with case mismatch..." -NoNewline
 try {
     $errorsBefore = $Error.Count
-    New-BucketObject -Bucket casetest -InputObject @{ Val = 42; _Id = "MixedCase-Key" } -Key "_Id" -Quiet
+    New-BucketObject -Bucket casetest -InputObject @{ Val = 42; _Id = "MixedCase-Key" } -KeyProperty "_Id" -Quiet
     $result = Get-BucketObject -Bucket casetest -Key "mixedcase-key" -WarningAction SilentlyContinue 2>$null
     $newErrors = $Error.Count - $errorsBefore
     if ($null -ne $result -and $result.Val -eq 42 -and $newErrors -eq 0) {
@@ -402,7 +402,7 @@ if ($after.Email -eq "alice@patched.com" -and $after.Name -eq "Alice" -and $afte
 }
 
 Write-Host "  Auto-patch (PSCustomObject)..." -NoNewline
-New-BucketObject -Bucket users -InputObject ([PSCustomObject]@{ _Id = "patch-obj"; Name = "Test"; Val = 1 }) -Key "_Id" -Quiet
+New-BucketObject -Bucket users -InputObject ([PSCustomObject]@{ _Id = "patch-obj"; Name = "Test"; Val = 1 }) -KeyProperty "_Id" -Quiet
 [PSCustomObject]@{ Val = 99; NewField = "added" } | Set-BucketObject -Bucket users -Key "patch-obj" -Quiet
 $patched = Get-BucketObject -Bucket users -Key "patch-obj"
 if ($patched.Val -eq 99 -and $patched.Name -eq "Test" -and $patched.NewField -eq "added") {
@@ -435,13 +435,12 @@ $arrayItems = @(
     [PSCustomObject]@{ _Id = "a2"; Name = "Second"; Seq = 2 }
     [PSCustomObject]@{ _Id = "a3"; Name = "Third"; Seq = 3 }
 )
-New-BucketObject -Bucket array-test -InputObject $arrayItems -Key _Id -ArrayTracking -Quiet
-New-BucketObject -Bucket array-test -InputObject @{ _Id = "solo"; Name = "Standalone" } -Key _Id -Quiet
+New-BucketObject -Bucket array-test -InputObject $arrayItems -KeyProperty _Id -ArrayKey "myarray" -Quiet
+New-BucketObject -Bucket array-test -InputObject @{ _Id = "solo"; Name = "Standalone" } -KeyProperty _Id -Quiet
 
 Write-Host "  Normal read:" -ForegroundColor DarkGray
 $normal = Get-BucketObject -Bucket array-test
-$hasArrayId = $normal | Where-Object { $_.PSObject.Properties['_ArrayId'] }
-Write-Host "    $($normal.Count) objects, $($hasArrayId.Count) with _ArrayId" -ForegroundColor DarkGray
+Write-Host "    $($normal.Count) objects" -ForegroundColor DarkGray
 
 Write-Host "  Grouped read:" -ForegroundColor DarkGray
 $allResults = [System.Collections.ArrayList]::new()
@@ -480,7 +479,7 @@ $perfObjects = 1..1000 | ForEach-Object {
         Timestamp = [DateTimeOffset]::Now
     }
 }
-$perfObjects | New-BucketObject -Bucket perf-test -Key Id -Quiet
+$perfObjects | New-BucketObject -Bucket perf-test -KeyProperty Id -Quiet
 $writeTime = $perfBench.ElapsedMilliseconds
 
 $perfBench.Restart()
@@ -506,7 +505,7 @@ $perf10kObjects = 1..10000 | ForEach-Object {
         Tags = @("tag-$_", "group-$($_ % 100)")
     }
 }
-$perf10kObjects | New-BucketObject -Bucket perf-10k -Key Id -Quiet
+$perf10kObjects | New-BucketObject -Bucket perf-10k -KeyProperty Id -Quiet
 $writeTime10k = $perfBench10k.ElapsedMilliseconds
 
 $perfBench10k.Restart()
@@ -547,7 +546,7 @@ $perf10kCObjects = 1..10000 | ForEach-Object {
         }
     }
 }
-$perf10kCObjects | New-BucketObject -Bucket perf-10k-complex -Key Id -Quiet
+$perf10kCObjects | New-BucketObject -Bucket perf-10k-complex -KeyProperty Id -Quiet
 $writeTime10kC = $perfBench10kC.ElapsedMilliseconds
 
 $perfBench10kC.Restart()
@@ -582,7 +581,7 @@ $perfJsonObjects = 1..1000 | ForEach-Object {
         Timestamp = [DateTimeOffset]::Now
     }
 }
-$perfJsonObjects | New-BucketObject -Bucket perf-json-1k -Key Id -AsJson -Quiet
+$perfJsonObjects | New-BucketObject -Bucket perf-json-1k -KeyProperty Id -AsJson -Quiet
 $jsonWriteTime = $perfJsonBench.ElapsedMilliseconds
 
 $perfJsonBench.Restart()
@@ -608,7 +607,7 @@ $perfJson10kObjects = 1..10000 | ForEach-Object {
         Tags = @("tag-$_", "group-$($_ % 100)")
     }
 }
-$perfJson10kObjects | New-BucketObject -Bucket perf-json-10k -Key Id -AsJson -Quiet
+$perfJson10kObjects | New-BucketObject -Bucket perf-json-10k -KeyProperty Id -AsJson -Quiet
 $jsonWriteTime10k = $perfJson10kBench.ElapsedMilliseconds
 
 $perfJson10kBench.Restart()
@@ -649,7 +648,7 @@ $perfJsonCObjects = 1..10000 | ForEach-Object {
         }
     }
 }
-$perfJsonCObjects | New-BucketObject -Bucket perf-json-complex -Key Id -AsJson -Quiet
+$perfJsonCObjects | New-BucketObject -Bucket perf-json-complex -KeyProperty Id -AsJson -Quiet
 $jsonWriteTimeC = $perfJsonCBench.ElapsedMilliseconds
 
 $perfJsonCBench.Restart()
