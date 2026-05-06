@@ -10,7 +10,7 @@ PowerShell module for file-based PSObject storage using directory-backed "bucket
 - `README.md` — documentation
 
 ## Storage Conventions
-- Default path: `$PWD/.buckets` (overridable via `-Path`)
+- Default path: `$HOME/.buckets` (overridable via `-Path`)
 - Default format: Binary via `PSSerializer` (`.dat`)
 - JSON format: `-AsJson` switch (`.json`)
 - Auto-fallback: JSON depth overflow → binary with warning

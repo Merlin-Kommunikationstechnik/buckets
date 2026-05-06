@@ -27,12 +27,17 @@ namespace Buckets.Provider
 
     public class BucketItemInfo
     {
+        public string Mode => IsContainer ? "d----" : "-a---";
+        public DateTime LastWriteTime { get; set; }
+        public long? Length => IsContainer ? (long?)null : SizeBytes;
         public string Name { get; set; }
-        public bool IsContainer { get; set; }
-        public int ItemCount { get; set; }
-        public string Format { get; set; }
-        public long SizeBytes { get; set; }
-        public string PhysicalPath { get; set; }
+
+        // Internal use only
+        internal bool IsContainer { get; set; }
+        internal int ItemCount { get; set; }
+        internal string Format { get; set; }
+        internal long SizeBytes { get; set; }
+        internal string PhysicalPath { get; set; }
     }
 
     [CmdletProvider("Buckets", ProviderCapabilities.ShouldProcess)]
@@ -389,7 +394,8 @@ namespace Buckets.Provider
                     ItemCount = count,
                     Format = "",
                     SizeBytes = 0,
-                    PhysicalPath = physical
+                    PhysicalPath = physical,
+                    LastWriteTime = di.LastWriteTime
                 };
 
                 WriteItemObject(info, ToLogicalPath(physical), true);
@@ -426,7 +432,14 @@ namespace Buckets.Provider
 
         protected override void GetChildItems(string path, bool recurse)
         {
-            GetChildItemsInternal(path, recurse);
+            string physical = ToPhysicalPath(path);
+            if (physical == null || !Directory.Exists(physical))
+            {
+                return;
+            }
+
+            uint currentDepth = 0;
+            EnumerateDirectory(physical, recurse, null, ref currentDepth);
         }
 
         protected override void GetChildItems(string path, bool recurse, uint depth)
@@ -469,7 +482,8 @@ namespace Buckets.Provider
                     ItemCount = count,
                     Format = "",
                     SizeBytes = 0,
-                    PhysicalPath = subDir.FullName
+                    PhysicalPath = subDir.FullName,
+                    LastWriteTime = subDir.LastWriteTime
                 }, logical, true);
 
                 if (recurse)
@@ -493,7 +507,8 @@ namespace Buckets.Provider
                     ItemCount = 0,
                     Format = ext == ".json" ? "JSON" : "Binary",
                     SizeBytes = file.Length,
-                    PhysicalPath = file.FullName
+                    PhysicalPath = file.FullName,
+                    LastWriteTime = file.LastWriteTime
                 }, logical, false);
             }
         }
@@ -695,7 +710,8 @@ namespace Buckets.Provider
                     ItemCount = 0,
                     Format = "",
                     SizeBytes = 0,
-                    PhysicalPath = physical
+                    PhysicalPath = physical,
+                    LastWriteTime = DateTime.Now
                 }, ToLogicalPath(physical), true);
             }
             else
@@ -738,14 +754,16 @@ namespace Buckets.Provider
                 }
 
                 SerializeFile(newItemValue, physical, format);
+                var fi = new FileInfo(physical);
                 WriteItemObject(new BucketItemInfo
                 {
                     Name = sanitizedKey,
                     IsContainer = false,
                     ItemCount = 0,
                     Format = format == "json" ? "JSON" : "Binary",
-                    SizeBytes = new FileInfo(physical).Length,
-                    PhysicalPath = physical
+                    SizeBytes = fi.Length,
+                    PhysicalPath = physical,
+                    LastWriteTime = fi.LastWriteTime
                 }, ToLogicalPath(physical), false);
             }
         }

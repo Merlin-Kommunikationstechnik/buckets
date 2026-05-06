@@ -11,12 +11,23 @@
 # --- Provider compilation ---
 $script:ProviderCsPath = Join-Path $PSScriptRoot "BucketsProvider.cs"
 $script:ProviderDllPath = Join-Path $PSScriptRoot "BucketsProvider.dll"
+$script:ProviderFormatPath = Join-Path $PSScriptRoot "BucketsProvider.format.ps1xml"
 
 if (-not (Test-Path $script:ProviderDllPath)) {
     $csCode = Get-Content -Path $script:ProviderCsPath -Raw
     Add-Type -TypeDefinition $csCode -OutputAssembly $script:ProviderDllPath -Language CSharp -ErrorAction Stop
 }
 Import-Module $script:ProviderDllPath
+
+# Load custom format definitions for provider types (filesystem-like output)
+if (Test-Path $script:ProviderFormatPath) {
+    Update-FormatData -PrependPath $script:ProviderFormatPath -ErrorAction SilentlyContinue
+}
+
+# Also set default display property set as fallback
+Update-TypeData -TypeName Buckets.Provider.BucketItemInfo `
+    -DefaultDisplayPropertySet Mode, LastWriteTime, Length, Name `
+    -ErrorAction SilentlyContinue
 
 # Bucket path caching for session
 $script:BucketPathCache = @{}
@@ -46,8 +57,63 @@ function Get-BucketNameCompletions {
     }
 }
 
+# Bucket root override (set via Set-BucketRoot or $env:BUCKETS_ROOT)
+$script:BucketRoot = $null
+
 function Get-DefaultPath {
-    return Join-Path $PWD.Path ".buckets"
+    if ($script:BucketRoot) { return $script:BucketRoot }
+    if ($env:BUCKETS_ROOT) { return $env:BUCKETS_ROOT }
+    return Join-Path $HOME ".buckets"
+}
+
+function Set-BucketRoot {
+    <#
+    .SYNOPSIS
+        Change the default bucket storage directory for the current session.
+    .DESCRIPTION
+        Overrides the default $HOME/.buckets path. Persists only for the current session.
+        For persistent overrides, set $env:BUCKETS_ROOT in your profile.
+        Automatically updates the 'buckets:' PSDrive to point to the new location.
+    .PARAMETER Path
+        The directory to use as the new bucket root. Created if it doesn't exist.
+    .EXAMPLE
+        Set-BucketRoot /data/my-buckets
+    .EXAMPLE
+        Set-BucketRoot $env:HOME/.config/buckets
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true, Position = 0)]
+        [string]$Path
+    )
+
+    $resolved = Resolve-SafePath $Path
+    if (-not (Test-Path $resolved)) {
+        New-Item -ItemType Directory -Path $resolved -Force | Out-Null
+    }
+    $script:BucketRoot = $resolved
+    Clear-BucketPathCache
+    Write-Verbose "Bucket root set to: $resolved"
+
+    # Update PSDrive
+    Sync-BucketDrive
+}
+
+function Get-BucketRoot {
+    <#
+    .SYNOPSIS
+        Returns the current default bucket storage directory.
+    .DESCRIPTION
+        Returns the active bucket root in priority order:
+        1. Session override (Set-BucketRoot)
+        2. Environment variable ($env:BUCKETS_ROOT)
+        3. Home directory fallback ($HOME/.buckets)
+    .EXAMPLE
+        Get-BucketRoot
+    #>
+    [CmdletBinding()]
+    param()
+    return Get-DefaultPath
 }
 
 function Resolve-SafePath {
@@ -267,7 +333,7 @@ function New-BucketObject {
     .PARAMETER Bucket
     Name of the bucket to save to. Creates the bucket if it doesn't exist. Default: "default".
     .PARAMETER Path
-    Root directory for bucket storage. Default: $PWD/.buckets.
+    Root directory for bucket storage. Default: $HOME/.buckets.
     .PARAMETER Key
     Literal filename (without extension). If omitted with -ArrayKey, items are named 0, 1, 2...
     .PARAMETER KeyProperty
@@ -722,7 +788,7 @@ function Get-BucketObject {
     .PARAMETER Bucket
     Bucket name(s) to search. If omitted, searches all buckets under -Path. Supports wildcards.
     .PARAMETER Path
-    Root directory for bucket storage. Default: $PWD/.buckets.
+    Root directory for bucket storage. Default: $HOME/.buckets.
     .PARAMETER Key
     Object key to retrieve. Case-insensitive prefix match. Looks for both .json and .dat files,
     including items in .arrays/ subdirectories.
@@ -961,7 +1027,7 @@ function Set-BucketObject {
     Object key to update. Auto-resolved from pipeline metadata if omitted.
     Required when piping partial updates.
     .PARAMETER Path
-    Root directory for bucket storage. Default: $PWD/.buckets.
+    Root directory for bucket storage. Default: $HOME/.buckets.
     .PARAMETER Depth
     Maximum depth for JSON serialization. Default: 20.
     .PARAMETER BinaryDepth
@@ -1207,7 +1273,7 @@ function Remove-BucketObject {
     .PARAMETER Bucket
     Name of the bucket containing the object(s) to remove.
     .PARAMETER Path
-    Root directory for bucket storage. Default: $PWD/.buckets.
+    Root directory for bucket storage. Default: $HOME/.buckets.
     .PARAMETER Key
     Object key to remove. Looks for both .json and .dat files. Case-insensitive.
     .PARAMETER All
@@ -1446,7 +1512,7 @@ function Get-BucketKeys {
     .PARAMETER Bucket
     Bucket name to scan. If omitted, scans all buckets under -Path. Supports wildcards.
     .PARAMETER Path
-    Root directory for bucket storage. Default: $PWD/.buckets.
+    Root directory for bucket storage. Default: $HOME/.buckets.
     .PARAMETER Match
     Filter keys by pattern (wildcard). Case-insensitive.
     .OUTPUTS
@@ -1526,7 +1592,7 @@ function Get-Bucket {
     Scans the storage path for bucket directories and returns information about each,
     including name, path, and total object count (JSON + binary files).
     .PARAMETER Path
-    Root directory for bucket storage. Default: $PWD/.buckets.
+    Root directory for bucket storage. Default: $HOME/.buckets.
     .PARAMETER Name
     Filter buckets by name pattern (substring match).
     .OUTPUTS
@@ -1579,7 +1645,7 @@ function Get-BucketStats {
     .PARAMETER Bucket
     Name of the bucket to analyze.
     .PARAMETER Path
-    Root directory for bucket storage. Default: $PWD/.buckets.
+    Root directory for bucket storage. Default: $HOME/.buckets.
     .OUTPUTS
     PSCustomObject with Name, Path, ObjectCount, TotalSize, OldestObject, and NewestObject properties.
     .EXAMPLE
@@ -1648,7 +1714,7 @@ function Remove-Bucket {
     .PARAMETER Bucket
     Bucket name(s) or wildcard patterns to remove. Supports glob-style wildcards (*, ?).
     .PARAMETER Path
-    Root directory for bucket storage. Default: $PWD/.buckets.
+    Root directory for bucket storage. Default: $HOME/.buckets.
     .PARAMETER WhatIf
     Preview which buckets would be removed without actually deleting them.
     .PARAMETER Confirm
@@ -1818,7 +1884,7 @@ function Copy-BucketObject {
     .PARAMETER DestinationBucket
     Destination bucket name. Defaults to the same as -Bucket if omitted.
     .PARAMETER Path
-    Root directory for bucket storage. Default: $PWD/.buckets.
+    Root directory for bucket storage. Default: $HOME/.buckets.
     .PARAMETER Key
     Source object key to copy.
     .PARAMETER DestinationKey
@@ -1911,7 +1977,7 @@ function Rename-BucketObject {
     .PARAMETER Bucket
     Bucket name.
     .PARAMETER Path
-    Root directory for bucket storage. Default: $PWD/.buckets.
+    Root directory for bucket storage. Default: $HOME/.buckets.
     .PARAMETER Key
     Current object key.
     .PARAMETER NewKey
@@ -1994,7 +2060,7 @@ function Move-BucketObject {
     .PARAMETER DestinationBucket
     Destination bucket name. Defaults to the same as -Bucket if omitted.
     .PARAMETER Path
-    Root directory for bucket storage. Default: $PWD/.buckets.
+    Root directory for bucket storage. Default: $HOME/.buckets.
     .PARAMETER Key
     Source object key to move.
     .PARAMETER DestinationKey
@@ -2095,7 +2161,7 @@ function Export-Bucket {
     .PARAMETER Bucket
     Bucket name to export. Supports wildcards.
     .PARAMETER Path
-    Root directory for bucket storage. Default: $PWD/.buckets.
+    Root directory for bucket storage. Default: $HOME/.buckets.
     .PARAMETER OutputFile
     Path to the output archive file.
     .PARAMETER AsJson
@@ -2186,7 +2252,7 @@ function Import-Bucket {
     .PARAMETER Bucket
     Destination bucket name. Creates the bucket if it doesn't exist.
     .PARAMETER Path
-    Root directory for bucket storage. Default: $PWD/.buckets.
+    Root directory for bucket storage. Default: $HOME/.buckets.
     .PARAMETER InputFile
     Path to the archive file to import.
     .PARAMETER AsJson
@@ -2318,14 +2384,16 @@ Export-ModuleMember -Function @(
     'Rename-BucketObject',
     'Move-BucketObject',
     'Export-Bucket',
-    'Import-Bucket'
+    'Import-Bucket',
+    'Set-BucketRoot',
+    'Get-BucketRoot'
 )
 
 # Tab completion for -Bucket and -DestinationBucket parameters
 $script:CompleterBlock = {
     param($commandName, $parameterName, $wordToComplete, $commandAst, $fakeBoundParameters)
 
-    $path = if ($fakeBoundParameters.ContainsKey('Path')) { $fakeBoundParameters['Path'] } else { Join-Path $PWD.Path ".buckets" }
+    $path = if ($fakeBoundParameters.ContainsKey('Path')) { $fakeBoundParameters['Path'] } else { Get-DefaultPath }
     if (-not [System.IO.Directory]::Exists($path)) { return }
 
     [System.IO.DirectoryInfo]::new($path).GetDirectories("$wordToComplete*") | ForEach-Object {
@@ -2340,7 +2408,7 @@ $script:KeyCompleterBlock = {
     $bucket = $fakeBoundParameters['Bucket']
     if (-not $bucket) { return }
 
-    $path = if ($fakeBoundParameters.ContainsKey('Path')) { $fakeBoundParameters['Path'] } else { Join-Path $PWD.Path ".buckets" }
+    $path = if ($fakeBoundParameters.ContainsKey('Path')) { $fakeBoundParameters['Path'] } else { Get-DefaultPath }
     $bucketPath = Join-Path $path $bucket
     if (-not [System.IO.Directory]::Exists($bucketPath)) { return }
 
@@ -2367,3 +2435,54 @@ Register-ArgumentCompleter -CommandName Move-BucketObject -ParameterName Destina
   'Copy-BucketObject', 'Rename-BucketObject', 'Move-BucketObject') | ForEach-Object {
     Register-ArgumentCompleter -CommandName $_ -ParameterName Key -ScriptBlock $script:KeyCompleterBlock
 }
+
+# --- PSDrive auto-mapping ---
+function Sync-BucketDrive {
+    <#
+    .SYNOPSIS
+        Creates or updates the 'buckets:' PSDrive to point to the current bucket root.
+    .DESCRIPTION
+        Can be called manually to create the drive after module import or to refresh
+        it after changing $env:BUCKETS_ROOT or calling Set-BucketRoot.
+    .EXAMPLE
+        Sync-BucketDrive
+    .EXAMPLE
+        # After setting environment variable
+        $env:BUCKETS_ROOT = "/data/buckets"
+        Sync-BucketDrive
+    #>
+    [CmdletBinding()]
+    param()
+
+    $root = Get-DefaultPath
+    $driveName = 'buckets'
+
+    # Remove existing drive if present
+    $existing = Get-PSDrive -Name $driveName -ErrorAction SilentlyContinue
+    if ($existing) {
+        Remove-PSDrive -Name $driveName -Force -ErrorAction SilentlyContinue
+    }
+
+    # Create new drive
+    try {
+        Write-Verbose "Creating PSDrive '$driveName' -> $root"
+        New-PSDrive -Name $driveName -PSProvider Buckets -Root $root -Scope Global | Out-Null
+
+        # Workaround: Provider's SessionState is bound to module scope, so the
+        # physical root variable isn't set in global scope. Set it manually.
+        Set-Variable -Name "__buckets_physical_root_$driveName" -Value $root -Scope Global -Force
+        Write-Verbose "PSDrive '$driveName' created successfully"
+    }
+    catch {
+        Write-Warning "Failed to create PSDrive '$driveName': $_"
+    }
+}
+
+# Cleanup on module removal
+$moduleInfo = $MyInvocation.MyCommand.ScriptBlock.Module
+$moduleInfo.OnRemove = {
+    Remove-PSDrive -Name buckets -Force -ErrorAction SilentlyContinue
+}
+
+# Export Sync-BucketDrive (defined after initial Export-ModuleMember)
+Export-ModuleMember -Function 'Sync-BucketDrive'

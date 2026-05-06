@@ -54,7 +54,7 @@ New-BucketObject
 |-----------|-------------|---------|
 | `-InputObject` | Object(s) to store | Required, accepts pipeline |
 | `-Bucket` | Bucket name | `"default"` |
-| `-Path` | Storage root directory | `$PWD/.buckets` |
+| `-Path` | Storage root directory | `$HOME/.buckets` |
 | `-Key` | Property name whose value becomes the filename | GUID |
 | `-Depth` | JSON serialization depth | `20` |
 | `-BinaryDepth` | Binary serialization depth | `2` |
@@ -141,7 +141,7 @@ Get-BucketObject
 |-----------|-------------|---------|
 | `-Key` | Object key to retrieve | All objects |
 | `-Bucket` | Bucket name(s) to search | All buckets |
-| `-Path` | Storage root directory | `$PWD/.buckets` |
+| `-Path` | Storage root directory | `$HOME/.buckets` |
 | `-Match` | Hashtable of exact-match filters | — |
 | `-Filter` | ScriptBlock for custom filtering | — |
 | `-First` | Return only the first N objects (or array groups) | — |
@@ -249,7 +249,7 @@ Set-BucketObject
 | `-InputObject` | Updated object. Pipeline input binds `_BucketName` and `_BucketKey` automatically | Required, accepts pipeline |
 | `-Bucket` | Bucket name (optional when piped from `Get-BucketObject`) | Bound from pipeline or required |
 | `-Key` | Object key (optional when piped from `Get-BucketObject`) | Bound from pipeline or required |
-| `-Path` | Storage root directory | `$PWD/.buckets` |
+| `-Path` | Storage root directory | `$HOME/.buckets` |
 | `-Depth` | JSON serialization depth | `20` |
 | `-BinaryDepth` | Binary serialization depth | `2` |
 | `-AsJson` | Force JSON format | — |
