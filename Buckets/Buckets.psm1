@@ -195,28 +195,38 @@ function New-BucketObject {
         if ($AsTimestamp -and -not [string]::IsNullOrWhiteSpace($Key)) {
             Write-Verbose "Both -Key and -AsTimestamp specified. -Key takes precedence, -AsTimestamp ignored."
         }
+
+        $pipelineBuffer = [System.Collections.ArrayList]::new()
+        $hasInputObjectParam = $false
     }
 
     process {
-        $isCollection = $InputObject -is [System.Collections.IEnumerable] -and $InputObject -isnot [string] -and $InputObject -isnot [hashtable] -and $InputObject -isnot [System.Collections.IDictionary]
+        if ($null -ne $InputObject) {
+            $isCollection = $InputObject -is [System.Collections.IEnumerable] -and $InputObject -isnot [string] -and $InputObject -isnot [hashtable] -and $InputObject -isnot [System.Collections.IDictionary]
+            if ($isCollection) {
+                foreach ($item in $InputObject) {
+                    $null = $pipelineBuffer.Add($item)
+                }
+                $hasInputObjectParam = $true
+            }
+            else {
+                $null = $pipelineBuffer.Add($InputObject)
+            }
+        }
+    }
+
+    end {
+        if ($pipelineBuffer.Count -eq 0) { return }
+
+        $totalCount = $pipelineBuffer.Count
 
         $arrayId = $null
-        if ($isCollection -and -not [string]::IsNullOrWhiteSpace($Key)) {
+        if ($pipelineBuffer.Count -gt 1 -and -not [string]::IsNullOrWhiteSpace($Key)) {
             $arrayId = [Guid]::NewGuid().ToString()
         }
 
-        if ($isCollection) {
-            $items = $InputObject
-        }
-        else {
-            $items = [System.Collections.ArrayList]::new()
-            $null = $items.Add($InputObject)
-        }
-
-        $totalCount += $items.Count
-
         $index = 0
-        foreach ($item in $items) {
+        foreach ($item in $pipelineBuffer) {
             if ($null -ne $arrayId) {
                 $item | Add-Member -NotePropertyName "_ArrayId" -NotePropertyValue $arrayId -Force
                 $item | Add-Member -NotePropertyName "_ArrayIndex" -NotePropertyValue $index -Force
@@ -340,9 +350,7 @@ function New-BucketObject {
 
             $index++
         }
-    }
 
-    end {
         if ($showProgress) {
             Write-Progress -Activity "Saving to '$Bucket'" -Completed
             $summary = "Saved $savedCount object(s) to '$Bucket'"

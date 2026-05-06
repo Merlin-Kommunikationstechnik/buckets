@@ -80,6 +80,9 @@ $users = @(
 )
 New-BucketObject -Bucket users -InputObject $users -Key Name
 
+# Or pipe the array directly (same result)
+$users | New-BucketObject -Bucket users -Key Name
+
 # Special characters are sanitized (/, :, *, etc. become _)
 ```
 
@@ -147,7 +150,7 @@ Retrieved objects include metadata properties: `_BucketName`, `_BucketKey`, `_Bu
 
 #### Array Tracking
 
-When you pass an array via `-InputObject` to `New-BucketObject`, each item is tagged with `_ArrayId` (shared GUID) and `_ArrayIndex` (original position). This lets you reconstruct the original array later:
+When you pass an array to `New-BucketObject` (via `-InputObject` or pipeline), each item is tagged with `_ArrayId` (shared GUID) and `_ArrayIndex` (original position). This lets you reconstruct the original array later:
 
 ```powershell
 # Save array — items get _ArrayId + _ArrayIndex metadata
@@ -157,6 +160,9 @@ $items = @(
     @{ _Id = "a3"; Name = "Third" }
 )
 New-BucketObject -Bucket orders -InputObject $items -Key _Id
+
+# Or pipe the array directly
+$items | New-BucketObject -Bucket orders -Key _Id
 
 # Read back with grouping — returns wrapper objects
 $result = Get-BucketObject -Bucket orders -GroupArrays
