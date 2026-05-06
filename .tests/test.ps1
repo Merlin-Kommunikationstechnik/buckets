@@ -435,7 +435,7 @@ $arrayItems = @(
     [PSCustomObject]@{ _Id = "a2"; Name = "Second"; Seq = 2 }
     [PSCustomObject]@{ _Id = "a3"; Name = "Third"; Seq = 3 }
 )
-New-BucketObject -Bucket array-test -InputObject $arrayItems -Key _Id -Quiet
+New-BucketObject -Bucket array-test -InputObject $arrayItems -Key _Id -ArrayTracking -Quiet
 New-BucketObject -Bucket array-test -InputObject @{ _Id = "solo"; Name = "Standalone" } -Key _Id -Quiet
 
 Write-Host "  Normal read:" -ForegroundColor DarkGray

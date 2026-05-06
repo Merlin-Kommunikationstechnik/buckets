@@ -62,6 +62,7 @@ New-BucketObject
 | `-AsJson` | Store as JSON instead of binary | `false` |
 | `-Quiet` | Suppress all output (no progress, no summary) | `false` |
 | `-Overwrite` | Overwrite existing objects with the same key | `false` |
+| `-ArrayTracking` | Tag array items for later reconstruction via `-GroupArrays` | `false` |
 
 Default behaviour: shows a progress indicator and final summary. Use `-Verbose` for per-object details.
 
@@ -80,8 +81,9 @@ $users = @(
 )
 New-BucketObject -Bucket users -InputObject $users -Key Name
 
-# Or pipe the array (same result, but loses array tracking)
+# Or pipe the array (add -ArrayTracking for grouping metadata)
 $users | New-BucketObject -Bucket users -Key Name
+$users | New-BucketObject -Bucket users -Key Name -ArrayTracking
 
 # Special characters are sanitized (/, :, *, etc. become _)
 ```
@@ -150,23 +152,26 @@ Retrieved objects include metadata properties: `_BucketName`, `_BucketKey`, `_Bu
 
 #### Array Tracking
 
-When you pass an array to `New-BucketObject` (via `-InputObject` or pipeline), each item is tagged with `_ArrayId` (shared GUID) and `_ArrayIndex` (original position). This lets you reconstruct the original array later:
+Use `-ArrayTracking` to tag array items with `_ArrayId` (shared GUID) and `_ArrayIndex` (original position) so they can be reconstructed later:
 
 ```powershell
-# Save array — items get _ArrayId + _ArrayIndex metadata
+# Save array with tracking
 $items = @(
     @{ _Id = "a1"; Name = "First" }
     @{ _Id = "a2"; Name = "Second" }
     @{ _Id = "a3"; Name = "Third" }
 )
-New-BucketObject -Bucket orders -InputObject $items -Key _Id
+New-BucketObject -Bucket orders -InputObject $items -Key _Id -ArrayTracking
 
-# Read back with grouping — returns wrapper objects
+# Or pipe with tracking
+$items | New-BucketObject -Bucket orders -Key _Id -ArrayTracking
+
+# Read back with grouping
 $result = Get-BucketObject -Bucket orders -GroupArrays
 $result._ArrayItems  # The reassembled array, sorted by original index
 ```
 
-Array tracking only activates when an array is passed via `-InputObject`. Piping items individually (`$items | New-BucketObject`) does not track arrays (PowerShell enumerates them), but this is faster for large pipelines.
+Without `-ArrayTracking`, objects are saved individually with no grouping metadata.
 
 `-GroupArrays` returns wrapper objects with:
 - `_ArrayGroup` — `$true` for array groups, absent for standalone objects
