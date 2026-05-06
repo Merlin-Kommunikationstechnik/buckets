@@ -622,6 +622,19 @@ function New-BucketObject {
     }
 }
 
+function Convert-HashtableToPSCustomObject {
+    param($obj)
+
+    if ($obj -is [hashtable]) {
+        $ordered = [ordered]@{}
+        foreach ($kvp in $obj.GetEnumerator()) {
+            $ordered[$kvp.Key] = $kvp.Value
+        }
+        return [PSCustomObject]$ordered
+    }
+    return $obj
+}
+
 function Read-BucketFile {
     param(
         [System.IO.FileInfo]$File
@@ -656,7 +669,7 @@ function Read-BucketFile {
                     $decoded = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($decoded))
                 }
             }
-            return [System.Management.Automation.PSSerializer]::Deserialize($decoded)
+            return Convert-HashtableToPSCustomObject ([System.Management.Automation.PSSerializer]::Deserialize($decoded))
         }
         catch {
             Write-Warning "Failed to deserialize '$($File.Name)': $_"
@@ -669,7 +682,7 @@ function Read-BucketFile {
             if ($content.StartsWith([char]0xFEFF)) {
                 $content = $content.Substring(1)
             }
-            return $content | ConvertFrom-Json
+            return Convert-HashtableToPSCustomObject ($content | ConvertFrom-Json)
         }
         catch {
             Write-Warning "Failed to parse JSON '$($File.Name)': $_"
