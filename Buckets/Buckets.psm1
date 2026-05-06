@@ -560,6 +560,7 @@ function Get-BucketObject {
         $files = Get-ObjectFiles -BucketPath $bucketPath -Key $Key
 
         foreach ($file in $files) {
+            if ($null -eq $file -or -not [System.IO.File]::Exists($file.FullName)) { continue }
             if ($First -gt 0 -and $emitted -ge $First) { break }
 
             $obj = Read-BucketFile -File $file
