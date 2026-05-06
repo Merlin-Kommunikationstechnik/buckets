@@ -8,6 +8,16 @@
     limits are exceeded.
 #>
 
+# --- Provider compilation ---
+$script:ProviderCsPath = Join-Path $PSScriptRoot "BucketsProvider.cs"
+$script:ProviderDllPath = Join-Path $PSScriptRoot "BucketsProvider.dll"
+
+if (-not (Test-Path $script:ProviderDllPath)) {
+    $csCode = Get-Content -Path $script:ProviderCsPath -Raw
+    Add-Type -TypeDefinition $csCode -OutputAssembly $script:ProviderDllPath -Language CSharp -ErrorAction Stop
+}
+Import-Module $script:ProviderDllPath
+
 # Bucket path caching for session
 $script:BucketPathCache = @{}
 $script:LastPWD = $PWD.Path
