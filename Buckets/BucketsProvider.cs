@@ -520,12 +520,11 @@ namespace Buckets.Provider
 
             var di = new DirectoryInfo(physical);
 
-            if (returnContainers == ReturnContainers.ReturnAllContainers)
+            // Always return subdirectories (bucket names or array groups)
+            // The returnContainers parameter filters, but we need names for tab completion
+            foreach (var subDir in di.GetDirectories().Where(d => d.Name != ".buckets").OrderBy(d => d.Name))
             {
-                foreach (var subDir in di.GetDirectories().Where(d => d.Name != ".buckets").OrderBy(d => d.Name))
-                {
-                    WriteItemObject(subDir.Name, subDir.Name, true);
-                }
+                WriteItemObject(subDir.Name, subDir.Name, true);
             }
 
             foreach (var file in di.GetFiles("*.dat").Concat(di.GetFiles("*.json")).OrderBy(f => f.Name))
