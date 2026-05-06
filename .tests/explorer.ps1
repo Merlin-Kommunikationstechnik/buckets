@@ -37,7 +37,7 @@ function Format-Value {
 }
 
 function Get-RootPath {
-    return Join-Path $PWD.Path ".buckets"
+    return Join-Path $HOME ".buckets"
 }
 
 function Scan-Buckets {

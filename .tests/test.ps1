@@ -7,7 +7,7 @@
 Remove-Module Buckets -ErrorAction SilentlyContinue
 Import-Module "$PSScriptRoot/../Buckets" -Force
 
-$bucketDir = Join-Path $PWD.Path ".buckets"
+$bucketDir = Join-Path $HOME ".buckets"
 if (Test-Path $bucketDir) { Remove-Item $bucketDir -Recurse -Force }
 
 Write-Host "========================================" -ForegroundColor Cyan
@@ -229,7 +229,7 @@ Write-Host "`n[11] Binary compression (-Compress — GZip reduces repetitive dat
 Remove-Bucket "compressed" -Force -Confirm:$false -WarningAction SilentlyContinue
 New-BucketObject -Bucket compressed -InputObject @{ _Id = "comp"; Data = "x" * 5000; Type = "compressed" } -KeyProperty "_Id" -Compress -Quiet
 New-BucketObject -Bucket compressed -InputObject @{ _Id = "uncomp"; Data = "x" * 5000; Type = "uncompressed" } -KeyProperty "_Id" -Quiet
-$basePath = Join-Path $PWD.Path ".buckets"
+$basePath = Join-Path $HOME ".buckets"
 $compPath = Join-Path $basePath "compressed"
 $compSize = (Get-ChildItem $compPath -Filter "comp.dat").Length
 $uncompSize = (Get-ChildItem $compPath -Filter "uncomp.dat").Length
@@ -325,7 +325,7 @@ try {
 }
 
 Write-Host "  Corrupted file handling..." -NoNewline
-$basePath = Join-Path $PWD.Path ".buckets"
+$basePath = Join-Path $HOME ".buckets"
 $usersPath = Join-Path $basePath "users"
 $corruptPath = Join-Path $usersPath "corrupt.dat"
 [System.IO.File]::WriteAllText($corruptPath, "THIS_IS_NOT_VALID_BASE64!!!", [System.Text.Encoding]::UTF8)

@@ -15,7 +15,7 @@ else {
 # --- Helpers ---
 
 function Clear-Buckets {
-    $bucketDir = Join-Path $PWD.Path ".buckets"
+    $bucketDir = Join-Path $HOME ".buckets"
     if (Test-Path $bucketDir) {
         Remove-Item $bucketDir -Recurse -Force
         Write-Host "  Wiped .buckets directory." -ForegroundColor DarkGray
@@ -190,7 +190,7 @@ function QuickExportImport {
     Write-Host "  [1] Export" -ForegroundColor White
     Write-Host "  [2] Import" -ForegroundColor White
     $choice = Read-Host -Prompt "  >"
-    $bucketDir = Join-Path $PWD.Path ".buckets"
+    $bucketDir = Join-Path $HOME ".buckets"
     switch ($choice) {
         "1" {
             $bucket = Read-Host "  Bucket name"
@@ -264,7 +264,7 @@ function QuickCompress {
     $data = "x" * 2000
     $hash = @{ _Id = $key; Data = $data; Type = "compressed" }
     New-BucketObject -Bucket $bucket -InputObject $hash -KeyProperty "_Id" -Compress -Quiet
-    $basePath = Join-Path $PWD.Path ".buckets"
+    $basePath = Join-Path $HOME ".buckets"
     $bPath = Join-Path $basePath $bucket
     $filePath = Join-Path $bPath "$key.dat"
     $size = (Get-ChildItem $filePath).Length
@@ -332,7 +332,7 @@ function QuickDebug {
     Write-Host "`n  --- Quick Debug (raw file inspection) ---" -ForegroundColor Cyan
     $bucket = Read-Host "  Bucket name"
     $key = Read-Host "  Key (partial match ok)"
-    $basePath = Join-Path $PWD.Path ".buckets"
+    $basePath = Join-Path $HOME ".buckets"
     $bucketPath = Join-Path $basePath $bucket
     $arraysPath = Join-Path $bucketPath ".arrays"
 
