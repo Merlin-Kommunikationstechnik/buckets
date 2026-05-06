@@ -103,9 +103,9 @@ function New-BucketObject {
     Saves a PSObject to a bucket. Creates the bucket if it doesn't exist.
     .DESCRIPTION
     Serializes one or more PowerShell objects and stores them in a bucket directory.
-    Arrays are stored as individual files. By default objects are serialized to binary
-    (.dat) using PSSerializer. Use -AsJson for JSON format. If JSON serialization
-    exceeds the depth limit, the object automatically falls back to binary format.
+    Arrays are stored as individual files. By default objects are serialized to JSON
+    (.json) using System.Text.Json for performance. Complex .NET types automatically
+    fall back to binary (.dat) using PSSerializer.
     .PARAMETER InputObject
     The object(s) to store. Accepts pipeline input. Arrays are stored as individual files.
     .PARAMETER Bucket
@@ -120,8 +120,8 @@ function New-BucketObject {
     Maximum depth for binary (PSSerializer) serialization. Default: 2.
     .PARAMETER AsTimestamp
     Use a timestamp-based filename (yyyyMMddHHmmssfff_index) instead of a GUID. Ignored if -Key is also specified.
-    .PARAMETER AsJson
-    Store objects as JSON (.json) instead of binary (.dat).
+    .PARAMETER AsBinary
+    Store objects as binary (.dat) instead of JSON (.json). Uses PSSerializer for full .NET type preservation.
     .PARAMETER Compress
     Enable GZip compression for binary (.dat) files to reduce disk usage.
     .PARAMETER Quiet
@@ -132,12 +132,12 @@ function New-BucketObject {
     By default, a progress indicator and summary are shown.
     Use -Verbose for per-object details. Use -Quiet for silent operation.
     .EXAMPLE
-    # Save users with Name as the key
+    # Save users with Name as the key (JSON by default)
     New-BucketObject -Bucket users -InputObject $users -Key Name
 
     .EXAMPLE
-    # Save config as JSON
-    New-BucketObject -Bucket config -InputObject $config -Key _Id -AsJson
+    # Save complex .NET objects as binary
+    New-BucketObject -Bucket files -InputObject $fileInfo -Key Name -AsBinary
 
     .EXAMPLE
     # Save metrics keyed by Hour
@@ -170,7 +170,7 @@ function New-BucketObject {
 
         [switch]$AsTimestamp,
 
-        [switch]$AsJson,
+        [switch]$AsBinary,
 
         [switch]$Compress,
 
@@ -181,10 +181,10 @@ function New-BucketObject {
 
     begin {
         $bucketPath = Ensure-BucketExists -Name $Bucket -Path $Path
-        $extension = if ($AsJson) { ".json" } else { ".dat" }
+        $extension = if ($AsBinary) { ".dat" } else { ".json" }
         $savedCount = 0
         $skippedCount = 0
-        $autoDepthCount = 0
+        $fallbackCount = 0
         $failedCount = 0
         $totalCount = 0
         $useVerbose = $VerbosePreference -eq 'Continue'
@@ -245,39 +245,7 @@ function New-BucketObject {
             }
 
             $writeSuccess = $false
-            if ($AsJson) {
-                $warnVar = $null
-                $json = ConvertTo-Json -InputObject $item -Depth $Depth -Compress -WarningAction SilentlyContinue -WarningVariable warnVar
-                if ($warnVar -and $warnVar[0] -like "*truncated*") {
-                    try {
-                        $xml = [System.Management.Automation.PSSerializer]::Serialize($item, $BinaryDepth)
-                        $rawBytes = [System.Text.Encoding]::UTF8.GetBytes($xml)
-                        if ($Compress) {
-                            $ms = [System.IO.MemoryStream]::new()
-                            $cs = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionLevel]::Optimal)
-                            $cs.Write($rawBytes, 0, $rawBytes.Length)
-                            $cs.Close()
-                            [System.IO.File]::WriteAllBytes($filePath, $ms.ToArray())
-                        }
-                        else {
-                            [System.IO.File]::WriteAllBytes($filePath, $rawBytes)
-                        }
-                        $filePath = [System.IO.Path]::ChangeExtension($filePath, ".dat")
-                        Write-Verbose "Object '$([System.IO.Path]::GetFileNameWithoutExtension($filename))' exceeds JSON depth $Depth, saved as binary (.dat)"
-                        $autoDepthCount++
-                        $writeSuccess = $true
-                    }
-                    catch {
-                        Write-Verbose "Failed to serialize object '$([System.IO.Path]::GetFileNameWithoutExtension($filename))' as binary: $_"
-                        $failedCount++
-                    }
-                }
-                else {
-                    [System.IO.File]::WriteAllText($filePath, $json, [System.Text.Encoding]::UTF8)
-                    $writeSuccess = $true
-                }
-            }
-            else {
+            if ($AsBinary) {
                 $currentDepth = $BinaryDepth
                 $serialized = $false
                 while (-not $serialized -and $currentDepth -le 10) {
@@ -297,7 +265,7 @@ function New-BucketObject {
                         $serialized = $true
                         if ($currentDepth -gt $BinaryDepth) {
                             Write-Verbose "Binary serialization required depth $currentDepth (default: $BinaryDepth)"
-                            $autoDepthCount++
+                            $fallbackCount++
                         }
                     }
                     catch {
@@ -310,6 +278,37 @@ function New-BucketObject {
                 }
                 else {
                     $writeSuccess = $true
+                }
+            }
+            else {
+                try {
+                    $json = ConvertTo-Json -InputObject $item -Depth $Depth -Compress -WarningAction SilentlyContinue
+                    [System.IO.File]::WriteAllText($filePath, $json, [System.Text.Encoding]::UTF8)
+                    $writeSuccess = $true
+                }
+                catch {
+                    try {
+                        $xml = [System.Management.Automation.PSSerializer]::Serialize($item, $BinaryDepth)
+                        $rawBytes = [System.Text.Encoding]::UTF8.GetBytes($xml)
+                        $filePath = [System.IO.Path]::ChangeExtension($filePath, ".dat")
+                        if ($Compress) {
+                            $ms = [System.IO.MemoryStream]::new()
+                            $cs = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionLevel]::Optimal)
+                            $cs.Write($rawBytes, 0, $rawBytes.Length)
+                            $cs.Close()
+                            [System.IO.File]::WriteAllBytes($filePath, $ms.ToArray())
+                        }
+                        else {
+                            [System.IO.File]::WriteAllBytes($filePath, $rawBytes)
+                        }
+                        Write-Verbose "Object '$([System.IO.Path]::GetFileNameWithoutExtension($filename))' incompatible with JSON, saved as binary (.dat)"
+                        $fallbackCount++
+                        $writeSuccess = $true
+                    }
+                    catch {
+                        Write-Verbose "Failed to serialize object '$([System.IO.Path]::GetFileNameWithoutExtension($filename))' as binary: $_"
+                        $failedCount++
+                    }
                 }
             }
 
@@ -341,8 +340,8 @@ function New-BucketObject {
             if ($skippedCount -gt 0) {
                 Write-Host "  $skippedCount skipped (existing or missing key)" -ForegroundColor Yellow
             }
-            if ($autoDepthCount -gt 0) {
-                Write-Host "  $autoDepthCount required auto-incremented depth" -ForegroundColor DarkYellow
+            if ($fallbackCount -gt 0) {
+                Write-Host "  $fallbackCount required binary fallback" -ForegroundColor DarkYellow
             }
             if ($failedCount -gt 0) {
                 Write-Host "  $failedCount failed to serialize" -ForegroundColor Red
@@ -620,9 +619,8 @@ function Set-BucketObject {
     the entire object replaces the stored version. If the piped object lacks metadata, only
     its properties are merged into the existing object (partial update).
 
-    Preserves the storage format (JSON or binary) of the existing file unless -AsJson forces
-    a format change. If JSON serialization exceeds the depth limit, the object automatically
-    falls back to binary format.
+    Preserves the storage format (JSON or binary) of the existing file. Complex .NET types
+    automatically fall back to binary (.dat) if JSON serialization fails.
     .PARAMETER InputObject
     The object to store. Accepts pipeline input. If it has _BucketName and _BucketKey metadata,
     bucket and key are auto-resolved. Otherwise -Bucket and -Key are required.
@@ -638,8 +636,8 @@ function Set-BucketObject {
     Maximum depth for JSON serialization. Default: 20.
     .PARAMETER BinaryDepth
     Maximum depth for binary (PSSerializer) serialization. Default: 2.
-    .PARAMETER AsJson
-    Force JSON format for the updated file.
+    .PARAMETER AsBinary
+    Force binary (.dat) format for the updated file.
     .PARAMETER Compress
     Enable GZip compression for binary (.dat) files.
     .PARAMETER Quiet
@@ -679,7 +677,7 @@ function Set-BucketObject {
         [ValidateRange(1, 10)]
         [int]$BinaryDepth = 2,
 
-        [switch]$AsJson,
+        [switch]$AsBinary,
 
         [switch]$Compress,
 
@@ -741,7 +739,7 @@ function Set-BucketObject {
         }
 
         $filePath = $file.FullName
-        $useJson = $file.Extension -eq ".json" -or $AsJson
+        $useJson = $file.Extension -eq ".json" -and -not $AsBinary
 
         if ($isPatch) {
             $existing = Read-BucketFile -File ([System.IO.FileInfo]::new($filePath))
@@ -785,12 +783,17 @@ function Set-BucketObject {
 
         $writeSuccess = $false
         if ($useJson) {
-            $warnVar = $null
-            $json = ConvertTo-Json -InputObject $InputObject -Depth $Depth -Compress -WarningAction SilentlyContinue -WarningVariable warnVar
-            if ($warnVar -and $warnVar[0] -like "*truncated*") {
+            try {
+                $json = ConvertTo-Json -InputObject $InputObject -Depth $Depth -Compress -WarningAction SilentlyContinue
+                [System.IO.File]::WriteAllText($filePath, $json, [System.Text.Encoding]::UTF8)
+                $writeSuccess = $true
+            }
+            catch {
                 try {
                     $xml = [System.Management.Automation.PSSerializer]::Serialize($InputObject, $BinaryDepth)
                     $rawBytes = [System.Text.Encoding]::UTF8.GetBytes($xml)
+                    if (Test-Path $filePath) { Remove-Item $filePath -Force }
+                    $filePath = [System.IO.Path]::ChangeExtension($filePath, ".dat")
                     if ($Compress) {
                         $ms = [System.IO.MemoryStream]::new()
                         $cs = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionLevel]::Optimal)
@@ -801,23 +804,18 @@ function Set-BucketObject {
                     else {
                         [System.IO.File]::WriteAllBytes($filePath, $rawBytes)
                     }
-                    $filePath = [System.IO.Path]::ChangeExtension($filePath, ".dat")
-                    Write-Verbose "Object '$Key' exceeds JSON depth $Depth, saved as binary (.dat)"
+                    Write-Verbose "Object '$Key' incompatible with JSON, saved as binary (.dat)"
                     $writeSuccess = $true
                 }
                 catch {
                     throw "Failed to serialize object '$Key' as binary: $_"
                 }
             }
-            else {
-                [System.IO.File]::WriteAllText($filePath, $json, [System.Text.Encoding]::UTF8)
-                $writeSuccess = $true
-            }
         }
         else {
             $currentDepth = $BinaryDepth
             $serialized = $false
-            while (-not $serialized -and $currentDepth -le 5) {
+            while (-not $serialized -and $currentDepth -le 10) {
                 try {
                     $xml = [System.Management.Automation.PSSerializer]::Serialize($InputObject, $currentDepth)
                     $rawBytes = [System.Text.Encoding]::UTF8.GetBytes($xml)
