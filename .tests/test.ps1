@@ -93,7 +93,7 @@ Write-Host "  Saved $($logEntries.Count) log entries" -ForegroundColor DarkGray
 # ============================================================
 # 5. Config (JSON format)
 # ============================================================
-Write-Host "`n[5] Config (JSON format — now default)" -ForegroundColor Yellow
+Write-Host "`n[5] Config (JSON format — explicit -AsJson switch)" -ForegroundColor Yellow
 
 $config = [PSCustomObject]@{
     _Id = "app-config"
@@ -103,7 +103,7 @@ $config = [PSCustomObject]@{
     Version = "2.1.0"
 }
 
-New-BucketObject -Bucket config -InputObject $config -Key _Id -Quiet
+New-BucketObject -Bucket config -InputObject $config -Key _Id -AsJson -Quiet
 Write-Host "  Saved config as JSON" -ForegroundColor DarkGray
 
 # ============================================================
@@ -128,9 +128,9 @@ Write-Host "  Saved 24 hourly records" -ForegroundColor DarkGray
 # ============================================================
 Write-Host "`n[7] Mixed formats (JSON + binary in same bucket)" -ForegroundColor Yellow
 
-New-BucketObject -Bucket mixed -InputObject @{ _Id = "m1"; Type = "json"; Value = 1 } -Key _Id -Quiet
-New-BucketObject -Bucket mixed -InputObject @{ _Id = "m2"; Type = "binary"; Value = 2 } -Key _Id -AsBinary -Quiet
-New-BucketObject -Bucket mixed -InputObject @{ _Id = "m3"; Type = "json"; Value = 3 } -Key _Id -Quiet
+New-BucketObject -Bucket mixed -InputObject @{ _Id = "m1"; Type = "json"; Value = 1 } -Key _Id -AsJson -Quiet
+New-BucketObject -Bucket mixed -InputObject @{ _Id = "m2"; Type = "binary"; Value = 2 } -Key _Id -Quiet
+New-BucketObject -Bucket mixed -InputObject @{ _Id = "m3"; Type = "json-fallback" } -Key _Id -AsJson -Quiet
 Write-Host "  Saved 3 objects (2 JSON, 1 binary)" -ForegroundColor DarkGray
 
 # ============================================================
@@ -227,8 +227,8 @@ Remove-Item $exportPath, $exportJson -Force
 # ============================================================
 Write-Host "`n[11] Binary compression (-Compress — GZip reduces repetitive data)" -ForegroundColor Yellow
 Remove-Bucket "compressed" -Force -Confirm:$false -WarningAction SilentlyContinue
-New-BucketObject -Bucket compressed -InputObject @{ _Id = "comp"; Data = "x" * 5000; Type = "compressed" } -Key "_Id" -AsBinary -Compress -Quiet
-New-BucketObject -Bucket compressed -InputObject @{ _Id = "uncomp"; Data = "x" * 5000; Type = "uncompressed" } -Key "_Id" -AsBinary -Quiet
+New-BucketObject -Bucket compressed -InputObject @{ _Id = "comp"; Data = "x" * 5000; Type = "compressed" } -Key "_Id" -Compress -Quiet
+New-BucketObject -Bucket compressed -InputObject @{ _Id = "uncomp"; Data = "x" * 5000; Type = "uncompressed" } -Key "_Id" -Quiet
 $basePath = Join-Path $PWD.Path ".buckets"
 $compPath = Join-Path $basePath "compressed"
 $compSize = (Get-ChildItem $compPath -Filter "comp.dat").Length
@@ -540,7 +540,7 @@ $perfJsonObjects = 1..1000 | ForEach-Object {
         Timestamp = [DateTimeOffset]::Now
     }
 }
-$perfJsonObjects | New-BucketObject -Bucket perf-json-1k -Key Id -Quiet
+$perfJsonObjects | New-BucketObject -Bucket perf-json-1k -Key Id -AsJson -Quiet
 $jsonWriteTime = $perfJsonBench.ElapsedMilliseconds
 
 $perfJsonBench.Restart()
@@ -566,7 +566,7 @@ $perfJson10kObjects = 1..10000 | ForEach-Object {
         Tags = @("tag-$_", "group-$($_ % 100)")
     }
 }
-$perfJson10kObjects | New-BucketObject -Bucket perf-json-10k -Key Id -Quiet
+$perfJson10kObjects | New-BucketObject -Bucket perf-json-10k -Key Id -AsJson -Quiet
 $jsonWriteTime10k = $perfJson10kBench.ElapsedMilliseconds
 
 $perfJson10kBench.Restart()
@@ -607,7 +607,7 @@ $perfJsonCObjects = 1..10000 | ForEach-Object {
         }
     }
 }
-$perfJsonCObjects | New-BucketObject -Bucket perf-json-complex -Key Id -Quiet
+$perfJsonCObjects | New-BucketObject -Bucket perf-json-complex -Key Id -AsJson -Quiet
 $jsonWriteTimeC = $perfJsonCBench.ElapsedMilliseconds
 
 $perfJsonCBench.Restart()

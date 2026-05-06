@@ -103,9 +103,10 @@ function New-BucketObject {
     Saves a PSObject to a bucket. Creates the bucket if it doesn't exist.
     .DESCRIPTION
     Serializes one or more PowerShell objects and stores them in a bucket directory.
-    Arrays are stored as individual files. By default objects are serialized to JSON
-    (.json) using System.Text.Json for performance. Complex .NET types automatically
-    fall back to binary (.dat) using PSSerializer.
+    Arrays are stored as individual files. By default objects are serialized to binary
+    (.dat) using PSSerializer for full .NET type preservation. Use -AsJson for
+    human-readable JSON format. If JSON serialization fails on complex types,
+    the object automatically falls back to binary format.
     .PARAMETER InputObject
     The object(s) to store. Accepts pipeline input. Arrays are stored as individual files.
     .PARAMETER Bucket
@@ -120,8 +121,8 @@ function New-BucketObject {
     Maximum depth for binary (PSSerializer) serialization. Default: 2.
     .PARAMETER AsTimestamp
     Use a timestamp-based filename (yyyyMMddHHmmssfff_index) instead of a GUID. Ignored if -Key is also specified.
-    .PARAMETER AsBinary
-    Store objects as binary (.dat) instead of JSON (.json). Uses PSSerializer for full .NET type preservation.
+    .PARAMETER AsJson
+    Store objects as JSON (.json) instead of binary (.dat).
     .PARAMETER Compress
     Enable GZip compression for binary (.dat) files to reduce disk usage.
     .PARAMETER Quiet
@@ -132,12 +133,12 @@ function New-BucketObject {
     By default, a progress indicator and summary are shown.
     Use -Verbose for per-object details. Use -Quiet for silent operation.
     .EXAMPLE
-    # Save users with Name as the key (JSON by default)
+    # Save users with Name as the key
     New-BucketObject -Bucket users -InputObject $users -Key Name
 
     .EXAMPLE
-    # Save complex .NET objects as binary
-    New-BucketObject -Bucket files -InputObject $fileInfo -Key Name -AsBinary
+    # Save config as JSON
+    New-BucketObject -Bucket config -InputObject $config -Key _Id -AsJson
 
     .EXAMPLE
     # Save metrics keyed by Hour
@@ -170,7 +171,7 @@ function New-BucketObject {
 
         [switch]$AsTimestamp,
 
-        [switch]$AsBinary,
+        [switch]$AsJson,
 
         [switch]$Compress,
 
@@ -181,7 +182,7 @@ function New-BucketObject {
 
     begin {
         $bucketPath = Ensure-BucketExists -Name $Bucket -Path $Path
-        $extension = if ($AsBinary) { ".dat" } else { ".json" }
+        $extension = if ($AsJson) { ".json" } else { ".dat" }
         $savedCount = 0
         $skippedCount = 0
         $fallbackCount = 0
@@ -194,6 +195,161 @@ function New-BucketObject {
         if ($AsTimestamp -and -not [string]::IsNullOrWhiteSpace($Key)) {
             Write-Verbose "Both -Key and -AsTimestamp specified. -Key takes precedence, -AsTimestamp ignored."
         }
+    }
+
+    process {
+        $isCollection = $InputObject -is [System.Collections.IEnumerable] -and $InputObject -isnot [string] -and $InputObject -isnot [hashtable] -and $InputObject -isnot [System.Collections.IDictionary]
+
+        if ($isCollection) {
+            $items = $InputObject
+        }
+        else {
+            $items = [System.Collections.ArrayList]::new()
+            $null = $items.Add($InputObject)
+        }
+
+        $totalCount += $items.Count
+
+        $index = 0
+        foreach ($item in $items) {
+            if (-not [string]::IsNullOrWhiteSpace($Key)) {
+                $keyValue = $item.$Key
+                if ($null -eq $keyValue) {
+                    Write-Verbose "Property '$Key' not found on object, skipping"
+                    $skippedCount++
+                    $index++
+                    continue
+                }
+                $safeKey = $keyValue -replace '[\\/:\*\?"<>\|\.\[\]]', '_'
+                if ([string]::IsNullOrWhiteSpace($safeKey) -or $safeKey -match '^_+$') {
+                    Write-Verbose "Key for object is empty after sanitization ('$keyValue' -> '$safeKey'), skipping"
+                    $skippedCount++
+                    $index++
+                    continue
+                }
+                $filename = "${safeKey}${extension}"
+            }
+            elseif ($AsTimestamp) {
+                $filename = "$(Get-Date -Format 'yyyyMMddHHmmssfff')_${index}${extension}"
+            }
+            else {
+                $filename = "$([Guid]::NewGuid())${extension}"
+            }
+
+            $filePath = Join-Path $bucketPath $filename
+
+            if ([System.IO.File]::Exists($filePath) -and -not $Overwrite) {
+                Write-Verbose "Object with key '$([System.IO.Path]::GetFileNameWithoutExtension($filename))' already exists in bucket '$Bucket'. Use -Overwrite to replace."
+                $skippedCount++
+                $index++
+                continue
+            }
+
+            $writeSuccess = $false
+            if ($AsJson) {
+                try {
+                    $json = ConvertTo-Json -InputObject $item -Depth $Depth -Compress -WarningAction SilentlyContinue
+                    [System.IO.File]::WriteAllText($filePath, $json, [System.Text.Encoding]::UTF8)
+                    $writeSuccess = $true
+                }
+                catch {
+                    try {
+                        $xml = [System.Management.Automation.PSSerializer]::Serialize($item, $BinaryDepth)
+                        $rawBytes = [System.Text.Encoding]::UTF8.GetBytes($xml)
+                        $filePath = [System.IO.Path]::ChangeExtension($filePath, ".dat")
+                        if ($Compress) {
+                            $ms = [System.IO.MemoryStream]::new()
+                            $cs = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionLevel]::Optimal)
+                            $cs.Write($rawBytes, 0, $rawBytes.Length)
+                            $cs.Close()
+                            [System.IO.File]::WriteAllBytes($filePath, $ms.ToArray())
+                        }
+                        else {
+                            [System.IO.File]::WriteAllBytes($filePath, $rawBytes)
+                        }
+                        Write-Verbose "Object '$([System.IO.Path]::GetFileNameWithoutExtension($filename))' incompatible with JSON, saved as binary (.dat)"
+                        $fallbackCount++
+                        $writeSuccess = $true
+                    }
+                    catch {
+                        Write-Verbose "Failed to serialize object '$([System.IO.Path]::GetFileNameWithoutExtension($filename))' as binary: $_"
+                        $failedCount++
+                    }
+                }
+            }
+            else {
+                $currentDepth = $BinaryDepth
+                $serialized = $false
+                while (-not $serialized -and $currentDepth -le 10) {
+                    try {
+                        $xml = [System.Management.Automation.PSSerializer]::Serialize($item, $currentDepth)
+                        $rawBytes = [System.Text.Encoding]::UTF8.GetBytes($xml)
+                        if ($Compress) {
+                            $ms = [System.IO.MemoryStream]::new()
+                            $cs = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionLevel]::Optimal)
+                            $cs.Write($rawBytes, 0, $rawBytes.Length)
+                            $cs.Close()
+                            [System.IO.File]::WriteAllBytes($filePath, $ms.ToArray())
+                        }
+                        else {
+                            [System.IO.File]::WriteAllBytes($filePath, $rawBytes)
+                        }
+                        $serialized = $true
+                        if ($currentDepth -gt $BinaryDepth) {
+                            Write-Verbose "Binary serialization required depth $currentDepth (default: $BinaryDepth)"
+                            $fallbackCount++
+                        }
+                    }
+                    catch {
+                        $currentDepth++
+                    }
+                }
+                if (-not $serialized) {
+                    Write-Verbose "Failed to serialize object with key '$([System.IO.Path]::GetFileNameWithoutExtension($filename))' at any depth"
+                    $failedCount++
+                }
+                else {
+                    $writeSuccess = $true
+                }
+            }
+
+            if ($writeSuccess) {
+                $currentKey = [System.IO.Path]::GetFileNameWithoutExtension($filename)
+                $savedCount++
+
+                if ($showProgress) {
+                    $percent = if ($totalCount -gt 0) { [math]::Round(($savedCount / $totalCount) * 100) } else { 0 }
+                    $activity = "Saving to '$Bucket'"
+                    $status = "$savedCount object(s) saved"
+                    Write-Progress -Activity $activity -Status $status -PercentComplete $percent -CurrentOperation $currentKey
+                }
+                elseif ($useVerbose) {
+                    Write-Verbose "Saved [$Bucket/$currentKey] -> $filePath"
+                }
+            }
+
+            $index++
+        }
+    }
+
+    end {
+        if ($showProgress) {
+            Write-Progress -Activity "Saving to '$Bucket'" -Completed
+            $summary = "Saved $savedCount object(s) to '$Bucket'"
+            if ($Compress) { $summary += " (compressed)" }
+            Write-Host $summary -ForegroundColor Green
+            if ($skippedCount -gt 0) {
+                Write-Host "  $skippedCount skipped (existing or missing key)" -ForegroundColor Yellow
+            }
+            if ($fallbackCount -gt 0) {
+                Write-Host "  $fallbackCount required auto-incremented depth or binary fallback" -ForegroundColor DarkYellow
+            }
+            if ($failedCount -gt 0) {
+                Write-Host "  $failedCount failed to serialize" -ForegroundColor Red
+            }
+        }
+    }
+}
     }
 
     process {
@@ -619,8 +775,8 @@ function Set-BucketObject {
     the entire object replaces the stored version. If the piped object lacks metadata, only
     its properties are merged into the existing object (partial update).
 
-    Preserves the storage format (JSON or binary) of the existing file. Complex .NET types
-    automatically fall back to binary (.dat) if JSON serialization fails.
+    Preserves the storage format (JSON or binary) of the existing file. If JSON serialization
+    fails on complex types, falls back to binary format.
     .PARAMETER InputObject
     The object to store. Accepts pipeline input. If it has _BucketName and _BucketKey metadata,
     bucket and key are auto-resolved. Otherwise -Bucket and -Key are required.
@@ -636,8 +792,8 @@ function Set-BucketObject {
     Maximum depth for JSON serialization. Default: 20.
     .PARAMETER BinaryDepth
     Maximum depth for binary (PSSerializer) serialization. Default: 2.
-    .PARAMETER AsBinary
-    Force binary (.dat) format for the updated file.
+    .PARAMETER AsJson
+    Force JSON format for the updated file.
     .PARAMETER Compress
     Enable GZip compression for binary (.dat) files.
     .PARAMETER Quiet
@@ -677,7 +833,7 @@ function Set-BucketObject {
         [ValidateRange(1, 10)]
         [int]$BinaryDepth = 2,
 
-        [switch]$AsBinary,
+        [switch]$AsJson,
 
         [switch]$Compress,
 
@@ -739,7 +895,7 @@ function Set-BucketObject {
         }
 
         $filePath = $file.FullName
-        $useJson = $file.Extension -eq ".json" -and -not $AsBinary
+        $useJson = $file.Extension -eq ".json" -or $AsJson
 
         if ($isPatch) {
             $existing = Read-BucketFile -File ([System.IO.FileInfo]::new($filePath))
