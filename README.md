@@ -126,6 +126,9 @@ Get-BucketObject
     [-Path <string>]
     [-Match <hashtable>]
     [-Filter <scriptblock>]
+    [-First <int>]
+    [-Skip <int>]
+    [-GroupArrays]
     [<CommonParameters>]
 ```
 
@@ -136,8 +139,33 @@ Get-BucketObject
 | `-Path` | Storage root directory | `$PWD/.buckets` |
 | `-Match` | Hashtable of exact-match filters | — |
 | `-Filter` | ScriptBlock for custom filtering | — |
+| `-First` | Return only the first N objects (or array groups) | — |
+| `-Skip` | Skip the first N objects (or array groups) | — |
+| `-GroupArrays` | Reassemble arrays stored as individual files | `false` |
 
-Retrieved objects include metadata properties: `_BucketName`, `_BucketKey`, `_BucketFile`.
+Retrieved objects include metadata properties: `_BucketName`, `_BucketKey`, `_BucketFile`. Objects that were saved as part of an array also include `_ArrayId` and `_ArrayIndex` for grouping.
+
+#### Array Tracking
+
+When you pass an array via `-InputObject` to `New-BucketObject`, each item is tagged with `_ArrayId` (shared GUID) and `_ArrayIndex` (original position). This lets you reconstruct the original array later:
+
+```powershell
+# Save array — items get _ArrayId + _ArrayIndex metadata
+$items = @(
+    @{ _Id = "a1"; Name = "First" }
+    @{ _Id = "a2"; Name = "Second" }
+    @{ _Id = "a3"; Name = "Third" }
+)
+New-BucketObject -Bucket orders -InputObject $items -Key _Id
+
+# Read back with grouping — returns wrapper objects
+$result = Get-BucketObject -Bucket orders -GroupArrays
+$result._ArrayItems  # The reassembled array, sorted by original index
+```
+
+`-GroupArrays` returns wrapper objects with:
+- `_ArrayGroup` — `$true` for array groups, absent for standalone objects
+- `_ArrayItems` — the reassembled array (sorted by `_ArrayIndex`), with `_ArrayId`/`_ArrayIndex` stripped
 
 #### Examples
 
@@ -172,6 +200,20 @@ Get-BucketObject -Filter { $_.Price -gt 20 }
 
 # Search for a key across all buckets
 Get-BucketObject -Key "special-item"
+
+# Reassemble stored arrays
+$result = Get-BucketObject -Bucket orders -GroupArrays
+$result._ArrayItems  # Array items in original order
+
+# Mixed: array groups + standalone objects
+Get-BucketObject -Bucket orders -GroupArrays | ForEach-Object {
+    if ($_.PSObject.Properties['_ArrayGroup'] -and $_._ArrayGroup) {
+        "Array group: $($_._ArrayItems.Count) items"
+    }
+    else {
+        "Standalone: $($_._Id)"
+    }
+}
 ```
 
 ---

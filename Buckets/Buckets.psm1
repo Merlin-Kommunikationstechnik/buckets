@@ -200,6 +200,11 @@ function New-BucketObject {
     process {
         $isCollection = $InputObject -is [System.Collections.IEnumerable] -and $InputObject -isnot [string] -and $InputObject -isnot [hashtable] -and $InputObject -isnot [System.Collections.IDictionary]
 
+        $arrayId = $null
+        if ($isCollection -and -not [string]::IsNullOrWhiteSpace($Key)) {
+            $arrayId = [Guid]::NewGuid().ToString()
+        }
+
         if ($isCollection) {
             $items = $InputObject
         }
@@ -212,6 +217,11 @@ function New-BucketObject {
 
         $index = 0
         foreach ($item in $items) {
+            if ($null -ne $arrayId) {
+                $item | Add-Member -NotePropertyName "_ArrayId" -NotePropertyValue $arrayId -Force
+                $item | Add-Member -NotePropertyName "_ArrayIndex" -NotePropertyValue $index -Force
+            }
+
             if (-not [string]::IsNullOrWhiteSpace($Key)) {
                 $keyValue = $item.$Key
                 if ($null -eq $keyValue) {
@@ -343,161 +353,6 @@ function New-BucketObject {
             }
             if ($fallbackCount -gt 0) {
                 Write-Host "  $fallbackCount required auto-incremented depth or binary fallback" -ForegroundColor DarkYellow
-            }
-            if ($failedCount -gt 0) {
-                Write-Host "  $failedCount failed to serialize" -ForegroundColor Red
-            }
-        }
-    }
-}
-    }
-
-    process {
-        $isCollection = $InputObject -is [System.Collections.IEnumerable] -and $InputObject -isnot [string] -and $InputObject -isnot [hashtable] -and $InputObject -isnot [System.Collections.IDictionary]
-
-        if ($isCollection) {
-            $items = $InputObject
-        }
-        else {
-            $items = [System.Collections.ArrayList]::new()
-            $null = $items.Add($InputObject)
-        }
-
-        $totalCount += $items.Count
-
-        $index = 0
-        foreach ($item in $items) {
-            if (-not [string]::IsNullOrWhiteSpace($Key)) {
-                $keyValue = $item.$Key
-                if ($null -eq $keyValue) {
-                    Write-Verbose "Property '$Key' not found on object, skipping"
-                    $skippedCount++
-                    $index++
-                    continue
-                }
-                $safeKey = $keyValue -replace '[\\/:\*\?"<>\|\.\[\]]', '_'
-                if ([string]::IsNullOrWhiteSpace($safeKey) -or $safeKey -match '^_+$') {
-                    Write-Verbose "Key for object is empty after sanitization ('$keyValue' -> '$safeKey'), skipping"
-                    $skippedCount++
-                    $index++
-                    continue
-                }
-                $filename = "${safeKey}${extension}"
-            }
-            elseif ($AsTimestamp) {
-                $filename = "$(Get-Date -Format 'yyyyMMddHHmmssfff')_${index}${extension}"
-            }
-            else {
-                $filename = "$([Guid]::NewGuid())${extension}"
-            }
-
-            $filePath = Join-Path $bucketPath $filename
-
-            if ([System.IO.File]::Exists($filePath) -and -not $Overwrite) {
-                Write-Verbose "Object with key '$([System.IO.Path]::GetFileNameWithoutExtension($filename))' already exists in bucket '$Bucket'. Use -Overwrite to replace."
-                $skippedCount++
-                $index++
-                continue
-            }
-
-            $writeSuccess = $false
-            if ($AsBinary) {
-                $currentDepth = $BinaryDepth
-                $serialized = $false
-                while (-not $serialized -and $currentDepth -le 10) {
-                    try {
-                        $xml = [System.Management.Automation.PSSerializer]::Serialize($item, $currentDepth)
-                        $rawBytes = [System.Text.Encoding]::UTF8.GetBytes($xml)
-                        if ($Compress) {
-                            $ms = [System.IO.MemoryStream]::new()
-                            $cs = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionLevel]::Optimal)
-                            $cs.Write($rawBytes, 0, $rawBytes.Length)
-                            $cs.Close()
-                            [System.IO.File]::WriteAllBytes($filePath, $ms.ToArray())
-                        }
-                        else {
-                            [System.IO.File]::WriteAllBytes($filePath, $rawBytes)
-                        }
-                        $serialized = $true
-                        if ($currentDepth -gt $BinaryDepth) {
-                            Write-Verbose "Binary serialization required depth $currentDepth (default: $BinaryDepth)"
-                            $fallbackCount++
-                        }
-                    }
-                    catch {
-                        $currentDepth++
-                    }
-                }
-                if (-not $serialized) {
-                    Write-Verbose "Failed to serialize object with key '$([System.IO.Path]::GetFileNameWithoutExtension($filename))' at any depth"
-                    $failedCount++
-                }
-                else {
-                    $writeSuccess = $true
-                }
-            }
-            else {
-                try {
-                    $json = ConvertTo-Json -InputObject $item -Depth $Depth -Compress -WarningAction SilentlyContinue
-                    [System.IO.File]::WriteAllText($filePath, $json, [System.Text.Encoding]::UTF8)
-                    $writeSuccess = $true
-                }
-                catch {
-                    try {
-                        $xml = [System.Management.Automation.PSSerializer]::Serialize($item, $BinaryDepth)
-                        $rawBytes = [System.Text.Encoding]::UTF8.GetBytes($xml)
-                        $filePath = [System.IO.Path]::ChangeExtension($filePath, ".dat")
-                        if ($Compress) {
-                            $ms = [System.IO.MemoryStream]::new()
-                            $cs = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionLevel]::Optimal)
-                            $cs.Write($rawBytes, 0, $rawBytes.Length)
-                            $cs.Close()
-                            [System.IO.File]::WriteAllBytes($filePath, $ms.ToArray())
-                        }
-                        else {
-                            [System.IO.File]::WriteAllBytes($filePath, $rawBytes)
-                        }
-                        Write-Verbose "Object '$([System.IO.Path]::GetFileNameWithoutExtension($filename))' incompatible with JSON, saved as binary (.dat)"
-                        $fallbackCount++
-                        $writeSuccess = $true
-                    }
-                    catch {
-                        Write-Verbose "Failed to serialize object '$([System.IO.Path]::GetFileNameWithoutExtension($filename))' as binary: $_"
-                        $failedCount++
-                    }
-                }
-            }
-
-            if ($writeSuccess) {
-                $currentKey = [System.IO.Path]::GetFileNameWithoutExtension($filename)
-                $savedCount++
-
-                if ($showProgress) {
-                    $percent = if ($totalCount -gt 0) { [math]::Round(($savedCount / $totalCount) * 100) } else { 0 }
-                    $activity = "Saving to '$Bucket'"
-                    $status = "$savedCount object(s) saved"
-                    Write-Progress -Activity $activity -Status $status -PercentComplete $percent -CurrentOperation $currentKey
-                }
-                elseif ($useVerbose) {
-                    Write-Verbose "Saved [$Bucket/$currentKey] -> $filePath"
-                }
-            }
-
-            $index++
-        }
-    }
-
-    end {
-        if ($showProgress) {
-            Write-Progress -Activity "Saving to '$Bucket'" -Completed
-            $summary = "Saved $savedCount object(s) to '$Bucket'"
-            if ($Compress) { $summary += " (compressed)" }
-            Write-Host $summary -ForegroundColor Green
-            if ($skippedCount -gt 0) {
-                Write-Host "  $skippedCount skipped (existing or missing key)" -ForegroundColor Yellow
-            }
-            if ($fallbackCount -gt 0) {
-                Write-Host "  $fallbackCount required binary fallback" -ForegroundColor DarkYellow
             }
             if ($failedCount -gt 0) {
                 Write-Host "  $failedCount failed to serialize" -ForegroundColor Red
@@ -643,11 +498,18 @@ function Get-BucketObject {
     .PARAMETER Filter
     ScriptBlock for custom filtering. Use $_ to reference object properties (e.g., { $_.Age -gt 30 }).
     .PARAMETER First
-    Return only the first N objects.
+    Return only the first N objects (or arrays when -GroupArrays is used).
     .PARAMETER Skip
-    Skip the first N objects before returning results.
+    Skip the first N objects (or arrays when -GroupArrays is used) before returning results.
+    .PARAMETER GroupArrays
+    Reassemble stored arrays from individual files. Objects saved as part of a collection
+    carry _ArrayId and _ArrayIndex metadata; this parameter groups objects by _ArrayId,
+    sorts by _ArrayIndex, and returns each group as a wrapper object with properties:
+    _ArrayGroup ($true) and _ArrayItems (the array of objects). Strips _ArrayId and _ArrayIndex
+    from the grouped objects. Objects without array metadata are returned as-is.
     .OUTPUTS
     Deserialized PSObjects with _BucketName, _BucketKey, and _BucketFile metadata.
+    When -GroupArrays is used, array groups are returned as objects with _ArrayGroup and _ArrayItems.
     .EXAMPLE
     Get-BucketObject -Bucket users -Match @{ Role = "admin" }
     .EXAMPLE
@@ -658,6 +520,8 @@ function Get-BucketObject {
     Get-BucketObject -Bucket users, orders
     .EXAMPLE
     Get-BucketObject -First 10 -Skip 20
+    .EXAMPLE
+    Get-BucketObject -Bucket orders -Key "ORD-001" -GroupArrays
     #>
     [CmdletBinding()]
     param(
@@ -675,7 +539,9 @@ function Get-BucketObject {
 
         [int]$First,
 
-        [int]$Skip
+        [int]$Skip,
+
+        [switch]$GroupArrays
     )
 
     if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
@@ -703,12 +569,10 @@ function Get-BucketObject {
         }
     }
 
-    $emitted = 0
-    $skipped = 0
+    $allObjects = [System.Collections.ArrayList]::new()
 
     foreach ($bucketPath in $bucketPaths) {
         if (-not [System.IO.Directory]::Exists($bucketPath)) { continue }
-        if ($First -gt 0 -and $emitted -ge $First) { break }
 
         $bucketName = Split-Path $bucketPath -Leaf
 
@@ -716,7 +580,6 @@ function Get-BucketObject {
 
         foreach ($file in $files) {
             if ($null -eq $file -or -not [System.IO.File]::Exists($file.FullName)) { continue }
-            if ($First -gt 0 -and $emitted -ge $First) { break }
 
             $obj = Read-BucketFile -File $file
             if ($null -eq $obj) { continue }
@@ -750,14 +613,70 @@ function Get-BucketObject {
                 if ($null -eq ($obj | Where-Object $Filter)) { continue }
             }
 
+            $obj | Add-Member -NotePropertyName "_BucketName" -NotePropertyValue $bucketName -Force
+            $obj | Add-Member -NotePropertyName "_BucketKey" -NotePropertyValue ([System.IO.Path]::GetFileNameWithoutExtension($file.Name)) -Force
+            $obj | Add-Member -NotePropertyName "_BucketFile" -NotePropertyValue $file.FullName -Force
+            $null = $allObjects.Add($obj)
+        }
+    }
+
+    if ($GroupArrays -and $allObjects.Count -gt 0) {
+        $groups = [System.Collections.Generic.Dictionary[string, System.Collections.ArrayList]]::new()
+        $singles = [System.Collections.ArrayList]::new()
+
+        foreach ($obj in $allObjects) {
+            if ($obj.PSObject.Properties['_ArrayId']) {
+                $arrayId = $obj._ArrayId
+                if (-not $groups.ContainsKey($arrayId)) {
+                    $groups[$arrayId] = [System.Collections.ArrayList]::new()
+                }
+                $null = $groups[$arrayId].Add($obj)
+            }
+            else {
+                $null = $singles.Add($obj)
+            }
+        }
+
+        $output = [System.Collections.ArrayList]::new()
+
+        foreach ($arrayId in $groups.Keys) {
+            $group = [System.Collections.ArrayList]::new()
+            foreach ($item in ($groups[$arrayId] | Sort-Object -Property _ArrayIndex)) {
+                $item.PSObject.Properties.Remove('_ArrayId')
+                $item.PSObject.Properties.Remove('_ArrayIndex')
+                $null = $group.Add($item)
+            }
+            $arrayGroup = [PSCustomObject]@{
+                _ArrayGroup = $true
+                _ArrayItems = $group.ToArray()
+            }
+            $null = $output.Add($arrayGroup)
+        }
+
+        foreach ($obj in $singles) {
+            $null = $output.Add($obj)
+        }
+
+        if ($Skip -gt 0) {
+            $output = $output | Select-Object -Skip $Skip
+        }
+        if ($First -gt 0) {
+            $output = $output | Select-Object -First $First
+        }
+
+        foreach ($item in $output) {
+            Write-Output $item
+        }
+    }
+    else {
+        $emitted = 0
+        $skipped = 0
+        foreach ($obj in $allObjects) {
             if ($Skip -gt 0 -and $skipped -lt $Skip) {
                 $skipped++
                 continue
             }
-
-            $obj | Add-Member -NotePropertyName "_BucketName" -NotePropertyValue $bucketName -Force
-            $obj | Add-Member -NotePropertyName "_BucketKey" -NotePropertyValue ([System.IO.Path]::GetFileNameWithoutExtension($file.Name)) -Force
-            $obj | Add-Member -NotePropertyName "_BucketFile" -NotePropertyValue $file.FullName -Force
+            if ($First -gt 0 -and $emitted -ge $First) { break }
             Write-Output $obj
             $emitted++
         }

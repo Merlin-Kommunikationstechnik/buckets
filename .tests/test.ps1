@@ -425,6 +425,48 @@ try {
 }
 
 # ============================================================
+# 14b. Array grouping (-GroupArrays — reassemble stored arrays)
+# ============================================================
+Write-Host "`n[14b] Array grouping (-GroupArrays — reconstruct original arrays)" -ForegroundColor Yellow
+Remove-Bucket "array-test" -Force -Confirm:$false -WarningAction SilentlyContinue
+
+$arrayItems = @(
+    [PSCustomObject]@{ _Id = "a1"; Name = "First"; Seq = 1 }
+    [PSCustomObject]@{ _Id = "a2"; Name = "Second"; Seq = 2 }
+    [PSCustomObject]@{ _Id = "a3"; Name = "Third"; Seq = 3 }
+)
+New-BucketObject -Bucket array-test -InputObject $arrayItems -Key _Id -Quiet
+New-BucketObject -Bucket array-test -InputObject @{ _Id = "solo"; Name = "Standalone" } -Key _Id -Quiet
+
+Write-Host "  Normal read:" -ForegroundColor DarkGray
+$normal = Get-BucketObject -Bucket array-test
+$hasArrayId = $normal | Where-Object { $_.PSObject.Properties['_ArrayId'] }
+Write-Host "    $($normal.Count) objects, $($hasArrayId.Count) with _ArrayId" -ForegroundColor DarkGray
+
+Write-Host "  Grouped read:" -ForegroundColor DarkGray
+$allResults = [System.Collections.ArrayList]::new()
+Get-BucketObject -Bucket array-test -GroupArrays | ForEach-Object { $null = $allResults.Add($_) }
+$arrayGroupCount = 0
+$arrayItemCount = 0
+$orderCheck = $false
+$soloFound = $false
+foreach ($item in $allResults) {
+    if ($item.PSObject.Properties['_ArrayGroup'] -and $item._ArrayGroup -eq $true) {
+        $arrayGroupCount++
+        $arrayItemCount = $item._ArrayItems.Count
+        $orderCheck = $item._ArrayItems[0].Seq -eq 1 -and $item._ArrayItems[1].Seq -eq 2 -and $item._ArrayItems[2].Seq -eq 3
+    }
+    elseif (($item.PSObject.Properties['_Id'] -and $item._Id -eq "solo") -or ($item -is [hashtable] -and $item['_Id'] -eq "solo")) {
+        $soloFound = $true
+    }
+}
+if ($arrayGroupCount -eq 1 -and $arrayItemCount -eq 3 -and $orderCheck -and $soloFound) {
+    Write-Host "  OK (1 array group with 3 items in order, 1 standalone)" -ForegroundColor Green
+} else {
+    Write-Host "  FAIL (groups: $arrayGroupCount, items: $arrayItemCount, solo: $soloFound)" -ForegroundColor Red
+}
+
+# ============================================================
 # 15. Performance benchmark
 # ============================================================
 Write-Host "`n[15] Performance benchmark (1,000 objects — baseline throughput)" -ForegroundColor Yellow
