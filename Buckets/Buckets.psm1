@@ -484,8 +484,14 @@ function New-BucketObject {
             $index = 0
             foreach ($item in $itemsToProcess) {
                 if ($null -ne $arrayId) {
-                    $item | Add-Member -NotePropertyName "_ArrayId" -NotePropertyValue $arrayId -Force
-                    $item | Add-Member -NotePropertyName "_ArrayIndex" -NotePropertyValue $index -Force
+                    if ($item -is [hashtable]) {
+                        $item._ArrayId = $arrayId
+                        $item._ArrayIndex = $index
+                    }
+                    else {
+                        $item | Add-Member -NotePropertyName "_ArrayId" -NotePropertyValue $arrayId -Force
+                        $item | Add-Member -NotePropertyName "_ArrayIndex" -NotePropertyValue $index -Force
+                    }
                 }
 
                 $itemFilename = if (-not [string]::IsNullOrWhiteSpace($Key)) {
@@ -880,8 +886,9 @@ function Get-BucketObject {
         $singles = [System.Collections.ArrayList]::new()
 
         foreach ($obj in $allObjects) {
-            if ($obj.PSObject.Properties['_ArrayId']) {
-                $arrayId = $obj._ArrayId
+            $hasArrayId = if ($obj -is [hashtable]) { $obj.ContainsKey('_ArrayId') } else { $null -ne $obj.PSObject.Properties['_ArrayId'] }
+            if ($hasArrayId) {
+                $arrayId = if ($obj -is [hashtable]) { $obj._ArrayId } else { $obj._ArrayId }
                 if (-not $groups.ContainsKey($arrayId)) {
                     $groups[$arrayId] = [System.Collections.ArrayList]::new()
                 }
@@ -896,9 +903,20 @@ function Get-BucketObject {
 
         foreach ($arrayId in $groups.Keys) {
             $group = [System.Collections.ArrayList]::new()
-            foreach ($item in ($groups[$arrayId] | Sort-Object -Property _ArrayIndex)) {
-                $item.PSObject.Properties.Remove('_ArrayId')
-                $item.PSObject.Properties.Remove('_ArrayIndex')
+            $sorted = if ($groups[$arrayId][0] -is [hashtable]) {
+                $groups[$arrayId] | Sort-Object -Property { $_['_ArrayIndex'] }
+            } else {
+                $groups[$arrayId] | Sort-Object -Property _ArrayIndex
+            }
+            foreach ($item in $sorted) {
+                if ($item -is [hashtable]) {
+                    $item.Remove('_ArrayId')
+                    $item.Remove('_ArrayIndex')
+                }
+                else {
+                    $item.PSObject.Properties.Remove('_ArrayId')
+                    $item.PSObject.Properties.Remove('_ArrayIndex')
+                }
                 $null = $group.Add($item)
             }
             $arrayGroup = [PSCustomObject]@{
