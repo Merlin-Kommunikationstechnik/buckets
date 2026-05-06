@@ -195,104 +195,208 @@ function New-BucketObject {
         if ($AsTimestamp -and -not [string]::IsNullOrWhiteSpace($Key)) {
             Write-Verbose "Both -Key and -AsTimestamp specified. -Key takes precedence, -AsTimestamp ignored."
         }
-
-        $pipelineBuffer = [System.Collections.ArrayList]::new()
-        $hasInputObjectParam = $false
     }
 
     process {
-        if ($null -ne $InputObject) {
-            $isCollection = $InputObject -is [System.Collections.IEnumerable] -and $InputObject -isnot [string] -and $InputObject -isnot [hashtable] -and $InputObject -isnot [System.Collections.IDictionary]
-            if ($isCollection) {
-                foreach ($item in $InputObject) {
-                    $null = $pipelineBuffer.Add($item)
+        if ($null -eq $InputObject) { return }
+
+        $isCollection = $InputObject -is [System.Collections.IEnumerable] -and $InputObject -isnot [string] -and $InputObject -isnot [hashtable] -and $InputObject -isnot [System.Collections.IDictionary]
+
+        if ($isCollection) {
+            $items = $InputObject
+            $arrayId = $null
+            if ($items.Count -gt 1 -and -not [string]::IsNullOrWhiteSpace($Key)) {
+                $arrayId = [Guid]::NewGuid().ToString()
+            }
+
+            $totalForItems = $items.Count
+            $index = 0
+            foreach ($item in $items) {
+                if ($null -ne $arrayId) {
+                    $item | Add-Member -NotePropertyName "_ArrayId" -NotePropertyValue $arrayId -Force
+                    $item | Add-Member -NotePropertyName "_ArrayIndex" -NotePropertyValue $index -Force
                 }
-                $hasInputObjectParam = $true
-            }
-            else {
-                $null = $pipelineBuffer.Add($InputObject)
+
+                $itemFilename = if (-not [string]::IsNullOrWhiteSpace($Key)) {
+                    $keyValue = $item.$Key
+                    if ($null -eq $keyValue) {
+                        Write-Verbose "Property '$Key' not found on object, skipping"
+                        $skippedCount++
+                        $index++
+                        continue
+                    }
+                    $safeKey = $keyValue -replace '[\\/:\*\?"<>\|\.\[\]]', '_'
+                    if ([string]::IsNullOrWhiteSpace($safeKey) -or $safeKey -match '^_+$') {
+                        Write-Verbose "Key for object is empty after sanitization ('$keyValue' -> '$safeKey'), skipping"
+                        $skippedCount++
+                        $index++
+                        continue
+                    }
+                    "${safeKey}${extension}"
+                }
+                elseif ($AsTimestamp) {
+                    "$(Get-Date -Format 'yyyyMMddHHmmssfff')_${index}${extension}"
+                }
+                else {
+                    "$([Guid]::NewGuid())${extension}"
+                }
+
+                $itemFilePath = Join-Path $bucketPath $itemFilename
+
+                if ([System.IO.File]::Exists($itemFilePath) -and -not $Overwrite) {
+                    Write-Verbose "Object with key '$([System.IO.Path]::GetFileNameWithoutExtension($itemFilename))' already exists in bucket '$Bucket'. Use -Overwrite to replace."
+                    $skippedCount++
+                    $index++
+                    continue
+                }
+
+                $writeSuccess = $false
+                if ($AsJson) {
+                    try {
+                        $json = ConvertTo-Json -InputObject $item -Depth $Depth -Compress -WarningAction SilentlyContinue
+                        [System.IO.File]::WriteAllText($itemFilePath, $json, [System.Text.Encoding]::UTF8)
+                        $writeSuccess = $true
+                    }
+                    catch {
+                        try {
+                            $xml = [System.Management.Automation.PSSerializer]::Serialize($item, $BinaryDepth)
+                            $rawBytes = [System.Text.Encoding]::UTF8.GetBytes($xml)
+                            $itemFilePath = [System.IO.Path]::ChangeExtension($itemFilePath, ".dat")
+                            if ($Compress) {
+                                $ms = [System.IO.MemoryStream]::new()
+                                $cs = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionLevel]::Optimal)
+                                $cs.Write($rawBytes, 0, $rawBytes.Length)
+                                $cs.Close()
+                                [System.IO.File]::WriteAllBytes($itemFilePath, $ms.ToArray())
+                            }
+                            else {
+                                [System.IO.File]::WriteAllBytes($itemFilePath, $rawBytes)
+                            }
+                            Write-Verbose "Object '$([System.IO.Path]::GetFileNameWithoutExtension($itemFilename))' incompatible with JSON, saved as binary (.dat)"
+                            $fallbackCount++
+                            $writeSuccess = $true
+                        }
+                        catch {
+                            Write-Verbose "Failed to serialize object '$([System.IO.Path]::GetFileNameWithoutExtension($itemFilename))' as binary: $_"
+                            $failedCount++
+                        }
+                    }
+                }
+                else {
+                    $currentDepth = $BinaryDepth
+                    $serialized = $false
+                    while (-not $serialized -and $currentDepth -le 10) {
+                        try {
+                            $xml = [System.Management.Automation.PSSerializer]::Serialize($item, $currentDepth)
+                            $rawBytes = [System.Text.Encoding]::UTF8.GetBytes($xml)
+                            if ($Compress) {
+                                $ms = [System.IO.MemoryStream]::new()
+                                $cs = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionLevel]::Optimal)
+                                $cs.Write($rawBytes, 0, $rawBytes.Length)
+                                $cs.Close()
+                                [System.IO.File]::WriteAllBytes($itemFilePath, $ms.ToArray())
+                            }
+                            else {
+                                [System.IO.File]::WriteAllBytes($itemFilePath, $rawBytes)
+                            }
+                            $serialized = $true
+                            if ($currentDepth -gt $BinaryDepth) {
+                                Write-Verbose "Binary serialization required depth $currentDepth (default: $BinaryDepth)"
+                                $fallbackCount++
+                            }
+                        }
+                        catch {
+                            $currentDepth++
+                        }
+                    }
+                    if (-not $serialized) {
+                        Write-Verbose "Failed to serialize object with key '$([System.IO.Path]::GetFileNameWithoutExtension($itemFilename))' at any depth"
+                        $failedCount++
+                    }
+                    else {
+                        $writeSuccess = $true
+                    }
+                }
+
+                if ($writeSuccess) {
+                    $currentKey = [System.IO.Path]::GetFileNameWithoutExtension($itemFilename)
+                    $savedCount++
+
+                    if ($showProgress) {
+                        $percent = if ($totalForItems -gt 0) { [math]::Round(($savedCount / $totalForItems) * 100) } else { 0 }
+                        $activity = "Saving to '$Bucket'"
+                        $status = "$savedCount object(s) saved"
+                        Write-Progress -Activity $activity -Status $status -PercentComplete $percent -CurrentOperation $currentKey
+                    }
+                    elseif ($useVerbose) {
+                        Write-Verbose "Saved [$Bucket/$currentKey] -> $itemFilePath"
+                    }
+                }
+
+                $index++
             }
         }
-    }
+        else {
+            $item = $InputObject
 
-    end {
-        if ($pipelineBuffer.Count -eq 0) { return }
-
-        $totalCount = $pipelineBuffer.Count
-
-        $arrayId = $null
-        if ($pipelineBuffer.Count -gt 1 -and -not [string]::IsNullOrWhiteSpace($Key)) {
-            $arrayId = [Guid]::NewGuid().ToString()
-        }
-
-        $index = 0
-        foreach ($item in $pipelineBuffer) {
-            if ($null -ne $arrayId) {
-                $item | Add-Member -NotePropertyName "_ArrayId" -NotePropertyValue $arrayId -Force
-                $item | Add-Member -NotePropertyName "_ArrayIndex" -NotePropertyValue $index -Force
-            }
-
-            if (-not [string]::IsNullOrWhiteSpace($Key)) {
+            $itemFilename = if (-not [string]::IsNullOrWhiteSpace($Key)) {
                 $keyValue = $item.$Key
                 if ($null -eq $keyValue) {
                     Write-Verbose "Property '$Key' not found on object, skipping"
                     $skippedCount++
-                    $index++
-                    continue
+                    return
                 }
                 $safeKey = $keyValue -replace '[\\/:\*\?"<>\|\.\[\]]', '_'
                 if ([string]::IsNullOrWhiteSpace($safeKey) -or $safeKey -match '^_+$') {
                     Write-Verbose "Key for object is empty after sanitization ('$keyValue' -> '$safeKey'), skipping"
                     $skippedCount++
-                    $index++
-                    continue
+                    return
                 }
-                $filename = "${safeKey}${extension}"
+                "${safeKey}${extension}"
             }
             elseif ($AsTimestamp) {
-                $filename = "$(Get-Date -Format 'yyyyMMddHHmmssfff')_${index}${extension}"
+                "$(Get-Date -Format 'yyyyMMddHHmmssfff')_0${extension}"
             }
             else {
-                $filename = "$([Guid]::NewGuid())${extension}"
+                "$([Guid]::NewGuid())${extension}"
             }
 
-            $filePath = Join-Path $bucketPath $filename
+            $itemFilePath = Join-Path $bucketPath $itemFilename
 
-            if ([System.IO.File]::Exists($filePath) -and -not $Overwrite) {
-                Write-Verbose "Object with key '$([System.IO.Path]::GetFileNameWithoutExtension($filename))' already exists in bucket '$Bucket'. Use -Overwrite to replace."
+            if ([System.IO.File]::Exists($itemFilePath) -and -not $Overwrite) {
+                Write-Verbose "Object with key '$([System.IO.Path]::GetFileNameWithoutExtension($itemFilename))' already exists in bucket '$Bucket'. Use -Overwrite to replace."
                 $skippedCount++
-                $index++
-                continue
+                return
             }
 
             $writeSuccess = $false
             if ($AsJson) {
                 try {
                     $json = ConvertTo-Json -InputObject $item -Depth $Depth -Compress -WarningAction SilentlyContinue
-                    [System.IO.File]::WriteAllText($filePath, $json, [System.Text.Encoding]::UTF8)
+                    [System.IO.File]::WriteAllText($itemFilePath, $json, [System.Text.Encoding]::UTF8)
                     $writeSuccess = $true
                 }
                 catch {
                     try {
                         $xml = [System.Management.Automation.PSSerializer]::Serialize($item, $BinaryDepth)
                         $rawBytes = [System.Text.Encoding]::UTF8.GetBytes($xml)
-                        $filePath = [System.IO.Path]::ChangeExtension($filePath, ".dat")
+                        $itemFilePath = [System.IO.Path]::ChangeExtension($itemFilePath, ".dat")
                         if ($Compress) {
                             $ms = [System.IO.MemoryStream]::new()
                             $cs = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionLevel]::Optimal)
                             $cs.Write($rawBytes, 0, $rawBytes.Length)
                             $cs.Close()
-                            [System.IO.File]::WriteAllBytes($filePath, $ms.ToArray())
+                            [System.IO.File]::WriteAllBytes($itemFilePath, $ms.ToArray())
                         }
                         else {
-                            [System.IO.File]::WriteAllBytes($filePath, $rawBytes)
+                            [System.IO.File]::WriteAllBytes($itemFilePath, $rawBytes)
                         }
-                        Write-Verbose "Object '$([System.IO.Path]::GetFileNameWithoutExtension($filename))' incompatible with JSON, saved as binary (.dat)"
+                        Write-Verbose "Object '$([System.IO.Path]::GetFileNameWithoutExtension($itemFilename))' incompatible with JSON, saved as binary (.dat)"
                         $fallbackCount++
                         $writeSuccess = $true
                     }
                     catch {
-                        Write-Verbose "Failed to serialize object '$([System.IO.Path]::GetFileNameWithoutExtension($filename))' as binary: $_"
+                        Write-Verbose "Failed to serialize object '$([System.IO.Path]::GetFileNameWithoutExtension($itemFilename))' as binary: $_"
                         $failedCount++
                     }
                 }
@@ -309,10 +413,10 @@ function New-BucketObject {
                             $cs = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionLevel]::Optimal)
                             $cs.Write($rawBytes, 0, $rawBytes.Length)
                             $cs.Close()
-                            [System.IO.File]::WriteAllBytes($filePath, $ms.ToArray())
+                            [System.IO.File]::WriteAllBytes($itemFilePath, $ms.ToArray())
                         }
                         else {
-                            [System.IO.File]::WriteAllBytes($filePath, $rawBytes)
+                            [System.IO.File]::WriteAllBytes($itemFilePath, $rawBytes)
                         }
                         $serialized = $true
                         if ($currentDepth -gt $BinaryDepth) {
@@ -325,7 +429,7 @@ function New-BucketObject {
                     }
                 }
                 if (-not $serialized) {
-                    Write-Verbose "Failed to serialize object with key '$([System.IO.Path]::GetFileNameWithoutExtension($filename))' at any depth"
+                    Write-Verbose "Failed to serialize object with key '$([System.IO.Path]::GetFileNameWithoutExtension($itemFilename))' at any depth"
                     $failedCount++
                 }
                 else {
@@ -334,7 +438,7 @@ function New-BucketObject {
             }
 
             if ($writeSuccess) {
-                $currentKey = [System.IO.Path]::GetFileNameWithoutExtension($filename)
+                $currentKey = [System.IO.Path]::GetFileNameWithoutExtension($itemFilename)
                 $savedCount++
 
                 if ($showProgress) {
@@ -344,13 +448,13 @@ function New-BucketObject {
                     Write-Progress -Activity $activity -Status $status -PercentComplete $percent -CurrentOperation $currentKey
                 }
                 elseif ($useVerbose) {
-                    Write-Verbose "Saved [$Bucket/$currentKey] -> $filePath"
+                    Write-Verbose "Saved [$Bucket/$currentKey] -> $itemFilePath"
                 }
             }
-
-            $index++
         }
+    }
 
+    end {
         if ($showProgress) {
             Write-Progress -Activity "Saving to '$Bucket'" -Completed
             $summary = "Saved $savedCount object(s) to '$Bucket'"

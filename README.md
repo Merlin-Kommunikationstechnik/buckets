@@ -80,7 +80,7 @@ $users = @(
 )
 New-BucketObject -Bucket users -InputObject $users -Key Name
 
-# Or pipe the array directly (same result)
+# Or pipe the array (same result, but loses array tracking)
 $users | New-BucketObject -Bucket users -Key Name
 
 # Special characters are sanitized (/, :, *, etc. become _)
@@ -161,13 +161,12 @@ $items = @(
 )
 New-BucketObject -Bucket orders -InputObject $items -Key _Id
 
-# Or pipe the array directly
-$items | New-BucketObject -Bucket orders -Key _Id
-
 # Read back with grouping — returns wrapper objects
 $result = Get-BucketObject -Bucket orders -GroupArrays
 $result._ArrayItems  # The reassembled array, sorted by original index
 ```
+
+Array tracking only activates when an array is passed via `-InputObject`. Piping items individually (`$items | New-BucketObject`) does not track arrays (PowerShell enumerates them), but this is faster for large pipelines.
 
 `-GroupArrays` returns wrapper objects with:
 - `_ArrayGroup` — `$true` for array groups, absent for standalone objects
