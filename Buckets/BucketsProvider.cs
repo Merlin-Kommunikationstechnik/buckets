@@ -58,7 +58,7 @@ namespace Buckets.Provider
     {
         private static readonly char[] InvalidChars = { '/', ':', '*', '?', '"', '<', '>', '|', '.', '[', ']' };
         private static readonly byte[] GZipMagic = { 0x1F, 0x8B };
-        private static readonly char ProviderSep = '\\';
+        private static readonly char ProviderSep = Path.DirectorySeparatorChar;
         private static readonly char Sep = Path.DirectorySeparatorChar;
         private const string ArraysDir = ".arrays";
 
@@ -94,7 +94,7 @@ namespace Buckets.Provider
             }
 
             // Return PSDriveInfo with drive name as logical root
-            var newDrive = new PSDriveInfo(drive.Name, this.ProviderInfo, drive.Name + ":", drive.Description, drive.Credential);
+            var newDrive = new PSDriveInfo(drive.Name, this.ProviderInfo, drive.Name + ":" + ProviderSep, drive.Description, drive.Credential);
             DriveRoots[drive.Name] = root;
             SessionState.PSVariable.Set("__buckets_physical_root_" + drive.Name, root);
             return newDrive;
@@ -823,17 +823,19 @@ namespace Buckets.Provider
             {
                 foreach (var bucketDir in di.GetDirectories().Where(d => d.Name != ".buckets").OrderBy(d => d.Name))
                 {
-                    WriteItemObject(bucketDir.Name, bucketDir.Name, true);
+                    string logicalPath = PSDriveInfo.Name + ":" + ProviderSep + bucketDir.Name;
+                    WriteItemObject(bucketDir.Name, logicalPath, true);
                 }
             }
             else if (isBucketRoot)
             {
                 string bucketName = di.Name;
+                string parentPath = PSDriveInfo.Name + ":" + ProviderSep + bucketName;
 
                 foreach (var file in di.GetFiles("*.dat").Concat(di.GetFiles("*.json")).OrderBy(f => f.Name))
                 {
                     string name = Path.GetFileNameWithoutExtension(file.Name);
-                    WriteItemObject(name, name, false);
+                    WriteItemObject(name, parentPath + ProviderSep + name, false);
                 }
 
                 string arraysPath = Path.Combine(physical, ArraysDir);
@@ -842,29 +844,37 @@ namespace Buckets.Provider
                     var arraysDir = new DirectoryInfo(arraysPath);
                     foreach (var arrayDir in arraysDir.GetDirectories().OrderBy(d => d.Name))
                     {
-                        WriteItemObject(arrayDir.Name, arrayDir.Name, true);
+                        WriteItemObject(arrayDir.Name, parentPath + ProviderSep + arrayDir.Name, true);
                     }
                 }
             }
             else if (IsArrayDirectory(physical))
             {
+                string bucketName = GetBucketNameFromPhysical(physical, root);
+                string arrayName = di.Name;
+                string parentPath = PSDriveInfo.Name + ":" + ProviderSep + bucketName + ProviderSep + arrayName;
+
                 foreach (var file in di.GetFiles("*.dat").Concat(di.GetFiles("*.json")).OrderBy(f => f.Name))
                 {
                     string name = Path.GetFileNameWithoutExtension(file.Name);
-                    WriteItemObject(name, name, false);
+                    WriteItemObject(name, parentPath + ProviderSep + name, false);
                 }
             }
             else
             {
+                string relativePhysical = physical.Substring(root.Length).TrimStart(Sep, '/', '\\');
+                string relativeLogical = relativePhysical.Replace('/', ProviderSep).Replace('\\', ProviderSep);
+                string prefix = PSDriveInfo.Name + ":" + ProviderSep + relativeLogical;
+
                 foreach (var subDir in di.GetDirectories().Where(d => d.Name != ".buckets").OrderBy(d => d.Name))
                 {
-                    WriteItemObject(subDir.Name, subDir.Name, true);
+                    WriteItemObject(subDir.Name, prefix + ProviderSep + subDir.Name, true);
                 }
 
                 foreach (var file in di.GetFiles("*.dat").Concat(di.GetFiles("*.json")).OrderBy(f => f.Name))
                 {
                     string name = Path.GetFileNameWithoutExtension(file.Name);
-                    WriteItemObject(name, name, false);
+                    WriteItemObject(name, prefix + ProviderSep + name, false);
                 }
             }
         }
@@ -960,6 +970,12 @@ namespace Buckets.Provider
                 return normalized;
             }
 
+            // Clamp ".." parent to drive root
+            if (normalized == "..")
+            {
+                return driveName + ProviderSep + child;
+            }
+
             // If child is already fully qualified, return it as-is
             if (child.StartsWith(driveName, StringComparison.OrdinalIgnoreCase))
             {
@@ -986,24 +1002,49 @@ namespace Buckets.Provider
                 path = driveName + ProviderSep + path;
             }
 
-            string cleaned = path;
-            int colonColon = cleaned.IndexOf("::", StringComparison.Ordinal);
-            if (colonColon >= 0) cleaned = cleaned.Substring(colonColon + 2);
-            if (cleaned.StartsWith(driveName, StringComparison.OrdinalIgnoreCase))
+            // Normalize separators to forward slash (consistent across platforms)
+            char sep = '/';
+            string normalized = path.Replace('\\', sep);
+
+            // Check if the path is just a separator or empty (drive root)
+            string trimmedNorm = normalized.TrimEnd(sep).TrimStart(sep);
+            if (string.IsNullOrEmpty(trimmedNorm))
             {
-                cleaned = cleaned.Substring(driveName.Length);
+                // At drive root - return the root path as-is
+                string rootPath = root ?? "";
+                if (!string.IsNullOrEmpty(rootPath) && !rootPath.EndsWith(sep.ToString()))
+                {
+                    rootPath = rootPath + sep;
+                }
+                return rootPath.Replace('\\', sep);
             }
-            cleaned = cleaned.TrimStart(ProviderSep, '/', '\\');
 
-            if (string.IsNullOrEmpty(cleaned)) return driveName;
+            // Ensure root has trailing separator
+            string rootPath2 = root ?? "";
+            if (!string.IsNullOrEmpty(rootPath2) && !rootPath2.EndsWith(sep.ToString()))
+            {
+                rootPath2 = rootPath2 + sep;
+            }
+            rootPath2 = rootPath2.Replace('\\', sep);
 
-            int sep = cleaned.LastIndexOf(ProviderSep);
-            if (sep < 0) sep = cleaned.LastIndexOf('/');
-            if (sep < 0) sep = cleaned.LastIndexOf('\\');
-            if (sep < 0) return driveName;
+            // Check if path equals root
+            string trimmedNormalized = normalized.TrimEnd(sep);
+            string trimmedRoot = rootPath2.TrimEnd(sep);
+            if (string.Equals(trimmedNormalized, trimmedRoot, StringComparison.OrdinalIgnoreCase))
+            {
+                return rootPath2;
+            }
 
-            string parentRel = cleaned.Substring(0, sep);
-            return string.IsNullOrEmpty(parentRel) ? driveName : (driveName + ProviderSep + parentRel);
+            // Find the last separator and return everything before it
+            int lastIndex = trimmedNormalized.LastIndexOf(sep);
+
+            if (lastIndex != -1)
+            {
+                if (lastIndex == 0) ++lastIndex;
+                return trimmedNormalized.Substring(0, lastIndex);
+            }
+
+            return rootPath2;
         }
 
         protected override string NormalizeRelativePath(string path, string basePath)
@@ -1013,16 +1054,19 @@ namespace Buckets.Provider
             string drivePrefix = PSDriveInfo.Name + ":";
             string root = GetPhysicalRoot();
 
-            // Convert physical paths to logical first
+            // Handle physical filesystem paths - convert to logical
             if (path.StartsWith(root, StringComparison.OrdinalIgnoreCase))
             {
-                return ToLogicalPath(path);
+                string logical = ToLogicalPath(path);
+                path = drivePrefix + ProviderSep + logical;
             }
 
-            // Clean up provider-qualified paths
+            // Handle provider-qualified paths like "buckets:/../something" or "buckets:\something"
             string cleaned = path;
             int colonColon = cleaned.IndexOf("::", StringComparison.Ordinal);
             if (colonColon >= 0) cleaned = cleaned.Substring(colonColon + 2);
+
+            // Strip drive prefix
             if (cleaned.StartsWith(drivePrefix, StringComparison.OrdinalIgnoreCase))
             {
                 cleaned = cleaned.Substring(drivePrefix.Length);
@@ -1038,7 +1082,9 @@ namespace Buckets.Provider
                 stack.Add(part);
             }
 
-            return string.Join(ProviderSep.ToString(), stack);
+            string relative = string.Join(ProviderSep.ToString(), stack);
+            // Return path relative to basePath (strip leading separator)
+            return relative;
         }
 
         #endregion
