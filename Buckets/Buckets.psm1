@@ -2423,7 +2423,7 @@ $script:KeyCompleterBlock = {
 
 @('New-BucketObject', 'Get-BucketObject', 'Set-BucketObject', 'Remove-BucketObject',
   'Get-BucketStats', 'Remove-Bucket', 'Copy-BucketObject', 'Rename-BucketObject',
-  'Move-BucketObject', 'Export-Bucket', 'Import-Bucket') | ForEach-Object {
+  'Move-BucketObject', 'Export-Bucket', 'Import-Bucket', 'fill', 'spill') | ForEach-Object {
     Register-ArgumentCompleter -CommandName $_ -ParameterName Bucket -ScriptBlock $script:CompleterBlock
 }
 
@@ -2432,7 +2432,7 @@ Register-ArgumentCompleter -CommandName Move-BucketObject -ParameterName Destina
 
 # Key completion for cmdlets that take a -Key
 @('Get-BucketObject', 'Set-BucketObject', 'Remove-BucketObject',
-  'Copy-BucketObject', 'Rename-BucketObject', 'Move-BucketObject') | ForEach-Object {
+  'Copy-BucketObject', 'Rename-BucketObject', 'Move-BucketObject', 'spill') | ForEach-Object {
     Register-ArgumentCompleter -CommandName $_ -ParameterName Key -ScriptBlock $script:KeyCompleterBlock
 }
 
@@ -2480,6 +2480,10 @@ $moduleInfo.OnRemove = {
 
 # Map PSDrive on module import
 Sync-BucketDrive
+
+# Bucket-themed aliases
+Set-Alias -Name fill -Value New-BucketObject
+Set-Alias -Name spill -Value Get-BucketObject
 
 # Ensure `ls` resolves to Get-ChildItem, not native /bin/ls (macOS)
 Set-Alias -Name ls -Value Get-ChildItem -Scope Global -Force
@@ -2540,4 +2544,4 @@ foreach ($cmd in $nativeCommands) {
 }
 
 # Export Sync-BucketDrive (defined after initial Export-ModuleMember)
-Export-ModuleMember -Function 'Sync-BucketDrive'
+Export-ModuleMember -Function 'Sync-BucketDrive' -Alias 'fill', 'spill'
