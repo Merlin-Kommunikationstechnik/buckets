@@ -12,7 +12,7 @@
 RootModule = 'Buckets.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.1.3'
+ModuleVersion = '1.1.4'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -111,7 +111,7 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-        ReleaseNotes = 'Fixed Get-BucketObject errors when searching multiple buckets with -Key. Get-ObjectFiles now returns empty array instead of $null when no key match found. Added case-insensitive key lookups. Performance improvements via direct .NET I/O calls.'
+        ReleaseNotes = 'Fixed native provider tab completion on macOS (drive root with separator, GetChildNames returns fully qualified paths, GetParentPath rewritten). Added fill/spill aliases. .arrays/ flattened in provider view. Added buckets: PSDrive auto-map on module import. Module cleanup: removed dead code, reordered functions alphabetically, fixed manifest module name (BucketTools -> Buckets).'
 
         # Prerelease string of this module
         # Prerelease = ''
