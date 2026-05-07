@@ -2481,5 +2481,63 @@ $moduleInfo.OnRemove = {
 # Map PSDrive on module import
 Sync-BucketDrive
 
+# Ensure `ls` resolves to Get-ChildItem, not native /bin/ls (macOS)
+Set-Alias -Name ls -Value Get-ChildItem -Scope Global -Force
+
+# Custom argument completer for buckets: drive paths
+$BucketsPathCompleter = {
+    param($commandName, $parameterName, $wordToComplete, $commandAst, $fakeBoundParameters)
+
+    # Only handle paths starting with buckets:
+    $word = $wordToComplete -replace '"$', ''
+    if (-not $word.StartsWith('buckets:', [StringComparison]::OrdinalIgnoreCase)) {
+        return
+    }
+
+    # Get the directory part and filter
+    $lastSlash = $word.LastIndexOf('\')
+    if ($lastSlash -lt 0) { $lastSlash = $word.LastIndexOf('/') }
+
+    if ($lastSlash -lt 0) {
+        # At drive root: buckets: or buckets:\
+        $dir = 'buckets:\'
+        $filter = $word.Substring($word.IndexOf(':') + 1).TrimStart('\', '/')
+    } else {
+        $dir = $word.Substring(0, $lastSlash + 1)
+        $filter = $word.Substring($lastSlash + 1)
+    }
+
+    # Normalize dir to end with \
+    if (-not $dir.EndsWith('\')) { $dir = $dir + '\' }
+
+    try {
+        $items = Get-ChildItem -Path $dir -ErrorAction Stop
+        foreach ($item in $items) {
+            $name = $item.Name
+            if ($filter -and -not $name.StartsWith($filter, [StringComparison]::OrdinalIgnoreCase)) {
+                continue
+            }
+            $isContainer = $item.PSIsContainer
+            $completionText = $dir + $name
+            $listItemText = $name
+            $resultType = if ($isContainer) { 'ProviderContainer' } else { 'ProviderItem' }
+            $toolTip = if ($isContainer) { "$name (bucket)" } else { "$name (object)" }
+            [System.Management.Automation.CompletionResult]::new($completionText, $listItemText, $resultType, $toolTip)
+        }
+    } catch {
+        # Silently ignore errors
+    }
+}
+
+# Register completer for path-like parameters
+$nativeCommands = @(
+    'Get-ChildItem', 'Get-Item', 'Remove-Item', 'Copy-Item', 'Move-Item',
+    'Resolve-Path', 'Test-Path', 'Set-Location'
+)
+foreach ($cmd in $nativeCommands) {
+    Register-ArgumentCompleter -CommandName $cmd -ParameterName Path -ScriptBlock $BucketsPathCompleter
+    Register-ArgumentCompleter -CommandName $cmd -ParameterName LiteralPath -ScriptBlock $BucketsPathCompleter
+}
+
 # Export Sync-BucketDrive (defined after initial Export-ModuleMember)
 Export-ModuleMember -Function 'Sync-BucketDrive'
