@@ -27,13 +27,26 @@ namespace Buckets.Provider
 
     public class BucketItemInfo
     {
-        public string Mode => IsContainer ? "d----" : "-a---";
+        public string Mode
+        {
+            get
+            {
+                switch (ItemKind)
+                {
+                    case "bucket": return "b--";
+                    case "array":  return "-a-";
+                    case "object": return "--o";
+                    default:       return IsContainer ? "b--" : "--o";
+                }
+            }
+        }
         public DateTime LastWriteTime { get; set; }
         public long? Length => IsContainer ? (long?)null : SizeBytes;
         public string Name { get; set; }
 
         // Internal use only
         internal bool IsContainer { get; set; }
+        internal string ItemKind { get; set; } // "bucket", "array", "object"
         internal int ItemCount { get; set; }
         internal string Format { get; set; }
         internal long SizeBytes { get; set; }
@@ -46,6 +59,7 @@ namespace Buckets.Provider
         private static readonly char[] InvalidChars = { '/', ':', '*', '?', '"', '<', '>', '|', '.', '[', ']' };
         private static readonly byte[] GZipMagic = { 0x1F, 0x8B };
         private static readonly char Sep = Path.DirectorySeparatorChar;
+        private const string ArraysDir = ".arrays";
 
         #region Drive Support
 
@@ -75,8 +89,6 @@ namespace Buckets.Provider
                 Directory.CreateDirectory(root);
             }
 
-            // Return PSDriveInfo with drive name as logical root, store physical root separately
-            // This ensures all navigation methods work with logical paths
             var newDrive = new PSDriveInfo(drive.Name, this.ProviderInfo, drive.Name + ":", drive.Description, drive.Credential);
             SessionState.PSVariable.Set("__buckets_physical_root_" + drive.Name, root);
             return newDrive;
@@ -105,8 +117,7 @@ namespace Buckets.Provider
 
         /// <summary>
         /// Convert a provider-logical path to the actual filesystem path.
-        /// Handles both relative paths (users/Alice) and provider-qualified paths (Buckets::...).
-        /// For leaf paths, probes .dat first, then .json.
+        /// Flattens .arrays/: bucket/arrayname resolves to bucket/.arrays/arrayname
         /// </summary>
         private string ToPhysicalPath(string path)
         {
@@ -131,8 +142,7 @@ namespace Buckets.Provider
                 path = path.Substring(driveName.Length);
             }
 
-            // Strip leading separators (these are provider separators, NOT filesystem roots)
-            // This is critical: on Unix, "/users" would be treated as absolute by Path.IsPathRooted
+            // Strip leading separators
             path = path.TrimStart(Sep, '/', '\\');
 
             if (string.IsNullOrEmpty(path))
@@ -140,7 +150,7 @@ namespace Buckets.Provider
                 return Directory.Exists(root) ? root : null;
             }
 
-            // NOW check if it's a filesystem-absolute path (e.g. passed directly from the engine)
+            // Check if it's a filesystem-absolute path
             if (Path.IsPathRooted(path))
             {
                 string normalized = Path.GetFullPath(path);
@@ -156,22 +166,71 @@ namespace Buckets.Provider
             // Normalize separators
             path = path.Replace('/', Sep).Replace('\\', Sep);
 
-            string physical = Path.Combine(root, path);
+            // Split into parts to handle flattening
+            string[] parts = path.Split(new[] { Sep }, StringSplitOptions.RemoveEmptyEntries);
 
-            if (Directory.Exists(physical)) return physical;
-            if (File.Exists(physical)) return physical;
+            if (parts.Length == 1)
+            {
+                // Single part: bucket name
+                string physical = Path.Combine(root, parts[0]);
+                if (Directory.Exists(physical)) return physical;
+                return null;
+            }
 
-            string datPath2 = physical + ".dat";
-            if (File.Exists(datPath2)) return datPath2;
+            // Two parts: bucket/arrayname -> bucket/.arrays/arrayname
+            if (parts.Length == 2)
+            {
+                // First try: bucket/arrayname/.arrays/arrayname (array dir with items)
+                string arrayDir = Path.Combine(root, parts[0], ArraysDir, parts[1]);
+                if (Directory.Exists(arrayDir)) return arrayDir;
 
-            string jsonPath2 = physical + ".json";
-            if (File.Exists(jsonPath2)) return jsonPath2;
+                // Second try: bucket/arrayname.dat (object in bucket root)
+                string objFile = Path.Combine(root, parts[0], parts[1]);
+                if (File.Exists(objFile)) return objFile;
+                string datFile = objFile + ".dat";
+                if (File.Exists(datFile)) return datFile;
+                string jsonFile = objFile + ".json";
+                if (File.Exists(jsonFile)) return jsonFile;
+
+                // Third try: plain directory (bucket itself, or legacy)
+                string bucketDir = Path.Combine(root, parts[0]);
+                if (Directory.Exists(bucketDir))
+                {
+                    string subDir = Path.Combine(bucketDir, parts[1]);
+                    if (Directory.Exists(subDir)) return subDir;
+                }
+
+                return null;
+            }
+
+            // Three+ parts: bucket/arrayname/item or bucket/subdir/item
+            if (parts.Length >= 3)
+            {
+                // If second part looks like an array path, insert .arrays/
+                string withArrays = Path.Combine(root, parts[0], ArraysDir);
+                for (int i = 1; i < parts.Length; i++)
+                {
+                    withArrays = Path.Combine(withArrays, parts[i]);
+                }
+                if (Directory.Exists(withArrays)) return withArrays;
+                if (File.Exists(withArrays)) return withArrays;
+                string datPath = withArrays + ".dat";
+                if (File.Exists(datPath)) return datPath;
+                string jsonPath = withArrays + ".json";
+                if (File.Exists(jsonPath)) return jsonPath;
+
+                // Fall back to direct path
+                string direct = Path.Combine(root, path);
+                if (Directory.Exists(direct)) return direct;
+                if (File.Exists(direct)) return direct;
+            }
 
             return null;
         }
 
         /// <summary>
         /// Convert a physical filesystem path to a provider-logical path.
+        /// Strips .arrays/ from the path for a flattened view.
         /// </summary>
         private string ToLogicalPath(string physicalPath)
         {
@@ -182,6 +241,28 @@ namespace Buckets.Provider
             }
 
             string relative = physicalPath.Substring(root.Length).TrimStart(Sep);
+
+            // Strip .arrays/ from the path (flattening)
+            string arraysPrefix = ArraysDir + Sep;
+            if (relative.StartsWith(arraysPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                // bucket/.arrays/arrayname -> bucket/arrayname
+                relative = relative.Substring(arraysPrefix.Length);
+                string[] parts = relative.Split(new[] { Sep }, StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length >= 1)
+                {
+                    // We need the bucket name - find it from the physical path
+                    string bucketName = GetBucketNameFromPhysical(physicalPath, root);
+                    if (parts.Length == 1)
+                    {
+                        relative = bucketName + Sep + parts[0];
+                    }
+                    else
+                    {
+                        relative = bucketName + Sep + string.Join(Sep.ToString(), parts);
+                    }
+                }
+            }
 
             // Strip known extensions
             string lower = relative.ToLowerInvariant();
@@ -195,6 +276,16 @@ namespace Buckets.Provider
             }
 
             return relative;
+        }
+
+        /// <summary>
+        /// Extract bucket name from a physical path by walking up from root.
+        /// </summary>
+        private string GetBucketNameFromPhysical(string physicalPath, string root)
+        {
+            string relative = physicalPath.Substring(root.Length).TrimStart(Sep);
+            string[] parts = relative.Split(new[] { Sep }, StringSplitOptions.RemoveEmptyEntries);
+            return parts.Length > 0 ? parts[0] : "";
         }
 
         #endregion
@@ -222,7 +313,6 @@ namespace Buckets.Provider
                     }
                 }
 
-                // Buckets module writes CLIXML as UTF-8 (not UTF-16LE)
                 string xml = Encoding.UTF8.GetString(bytes);
                 return PSSerializer.Deserialize(xml);
             }
@@ -328,6 +418,34 @@ namespace Buckets.Provider
             return result;
         }
 
+        /// <summary>
+        /// Determine if a physical directory is at the bucket root level (direct child of drive root).
+        /// </summary>
+        private bool IsBucketRoot(string physicalDir, string root)
+        {
+            string relative = physicalDir.Substring(root.Length).TrimStart(Sep);
+            // Root itself has empty relative path; bucket roots have exactly one segment
+            return !string.IsNullOrEmpty(relative) && !relative.Contains(Sep.ToString());
+        }
+
+        /// <summary>
+        /// Determine if we're at the drive root (not inside any bucket).
+        /// </summary>
+        private bool IsDriveRoot(string physicalDir, string root)
+        {
+            return string.Equals(Path.GetFullPath(physicalDir), Path.GetFullPath(root), StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// Determine if a physical directory is inside .arrays/
+        /// </summary>
+        private bool IsArrayDirectory(string physicalDir)
+        {
+            string normalized = physicalDir.Replace('\\', Sep);
+            return normalized.Contains(Sep + ArraysDir + Sep) ||
+                   normalized.EndsWith(Sep + ArraysDir);
+        }
+
         private string GetBucketName(string logicalPath)
         {
             string normalized = ToLogicalPath(logicalPath).TrimStart(Sep, '/', '\\');
@@ -340,13 +458,6 @@ namespace Buckets.Provider
             string normalized = ToLogicalPath(logicalPath).TrimStart(Sep, '/', '\\');
             int sep = normalized.LastIndexOf(Sep);
             return sep < 0 ? normalized : normalized.Substring(sep + 1);
-        }
-
-        private string GetParentLogicalPath(string logicalPath)
-        {
-            string normalized = ToLogicalPath(logicalPath).TrimStart(Sep, '/', '\\');
-            int sep = normalized.LastIndexOf(Sep);
-            return sep < 0 ? "" : normalized.Substring(0, sep);
         }
 
         #endregion
@@ -382,15 +493,48 @@ namespace Buckets.Provider
 
             if (Directory.Exists(physical))
             {
+                string root = GetPhysicalRoot();
+                bool isDriveRoot = IsDriveRoot(physical, root);
+                bool isBucketRoot = IsBucketRoot(physical, root);
+                bool isArrayDir = IsArrayDirectory(physical);
+
+                string itemKind;
+                if (isDriveRoot) itemKind = "bucket"; // Drive root itself
+                else if (isBucketRoot) itemKind = "bucket";
+                else if (isArrayDir) itemKind = "array";
+                else itemKind = "bucket";
+
                 var di = new DirectoryInfo(physical);
-                var items = di.GetFiles("*.dat").Concat(di.GetFiles("*.json"));
+                var files = di.GetFiles("*.dat").Concat(di.GetFiles("*.json"));
                 var dirs = di.GetDirectories().Where(d => d.Name != ".buckets");
-                int count = items.Count() + dirs.Count();
+                int arrayCount = 0;
+                if (isDriveRoot || isBucketRoot)
+                {
+                    string arraysPath = isDriveRoot ? "" : Path.Combine(physical, ArraysDir);
+                    // For drive root, count arrays across all buckets
+                    if (isDriveRoot)
+                    {
+                        foreach (var bucketDir in dirs)
+                        {
+                            string bucketArrays = Path.Combine(bucketDir.FullName, ArraysDir);
+                            if (Directory.Exists(bucketArrays))
+                            {
+                                arrayCount += new DirectoryInfo(bucketArrays).GetDirectories().Length;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        arrayCount = Directory.Exists(arraysPath) ? new DirectoryInfo(arraysPath).GetDirectories().Length : 0;
+                    }
+                }
+                int count = files.Count() + dirs.Count() + arrayCount;
 
                 var info = new BucketItemInfo
                 {
                     Name = di.Name,
                     IsContainer = true,
+                    ItemKind = itemKind,
                     ItemCount = count,
                     Format = "",
                     SizeBytes = 0,
@@ -464,52 +608,169 @@ namespace Buckets.Provider
             if (depthLimit.HasValue && currentDepth >= depthLimit.Value) return;
 
             var di = new DirectoryInfo(directory);
+            string root = GetPhysicalRoot();
+            bool isDriveRoot = IsDriveRoot(directory, root);
+            bool isBucketRoot = IsBucketRoot(directory, root);
 
-            // Subdirectories
-            foreach (var subDir in di.GetDirectories().OrderBy(d => d.Name))
+            if (isDriveRoot)
             {
-                if (subDir.Name == ".buckets") continue;
-
-                var files = subDir.GetFiles("*.dat").Concat(subDir.GetFiles("*.json"));
-                var subDirs = subDir.GetDirectories().Where(d => d.Name != ".buckets");
-                int count = files.Count() + subDirs.Count();
-
-                string logical = ToLogicalPath(subDir.FullName);
-                WriteItemObject(new BucketItemInfo
+                // At drive root: show bucket directories (b--)
+                foreach (var bucketDir in di.GetDirectories().Where(d => d.Name != ".buckets").OrderBy(d => d.Name))
                 {
-                    Name = subDir.Name,
-                    IsContainer = true,
-                    ItemCount = count,
-                    Format = "",
-                    SizeBytes = 0,
-                    PhysicalPath = subDir.FullName,
-                    LastWriteTime = subDir.LastWriteTime
-                }, logical, true);
+                    var files = bucketDir.GetFiles("*.dat").Concat(bucketDir.GetFiles("*.json"));
+                    var arraysPath = Path.Combine(bucketDir.FullName, ArraysDir);
+                    int arrayCount = Directory.Exists(arraysPath) ? new DirectoryInfo(arraysPath).GetDirectories().Length : 0;
+                    int count = files.Count() + arrayCount;
 
-                if (recurse)
-                {
-                    currentDepth++;
-                    EnumerateDirectory(subDir.FullName, recurse, depthLimit, ref currentDepth);
-                    currentDepth--;
+                    WriteItemObject(new BucketItemInfo
+                    {
+                        Name = bucketDir.Name,
+                        IsContainer = true,
+                        ItemKind = "bucket",
+                        ItemCount = count,
+                        Format = "",
+                        SizeBytes = 0,
+                        PhysicalPath = bucketDir.FullName,
+                        LastWriteTime = bucketDir.LastWriteTime
+                    }, bucketDir.Name, true);
+
+                    if (recurse)
+                    {
+                        currentDepth++;
+                        EnumerateDirectory(bucketDir.FullName, recurse, depthLimit, ref currentDepth);
+                        currentDepth--;
+                    }
                 }
             }
-
-            // Files
-            foreach (var file in di.GetFiles("*.dat").Concat(di.GetFiles("*.json")).OrderBy(f => f.Name))
+            else if (isBucketRoot)
             {
-                string ext = Path.GetExtension(file.Name).ToLowerInvariant();
-                string logical = ToLogicalPath(file.FullName);
+                // At bucket root: show regular files (objects) and array dirs (from .arrays/)
+                // Hide .arrays/ itself
 
-                WriteItemObject(new BucketItemInfo
+                // Regular files (--o)
+                foreach (var file in di.GetFiles("*.dat").Concat(di.GetFiles("*.json")).OrderBy(f => f.Name))
                 {
-                    Name = Path.GetFileNameWithoutExtension(file.Name),
-                    IsContainer = false,
-                    ItemCount = 0,
-                    Format = ext == ".json" ? "JSON" : "Binary",
-                    SizeBytes = file.Length,
-                    PhysicalPath = file.FullName,
-                    LastWriteTime = file.LastWriteTime
-                }, logical, false);
+                    string ext = Path.GetExtension(file.Name).ToLowerInvariant();
+                    string logical = ToLogicalPath(file.FullName);
+
+                    WriteItemObject(new BucketItemInfo
+                    {
+                        Name = Path.GetFileNameWithoutExtension(file.Name),
+                        IsContainer = false,
+                        ItemKind = "object",
+                        ItemCount = 0,
+                        Format = ext == ".json" ? "JSON" : "Binary",
+                        SizeBytes = file.Length,
+                        PhysicalPath = file.FullName,
+                        LastWriteTime = file.LastWriteTime
+                    }, logical, false);
+                }
+
+                // Array directories from .arrays/ (-a-)
+                string arraysPath = Path.Combine(directory, ArraysDir);
+                if (Directory.Exists(arraysPath))
+                {
+                    var arraysDir = new DirectoryInfo(arraysPath);
+                    foreach (var arrayDir in arraysDir.GetDirectories().OrderBy(d => d.Name))
+                    {
+                        var files = arrayDir.GetFiles("*.dat").Concat(arrayDir.GetFiles("*.json"));
+                        int count = files.Count();
+
+                        // Logical path: bucket/arrayname (not bucket/.arrays/arrayname)
+                        string logical = di.Name + Sep + arrayDir.Name;
+
+                        WriteItemObject(new BucketItemInfo
+                        {
+                            Name = arrayDir.Name,
+                            IsContainer = true,
+                            ItemKind = "array",
+                            ItemCount = count,
+                            Format = "",
+                            SizeBytes = 0,
+                            PhysicalPath = arrayDir.FullName,
+                            LastWriteTime = arrayDir.LastWriteTime
+                        }, logical, true);
+
+                        if (recurse)
+                        {
+                            currentDepth++;
+                            EnumerateDirectory(arrayDir.FullName, recurse, depthLimit, ref currentDepth);
+                            currentDepth--;
+                        }
+                    }
+                }
+            }
+            else if (IsArrayDirectory(directory))
+            {
+                // Inside an array directory: show array item files (--o)
+                foreach (var file in di.GetFiles("*.dat").Concat(di.GetFiles("*.json")).OrderBy(f => f.Name))
+                {
+                    string ext = Path.GetExtension(file.Name).ToLowerInvariant();
+                    string logical = ToLogicalPath(file.FullName);
+
+                    WriteItemObject(new BucketItemInfo
+                    {
+                        Name = Path.GetFileNameWithoutExtension(file.Name),
+                        IsContainer = false,
+                        ItemKind = "object",
+                        ItemCount = 0,
+                        Format = ext == ".json" ? "JSON" : "Binary",
+                        SizeBytes = file.Length,
+                        PhysicalPath = file.FullName,
+                        LastWriteTime = file.LastWriteTime
+                    }, logical, false);
+                }
+            }
+            else
+            {
+                // General subdirectory (not bucket root, not array): show contents normally
+                foreach (var subDir in di.GetDirectories().OrderBy(d => d.Name))
+                {
+                    if (subDir.Name == ".buckets") continue;
+
+                    var files = subDir.GetFiles("*.dat").Concat(subDir.GetFiles("*.json"));
+                    var subDirs = subDir.GetDirectories().Where(d => d.Name != ".buckets");
+                    int count = files.Count() + subDirs.Count();
+
+                    string logical = ToLogicalPath(subDir.FullName);
+                    WriteItemObject(new BucketItemInfo
+                    {
+                        Name = subDir.Name,
+                        IsContainer = true,
+                        ItemKind = "bucket",
+                        ItemCount = count,
+                        Format = "",
+                        SizeBytes = 0,
+                        PhysicalPath = subDir.FullName,
+                        LastWriteTime = subDir.LastWriteTime
+                    }, logical, true);
+
+                    if (recurse)
+                    {
+                        currentDepth++;
+                        EnumerateDirectory(subDir.FullName, recurse, depthLimit, ref currentDepth);
+                        currentDepth--;
+                    }
+                }
+
+                // Files
+                foreach (var file in di.GetFiles("*.dat").Concat(di.GetFiles("*.json")).OrderBy(f => f.Name))
+                {
+                    string ext = Path.GetExtension(file.Name).ToLowerInvariant();
+                    string logical = ToLogicalPath(file.FullName);
+
+                    WriteItemObject(new BucketItemInfo
+                    {
+                        Name = Path.GetFileNameWithoutExtension(file.Name),
+                        IsContainer = false,
+                        ItemKind = "object",
+                        ItemCount = 0,
+                        Format = ext == ".json" ? "JSON" : "Binary",
+                        SizeBytes = file.Length,
+                        PhysicalPath = file.FullName,
+                        LastWriteTime = file.LastWriteTime
+                    }, logical, false);
+                }
             }
         }
 
@@ -519,17 +780,58 @@ namespace Buckets.Provider
             if (physical == null || !Directory.Exists(physical)) return;
 
             var di = new DirectoryInfo(physical);
+            string root = GetPhysicalRoot();
+            bool isDriveRoot = IsDriveRoot(physical, root);
+            bool isBucketRoot = IsBucketRoot(physical, root);
 
-            // Always return subdirectories (bucket names or array groups)
-            // The returnContainers parameter filters, but we need names for tab completion
-            foreach (var subDir in di.GetDirectories().Where(d => d.Name != ".buckets").OrderBy(d => d.Name))
+            if (isDriveRoot)
             {
-                WriteItemObject(subDir.Name, subDir.Name, true);
+                // At drive root: show bucket names (b--)
+                foreach (var bucketDir in di.GetDirectories().Where(d => d.Name != ".buckets").OrderBy(d => d.Name))
+                {
+                    WriteItemObject(bucketDir.Name, bucketDir.Name, true);
+                }
             }
-
-            foreach (var file in di.GetFiles("*.dat").Concat(di.GetFiles("*.json")).OrderBy(f => f.Name))
+            else if (isBucketRoot)
             {
-                WriteItemObject(Path.GetFileNameWithoutExtension(file.Name), Path.GetFileNameWithoutExtension(file.Name), false);
+                // At bucket root: show array names (from .arrays/) and file names
+                // Hide .arrays/ itself
+
+                foreach (var file in di.GetFiles("*.dat").Concat(di.GetFiles("*.json")).OrderBy(f => f.Name))
+                {
+                    WriteItemObject(Path.GetFileNameWithoutExtension(file.Name), Path.GetFileNameWithoutExtension(file.Name), false);
+                }
+
+                string arraysPath = Path.Combine(physical, ArraysDir);
+                if (Directory.Exists(arraysPath))
+                {
+                    var arraysDir = new DirectoryInfo(arraysPath);
+                    foreach (var arrayDir in arraysDir.GetDirectories().OrderBy(d => d.Name))
+                    {
+                        WriteItemObject(arrayDir.Name, arrayDir.Name, true);
+                    }
+                }
+            }
+            else if (IsArrayDirectory(physical))
+            {
+                // Inside array dir: show file names
+                foreach (var file in di.GetFiles("*.dat").Concat(di.GetFiles("*.json")).OrderBy(f => f.Name))
+                {
+                    WriteItemObject(Path.GetFileNameWithoutExtension(file.Name), Path.GetFileNameWithoutExtension(file.Name), false);
+                }
+            }
+            else
+            {
+                // General: show subdirectories and files
+                foreach (var subDir in di.GetDirectories().Where(d => d.Name != ".buckets").OrderBy(d => d.Name))
+                {
+                    WriteItemObject(subDir.Name, subDir.Name, true);
+                }
+
+                foreach (var file in di.GetFiles("*.dat").Concat(di.GetFiles("*.json")).OrderBy(f => f.Name))
+                {
+                    WriteItemObject(Path.GetFileNameWithoutExtension(file.Name), Path.GetFileNameWithoutExtension(file.Name), false);
+                }
             }
         }
 
@@ -539,6 +841,23 @@ namespace Buckets.Provider
             if (physical == null || !Directory.Exists(physical)) return false;
 
             var di = new DirectoryInfo(physical);
+            string root = GetPhysicalRoot();
+            bool isDriveRoot = IsDriveRoot(physical, root);
+            bool isBucketRoot = IsBucketRoot(physical, root);
+
+            if (isDriveRoot)
+            {
+                return di.GetDirectories().Any(d => d.Name != ".buckets");
+            }
+
+            if (isBucketRoot)
+            {
+                // Has files or arrays
+                if (di.GetFiles("*.dat").Length > 0 || di.GetFiles("*.json").Length > 0) return true;
+                string arraysPath = Path.Combine(physical, ArraysDir);
+                return Directory.Exists(arraysPath) && new DirectoryInfo(arraysPath).GetDirectories().Length > 0;
+            }
+
             return di.GetFiles("*.dat").Length > 0 ||
                    di.GetFiles("*.json").Length > 0 ||
                    di.GetDirectories().Length > 0;
@@ -674,7 +993,6 @@ namespace Buckets.Provider
             string physical = ToPhysicalPath(path);
             bool wantContainer = string.Equals(itemTypeName, "directory", StringComparison.OrdinalIgnoreCase);
 
-            // If path points to non-existent location, build the physical path manually
             if (physical == null)
             {
                 string root = GetPhysicalRoot();
@@ -706,6 +1024,7 @@ namespace Buckets.Provider
                 {
                     Name = GetChildName(path),
                     IsContainer = true,
+                    ItemKind = "bucket",
                     ItemCount = 0,
                     Format = "",
                     SizeBytes = 0,
@@ -758,6 +1077,7 @@ namespace Buckets.Provider
                 {
                     Name = sanitizedKey,
                     IsContainer = false,
+                    ItemKind = "object",
                     ItemCount = 0,
                     Format = format == "json" ? "JSON" : "Binary",
                     SizeBytes = fi.Length,
@@ -815,7 +1135,6 @@ namespace Buckets.Provider
 
         private object MergeObjects(object existing, object newValue)
         {
-            // Convert existing to a plain dictionary for clean serialization
             var existingDict = ToDictionary(existing);
 
             if (newValue is IDictionary newDict)
@@ -856,7 +1175,6 @@ namespace Buckets.Provider
             var pso = value as PSObject;
             if (pso != null)
             {
-                // If base object is a dictionary, use it as the primary source
                 if (pso.BaseObject is IDictionary baseDict)
                 {
                     foreach (DictionaryEntry entry in baseDict)
@@ -866,7 +1184,6 @@ namespace Buckets.Provider
                     return result;
                 }
 
-                // For non-dictionary PSObjects, extract properties
                 var skip = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
                 {
                     "Equals", "GetHashCode", "GetType", "ToString",
