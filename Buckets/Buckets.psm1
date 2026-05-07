@@ -2442,12 +2442,11 @@ function Sync-BucketDrive {
     .SYNOPSIS
         Creates or updates the 'buckets:' PSDrive to point to the current bucket root.
     .DESCRIPTION
-        Can be called manually to create the drive after module import or to refresh
-        it after changing $env:BUCKETS_ROOT or calling Set-BucketRoot.
+        Automatically called on module import and by Set-BucketRoot.
+        Can also be called manually to refresh after changing $env:BUCKETS_ROOT.
     .EXAMPLE
         Sync-BucketDrive
     .EXAMPLE
-        # After setting environment variable
         $env:BUCKETS_ROOT = "/data/buckets"
         Sync-BucketDrive
     #>
@@ -2463,15 +2462,10 @@ function Sync-BucketDrive {
         Remove-PSDrive -Name $driveName -Force -ErrorAction SilentlyContinue
     }
 
-    # Create new drive
+    # Create drive
     try {
         Write-Verbose "Creating PSDrive '$driveName' -> $root"
         New-PSDrive -Name $driveName -PSProvider Buckets -Root $root -Scope Global | Out-Null
-
-        # Workaround: Provider's SessionState is bound to module scope, so the
-        # physical root variable isn't set in global scope. Set it manually.
-        Set-Variable -Name "__buckets_physical_root_$driveName" -Value $root -Scope Global -Force
-        Write-Verbose "PSDrive '$driveName' created successfully"
     }
     catch {
         Write-Warning "Failed to create PSDrive '$driveName': $_"
@@ -2483,6 +2477,9 @@ $moduleInfo = $MyInvocation.MyCommand.ScriptBlock.Module
 $moduleInfo.OnRemove = {
     Remove-PSDrive -Name buckets -Force -ErrorAction SilentlyContinue
 }
+
+# Map PSDrive on module import
+Sync-BucketDrive
 
 # Export Sync-BucketDrive (defined after initial Export-ModuleMember)
 Export-ModuleMember -Function 'Sync-BucketDrive'

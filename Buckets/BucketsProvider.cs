@@ -61,6 +61,9 @@ namespace Buckets.Provider
         private static readonly char Sep = Path.DirectorySeparatorChar;
         private const string ArraysDir = ".arrays";
 
+        // Static cache: drive name -> physical root path
+        private static readonly Dictionary<string, string> DriveRoots = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
         #region Drive Support
 
         protected override PSDriveInfo NewDrive(PSDriveInfo drive)
@@ -89,16 +92,34 @@ namespace Buckets.Provider
                 Directory.CreateDirectory(root);
             }
 
+            // Return PSDriveInfo with drive name as logical root
             var newDrive = new PSDriveInfo(drive.Name, this.ProviderInfo, drive.Name + ":", drive.Description, drive.Credential);
+            DriveRoots[drive.Name] = root;
             SessionState.PSVariable.Set("__buckets_physical_root_" + drive.Name, root);
             return newDrive;
         }
 
         private string GetPhysicalRoot()
         {
-            string varName = "__buckets_physical_root_" + PSDriveInfo.Name;
+            string driveName = PSDriveInfo.Name;
+
+            // Check static cache first (works across all scopes)
+            if (DriveRoots.TryGetValue(driveName, out string cachedRoot))
+            {
+                return cachedRoot;
+            }
+
+            // Fall back to session variable
+            string varName = "__buckets_physical_root_" + driveName;
             var variable = SessionState.PSVariable.Get(varName);
-            return variable?.Value as string ?? PSDriveInfo.Root;
+            if (variable?.Value is string sessionRoot)
+            {
+                DriveRoots[driveName] = sessionRoot;
+                return sessionRoot;
+            }
+
+            // Last resort: drive root (shouldn't happen)
+            return PSDriveInfo.Root;
         }
 
         protected override Collection<PSDriveInfo> InitializeDefaultDrives()
