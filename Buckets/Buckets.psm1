@@ -277,7 +277,7 @@ function Read-BucketFile {
 }
 
 function Get-ObjectFiles {
-    param([string]$BucketPath, [string]$Key, [switch]$IncludeArrays)
+    param([string]$BucketPath, [string]$Key)
 
     if (-not [string]::IsNullOrWhiteSpace($Key)) {
         $results = [System.Collections.ArrayList]::new()
@@ -290,20 +290,6 @@ function Get-ObjectFiles {
                 $null = $results.Add($f)
             }
         }
-        if ($IncludeArrays.IsPresent -and [System.IO.Directory]::Exists((Join-Path $BucketPath ".arrays"))) {
-            $arraysPath = Join-Path $BucketPath ".arrays"
-            if ([System.IO.Directory]::Exists($arraysPath)) {
-                foreach ($subdir in [System.IO.DirectoryInfo]::new($arraysPath).GetDirectories()) {
-                    foreach ($f in @($subdir.GetFiles("*.json")) + @($subdir.GetFiles("*.dat"))) {
-                        $base = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
-                        $baseLower = $base.ToLowerInvariant()
-                        if ($baseLower -eq $target -or $baseLower.StartsWith("${target}_") -or $baseLower.StartsWith("${target}.")) {
-                            $null = $results.Add($f)
-                        }
-                    }
-                }
-            }
-        }
         return $results.ToArray()
     }
     else {
@@ -311,16 +297,6 @@ function Get-ObjectFiles {
         $di = [System.IO.DirectoryInfo]::new($BucketPath)
         foreach ($f in @($di.GetFiles("*.json")) + @($di.GetFiles("*.dat"))) {
             $null = $results.Add($f)
-        }
-        if ($IncludeArrays.IsPresent -and [System.IO.Directory]::Exists((Join-Path $BucketPath ".arrays"))) {
-            $arraysPath = Join-Path $BucketPath ".arrays"
-            if ([System.IO.Directory]::Exists($arraysPath)) {
-                foreach ($subdir in [System.IO.DirectoryInfo]::new($arraysPath).GetDirectories()) {
-                    foreach ($f in @($subdir.GetFiles("*.json")) + @($subdir.GetFiles("*.dat"))) {
-                        $null = $results.Add($f)
-                    }
-                }
-            }
         }
         return $results.ToArray()
     }
@@ -338,17 +314,6 @@ function Find-ObjectFile {
         $base = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
         $baseLower = $base.ToLowerInvariant()
         if ($baseLower -eq $target -or $baseLower.StartsWith("${target}_") -or $baseLower.StartsWith("${target}.")) { return $f }
-    }
-
-    $arraysPath = Join-Path $BucketPath ".arrays"
-    if ([System.IO.Directory]::Exists($arraysPath)) {
-        foreach ($subdir in [System.IO.DirectoryInfo]::new($arraysPath).GetDirectories()) {
-            foreach ($f in @($subdir.GetFiles("*.json")) + @($subdir.GetFiles("*.dat"))) {
-                $base = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
-                $baseLower = $base.ToLowerInvariant()
-                if ($baseLower -eq $target -or $baseLower.StartsWith("${target}_") -or $baseLower.StartsWith("${target}.")) { return $f }
-            }
-        }
     }
 
     return $null
@@ -551,14 +516,12 @@ function Get-Bucket {
     Filter buckets by name pattern (substring match on full nested path).
     .PARAMETER AsTree
     Render a tree view of all buckets and directories.
-    .PARAMETER Files
-    Include individual .dat and .json files in tree view.
-    .PARAMETER Arrays
-    Include .arrays/ groups in tree view.
+    .PARAMETER NoFiles
+    Hide individual .dat and .json files in tree view. Files are shown by default.
     .PARAMETER Raw
     Return structured tree objects instead of formatted text (for -AsTree mode).
     .PARAMETER MaxFiles
-    Maximum files to display per bucket in tree view. Truncated files shown as "... N more". Default: 50.
+    Maximum files to display per bucket in tree view. Truncated files shown as "... N more". Default: 5.
     .PARAMETER Depth
     Maximum depth to display in tree view.
     .OUTPUTS
@@ -570,17 +533,16 @@ function Get-Bucket {
     .EXAMPLE
     Get-Bucket -AsTree
     .EXAMPLE
-    Get-Bucket -AsTree -Files
+    Get-Bucket -AsTree -NoFiles
     #>
     [CmdletBinding()]
     param(
         [Parameter(Position = 0)][string]$Name,
         [string]$Path,
         [switch]$AsTree,
-        [switch]$Files,
-        [switch]$Arrays,
+        [switch]$NoFiles,
         [switch]$Raw,
-        [int]$MaxFiles = 50,
+        [int]$MaxFiles = 5,
         [int]$Depth = [int]::MaxValue
     )
 
@@ -620,7 +582,7 @@ function Get-Bucket {
             $di.GetFiles("*.json") | ForEach-Object { $stats.SizeBytes += $_.Length }
 
             foreach ($sub in $di.GetDirectories()) {
-                if ($sub.Name -eq ".buckets" -or $sub.Name -eq ".arrays") { continue }
+                if ($sub.Name -eq ".buckets") { continue }
                 $childStats = ScanDir -Dir $sub.FullName -Root $Root
                 $stats.ObjectCount += $childStats.ObjectCount
                 $stats.SizeBytes += $childStats.SizeBytes
@@ -628,18 +590,7 @@ function Get-Bucket {
                 if ($childStats.ObjectCount -gt 0) { $stats.BucketCount++ }
             }
 
-            $hasArrays = $false
-            $arraysPath = Join-Path $Dir ".arrays"
-            if ([System.IO.Directory]::Exists($arraysPath)) {
-                $arraysDi = [System.IO.DirectoryInfo]::new($arraysPath)
-                foreach ($arr in $arraysDi.GetDirectories()) {
-                    $arrFiles = @($arr.GetFiles("*.dat")) + @($arr.GetFiles("*.json"))
-                    if ($arrFiles.Count -gt 0) { $hasArrays = $true; $stats.BucketCount++ }
-                }
-            }
-
             $isBucket = $stats.ObjectCount -gt 0
-            if (-not $isBucket -and $hasArrays) { $isBucket = $true }
             if ($Dir -ne $Root -and -not $isBucket -and $stats.BucketCount -gt 0) { $isBucket = $true }
 
             if ($Dir -eq $Root) {
@@ -688,36 +639,9 @@ function Get-Bucket {
 
             $di = [System.IO.DirectoryInfo]::new($Dir)
 
-            if ($Arrays) {
-                $arraysPath = Join-Path $Dir ".arrays"
-                if ([System.IO.Directory]::Exists($arraysPath)) {
-                    $arraysDi = [System.IO.DirectoryInfo]::new($arraysPath)
-                    foreach ($arr in ($arraysDi.GetDirectories() | Sort-Object Name)) {
-                        $arrFiles = @($arr.GetFiles("*.dat")) + @($arr.GetFiles("*.json"))
-                        if ($arrFiles.Count -gt 0) {
-                            $arrSize = ($arrFiles | ForEach-Object { $_.Length }) | Measure-Object -Sum | Select-Object -ExpandProperty Sum
-                            $arrNode = [PSCustomObject]@{
-                                Name         = ".arrays/"
-                                Type         = "Array"
-                                Path         = "$relPath/.arrays"
-                                ObjectCount  = $arrFiles.Count
-                                SizeBytes    = $arrSize
-                                Depth        = $CurrentDepth + 1
-                                Children     = [System.Collections.ArrayList]::new()
-                                _BucketName  = $relPath
-                                _BucketKey   = ""
-                            }
-                            $arrNode.PSObject.TypeNames.Insert(0, "Buckets.Tree")
-                            $null = $node.Children.Add($arrNode)
-                            break
-                        }
-                    }
-                }
-            }
-
             $subDirs = @()
             foreach ($sub in ($di.GetDirectories() | Sort-Object Name)) {
-                if ($sub.Name -eq ".buckets" -or $sub.Name -eq ".arrays") { continue }
+                if ($sub.Name -eq ".buckets") { continue }
                 $subHasFiles = $sub.GetFiles("*.dat").Length -gt 0 -or $sub.GetFiles("*.json").Length -gt 0
                 $subStats = ScanDir -Dir $sub.FullName -Root $Root
                 $subRelPath = $sub.FullName.Substring($Root.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar).Replace([System.IO.Path]::DirectorySeparatorChar, '/')
@@ -728,16 +652,16 @@ function Get-Bucket {
             }
 
             foreach ($sub in $subDirs) {
-                if ($CurrentDepth + 1 -lt $Depth -or $Files) {
+                if ($CurrentDepth + 1 -lt $Depth -or (-not $NoFiles)) {
                     $child = BuildTree -Dir $sub.FullName -Root $Root -CurrentDepth ($CurrentDepth + 1)
                     $null = $node.Children.Add($child)
                 }
             }
 
-            if ($Files) {
+            if (-not $NoFiles) {
                 foreach ($f in ($di.GetFiles("*.dat") | Sort-Object Name)) {
                     $fNode = [PSCustomObject]@{
-                        Name         = $f.Name
+                        Name         = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
                         Type         = "File"
                         Path         = "$relPath/$($f.Name)"
                         ObjectCount  = 1
@@ -746,13 +670,14 @@ function Get-Bucket {
                         Children     = [System.Collections.ArrayList]::new()
                         _BucketName  = $relPath
                         _BucketKey   = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
+                        _Extension   = $f.Extension
                     }
                     $fNode.PSObject.TypeNames.Insert(0, "Buckets.Tree")
                     $null = $node.Children.Add($fNode)
                 }
                 foreach ($f in ($di.GetFiles("*.json") | Sort-Object Name)) {
                     $fNode = [PSCustomObject]@{
-                        Name         = $f.Name
+                        Name         = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
                         Type         = "File"
                         Path         = "$relPath/$($f.Name)"
                         ObjectCount  = 1
@@ -761,6 +686,7 @@ function Get-Bucket {
                         Children     = [System.Collections.ArrayList]::new()
                         _BucketName  = $relPath
                         _BucketKey   = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
+                        _Extension   = $f.Extension
                     }
                     $fNode.PSObject.TypeNames.Insert(0, "Buckets.Tree")
                     $null = $node.Children.Add($fNode)
@@ -781,14 +707,8 @@ function Get-Bucket {
             else {
                 $linePrefix = if ($IsLast) { "$Prefix└── " } else { "$Prefix├── " }
 
-                if ($Node.Type -eq "Array") {
-                    $sizeStr = "$(TreeItemCount $Node.ObjectCount)"
-                    Write-Host "$linePrefix" -NoNewline -ForegroundColor DarkGray
-                    Write-Host "$($Node.Name) " -NoNewline -ForegroundColor Magenta
-                    Write-Host "($sizeStr)" -ForegroundColor DarkGray
-                }
-                elseif ($Node.Type -eq "File") {
-                    $color = if ($Node.Name -like "*.json") { "Gray" } else { "White" }
+                if ($Node.Type -eq "File") {
+                    $color = if ($Node._Extension -eq ".json") { "Gray" } else { "White" }
                     Write-Host "$linePrefix" -NoNewline -ForegroundColor DarkGray
                     Write-Host $Node.Name -ForegroundColor $color
                 }
@@ -856,7 +776,7 @@ function Get-Bucket {
             }
         }
         foreach ($subDir in $di.GetDirectories()) {
-            if ($subDir.Name -eq ".buckets" -or $subDir.Name -eq ".arrays") { continue }
+            if ($subDir.Name -eq ".buckets") { continue }
             Find-BucketsRecursive -Dir $subDir.FullName
         }
     }
@@ -922,12 +842,6 @@ function Get-BucketKeys {
         $bucketName = Split-Path $bucketPath -Leaf
         $di = [System.IO.DirectoryInfo]::new($bucketPath)
         $files = @($di.GetFiles("*.json")) + @($di.GetFiles("*.dat"))
-        $arraysPath = Join-Path $bucketPath ".arrays"
-        if ([System.IO.Directory]::Exists($arraysPath)) {
-            foreach ($subdir in [System.IO.DirectoryInfo]::new($arraysPath).GetDirectories()) {
-                $files += @($subdir.GetFiles("*.json")) + @($subdir.GetFiles("*.dat"))
-            }
-        }
         foreach ($f in $files) {
             $relPath = $f.FullName.Substring($bucketPath.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar)
             $key = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
@@ -956,26 +870,17 @@ function Get-BucketObject {
     .PARAMETER Path
     Root directory for bucket storage. Default: $HOME/.buckets.
     .PARAMETER Key
-    Object key to retrieve. Case-insensitive prefix match. Looks for both .json and .dat files,
-    including items in .arrays/ subdirectories.
-    .PARAMETER ArrayKey
-    Restrict results to objects in the specified array directory. Use with -GroupArrays
-    to get a specific array group.
+    Object key to retrieve. Case-insensitive prefix match. Looks for both .json and .dat files.
     .PARAMETER Match
     Hashtable of property-value pairs for exact-match filtering. All pairs must match. Supports $null values.
     .PARAMETER Filter
     ScriptBlock for custom filtering. Use $_ to reference object properties (e.g., { $_.Age -gt 30 }).
     .PARAMETER First
-    Return only the first N objects (or arrays when -GroupArrays is used).
+    Return only the first N objects.
     .PARAMETER Skip
-    Skip the first N objects (or arrays when -GroupArrays is used) before returning results.
-    .PARAMETER GroupArrays
-    Reassemble stored arrays from .arrays/ subdirectories. Returns each array group
-    as a wrapper object with properties: _ArrayGroup ($true) and _ArrayItems (the array of objects).
-    Objects without array grouping are returned as-is.
+    Skip the first N objects before returning results.
     .OUTPUTS
     Deserialized PSObjects with _BucketName, _BucketKey, and _BucketFile metadata.
-    When -GroupArrays is used, array groups are returned as objects with _ArrayGroup and _ArrayItems.
     .EXAMPLE
     Get-BucketObject -Bucket users -Match @{ Role = "admin" }
     .EXAMPLE
@@ -986,20 +891,16 @@ function Get-BucketObject {
     Get-BucketObject -Bucket users, orders
     .EXAMPLE
     Get-BucketObject -First 10 -Skip 20
-    .EXAMPLE
-    Get-BucketObject -Bucket staff -ArrayKey admins -GroupArrays
     #>
     [CmdletBinding()]
     param(
         [Parameter(Position = 1)][string[]]$Bucket,
         [string]$Path,
         [Parameter(Position = 0)][string]$Key,
-        [string]$ArrayKey,
         [hashtable]$Match,
         [scriptblock]$Filter,
         [int]$First,
-        [int]$Skip,
-        [switch]$GroupArrays
+        [int]$Skip
     )
 
     if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
@@ -1030,16 +931,7 @@ function Get-BucketObject {
     foreach ($bucketPath in $bucketPaths) {
         if (-not [System.IO.Directory]::Exists($bucketPath)) { continue }
         $bucketName = Split-Path $bucketPath -Leaf
-        $files = Get-ObjectFiles -BucketPath $bucketPath -Key $Key -IncludeArrays
-
-        if (-not [string]::IsNullOrWhiteSpace($ArrayKey)) {
-            $safeArrayKey = $ArrayKey.ToLowerInvariant()
-            $targetArrayPath = Join-Path (Join-Path $bucketPath ".arrays") $safeArrayKey
-            $files = @($files | Where-Object {
-                [System.IO.Path]::GetDirectoryName($_.FullName).ToLowerInvariant() -eq $targetArrayPath.ToLowerInvariant() -or
-                [System.IO.Path]::GetDirectoryName($_.FullName).ToLowerInvariant().StartsWith("${targetArrayPath}")
-            })
-        }
+        $files = Get-ObjectFiles -BucketPath $bucketPath -Key $Key
 
         foreach ($file in $files) {
             if ($null -eq $file -or -not [System.IO.File]::Exists($file.FullName)) { continue }
@@ -1073,54 +965,11 @@ function Get-BucketObject {
         }
     }
 
-    if ($GroupArrays -and $allObjects.Count -gt 0) {
-        $dirGroups = [System.Collections.Generic.Dictionary[string, System.Collections.ArrayList]]::new()
-        $singles = [System.Collections.ArrayList]::new()
-
-        foreach ($obj in $allObjects) {
-            $filePath = $obj._BucketFile
-            $fileDir = [System.IO.Path]::GetDirectoryName($filePath)
-            $bucketDir = [System.IO.Path]::GetDirectoryName($fileDir)
-            $isInArray = $false
-            if ($bucketDir -and [System.IO.Path]::GetFileName($bucketDir) -eq ".arrays") {
-                $isInArray = $true
-                $arrayKey = [System.IO.Path]::GetFileName($fileDir)
-                if (-not $dirGroups.ContainsKey($arrayKey)) {
-                    $dirGroups[$arrayKey] = [System.Collections.ArrayList]::new()
-                }
-                $null = $dirGroups[$arrayKey].Add($obj)
-            }
-            if (-not $isInArray) { $null = $singles.Add($obj) }
-        }
-
-        $output = [System.Collections.ArrayList]::new()
-        foreach ($arrayKey in $dirGroups.Keys) {
-            $groupItems = $dirGroups[$arrayKey] | Sort-Object -Property _BucketKey
-            $group = [System.Collections.ArrayList]::new()
-            foreach ($item in $groupItems) {
-                $item.PSObject.Properties.Remove('_BucketName')
-                $item.PSObject.Properties.Remove('_BucketKey')
-                $item.PSObject.Properties.Remove('_BucketFile')
-                $null = $group.Add($item)
-            }
-            $null = $output.Add([PSCustomObject]@{
-                _ArrayGroup = $true
-                _ArrayItems = $group.ToArray()
-            })
-        }
-        foreach ($obj in $singles) { $null = $output.Add($obj) }
-
-        if ($Skip -gt 0) { $output = $output | Select-Object -Skip $Skip }
-        if ($First -gt 0) { $output = $output | Select-Object -First $First }
-        foreach ($item in $output) { Write-Output $item }
-    }
-    else {
-        $emitted = 0; $skipped = 0
-        foreach ($obj in $allObjects) {
-            if ($Skip -gt 0 -and $skipped -lt $Skip) { $skipped++; continue }
-            if ($First -gt 0 -and $emitted -ge $First) { break }
-            Write-Output $obj; $emitted++
-        }
+    $emitted = 0; $skipped = 0
+    foreach ($obj in $allObjects) {
+        if ($Skip -gt 0 -and $skipped -lt $Skip) { $skipped++; continue }
+        if ($First -gt 0 -and $emitted -ge $First) { break }
+        Write-Output $obj; $emitted++
     }
 }
 
@@ -1157,13 +1006,6 @@ function Get-BucketStats {
     $di = [System.IO.DirectoryInfo]::new($bucketPath)
     $datFiles = @($di.GetFiles("*.dat"))
     $jsonFiles = @($di.GetFiles("*.json"))
-    $arraysPath = Join-Path $bucketPath ".arrays"
-    if ([System.IO.Directory]::Exists($arraysPath)) {
-        foreach ($subdir in [System.IO.DirectoryInfo]::new($arraysPath).GetDirectories()) {
-            $datFiles += @($subdir.GetFiles("*.dat"))
-            $jsonFiles += @($subdir.GetFiles("*.json"))
-        }
-    }
 
     $fileObjects = $datFiles + $jsonFiles
     $totalSize = ($fileObjects | Measure-Object -Property Length -Sum).Sum
@@ -1388,10 +1230,6 @@ function New-BucketObject {
     (.dat) using PSSerializer for full .NET type preservation. Use -AsJson for
     human-readable JSON format. If JSON serialization fails on complex types,
     the object automatically falls back to binary format.
-
-    When -ArrayKey is specified, items are saved into a .arrays/<key>/ subdirectory
-    for grouping. Use -KeyProperty to name files from object properties, or -Key
-    for literal names. Items with duplicate keys get _0, _1, etc. suffixes.
     .PARAMETER InputObject
     The object(s) to store. Accepts pipeline input. Arrays are stored as individual files.
     .PARAMETER Bucket
@@ -1399,16 +1237,9 @@ function New-BucketObject {
     .PARAMETER Path
     Root directory for bucket storage. Default: $HOME/.buckets.
     .PARAMETER Key
-    Literal filename (without extension). If omitted with -ArrayKey, items are named 0, 1, 2...
+    Literal filename (without extension).
     .PARAMETER KeyProperty
     Property name whose value becomes the filename. Special characters (/, :, *, ?, ", <, >, |, ., []) are sanitized to underscores.
-    .PARAMETER ArrayKey
-    Save items into a .arrays/<key>/ subdirectory for grouping. Enables buffered array storage
-    with automatic key collision handling (suffixing with _0, _1, etc.). Use -GroupArrays
-    on Get-BucketObject to reconstruct the full array.
-    .PARAMETER ArrayGuid
-    Save items into a .arrays/<guid>/ subdirectory for grouping. Uses an auto-generated GUID
-    as the directory name. Equivalent to -ArrayKey with a GUID value.
     .PARAMETER Depth
     Maximum depth for JSON serialization. Default: 20.
     .PARAMETER BinaryDepth
@@ -1431,15 +1262,7 @@ function New-BucketObject {
     .EXAMPLE
     New-BucketObject -Bucket config -InputObject $config -Key "app-settings" -AsJson
     .EXAMPLE
-    $admins | New-BucketObject -Bucket staff -KeyProperty Name -ArrayKey "admins"
-    .EXAMPLE
-    $items | New-BucketObject -Bucket orders -ArrayKey "pending"
-    .EXAMPLE
-    $items | New-BucketObject -Bucket orders -ArrayGuid
-    .EXAMPLE
     New-BucketObject -Bucket users -InputObject @{ Name = "Alice"; Email = "alice@new.com"; Role = "manager"; Active = $true } -KeyProperty Name -Overwrite
-    .EXAMPLE
-    $admins = (Get-BucketObject -Bucket staff -ArrayKey admins -GroupArrays)._ArrayItems
     #>
     [CmdletBinding()]
     param(
@@ -1448,8 +1271,6 @@ function New-BucketObject {
         [string]$Path,
         [string]$Key,
         [string]$KeyProperty,
-        [string]$ArrayKey,
-        [switch]$ArrayGuid,
         [ValidateRange(1, 100)][int]$Depth = 20,
         [ValidateRange(1, 10)][int]$BinaryDepth = 2,
         [switch]$AsTimestamp,
@@ -1470,25 +1291,10 @@ function New-BucketObject {
         if ($AsTimestamp -and (-not [string]::IsNullOrWhiteSpace($Key) -or -not [string]::IsNullOrWhiteSpace($KeyProperty))) {
             Write-Verbose "Both -Key/-KeyProperty and -AsTimestamp specified. -Key/-KeyProperty takes precedence, -AsTimestamp ignored."
         }
-
-        if ($ArrayGuid.IsPresent) {
-            if (-not [string]::IsNullOrWhiteSpace($ArrayKey)) { $ArrayGuid = $false }
-            else { $ArrayKey = [Guid]::NewGuid().ToString() }
-        }
-
-        $itemsToProcess = [System.Collections.ArrayList]::new()
-        $useBuffering = -not [string]::IsNullOrWhiteSpace($ArrayKey)
     }
 
     process {
         if ($null -eq $InputObject) { return }
-
-        if ($useBuffering) {
-            $isCollection = $InputObject -is [System.Collections.IEnumerable] -and $InputObject -isnot [string] -and $InputObject -isnot [hashtable] -and $InputObject -isnot [System.Collections.IDictionary]
-            if ($isCollection) { foreach ($item in $InputObject) { $null = $itemsToProcess.Add($item) } }
-            else { $null = $itemsToProcess.Add($InputObject) }
-            return
-        }
 
         $isCollection = $InputObject -is [System.Collections.IEnumerable] -and $InputObject -isnot [string] -and $InputObject -isnot [hashtable] -and $InputObject -isnot [System.Collections.IDictionary]
 
@@ -1534,46 +1340,6 @@ function New-BucketObject {
     }
 
     end {
-        if ($useBuffering -and $itemsToProcess.Count -gt 0) {
-            $safeArrayKey = $ArrayKey -replace '[\\/:\*\?"<>\|\.\[\]]', '_'
-            if ([string]::IsNullOrWhiteSpace($safeArrayKey) -or $safeArrayKey -match '^_+$') {
-                Write-Verbose "ArrayKey is empty after sanitization ('$ArrayKey'), treating as non-array save"
-                $safeArrayKey = $null
-            }
-
-            if ($null -ne $safeArrayKey) {
-                $arrayPath = Join-Path (Join-Path $bucketPath ".arrays") $safeArrayKey
-                if (-not [System.IO.Directory]::Exists($arrayPath)) { $null = [System.IO.Directory]::CreateDirectory($arrayPath) }
-            }
-            else { $arrayPath = $bucketPath }
-
-            $seenKeys = @{}
-            $totalForItems = $itemsToProcess.Count
-            $index = 0
-            foreach ($item in $itemsToProcess) {
-                $baseKey = Resolve-ItemKey -Item $item -Key $Key -KeyProperty $KeyProperty -Index $index
-                if ($null -eq $baseKey) { $skippedCount++; $index++; continue }
-
-                if ($seenKeys.ContainsKey($baseKey)) {
-                    $suffix = $seenKeys[$baseKey]
-                    $filename = "${baseKey}_${suffix}${extension}"
-                    $seenKeys[$baseKey] = $suffix + 1
-                }
-                else {
-                    $filename = "${baseKey}${extension}"
-                    $seenKeys[$baseKey] = 1
-                }
-
-                $itemFilePath = Join-Path $arrayPath $filename
-                $writeResult = Save-BucketFile -Path $itemFilePath -Item $item -Extension $extension -AsJson:$AsJson.IsPresent -Compress:$Compress.IsPresent -Depth $Depth -BinaryDepth $BinaryDepth -Overwrite:$Overwrite.IsPresent -BucketPath $bucketPath -Bucket $Bucket
-                if ($writeResult.Success) { $savedCount++ }
-                elseif ($writeResult.Skipped) { $skippedCount++ }
-                else { $failedCount++ }
-                if ($writeResult.Fallback) { $fallbackCount++ }
-                $index++
-            }
-        }
-
         if ($showProgress -or $useVerbose) { Write-Progress -Activity "Saving to '$Bucket'" -Completed }
         if (-not $useQuiet) {
             $summary = "Saved $savedCount object(s) to '$Bucket'"
@@ -1662,7 +1428,7 @@ function Remove-Bucket {
                 }
             }
             foreach ($subDir in $di.GetDirectories()) {
-                if ($subDir.Name -eq ".buckets" -or $subDir.Name -eq ".arrays") { continue }
+                if ($subDir.Name -eq ".buckets") { continue }
                 $matched += Scan-Dir -Dir $subDir.FullName
             }
             $matched
@@ -1701,7 +1467,7 @@ function Remove-Bucket {
         # Check for nested bucket subdirectories
         $nestedBuckets = @()
         foreach ($subDir in $di.GetDirectories()) {
-            if ($subDir.Name -eq ".buckets" -or $subDir.Name -eq ".arrays") { continue }
+            if ($subDir.Name -eq ".buckets") { continue }
             if ($subDir.GetFiles("*.dat").Length -gt 0 -or $subDir.GetFiles("*.json").Length -gt 0) {
                 $nestedBuckets += $subDir.Name
             }
@@ -1776,18 +1542,22 @@ function Remove-Bucket {
         $target = "bucket '$($r.Name)' ($($r.Objects) object(s), $($r.Size))"
 
         if ($r.HasNestedBuckets -and -not $Recurse) {
-            # Remove only bucket files and .arrays/, preserve nested bucket dirs
+            # Remove only bucket files, preserve nested bucket dirs
             $finalDirs = @($finalDi.GetDirectories())
-            $nestedDirs = @($finalDirs | Where-Object { $_.Name -ne ".arrays" -and ($_.GetFiles("*.dat").Length -gt 0 -or $_.GetFiles("*.json").Length -gt 0) })
+            $nestedDirs = @($finalDirs | Where-Object { $_.GetFiles("*.dat").Length -gt 0 -or $_.GetFiles("*.json").Length -gt 0 })
 
             $nestedMsg = " (preserving nested buckets: $($nestedDirs.Name -join ', '))"
 
             if ($PSCmdlet.ShouldProcess($target + $nestedMsg, "Remove-Bucket")) {
                 # Delete bucket files
                 foreach ($f in $finalFiles) { $f.Delete() }
-                # Delete .arrays/
-                $arraysDir = $finalDirs | Where-Object { $_.Name -eq ".arrays" }
-                if ($arraysDir) { [System.IO.Directory]::Delete($arraysDir.FullName, $true) }
+                # Delete empty non-bucket subdirectories
+                foreach ($d in $finalDirs) {
+                    $hasBucketFiles = $d.GetFiles("*.dat").Length -gt 0 -or $d.GetFiles("*.json").Length -gt 0
+                    if (-not $hasBucketFiles -and $d.GetDirectories().Length -eq 0) {
+                        $d.Delete()
+                    }
+                }
                 # Remove empty bucket dir if nothing left
                 $remainingDirs = @($finalDi.GetDirectories())
                 if ($remainingDirs.Count -eq 0 -and $finalDi.GetFiles().Length -eq 0) {
@@ -1809,8 +1579,7 @@ function Remove-Bucket {
         else {
             # No nested buckets — standard deletion
             $finalDirs = @($finalDi.GetDirectories())
-            $finalNonArrays = @($finalDirs | Where-Object { $_.Name -ne ".arrays" })
-            if ($finalNonArrays.Count -gt 0) {
+            if ($finalDirs.Count -gt 0) {
                 Write-Warning "Bucket '$($r.Name)' contains non-bucket subdirectories, aborting"
                 continue
             }
@@ -1887,26 +1656,17 @@ function Remove-BucketObject {
         $allFiles = @()
         $di = [System.IO.DirectoryInfo]::new($bucketPath)
         $allFiles += @($di.GetFiles("*.json")) + @($di.GetFiles("*.dat"))
-        $arraysPath = Join-Path $bucketPath ".arrays"
-        if ([System.IO.Directory]::Exists($arraysPath)) {
-            foreach ($subdir in [System.IO.DirectoryInfo]::new($arraysPath).GetDirectories()) {
-                $allFiles += @($subdir.GetFiles("*.json")) + @($subdir.GetFiles("*.dat"))
-            }
-        }
 
         if ($allFiles.Count -eq 0) { Write-Verbose "Bucket '$Bucket' is already empty"; return }
 
         $target = "$($allFiles.Count) object(s) from bucket '$Bucket'"
         if ($PSCmdlet.ShouldProcess($target, "Remove-BucketObject")) {
             $allFiles | ForEach-Object { [System.IO.File]::Delete($_.FullName) }
-            $di2 = [System.IO.DirectoryInfo]::new($arraysPath)
-            if ([System.IO.Directory]::Exists($arraysPath)) {
-                foreach ($subdir in $di2.GetDirectories()) {
-                    $remaining = @($subdir.GetFiles())
-                    if ($remaining.Count -eq 0) { [System.IO.Directory]::Delete($subdir.FullName) }
-                }
-                $allRemaining = @($di2.GetDirectories()) + @($di2.GetFiles())
-                if ($allRemaining.Count -eq 0) { [System.IO.Directory]::Delete($arraysPath) }
+            # Clean up empty subdirectories
+            foreach ($d in $di.GetDirectories()) {
+                if ($d.Name -eq ".buckets") { continue }
+                $remaining = @($d.GetFiles()) + @($d.GetDirectories())
+                if ($remaining.Count -eq 0) { [System.IO.Directory]::Delete($d.FullName) }
             }
         }
 
@@ -1929,16 +1689,13 @@ function Remove-BucketObject {
                 [PSCustomObject]@{ Bucket = $Bucket; Key = $relPath; FilePath = $file.FullName }
             }
             [System.IO.File]::Delete($file.FullName)
+            # Clean up empty parent subdirectories
             $parentDir = [System.IO.Path]::GetDirectoryName($file.FullName)
-            $arraysPath = Join-Path $bucketPath ".arrays"
-            if ($parentDir -ne $bucketPath -and $parentDir.StartsWith($arraysPath)) {
+            if ($parentDir -ne $bucketPath -and $parentDir.StartsWith($bucketPath)) {
                 $parentDi = [System.IO.DirectoryInfo]::new($parentDir)
                 $remaining = @($parentDi.GetFiles()) + @($parentDi.GetDirectories())
                 if ($remaining.Count -eq 0) {
                     [System.IO.Directory]::Delete($parentDir)
-                    $arraysDi = [System.IO.DirectoryInfo]::new($arraysPath)
-                    $allRemaining = @($arraysDi.GetDirectories()) + @($arraysDi.GetFiles())
-                    if ($allRemaining.Count -eq 0) { [System.IO.Directory]::Delete($arraysPath) }
                 }
             }
         }
@@ -1947,12 +1704,6 @@ function Remove-BucketObject {
         $allFiles = @()
         $di = [System.IO.DirectoryInfo]::new($bucketPath)
         $allFiles += @($di.GetFiles("*.json")) + @($di.GetFiles("*.dat"))
-        $arraysPath = Join-Path $bucketPath ".arrays"
-        if ([System.IO.Directory]::Exists($arraysPath)) {
-            foreach ($subdir in [System.IO.DirectoryInfo]::new($arraysPath).GetDirectories()) {
-                $allFiles += @($subdir.GetFiles("*.json")) + @($subdir.GetFiles("*.dat"))
-            }
-        }
 
         if ($allFiles.Count -eq 0) { Write-Verbose "Bucket '$Bucket' is already empty"; return }
 
@@ -2369,7 +2120,7 @@ $script:CompleterBlock = {
             }
         }
         foreach ($subDir in $di.GetDirectories()) {
-            if ($subDir.Name -eq ".buckets" -or $subDir.Name -eq ".arrays") { continue }
+            if ($subDir.Name -eq ".buckets") { continue }
             Find-BucketsForCompletion -Dir $subDir.FullName -Root $Root -Filter $Filter
         }
     }
