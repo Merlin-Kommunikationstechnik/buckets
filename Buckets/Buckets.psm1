@@ -541,11 +541,12 @@ function Get-Bucket {
     Lists available buckets with object counts.
     .DESCRIPTION
     Scans the storage path for bucket directories and returns information about each,
-    including name, path, and total object count (JSON + binary files).
+    including name, path, and total object count (JSON + binary files). Supports nested
+    buckets — any directory containing .dat or .json files is a bucket.
     .PARAMETER Path
     Root directory for bucket storage. Default: $HOME/.buckets.
     .PARAMETER Name
-    Filter buckets by name pattern (substring match).
+    Filter buckets by name pattern (substring match on full nested path).
     .OUTPUTS
     PSCustomObject with Name, Path, and ObjectCount properties.
     .EXAMPLE
@@ -563,21 +564,30 @@ function Get-Bucket {
     $Path = Resolve-SafePath -Path $Path
     if (-not [System.IO.Directory]::Exists($Path)) { return }
 
-    $buckets = @([System.IO.DirectoryInfo]::new($Path).GetDirectories())
-    if (-not [string]::IsNullOrWhiteSpace($Name)) {
-        $buckets = $buckets | Where-Object { $_.Name -like "*$Name*" }
-    }
-
-    $buckets | ForEach-Object {
-        $bucketDir = $_
-        $datFiles = [System.IO.Directory]::GetFiles($bucketDir.FullName, "*.dat")
-        $jsonFiles = [System.IO.Directory]::GetFiles($bucketDir.FullName, "*.json")
-        [PSCustomObject]@{
-            Name        = $bucketDir.Name
-            Path        = $bucketDir.FullName
-            ObjectCount = $datFiles.Length + $jsonFiles.Length
+    function Find-BucketsRecursive {
+        param([string]$Dir)
+        $di = [System.IO.DirectoryInfo]::new($Dir)
+        $hasFiles = $di.GetFiles("*.dat").Length -gt 0 -or $di.GetFiles("*.json").Length -gt 0
+        if ($hasFiles -and $Dir -ne $Path) {
+            $datFiles = [System.IO.Directory]::GetFiles($Dir, "*.dat")
+            $jsonFiles = [System.IO.Directory]::GetFiles($Dir, "*.json")
+            [PSCustomObject]@{
+                Name        = $Dir.Substring($Path.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar).Replace([System.IO.Path]::DirectorySeparatorChar, '/')
+                Path        = $Dir
+                ObjectCount = $datFiles.Length + $jsonFiles.Length
+            }
+        }
+        foreach ($subDir in $di.GetDirectories()) {
+            if ($subDir.Name -eq ".buckets" -or $subDir.Name -eq ".arrays") { continue }
+            Find-BucketsRecursive -Dir $subDir.FullName
         }
     }
+
+    $results = Find-BucketsRecursive -Dir $Path
+    if (-not [string]::IsNullOrWhiteSpace($Name)) {
+        $results = $results | Where-Object { $_.Name -like "*$Name*" }
+    }
+    $results
 }
 
 function Get-BucketKeys {
@@ -1304,14 +1314,23 @@ function Remove-Bucket {
     Removes one or more buckets and all their objects.
     .DESCRIPTION
     Deletes bucket directories and their contents. Supports exact names, multiple
-    buckets, and wildcard patterns. Only removes directories containing .dat/.json
-    files (or empty directories). Skips buckets with other file types.
+    buckets, and wildcard patterns (including nested bucket paths like "projects/myapp").
+    Only removes directories containing .dat/.json files (or empty directories).
+    Skips buckets with other file types.
+
+    By default, only removes files in the target bucket and leaves nested bucket
+    directories intact. Use -Recurse to remove the target and all nested buckets.
+
     Uses standard -Confirm/-WhatIf support (SupportsShouldProcess).
     -Confirm:$false skips the confirmation prompt.
     .PARAMETER Bucket
     Bucket name(s) or wildcard patterns to remove. Supports glob-style wildcards (*, ?).
+    For nested buckets, use path notation like "projects/myapp".
     .PARAMETER Path
     Root directory for bucket storage. Default: $HOME/.buckets.
+    .PARAMETER Recurse
+    Remove the target bucket and all nested buckets beneath it. Without this flag,
+    nested bucket directories are preserved.
     .PARAMETER WhatIf
     Preview which buckets would be removed without actually deleting them.
     .PARAMETER Confirm
@@ -1320,43 +1339,67 @@ function Remove-Bucket {
     .EXAMPLE
     Remove-Bucket -Bucket users
     .EXAMPLE
+    Remove-Bucket -Bucket "projects/myapp"
+    .EXAMPLE
     Remove-Bucket -Bucket "temp*" -Confirm:$false
     .EXAMPLE
-    Remove-Bucket * -WhatIf
+    Remove-Bucket -Bucket projects -Recurse
     #>
     [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
     param(
         [Parameter(Mandatory = $true, Position = 0, ValueFromRemainingArguments = $true)][string[]]$Bucket,
         [string]$Path,
+        [switch]$Recurse,
         [switch]$Force
     )
 
     if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
     $Path = Resolve-SafePath -Path $Path
 
-    $allBuckets = @()
-    if ([System.IO.Directory]::Exists($Path)) {
-        $allBuckets = @([System.IO.DirectoryInfo]::new($Path).GetDirectories()) | ForEach-Object {
-            [PSCustomObject]@{ Name = $_.Name; Path = $_.FullName }
+    function Find-MatchingBuckets {
+        param([string]$Root, [string[]]$Patterns)
+
+        function Scan-Dir {
+            param([string]$Dir)
+            $matched = @()
+            $di = [System.IO.DirectoryInfo]::new($Dir)
+            $hasFiles = $di.GetFiles("*.dat").Length -gt 0 -or $di.GetFiles("*.json").Length -gt 0
+            $relName = ""
+            if ($Dir -ne $Root) {
+                $relName = $Dir.Substring($Root.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar).Replace([System.IO.Path]::DirectorySeparatorChar, '/')
+            }
+            if ($hasFiles) {
+                foreach ($pattern in $Patterns) {
+                    if ($pattern -match '[\*\?]') {
+                        if ($relName -like $pattern) {
+                            $matched += [PSCustomObject]@{ Name = $relName; Path = $Dir }
+                            break
+                        }
+                    }
+                    elseif ($pattern -eq "*" -or $relName -eq $pattern -or ($relName -like "$pattern*") -or ($relName -like "*/$pattern") -or ($relName -like "*/$pattern/*") -or ($relName -like "$pattern/*")) {
+                        $matched += [PSCustomObject]@{ Name = $relName; Path = $Dir }
+                        break
+                    }
+                }
+            }
+            foreach ($subDir in $di.GetDirectories()) {
+                if ($subDir.Name -eq ".buckets" -or $subDir.Name -eq ".arrays") { continue }
+                $matched += Scan-Dir -Dir $subDir.FullName
+            }
+            $matched
+        }
+
+        if ([System.IO.Directory]::Exists($Root)) {
+            Scan-Dir -Dir $Root
         }
     }
 
-    $matched = @()
-    foreach ($pattern in $Bucket) {
-        if ($pattern -match '[\*\?]') {
-            $found = $allBuckets | Where-Object { $_.Name -like $pattern }
-            if (-not $found) { Write-Warning "No buckets match pattern '$pattern'" }
-            $matched += $found
-        }
-        elseif ($pattern -eq "*") { $matched += $allBuckets }
-        else {
-            $exact = $allBuckets | Where-Object { $_.Name -eq $pattern }
-            if ($exact) { $matched += $exact }
-            else { Write-Warning "Bucket '$pattern' not found at '$Path'" }
-        }
-    }
+    $matched = Find-MatchingBuckets -Root $Path -Patterns $Bucket
 
-    if ($matched.Count -eq 0) { return }
+    if ($matched.Count -eq 0) {
+        Write-Warning "No buckets match the specified pattern(s)"
+        return
+    }
 
     $removable = @()
     $skippedBuckets = @()
@@ -1369,13 +1412,6 @@ function Remove-Bucket {
         }
 
         $di = [System.IO.DirectoryInfo]::new($m.Path)
-        $subDirs = @($di.GetDirectories())
-        $nonArraysDirs = @($subDirs | Where-Object { $_.Name -ne ".arrays" })
-        if ($nonArraysDirs.Count -gt 0) {
-            $skippedBuckets += [PSCustomObject]@{ Name = $m.Name; Reason = "contains non-bucket subdirectories: $($nonArraysDirs.Name -join ', ')" }
-            continue
-        }
-
         $allFiles = @($di.GetFiles())
         $otherFiles = @($allFiles | Where-Object { $_.Extension -notin ".dat", ".json" })
         if ($otherFiles.Count -gt 0) {
@@ -1383,10 +1419,25 @@ function Remove-Bucket {
             continue
         }
 
+        # Check for nested bucket subdirectories
+        $nestedBuckets = @()
+        foreach ($subDir in $di.GetDirectories()) {
+            if ($subDir.Name -eq ".buckets" -or $subDir.Name -eq ".arrays") { continue }
+            if ($subDir.GetFiles("*.dat").Length -gt 0 -or $subDir.GetFiles("*.json").Length -gt 0) {
+                $nestedBuckets += $subDir.Name
+            }
+        }
+
         $stats = Get-BucketStats -Bucket $m.Name -Path $Path
+        $hasNested = $nestedBuckets.Count -gt 0
+
         $removable += [PSCustomObject]@{
-            Name = $m.Name; Objects = if ($stats) { $stats.ObjectCount } else { 0 }
-            Size = if ($stats) { $stats.TotalSize } else { "0 KB" }; Path = $m.Path
+            Name = $m.Name
+            Objects = if ($stats) { $stats.ObjectCount } else { 0 }
+            Size = if ($stats) { $stats.TotalSize } else { "0 KB" }
+            Path = $m.Path
+            HasNestedBuckets = $hasNested
+            NestedBucketNames = $nestedBuckets
         }
     }
 
@@ -1395,7 +1446,16 @@ function Remove-Bucket {
     if ($WhatIfPreference) {
         if ($removable.Count -gt 0) {
             Write-Host "  What if: Remove the following bucket(s):" -ForegroundColor Yellow
-            foreach ($r in $removable) { Write-Host "    $($r.Name) ($($r.Objects) objects, $($r.Size))" -ForegroundColor DarkGray }
+            foreach ($r in $removable) {
+                $msg = "    $($r.Name) ($($r.Objects) objects, $($r.Size))"
+                if ($r.HasNestedBuckets -and -not $Recurse) {
+                    $msg += " [nested buckets preserved: $($r.NestedBucketNames -join ', ')]"
+                }
+                elseif ($r.HasNestedBuckets) {
+                    $msg += " [includes nested buckets: $($r.NestedBucketNames -join ', ')]"
+                }
+                Write-Host $msg -ForegroundColor DarkGray
+            }
         }
         if ($skippedBuckets.Count -gt 0) {
             Write-Host "`n  Skipped:" -ForegroundColor Yellow
@@ -1415,20 +1475,54 @@ function Remove-Bucket {
             Write-Warning "Bucket '$($r.Name)' now contains non-bucket files, aborting: $($finalOther.Name -join ', ')"
             continue
         }
-        $finalDirs = @($finalDi.GetDirectories())
-        $finalNonArrays = @($finalDirs | Where-Object { $_.Name -ne ".arrays" })
-        if ($finalNonArrays.Count -gt 0) {
-            Write-Warning "Bucket '$($r.Name)' now contains non-bucket subdirectories, aborting"
-            continue
-        }
 
         $target = "bucket '$($r.Name)' ($($r.Objects) object(s), $($r.Size))"
-        if ($PSCmdlet.ShouldProcess($target, "Remove-Bucket")) {
-            Write-Verbose "Removing bucket '$($r.Name)' ($($r.Objects) object(s))"
-            [System.IO.Directory]::Delete($r.Path, $true)
-            $cacheKeys = @($script:BucketPathCache.Keys) | Where-Object { $_ -like "*|$($r.Name)" }
-            foreach ($ck in $cacheKeys) { $script:BucketPathCache.Remove($ck) }
-            $removedCount++
+
+        if ($r.HasNestedBuckets -and -not $Recurse) {
+            # Remove only bucket files and .arrays/, preserve nested bucket dirs
+            $finalDirs = @($finalDi.GetDirectories())
+            $nestedDirs = @($finalDirs | Where-Object { $_.Name -ne ".arrays" -and ($_.GetFiles("*.dat").Length -gt 0 -or $_.GetFiles("*.json").Length -gt 0) })
+
+            $nestedMsg = " (preserving nested buckets: $($nestedDirs.Name -join ', '))"
+
+            if ($PSCmdlet.ShouldProcess($target + $nestedMsg, "Remove-Bucket")) {
+                # Delete bucket files
+                foreach ($f in $finalFiles) { $f.Delete() }
+                # Delete .arrays/
+                $arraysDir = $finalDirs | Where-Object { $_.Name -eq ".arrays" }
+                if ($arraysDir) { [System.IO.Directory]::Delete($arraysDir.FullName, $true) }
+                # Remove empty bucket dir if nothing left
+                $remainingDirs = @($finalDi.GetDirectories())
+                if ($remainingDirs.Count -eq 0 -and $finalDi.GetFiles().Length -eq 0) {
+                    $finalDi.Delete()
+                }
+                $cacheKeys = @($script:BucketPathCache.Keys) | Where-Object { $_ -like "*|$($r.Name)" }
+                foreach ($ck in $cacheKeys) { $script:BucketPathCache.Remove($ck) }
+                $removedCount++
+            }
+        }
+        elseif ($Recurse) {
+            if ($PSCmdlet.ShouldProcess($target, "Remove-Bucket -Recurse")) {
+                [System.IO.Directory]::Delete($r.Path, $true)
+                $cacheKeys = @($script:BucketPathCache.Keys) | Where-Object { $_ -like "*|$($r.Name)*" }
+                foreach ($ck in $cacheKeys) { $script:BucketPathCache.Remove($ck) }
+                $removedCount++
+            }
+        }
+        else {
+            # No nested buckets — standard deletion
+            $finalDirs = @($finalDi.GetDirectories())
+            $finalNonArrays = @($finalDirs | Where-Object { $_.Name -ne ".arrays" })
+            if ($finalNonArrays.Count -gt 0) {
+                Write-Warning "Bucket '$($r.Name)' contains non-bucket subdirectories, aborting"
+                continue
+            }
+            if ($PSCmdlet.ShouldProcess($target, "Remove-Bucket")) {
+                [System.IO.Directory]::Delete($r.Path, $true)
+                $cacheKeys = @($script:BucketPathCache.Keys) | Where-Object { $_ -like "*|$($r.Name)" }
+                foreach ($ck in $cacheKeys) { $script:BucketPathCache.Remove($ck) }
+                $removedCount++
+            }
         }
     }
 
@@ -1963,8 +2057,29 @@ $script:CompleterBlock = {
     param($commandName, $parameterName, $wordToComplete, $commandAst, $fakeBoundParameters)
     $path = if ($fakeBoundParameters.ContainsKey('Path')) { $fakeBoundParameters['Path'] } else { Get-DefaultPath }
     if (-not [System.IO.Directory]::Exists($path)) { return }
-    [System.IO.DirectoryInfo]::new($path).GetDirectories("$wordToComplete*") | ForEach-Object {
-        [System.Management.Automation.CompletionResult]::new($_.Name, $_.Name, 'ParameterValue', $_.Name)
+
+    function Find-BucketsForCompletion {
+        param([string]$Dir, [string]$Root, [string]$Filter)
+        $di = [System.IO.DirectoryInfo]::new($Dir)
+        $hasFiles = $di.GetFiles("*.dat").Length -gt 0 -or $di.GetFiles("*.json").Length -gt 0
+        $relName = ""
+        if ($Dir -ne $Root) {
+            $relName = $Dir.Substring($Root.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar).Replace([System.IO.Path]::DirectorySeparatorChar, '/')
+        }
+        if ($hasFiles) {
+            if ($Filter -eq "*" -or $relName -like "$Filter*" -or ($relName -contains $Filter)) {
+                $relName
+            }
+        }
+        foreach ($subDir in $di.GetDirectories()) {
+            if ($subDir.Name -eq ".buckets" -or $subDir.Name -eq ".arrays") { continue }
+            Find-BucketsForCompletion -Dir $subDir.FullName -Root $Root -Filter $Filter
+        }
+    }
+
+    $filter = if ($wordToComplete) { $wordToComplete } else { "*" }
+    Find-BucketsForCompletion -Dir $path -Root $path -Filter $filter | ForEach-Object {
+        [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
     }
 }
 
