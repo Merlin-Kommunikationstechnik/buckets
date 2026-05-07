@@ -1268,6 +1268,23 @@ namespace Buckets.Provider
             }
             cleaned = cleaned.TrimStart(ProviderSep, '/', '\\');
 
+            // Also normalize basePath to get its relative portion
+            string cleanedBase = basePath ?? "";
+            int baseColonColon = cleanedBase.IndexOf("::", StringComparison.Ordinal);
+            if (baseColonColon >= 0) cleanedBase = cleanedBase.Substring(baseColonColon + 2);
+            if (cleanedBase.StartsWith(drivePrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                cleanedBase = cleanedBase.Substring(drivePrefix.Length);
+            }
+            cleanedBase = cleanedBase.TrimStart(ProviderSep, '/', '\\');
+
+            // Strip basePath from path to get the truly relative portion
+            if (!string.IsNullOrEmpty(cleanedBase) && cleaned.StartsWith(cleanedBase, StringComparison.OrdinalIgnoreCase))
+            {
+                string afterBase = cleaned.Substring(cleanedBase.Length);
+                cleaned = afterBase.TrimStart(ProviderSep, '/', '\\');
+            }
+
             // Remove . and .. segments (clamp to root)
             string[] parts = cleaned.Split(new[] { ProviderSep, '/', '\\' }, StringSplitOptions.RemoveEmptyEntries);
             var stack = new System.Collections.Generic.List<string>();
@@ -1277,9 +1294,7 @@ namespace Buckets.Provider
                 stack.Add(part);
             }
 
-            string relative = string.Join(ProviderSep.ToString(), stack);
-            // Return path relative to basePath (strip leading separator)
-            return relative;
+            return string.Join(ProviderSep.ToString(), stack);
         }
 
         #endregion
