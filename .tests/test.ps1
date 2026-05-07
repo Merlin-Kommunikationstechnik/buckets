@@ -555,6 +555,32 @@ New-BucketObject -Bucket "org/eu/de/berlin" -InputObject $cityData -Key "info" -
 New-BucketObject -Bucket $nestedBucket -InputObject $teamData -Key "profile" -Quiet
 
 # ============================================================
+# 15a. Get-Bucket -AsTree
+# ============================================================
+Write-Host "`n[15a] Get-Bucket -AsTree" -ForegroundColor Yellow
+$tree = Get-Bucket -AsTree -Raw -Name "org"
+$orgChildren = @($tree.Children | Where-Object { $_.Name -eq "org" })
+if ($orgChildren.Count -eq 1) {
+    $orgNode = $orgChildren[0]
+    # org bucket has 5 objects total (recursive), with eu as a child bucket
+    if ($orgNode._BucketName -eq "org" -and $orgNode.ObjectCount -eq 5 -and $orgNode.Children.Count -ge 1 -and $orgNode.Children[0].Name -eq "eu") {
+        Write-Host "  Tree structure: OK (org → eu with correct nesting)" -ForegroundColor Green
+    } else {
+        Write-Host "  FAIL (org node structure incorrect: _BucketName=$($orgNode._BucketName) ObjectCount=$($orgNode.ObjectCount) Children=$($orgNode.Children.Count) FirstChild=$($orgNode.Children[0].Name))" -ForegroundColor Red
+    }
+} else {
+    Write-Host "  FAIL (expected 1 org node, got $($orgChildren.Count))" -ForegroundColor Red
+}
+
+# Verify -Raw output has correct type
+$rawAll = Get-Bucket -AsTree -Raw
+if ($rawAll.PSObject.TypeNames[0] -eq "Buckets.Tree" -and $rawAll.Type -eq "Root") {
+    Write-Host "  Raw output type: OK (Buckets.Tree Root)" -ForegroundColor Green
+} else {
+    Write-Host "  FAIL (raw output type incorrect: $($rawAll.PSObject.TypeNames[0]))" -ForegroundColor Red
+}
+
+# ============================================================
 # 15. Performance benchmark (1,000 objects — baseline throughput)
 # ============================================================
 Write-Host "`n[15] Performance benchmark (1,000 objects — baseline throughput)" -ForegroundColor Yellow
