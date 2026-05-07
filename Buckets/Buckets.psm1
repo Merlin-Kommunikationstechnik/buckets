@@ -1362,6 +1362,7 @@ function Remove-Bucket {
         function Scan-Dir {
             param([string]$Dir)
             $matched = @()
+            if (-not [System.IO.Directory]::Exists($Dir)) { return $matched }
             $di = [System.IO.DirectoryInfo]::new($Dir)
             $hasFiles = $di.GetFiles("*.dat").Length -gt 0 -or $di.GetFiles("*.json").Length -gt 0
             $relName = ""
@@ -1443,6 +1444,23 @@ function Remove-Bucket {
 
     if ($removable.Count -eq 0 -and $skippedBuckets.Count -eq 0) { return }
 
+    # When -Recurse, deduplicate: only keep buckets that aren't subdirectories of other matched buckets
+    if ($Recurse -and $removable.Count -gt 1) {
+        $sorted = @($removable | Sort-Object { $_.Path.Length })
+        $topLevel = @()
+        foreach ($r in $sorted) {
+            $isChild = $false
+            foreach ($existing in $topLevel) {
+                if ($r.Path.StartsWith($existing.Path + [System.IO.Path]::DirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase)) {
+                    $isChild = $true
+                    break
+                }
+            }
+            if (-not $isChild) { $topLevel += $r }
+        }
+        $removable = $topLevel
+    }
+
     if ($WhatIfPreference) {
         if ($removable.Count -gt 0) {
             Write-Host "  What if: Remove the following bucket(s):" -ForegroundColor Yellow
@@ -1468,6 +1486,7 @@ function Remove-Bucket {
 
     $removedCount = 0
     foreach ($r in $removable) {
+        if (-not [System.IO.Directory]::Exists($r.Path)) { continue }
         $finalDi = [System.IO.DirectoryInfo]::new($r.Path)
         $finalFiles = @($finalDi.GetFiles())
         $finalOther = @($finalFiles | Where-Object { $_.Extension -notin ".dat", ".json" })

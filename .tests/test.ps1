@@ -462,11 +462,100 @@ foreach ($item in $allResults) {
 if ($arrayGroupCount -eq 1 -and $arrayItemCount -eq 3 -and $orderCheck -and $soloFound) {
     Write-Host "  OK (1 array group with 3 items in order, 1 standalone)" -ForegroundColor Green
 } else {
-    Write-Host "  FAIL (groups: $arrayGroupCount, items: $arrayItemCount, solo: $soloFound)" -ForegroundColor Red
+    Write-Host "  FAIL (groups: $arrayGroupCount, items: $arrayItemCount, order: $orderCheck, solo: $soloFound)" -ForegroundColor Red
 }
 
 # ============================================================
-# 15. Performance benchmark
+# 15. Nested buckets (5 levels deep)
+# ============================================================
+Write-Host "`n[15] Nested buckets (5 levels deep)" -ForegroundColor Yellow
+Remove-Bucket "org" -Force -Confirm:$false -WarningAction SilentlyContinue
+
+$nestedBucket = "org/eu/de/berlin/team-a"
+
+# Write objects at different nesting levels
+$orgData = @{ Name = "Global Corp"; Founded = 1990 }
+New-BucketObject -Bucket "org" -InputObject $orgData -Key "meta" -Quiet
+
+$euData = @{ Region = "Europe"; Hq = "Frankfurt" }
+New-BucketObject -Bucket "org/eu" -InputObject $euData -Key "info" -Quiet
+
+$deData = @{ Country = "Germany"; Currency = "EUR" }
+New-BucketObject -Bucket "org/eu/de" -InputObject $deData -Key "info" -Quiet
+
+$cityData = @{ City = "Berlin"; Employees = 150 }
+New-BucketObject -Bucket "org/eu/de/berlin" -InputObject $cityData -Key "info" -Quiet
+
+$teamData = @{ Team = "Team A"; Lead = "Alice"; Members = 5 }
+New-BucketObject -Bucket $nestedBucket -InputObject $teamData -Key "profile" -Quiet
+
+# Verify reads at each level
+$passCount = 0
+$failMsg = @()
+
+$r = Get-BucketObject -Bucket "org" -Key "meta"
+if ($r.Name -eq "Global Corp" -and $r.Founded -eq 1990) { $passCount++ } else { $failMsg += "org/meta" }
+
+$r = Get-BucketObject -Bucket "org/eu" -Key "info"
+if ($r.Region -eq "Europe") { $passCount++ } else { $failMsg += "org/eu/info" }
+
+$r = Get-BucketObject -Bucket "org/eu/de" -Key "info"
+if ($r.Country -eq "Germany") { $passCount++ } else { $failMsg += "org/eu/de/info" }
+
+$r = Get-BucketObject -Bucket "org/eu/de/berlin" -Key "info"
+if ($r.City -eq "Berlin") { $passCount++ } else { $failMsg += "org/eu/de/berlin/info" }
+
+$r = Get-BucketObject -Bucket $nestedBucket -Key "profile"
+if ($r.Team -eq "Team A" -and $r.Lead -eq "Alice") { $passCount++ } else { $failMsg += "$nestedBucket/profile" }
+
+# Verify Get-Bucket finds all nested buckets
+$buckets = Get-Bucket -Name "org"
+$orgBuckets = @($buckets | Where-Object { $_.Name -like "org*" })
+if ($orgBuckets.Count -ge 5) { $passCount++ } else { $failMsg += "Get-Bucket found $($orgBuckets.Count)/5 nested buckets" }
+
+# Verify provider navigation
+$driveItems = @()
+Get-ChildItem "buckets:\org" -ErrorAction SilentlyContinue | ForEach-Object { $driveItems += $_.Name }
+if ($driveItems -contains "eu") { $passCount++ } else { $failMsg += "provider: missing eu at org level" }
+
+$euItems = @()
+Get-ChildItem "buckets:\org\eu" -ErrorAction SilentlyContinue | ForEach-Object { $driveItems += $_.Name }
+if ($euItems -contains "de") { $passCount++ } else { $failMsg += "provider: missing de at eu level" }
+
+if ($passCount -eq 7) {
+    Write-Host "  5-level deep nested buckets: OK (7/7 checks passed)" -ForegroundColor Green
+} else {
+    Write-Host "  FAIL ($passCount/7 passed): $($failMsg -join ', ')" -ForegroundColor Red
+}
+
+# Test Remove-Bucket at deep level (without -Recurse, should preserve parent)
+Remove-Bucket $nestedBucket -Force -Confirm:$false -WarningAction SilentlyContinue
+$deepGone = $null -eq (Get-BucketObject -Bucket $nestedBucket -Key "profile" -WarningAction SilentlyContinue 2>$null)
+$parentIntact = (Get-BucketObject -Bucket "org/eu/de/berlin" -Key "info").City -eq "Berlin"
+if ($deepGone -and $parentIntact) {
+    Write-Host "  Deep remove: OK (removed leaf, parent preserved)" -ForegroundColor Green
+} else {
+    Write-Host "  FAIL (deep gone: $deepGone, parent intact: $parentIntact)" -ForegroundColor Red
+}
+
+# Test Remove-Bucket -Recurse
+Remove-Bucket "org" -Recurse -Force -Confirm:$false -WarningAction SilentlyContinue
+$orgGone = -not (Test-Path (Join-Path $HOME ".buckets/org"))
+if ($orgGone) {
+    Write-Host "  Recursive remove: OK (entire tree removed)" -ForegroundColor Green
+} else {
+    Write-Host "  FAIL (org directory still exists)" -ForegroundColor Red
+}
+
+# Recreate the nested buckets so they survive the test suite
+New-BucketObject -Bucket "org" -InputObject $orgData -Key "meta" -Quiet
+New-BucketObject -Bucket "org/eu" -InputObject $euData -Key "info" -Quiet
+New-BucketObject -Bucket "org/eu/de" -InputObject $deData -Key "info" -Quiet
+New-BucketObject -Bucket "org/eu/de/berlin" -InputObject $cityData -Key "info" -Quiet
+New-BucketObject -Bucket $nestedBucket -InputObject $teamData -Key "profile" -Quiet
+
+# ============================================================
+# 15. Performance benchmark (1,000 objects — baseline throughput)
 # ============================================================
 Write-Host "`n[15] Performance benchmark (1,000 objects — baseline throughput)" -ForegroundColor Yellow
 Remove-Bucket "perf-test" -Force -Confirm:$false -WarningAction SilentlyContinue

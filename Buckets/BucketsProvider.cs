@@ -79,7 +79,7 @@ namespace Buckets.Provider
     }
 
     [CmdletProvider("Buckets", ProviderCapabilities.ShouldProcess)]
-    public class BucketsProvider : NavigationCmdletProvider
+    public class BucketsProvider : NavigationCmdletProvider, IContentCmdletProvider
     {
         private static readonly char[] InvalidChars = { '/', ':', '*', '?', '"', '<', '>', '|', '.', '[', ']' };
         private static readonly byte[] GZipMagic = { 0x1F, 0x8B };
@@ -426,6 +426,16 @@ namespace Buckets.Provider
                 string xml = PSSerializer.Serialize(value);
                 File.WriteAllBytes(physicalPath, Encoding.UTF8.GetBytes(xml));
             }
+        }
+
+        internal object DeserializeFileInternal(string physicalPath, out string format, out bool compressed)
+        {
+            return DeserializeFile(physicalPath, out format, out compressed);
+        }
+
+        internal void SerializeFileInternal(object value, string physicalPath, string format)
+        {
+            SerializeFile(value, physicalPath, format);
         }
 
         private void TrySerializeJson(object value, string physicalPath)
@@ -1740,5 +1750,229 @@ namespace Buckets.Provider
         }
 
         #endregion
+
+        #region Content Cmdlet Provider
+
+        public IContentReader GetContentReader(string path)
+        {
+            string physical = ToPhysicalPath(path);
+            if (physical == null || !File.Exists(physical))
+            {
+                WriteError(new ErrorRecord(new ItemNotFoundException($"Object not found: {path}"),
+                    "ItemNotFound", ErrorCategory.ObjectNotFound, path));
+                return null;
+            }
+
+            if (Directory.Exists(physical))
+            {
+                WriteError(new ErrorRecord(new InvalidOperationException("Get-Content cannot be used on a bucket directory. Use Get-Item to retrieve objects."),
+                    "NotAnObject", ErrorCategory.InvalidType, path));
+                return null;
+            }
+
+            return new BucketContentReader(physical, this);
+        }
+
+        public IContentWriter GetContentWriter(string path)
+        {
+            string physical = ToPhysicalPath(path);
+            if (physical == null)
+            {
+                physical = ResolveNewObjectPath(path);
+                if (physical == null)
+                {
+                    WriteError(new ErrorRecord(new ItemNotFoundException($"Cannot resolve path: {path}"),
+                        "PathNotFound", ErrorCategory.ObjectNotFound, path));
+                    return null;
+                }
+            }
+
+            if (Directory.Exists(physical))
+            {
+                WriteError(new ErrorRecord(new InvalidOperationException("Set-Content cannot be used on a bucket directory."),
+                    "NotAnObject", ErrorCategory.InvalidType, path));
+                return null;
+            }
+
+            return new BucketContentWriter(physical, this);
+        }
+
+        public void ClearContent(string path)
+        {
+            string physical = ToPhysicalPath(path);
+            if (physical == null || !File.Exists(physical))
+            {
+                WriteError(new ErrorRecord(new ItemNotFoundException($"Object not found: {path}"),
+                    "ItemNotFound", ErrorCategory.ObjectNotFound, path));
+                return;
+            }
+
+            if (ShouldProcess($"Clear content of {path}", "Clear-Content"))
+            {
+                File.Delete(physical);
+            }
+        }
+
+        public object GetContentReaderDynamicParameters(string path) => null;
+        public object GetContentWriterDynamicParameters(string path) => null;
+        public object ClearContentDynamicParameters(string path) => null;
+
+        private string ResolveNewObjectPath(string path)
+        {
+            string root = GetPhysicalRoot();
+
+            string driveName = PSDriveInfo.Name + ":";
+            if (path.StartsWith(driveName, StringComparison.OrdinalIgnoreCase))
+            {
+                path = path.Substring(driveName.Length);
+            }
+
+            path = path.TrimStart(Sep, '/', '\\');
+            if (string.IsNullOrEmpty(path)) return null;
+
+            string normalized = path.Replace('/', Sep).Replace('\\', Sep);
+            string[] parts = normalized.Split(new[] { Sep }, StringSplitOptions.RemoveEmptyEntries);
+
+            // Last part is the key, rest is the bucket path
+            if (parts.Length < 2) return null;
+
+            string bucketPath = root;
+            for (int i = 0; i < parts.Length - 1; i++)
+            {
+                bucketPath = Path.Combine(bucketPath, parts[i]);
+            }
+
+            string key = parts[parts.Length - 1];
+            string sanitized = SanitizeKey(key);
+            if (string.IsNullOrEmpty(sanitized)) return null;
+
+            if (!Directory.Exists(bucketPath))
+            {
+                Directory.CreateDirectory(bucketPath);
+            }
+
+            // Default to .dat if no extension specified
+            string ext = Path.GetExtension(sanitized);
+            if (string.IsNullOrEmpty(ext))
+            {
+                // Check if bucket has .json files
+                var jsonCount = new DirectoryInfo(bucketPath).GetFiles("*.json").Length;
+                var datCount = new DirectoryInfo(bucketPath).GetFiles("*.dat").Length;
+                ext = jsonCount > datCount ? ".json" : ".dat";
+                sanitized = sanitized + ext;
+            }
+
+            return Path.Combine(bucketPath, sanitized);
+        }
+
+        #endregion
+    }
+
+    public class BucketContentReader : IContentReader
+    {
+        private readonly string _physicalPath;
+        private readonly BucketsProvider _provider;
+        private bool _read;
+
+        public BucketContentReader(string physicalPath, BucketsProvider provider)
+        {
+            _physicalPath = physicalPath;
+            _provider = provider;
+            _read = false;
+        }
+
+        public IList Read(long readCount)
+        {
+            if (_read) return new object[0];
+            _read = true;
+
+            try
+            {
+                object content = _provider.DeserializeFileInternal(_physicalPath, out _, out _);
+                return new object[] { content };
+            }
+            catch (Exception ex)
+            {
+                _provider.WriteError(new ErrorRecord(
+                    new RuntimeException($"Failed to read content: {ex.Message}"),
+                    "ReadError", ErrorCategory.ReadError, _physicalPath));
+                return new object[0];
+            }
+        }
+
+        public void Seek(long offset, SeekOrigin origin)
+        {
+            // Object storage doesn't support seeking
+        }
+
+        public void Close()
+        {
+        }
+
+        public void Dispose()
+        {
+        }
+    }
+
+    public class BucketContentWriter : IContentWriter
+    {
+        private readonly string _physicalPath;
+        private readonly BucketsProvider _provider;
+        private readonly System.Collections.Generic.List<object> _buffer;
+
+        public BucketContentWriter(string physicalPath, BucketsProvider provider)
+        {
+            _physicalPath = physicalPath;
+            _provider = provider;
+            _buffer = new System.Collections.Generic.List<object>();
+        }
+
+        public IList Write(IList items)
+        {
+            if (items != null)
+            {
+                foreach (var item in items)
+                {
+                    _buffer.Add(item);
+                }
+            }
+            return new object[0];
+        }
+
+        public void Seek(long offset, SeekOrigin origin)
+        {
+            // Object storage doesn't support seeking
+        }
+
+        public void Close()
+        {
+            if (_buffer.Count == 0) return;
+
+            try
+            {
+                object value = _buffer.Count == 1 ? _buffer[0] : _buffer.ToArray();
+                string ext = Path.GetExtension(_physicalPath).ToLowerInvariant();
+                string format = ext == ".json" ? "json" : "binary";
+
+                string dir = Path.GetDirectoryName(_physicalPath);
+                if (!Directory.Exists(dir))
+                {
+                    Directory.CreateDirectory(dir);
+                }
+
+                _provider.SerializeFileInternal(value, _physicalPath, format);
+            }
+            catch (Exception ex)
+            {
+                _provider.WriteError(new ErrorRecord(
+                    new RuntimeException($"Failed to write content: {ex.Message}"),
+                    "WriteError", ErrorCategory.WriteError, _physicalPath));
+            }
+        }
+
+        public void Dispose()
+        {
+            Close();
+        }
     }
 }
