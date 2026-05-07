@@ -9,16 +9,20 @@
       <TableControl>
         <TableHeaders>
           <TableColumnHeader>
-            <Label>Mode</Label>
-            <Width>7</Width>
+            <Label>Type</Label>
+            <Width>5</Width>
           </TableColumnHeader>
           <TableColumnHeader>
             <Label>LastWriteTime</Label>
             <Width>25</Width>
           </TableColumnHeader>
           <TableColumnHeader>
-            <Label>Length</Label>
-            <Width>10</Width>
+            <Label>CreationTime</Label>
+            <Width>25</Width>
+          </TableColumnHeader>
+          <TableColumnHeader>
+            <Label>Size</Label>
+            <Width>12</Width>
             <Alignment>Right</Alignment>
           </TableColumnHeader>
           <TableColumnHeader>
@@ -29,13 +33,16 @@
           <TableRowEntry>
             <TableColumnItems>
               <TableColumnItem>
-                <PropertyName>Mode</PropertyName>
+                <PropertyName>Type</PropertyName>
               </TableColumnItem>
               <TableColumnItem>
                 <PropertyName>LastWriteTime</PropertyName>
               </TableColumnItem>
               <TableColumnItem>
-                <PropertyName>Length</PropertyName>
+                <PropertyName>CreationTime</PropertyName>
+              </TableColumnItem>
+              <TableColumnItem>
+                <PropertyName>Size</PropertyName>
               </TableColumnItem>
               <TableColumnItem>
                 <PropertyName>Name</PropertyName>

@@ -27,7 +27,7 @@ namespace Buckets.Provider
 
     public class BucketItemInfo
     {
-        public string Mode
+        public string Type
         {
             get
             {
@@ -41,7 +41,18 @@ namespace Buckets.Provider
             }
         }
         public DateTime LastWriteTime { get; set; }
-        public long? Length => IsContainer ? (long?)null : SizeBytes;
+        public DateTime CreationTime { get; set; }
+        public string Size
+        {
+            get
+            {
+                if (IsContainer)
+                {
+                    return FormatSize(SizeBytes);
+                }
+                return SizeBytes > 0 ? FormatSize(SizeBytes) : "--";
+            }
+        }
         public string Name { get; set; }
 
         // Internal use only
@@ -51,6 +62,20 @@ namespace Buckets.Provider
         internal string Format { get; set; }
         internal long SizeBytes { get; set; }
         internal string PhysicalPath { get; set; }
+
+        private static string FormatSize(long bytes)
+        {
+            if (bytes == 0) return "0 B";
+            string[] units = { "B", "KB", "MB", "GB", "TB" };
+            int unit = 0;
+            double size = bytes;
+            while (size >= 1024 && unit < units.Length - 1)
+            {
+                size /= 1024;
+                unit++;
+            }
+            return (int)Math.Round(size) + " " + units[unit];
+        }
     }
 
     [CmdletProvider("Buckets", ProviderCapabilities.ShouldProcess)]
@@ -466,6 +491,32 @@ namespace Buckets.Provider
         }
 
         /// <summary>
+        /// Recursively calculate total size of .dat and .json files in a directory tree.
+        /// </summary>
+        private long GetDirectorySize(string directory)
+        {
+            long total = 0;
+            try
+            {
+                var di = new DirectoryInfo(directory);
+                foreach (var file in di.GetFiles("*.dat"))
+                {
+                    total += file.Length;
+                }
+                foreach (var file in di.GetFiles("*.json"))
+                {
+                    total += file.Length;
+                }
+                foreach (var subDir in di.GetDirectories().Where(d => d.Name != ".buckets"))
+                {
+                    total += GetDirectorySize(subDir.FullName);
+                }
+            }
+            catch { }
+            return total;
+        }
+
+        /// <summary>
         /// Determine if a physical directory is inside .arrays/
         /// </summary>
         private bool IsArrayDirectory(string physicalDir)
@@ -566,9 +617,10 @@ namespace Buckets.Provider
                     ItemKind = itemKind,
                     ItemCount = count,
                     Format = "",
-                    SizeBytes = 0,
+                    SizeBytes = GetDirectorySize(physical),
                     PhysicalPath = physical,
-                    LastWriteTime = di.LastWriteTime
+                    LastWriteTime = di.LastWriteTime,
+                    CreationTime = di.CreationTime
                 };
 
                 WriteItemObject(info, ToLogicalPath(physical), true);
@@ -658,9 +710,10 @@ namespace Buckets.Provider
                         ItemKind = "bucket",
                         ItemCount = count,
                         Format = "",
-                        SizeBytes = 0,
+                        SizeBytes = GetDirectorySize(bucketDir.FullName),
                         PhysicalPath = bucketDir.FullName,
-                        LastWriteTime = bucketDir.LastWriteTime
+                        LastWriteTime = bucketDir.LastWriteTime,
+                        CreationTime = bucketDir.CreationTime
                     }, bucketDir.Name, true);
 
                     if (recurse)
@@ -691,7 +744,8 @@ namespace Buckets.Provider
                         Format = ext == ".json" ? "JSON" : "Binary",
                         SizeBytes = file.Length,
                         PhysicalPath = file.FullName,
-                        LastWriteTime = file.LastWriteTime
+                        LastWriteTime = file.LastWriteTime,
+                        CreationTime = file.CreationTime
                     }, logical, false);
                 }
 
@@ -715,9 +769,10 @@ namespace Buckets.Provider
                             ItemKind = "array",
                             ItemCount = count,
                             Format = "",
-                            SizeBytes = 0,
+                            SizeBytes = GetDirectorySize(arrayDir.FullName),
                             PhysicalPath = arrayDir.FullName,
-                            LastWriteTime = arrayDir.LastWriteTime
+                            LastWriteTime = arrayDir.LastWriteTime,
+                            CreationTime = arrayDir.CreationTime
                         }, logical, true);
 
                         if (recurse)
@@ -746,7 +801,8 @@ namespace Buckets.Provider
                         Format = ext == ".json" ? "JSON" : "Binary",
                         SizeBytes = file.Length,
                         PhysicalPath = file.FullName,
-                        LastWriteTime = file.LastWriteTime
+                        LastWriteTime = file.LastWriteTime,
+                        CreationTime = file.CreationTime
                     }, logical, false);
                 }
             }
@@ -769,9 +825,10 @@ namespace Buckets.Provider
                         ItemKind = "bucket",
                         ItemCount = count,
                         Format = "",
-                        SizeBytes = 0,
+                        SizeBytes = GetDirectorySize(subDir.FullName),
                         PhysicalPath = subDir.FullName,
-                        LastWriteTime = subDir.LastWriteTime
+                        LastWriteTime = subDir.LastWriteTime,
+                        CreationTime = subDir.CreationTime
                     }, logical, true);
 
                     if (recurse)
@@ -797,7 +854,8 @@ namespace Buckets.Provider
                         Format = ext == ".json" ? "JSON" : "Binary",
                         SizeBytes = file.Length,
                         PhysicalPath = file.FullName,
-                        LastWriteTime = file.LastWriteTime
+                        LastWriteTime = file.LastWriteTime,
+                        CreationTime = file.CreationTime
                     }, logical, false);
                 }
             }
@@ -1141,7 +1199,8 @@ namespace Buckets.Provider
                     Format = "",
                     SizeBytes = 0,
                     PhysicalPath = physical,
-                    LastWriteTime = DateTime.Now
+                    LastWriteTime = DateTime.Now,
+                    CreationTime = DateTime.Now
                 }, ToLogicalPath(physical), true);
             }
             else
@@ -1194,7 +1253,8 @@ namespace Buckets.Provider
                     Format = format == "json" ? "JSON" : "Binary",
                     SizeBytes = fi.Length,
                     PhysicalPath = physical,
-                    LastWriteTime = fi.LastWriteTime
+                    LastWriteTime = fi.LastWriteTime,
+                    CreationTime = fi.CreationTime
                 }, ToLogicalPath(physical), false);
             }
         }

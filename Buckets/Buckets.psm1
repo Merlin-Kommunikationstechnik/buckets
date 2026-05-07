@@ -24,7 +24,7 @@ if (Test-Path $script:ProviderFormatPath) {
 }
 
 Update-TypeData -TypeName Buckets.Provider.BucketItemInfo `
-    -DefaultDisplayPropertySet Mode, LastWriteTime, Length, Name `
+    -DefaultDisplayPropertySet Type, LastWriteTime, CreationTime, Size, Name `
     -ErrorAction SilentlyContinue
 
 # --- State ---
