@@ -54,9 +54,10 @@ Uses `SupportsShouldProcess` for `-WhatIf` support. Parameter sets enforce `-Key
 
 ## Release Workflow
 1. **Confirm with the user before releasing** — do not run the workflow without explicit confirmation
-2. `git push`
-3. `gh workflow run "Release Buckets" --ref main -f release_type=<patch|minor|major>`
-4. Monitor at the returned URL and notify user when done
+2. **Do NOT manually bump ModuleVersion** in `Buckets.psd1` — the workflow auto-bumps it
+3. `git push`
+4. `gh workflow run "Release Buckets" --ref main -f release_type=<patch|minor|major>`
+5. Monitor at the returned URL and notify user when done
 
 ## Testing
 ```bash

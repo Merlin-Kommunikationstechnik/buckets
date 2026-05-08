@@ -44,47 +44,56 @@ jobs:
             throw "Module manifest '$manifestPath' does not contain a valid Version value."
           }
 
-          $match = [regex]::Match($currentVersion, '^(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)$')
-          if (!$match.Success) {
-            throw "Current version '$currentVersion' is not valid semver (major.minor.patch)."
+          # Check if the manifest was already bumped in the latest commit
+          $diff = git diff HEAD~1 HEAD -- $manifestPath
+          $alreadyBumped = $diff -match "ModuleVersion"
+
+          if ($alreadyBumped) {
+            Write-Host "Manifest version already bumped to $currentVersion in latest commit. Skipping bump."
+            $newVersion = $currentVersion
+          } else {
+            $match = [regex]::Match($currentVersion, '^(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)$')
+            if (!$match.Success) {
+              throw "Current version '$currentVersion' is not valid semver (major.minor.patch)."
+            }
+
+            $major = [int]$match.Groups["major"].Value
+            $minor = [int]$match.Groups["minor"].Value
+            $patch = [int]$match.Groups["patch"].Value
+
+            $releaseType = "${{ github.event.inputs.release_type }}"
+            switch ($releaseType) {
+              "major" {
+                $major++
+                $minor = 0
+                $patch = 0
+              }
+              "minor" {
+                $minor++
+                $patch = 0
+              }
+              "patch" {
+                $patch++
+              }
+              default {
+                throw "Unsupported release type '$releaseType'."
+              }
+            }
+
+            $newVersion = "$major.$minor.$patch"
+            $manifestContent = Get-Content -Path $manifestPath -Raw
+            $updatedManifestContent = [regex]::Replace(
+              $manifestContent,
+              "(?m)^ModuleVersion\s*=\s*'[^']+'",
+              "ModuleVersion = '$newVersion'"
+            )
+
+            if ($manifestContent -eq $updatedManifestContent) {
+              throw "Could not update ModuleVersion in '$manifestPath'."
+            }
+
+            Set-Content -Path $manifestPath -Value $updatedManifestContent -Encoding UTF8
           }
-
-          $major = [int]$match.Groups["major"].Value
-          $minor = [int]$match.Groups["minor"].Value
-          $patch = [int]$match.Groups["patch"].Value
-
-          $releaseType = "${{ github.event.inputs.release_type }}"
-          switch ($releaseType) {
-            "major" {
-              $major++
-              $minor = 0
-              $patch = 0
-            }
-            "minor" {
-              $minor++
-              $patch = 0
-            }
-            "patch" {
-              $patch++
-            }
-            default {
-              throw "Unsupported release type '$releaseType'."
-            }
-          }
-
-          $newVersion = "$major.$minor.$patch"
-          $manifestContent = Get-Content -Path $manifestPath -Raw
-          $updatedManifestContent = [regex]::Replace(
-            $manifestContent,
-            "(?m)^ModuleVersion\s*=\s*'[^']+'",
-            "ModuleVersion = '$newVersion'"
-          )
-
-          if ($manifestContent -eq $updatedManifestContent) {
-            throw "Could not update ModuleVersion in '$manifestPath'."
-          }
-
-          Set-Content -Path $manifestPath -Value $updatedManifestContent -Encoding UTF8
 
           "new_version=$newVersion" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
