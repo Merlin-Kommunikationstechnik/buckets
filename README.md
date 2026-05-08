@@ -376,7 +376,7 @@ Get-Bucket
     [[-Name] <string>]
     [-Path <string>]
     [-Tree]
-    [-NoObjects]
+    [-Objects]
     [-Raw]
     [-MaxFiles <int>]
     [-Depth <int>]
@@ -388,7 +388,7 @@ Get-Bucket
 | `-Name` | Filter buckets by name (substring match on full nested path) | All buckets |
 | `-Path` | Storage root directory | `$HOME/.buckets` |
 | `-Tree` | Render a colorized tree view of all buckets and files | `false` |
-| `-NoObjects` | Hide individual files in tree view | `false` (files shown) |
+| `-Objects` | Show individual files in tree view | `false` (directories only) |
 | `-Raw` | Return structured tree objects (`Buckets.Tree`) instead of formatted text | `false` |
 | `-MaxFiles` | Max files per bucket in tree view | `5` |
 | `-Depth` | Max depth to display in tree view | Unlimited |
@@ -406,7 +406,7 @@ Get-Bucket "user"
 Get-Bucket -Tree
 
 # Tree view without individual objects
-Get-Bucket -Tree -NoObjects
+Get-Bucket -Tree -Objects
 
 # Tree view showing up to 20 files per bucket
 Get-Bucket -Tree -MaxFiles 20

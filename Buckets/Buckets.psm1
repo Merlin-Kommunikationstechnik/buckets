@@ -569,8 +569,8 @@ function Get-Bucket {
     Filter buckets by name pattern (substring match on full nested path).
     .PARAMETER Tree
     Render a tree view of all buckets and directories.
-    .PARAMETER NoObjects
-    Hide individual object files in tree view. Files are shown by default.
+    .PARAMETER Objects
+    Show individual object files in tree view. Only bucket directories are shown by default.
     .PARAMETER Raw
     Return structured tree objects instead of formatted text (for -Tree mode).
     .PARAMETER MaxFiles
@@ -590,14 +590,14 @@ function Get-Bucket {
     .EXAMPLE
     Get-Bucket -Tree
     .EXAMPLE
-    Get-Bucket -Tree -NoObjects
+    Get-Bucket -Tree -Objects
     #>
     [CmdletBinding()]
     param(
         [Parameter(Position = 0)][string]$Name,
         [string]$Path,
         [switch]$Tree,
-        [switch]$NoObjects,
+        [switch]$Objects,
         [switch]$Raw,
         [switch]$Recurse,
         [int]$MaxFiles = 5,
@@ -717,13 +717,13 @@ function Get-Bucket {
             }
 
             foreach ($sub in $subDirs) {
-                if ($CurrentDepth + 1 -lt $Depth -or (-not $NoObjects)) {
+                if ($CurrentDepth + 1 -lt $Depth -or $Objects) {
                     $child = BuildTree -Dir $sub.FullName -Root $Root -CurrentDepth ($CurrentDepth + 1)
                     $null = $node.Children.Add($child)
                 }
             }
 
-            if (-not $NoObjects) {
+            if ($Objects) {
                 foreach ($f in ($di.GetFiles("*.dat") | Sort-Object Name)) {
                     $fNode = [PSCustomObject]@{
                         Name         = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
