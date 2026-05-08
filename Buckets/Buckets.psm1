@@ -862,10 +862,10 @@ function Get-Bucket {
                 if ($child.Name -eq ".buckets") { continue }
                 $hasSubBuckets = $true
                 $childStats = Get-AggregatedStats -Dir $child.FullName
-                $count += $childStats.Count
+                $count += $childStats.TotalCount
             }
 
-            @{ Count = $count; HasSubBuckets = $hasSubBuckets }
+            [PSCustomObject]@{ TotalCount = $count; HasSubBuckets = $hasSubBuckets }
         }
 
         $rootDi = [System.IO.DirectoryInfo]::new($Path)
@@ -875,7 +875,7 @@ function Get-Bucket {
             $null = $results.Add([PSCustomObject]@{
                 Name          = $subDir.Name
                 Path          = $subDir.FullName
-                ObjectCount   = $stats.Count
+                ObjectCount   = $stats.TotalCount
                 HasSubBuckets = $stats.HasSubBuckets
             })
         }
