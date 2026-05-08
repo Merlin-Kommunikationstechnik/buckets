@@ -22,13 +22,6 @@ Import-Module "$PSScriptRoot/../Buckets" -Force
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
 $startTs = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 
-$createdBuckets = [System.Collections.ArrayList]::new()
-
-function Use-Bucket {
-    param([string]$Name)
-    $null = $createdBuckets.Add($Name)
-}
-
 function Write-InfoBlock {
     param([string]$Mode)
     $mod = Get-Module Buckets
@@ -83,7 +76,6 @@ $servers = @(
     [PSCustomObject]@{ _Id = "srv-backup-01"; Hostname = "srv-backup-01"; OS = "Ubuntu 22.04 LTS"; CPU = "Intel Xeon Silver 4314 @ 2.2GHz x 4"; RAM_GB = 32; Disk_GB = 16000; IP = "10.0.12.10"; Role = "Backup Server"; Location = "dc1-rack-d-01"; Status = "production"; LastBoot = [DateTime]::Now.AddDays(-7) }
 )
 $servers | New-BucketObject -Bucket servers/inventory -KeyProperty _Id -Quiet
-Use-Bucket "servers/inventory"
 Write-Host "  Created $($servers.Count) server records" -ForegroundColor DarkGray
 
 # ============================================================
@@ -100,7 +92,6 @@ $networks = @(
     [PSCustomObject]@{ _Id = "net-backup"; Name = "Backup"; Subnet = "10.0.12.0/24"; Gateway = "10.0.12.1"; VLAN = 14; Description = "Backup traffic isolation" }
 )
 $networks | New-BucketObject -Bucket network/vlans -KeyProperty _Id -Quiet
-Use-Bucket "network/vlans"
 Write-Host "  Created $($networks.Count) VLANs" -ForegroundColor DarkGray
 
 $firewall = @(
@@ -112,7 +103,6 @@ $firewall = @(
     [PSCustomObject]@{ _Id = "fw-006"; Source = "any"; Dest = "any"; Port = "any"; Protocol = "any"; Action = "DENY"; Rule = "Default deny" }
 )
 $firewall | New-BucketObject -Bucket network/firewall -KeyProperty _Id -Quiet
-Use-Bucket "network/firewall"
 Write-Host "  Created $($firewall.Count) firewall rules" -ForegroundColor DarkGray
 
 # ============================================================
@@ -133,7 +123,6 @@ $adUsers = @(
     [PSCustomObject]@{ _Id = "u-jack"; SamAccountName = "jack"; DisplayName = "Jack Jackson"; Email = "jack@example.com"; Department = "IT"; Title = "Help Desk Tech"; Manager = "alice"; Enabled = $false; LastLogon = [DateTime]::Now.AddDays(-90) }
 )
 $adUsers | New-BucketObject -Bucket ad/users -KeyProperty _Id -Quiet
-Use-Bucket "ad/users"
 Write-Host "  Created $($adUsers.Count) AD user accounts" -ForegroundColor DarkGray
 
 $groups = @(
@@ -145,7 +134,6 @@ $groups = @(
     [PSCustomObject]@{ _Id = "g-helpdesk"; Name = "HelpDesk"; Description = "Help desk staff"; Members = @("jack", "alice") }
 )
 $groups | New-BucketObject -Bucket ad/groups -KeyProperty _Id -Quiet
-Use-Bucket "ad/groups"
 Write-Host "  Created $($groups.Count) AD groups" -ForegroundColor DarkGray
 
 # ============================================================
@@ -163,7 +151,6 @@ $sslCerts = @(
     [PSCustomObject]@{ _Id = "cert-expired-01"; Domain = "old.example.com"; Issuer = "Comodo"; Expiry = $date.AddDays(-10); DaysLeft = -10; Type = "Single"; KeySize = 2048; Algorithm = "RSA" }
 )
 $sslCerts | New-BucketObject -Bucket certificates/ssl -KeyProperty _Id -Quiet
-Use-Bucket "certificates/ssl"
 Write-Host "  Created $($sslCerts.Count) SSL certificate records" -ForegroundColor DarkGray
 
 # ============================================================
@@ -180,7 +167,6 @@ $backups = @(
     [PSCustomObject]@{ _Id = "bkp-failed-01"; Name = "Daily VM Snapshots"; Type = "Snapshot"; Schedule = "0 4 * * *"; Target = "backup-vsan-01:/snapshots"; Retention = "7 days"; LastRun = $date.AddDays(-1); NextRun = $date.AddHours(5); Status = "failed"; Size_GB = 0; Duration_Min = 0; Error = "ESXi host unreachable" }
 )
 $backups | New-BucketObject -Bucket backups/jobs -KeyProperty _Id -Quiet
-Use-Bucket "backups/jobs"
 Write-Host "  Created $($backups.Count) backup job records" -ForegroundColor DarkGray
 
 # ============================================================
@@ -199,7 +185,6 @@ $services = @(
     [PSCustomObject]@{ _Id = "svc-backup"; Name = "backup-agent"; Server = "srv-backup-01"; Status = "running"; CPU_Pct = 8.0; Mem_MB = 256; Uptime_Days = 7; Restarts = 0; LastCheck = $date.AddMinutes(-15) }
 )
 $services | New-BucketObject -Bucket services/daemons -KeyProperty _Id -Quiet
-Use-Bucket "services/daemons"
 Write-Host "  Created $($services.Count) service records" -ForegroundColor DarkGray
 
 # ============================================================
@@ -218,7 +203,6 @@ $disks = @(
     [PSCustomObject]@{ _Id = "disk-dc01-d"; Server = "srv-dc-01"; Filesystem = "D:"; Size_GB = 400; Used_GB = 320; Avail_GB = 80; Use_Pct = 80; Mount = "D:"; Alert = "WARNING" }
 )
 $disks | New-BucketObject -Bucket storage/disks -KeyProperty _Id -Quiet
-Use-Bucket "storage/disks"
 Write-Host "  Created $($disks.Count) disk usage records" -ForegroundColor DarkGray
 
 # ============================================================
@@ -239,7 +223,6 @@ $dnsRecords = @(
     [PSCustomObject]@{ _Id = "dns-srv-cal"; Name = "_caldav._tcp.example.com"; Type = "SRV"; Value = "0 443 mail.example.com"; TTL = 3600; Zone = "example.com" }
 )
 $dnsRecords | New-BucketObject -Bucket network/dns -KeyProperty _Id -Quiet
-Use-Bucket "network/dns"
 Write-Host "  Created $($dnsRecords.Count) DNS records" -ForegroundColor DarkGray
 
 # ============================================================
@@ -256,7 +239,6 @@ $packages = @(
     [PSCustomObject]@{ _Id = "pkg-postfix3"; Server = "srv-mail-01"; Name = "postfix"; Version = "3.7.6-0ubuntu1"; Architecture = "amd64"; Size_KB = 4200; Repo = "ubuntu jammy"; Installed = [DateTime]::Now.AddDays(-150) }
 )
 $packages | New-BucketObject -Bucket packages/installed -KeyProperty _Id -Quiet
-Use-Bucket "packages/installed"
 Write-Host "  Created $($packages.Count) package records" -ForegroundColor DarkGray
 
 # ============================================================
@@ -273,7 +255,6 @@ $scheduledTasks = @(
     [PSCustomObject]@{ _Id = "cron-disabled-old"; Name = "Old Cleanup Script"; User = "admin"; Schedule = "0 5 * * *"; Command = "/home/admin/cleanup.sh"; NextRun = $null; LastRun = $date.AddDays(-90); Status = "disabled" }
 )
 $scheduledTasks | New-BucketObject -Bucket scheduled/tasks -KeyProperty _Id -Quiet
-Use-Bucket "scheduled/tasks"
 Write-Host "  Created $($scheduledTasks.Count) scheduled task records" -ForegroundColor DarkGray
 
 # ============================================================
@@ -302,9 +283,5 @@ Write-Host "  Objects created: $totalObjects" -ForegroundColor DarkGray
 
 Write-Host "`n[Bucket Overview]" -ForegroundColor Blue
 Get-Bucket -AsTree | Select-Object -First 20
-
-foreach ($b in $createdBuckets) {
-    Remove-Bucket $b -Force -Confirm:$false -WarningAction SilentlyContinue
-}
 
 Write-InfoBlock -Mode bottom

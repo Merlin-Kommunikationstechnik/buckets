@@ -13,6 +13,12 @@ if (Test-Path $bucketDir) { Remove-Item $bucketDir -Recurse -Force }
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
 $startTs = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 
+$createdBuckets = [System.Collections.ArrayList]::new()
+function Use-Bucket {
+    param([string]$Name)
+    $null = $createdBuckets.Add($Name)
+}
+
 function Write-InfoBlock {
     param([string]$Mode)
     $mod = Get-Module Buckets
@@ -63,6 +69,7 @@ $users = @(
 )
 
 New-BucketObject -Bucket users -InputObject $users -KeyProperty Name -Quiet
+Use-Bucket "users"
 Write-Host "  Saved $($users.Count) users (keyed by Name)" -ForegroundColor DarkGray
 
 # ============================================================
@@ -99,6 +106,7 @@ $orders = @(
 )
 
 New-BucketObject -Bucket orders -InputObject $orders -KeyProperty OrderId -Quiet
+Use-Bucket "orders"
 Write-Host "  Saved $($orders.Count) orders" -ForegroundColor DarkGray
 
 # ============================================================
@@ -107,6 +115,7 @@ Write-Host "  Saved $($orders.Count) orders" -ForegroundColor DarkGray
 Write-Host "`n[3] System objects (FileInfo — complex objects auto-fallback to binary)" -ForegroundColor Blue
 
 Get-ChildItem $PSScriptRoot | Where-Object { $_.Name -notmatch "^\." } | New-BucketObject -Bucket files -KeyProperty Name -Quiet
+Use-Bucket "files"
 Write-Host "  Saved directory listing (complex objects fallback to .dat)" -ForegroundColor DarkGray
 
 # ============================================================
@@ -122,6 +131,7 @@ $logEntries = @(
 )
 
 New-BucketObject -Bucket logs -InputObject $logEntries -KeyProperty Id -Quiet
+Use-Bucket "logs"
 Write-Host "  Saved $($logEntries.Count) log entries" -ForegroundColor DarkGray
 
 # ============================================================
@@ -138,6 +148,7 @@ $config = [PSCustomObject]@{
 }
 
 New-BucketObject -Bucket config -InputObject $config -KeyProperty _Id -AsJson -Quiet
+Use-Bucket "config"
 Write-Host "  Saved config as JSON" -ForegroundColor DarkGray
 
 # ============================================================
@@ -155,6 +166,7 @@ $metrics = foreach ($hour in 0..23) {
 }
 
 New-BucketObject -Bucket metrics -InputObject $metrics -KeyProperty Hour -Quiet
+Use-Bucket "metrics"
 Write-Host "  Saved 24 hourly records" -ForegroundColor DarkGray
 
 # ============================================================
@@ -165,6 +177,7 @@ Write-Host "`n[7] Mixed formats (JSON + binary in same bucket)" -ForegroundColor
 New-BucketObject -Bucket mixed -InputObject @{ _Id = "m1"; Type = "json"; Value = 1 } -KeyProperty _Id -AsJson -Quiet
 New-BucketObject -Bucket mixed -InputObject @{ _Id = "m2"; Type = "binary"; Value = 2 } -KeyProperty _Id -Quiet
 New-BucketObject -Bucket mixed -InputObject @{ _Id = "m3"; Type = "json-fallback" } -KeyProperty _Id -AsJson -Quiet
+Use-Bucket "mixed"
 Write-Host "  Saved 3 objects (2 JSON, 1 binary)" -ForegroundColor DarkGray
 
 # ============================================================
@@ -766,6 +779,10 @@ if ($null -eq $noB -or @($noB).Count -eq 0) { $edgeOk++ } else { $edgeFail++; $e
 # Cleanup edge bucket
 Remove-Bucket "edge" -Force -Confirm:$false -WarningAction SilentlyContinue
 Remove-Bucket "a" -Force -Confirm:$false -WarningAction SilentlyContinue
+
+foreach ($bucket in $createdBuckets) {
+    Remove-Bucket -Bucket $bucket -Force -Confirm:$false -WarningAction SilentlyContinue
+}
 
 if ($edgeFail -eq 0) {
     Write-Host "  All $edgeOk/14 edge case checks passed" -ForegroundColor Magenta
