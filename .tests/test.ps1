@@ -467,6 +467,13 @@ if ($r.City -eq "Berlin") { $passCount++ } else { $failMsg += "org/eu/de/berlin/
 $r = Get-BucketObject -Bucket $nestedBucket -Key "profile"
 if ($r.Team -eq "Team A" -and $r.Lead -eq "Alice") { $passCount++ } else { $failMsg += "$nestedBucket/profile" }
 
+# Verify Get-BucketObject -Recurse spills nested buckets
+$recursiveResult = Get-BucketObject -Bucket "org" -Recurse
+$recursiveCount = @($recursiveResult).Count
+$hasGlobal = $null -ne ($recursiveResult | Where-Object { $_.Name -eq "Global Corp" -and $_.Founded -eq 1990 })
+$recursiveOk = $recursiveCount -eq 5 -and $hasGlobal
+if ($recursiveOk) { $passCount++ } else { $failMsg += "Recurse expected 5 objects, got $recursiveCount" }
+
 # Verify Get-Bucket finds all nested buckets
 $buckets = Get-Bucket -Name "org"
 $orgBuckets = @($buckets | Where-Object { $_.Name -like "org*" })
@@ -478,13 +485,13 @@ Get-ChildItem "buckets:\org" -ErrorAction SilentlyContinue | ForEach-Object { $d
 if ($driveItems -contains "eu") { $passCount++ } else { $failMsg += "provider: missing eu at org level" }
 
 $euItems = @()
-Get-ChildItem "buckets:\org\eu" -ErrorAction SilentlyContinue | ForEach-Object { $driveItems += $_.Name }
+Get-ChildItem "buckets:\org\eu" -ErrorAction SilentlyContinue | ForEach-Object { $euItems += $_.Name }
 if ($euItems -contains "de") { $passCount++ } else { $failMsg += "provider: missing de at eu level" }
 
-if ($passCount -eq 7) {
-    Write-Host "  5-level deep nested buckets: OK (7/7 checks passed)" -ForegroundColor Magenta
+if ($passCount -eq 9) {
+    Write-Host "  5-level deep nested buckets: OK (9/9 checks passed)" -ForegroundColor Magenta
 } else {
-    Write-Host "  FAIL ($passCount/7 passed): $($failMsg -join ', ')" -ForegroundColor Red
+    Write-Host "  FAIL ($passCount/9 passed): $($failMsg -join ', ')" -ForegroundColor Red
 }
 
 # Test Remove-Bucket at deep level (without -Recurse, should preserve parent)

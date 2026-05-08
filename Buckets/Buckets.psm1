@@ -591,6 +591,7 @@ function Get-Bucket {
         function ScanDir {
             param([string]$Dir, [string]$Root)
             $stats = @{ ObjectCount = 0; SizeBytes = 0; BucketCount = 0 }
+            if (-not [System.IO.Directory]::Exists($Dir)) { return $stats }
             $di = [System.IO.DirectoryInfo]::new($Dir)
             $stats.ObjectCount += $di.GetFiles("*.dat").Length + $di.GetFiles("*.json").Length
             $di.GetFiles("*.dat") | ForEach-Object { $stats.SizeBytes += $_.Length }
@@ -657,10 +658,16 @@ function Get-Bucket {
             $subDirs = @()
             foreach ($sub in ($di.GetDirectories() | Sort-Object Name)) {
                 if ($sub.Name -eq ".buckets") { continue }
-                $subHasFiles = $sub.GetFiles("*.dat").Length -gt 0 -or $sub.GetFiles("*.json").Length -gt 0
-                $subStats = ScanDir -Dir $sub.FullName -Root $Root
                 $subRelPath = $sub.FullName.Substring($Root.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar).Replace([System.IO.Path]::DirectorySeparatorChar, '/')
-                if (-not [string]::IsNullOrWhiteSpace($script:TreeNameFilter) -and $subRelPath -notlike "*$script:TreeNameFilter*") { continue }
+                if (-not [string]::IsNullOrWhiteSpace($script:TreeNameFilter)) {
+                    $subRelPathSlash = $subRelPath.TrimEnd('/') + '/'
+                    $filterSlash = $script:TreeNameFilter.TrimEnd('/') + '/'
+                    $subContainedInFilter = $filterSlash.StartsWith($subRelPathSlash)
+                    $filterContainedInSub = $subRelPathSlash.StartsWith($filterSlash)
+                    if (-not $subContainedInFilter -and -not $filterContainedInSub) { continue }
+                }
+                $subHasFiles = $sub.Exists -and ($sub.GetFiles("*.dat").Length -gt 0 -or $sub.GetFiles("*.json").Length -gt 0)
+                $subStats = if ($sub.Exists) { ScanDir -Dir $sub.FullName -Root $Root } else { @{ ObjectCount = 0; SizeBytes = 0; BucketCount = 0 } }
                 if ($subHasFiles -or $subStats.BucketCount -gt 0) {
                     $subDirs += $sub
                 }
@@ -889,6 +896,8 @@ function Get-BucketObject {
     Hashtable of property-value pairs for exact-match filtering. All pairs must match. Supports $null values.
     .PARAMETER Filter
     ScriptBlock for custom filtering. Use $_ to reference object properties (e.g., { $_.Age -gt 30 }).
+    .PARAMETER Recurse
+    Recursively include objects from nested sub-buckets.
     .PARAMETER First
     Return only the first N objects.
     .PARAMETER Skip
@@ -904,6 +913,8 @@ function Get-BucketObject {
     .EXAMPLE
     Get-BucketObject -Bucket users, orders
     .EXAMPLE
+    Get-BucketObject -Bucket org -Recurse
+    .EXAMPLE
     Get-BucketObject -First 10 -Skip 20
     #>
     [CmdletBinding()]
@@ -913,6 +924,7 @@ function Get-BucketObject {
         [Parameter(Position = 0)][string]$Key,
         [hashtable]$Match,
         [scriptblock]$Filter,
+        [switch]$Recurse,
         [int]$First,
         [int]$Skip
     )
@@ -930,7 +942,12 @@ function Get-BucketObject {
                 $bucketPaths += $matched | ForEach-Object { $_.Path }
             }
             else {
-                $bucketPaths += Get-BucketPath -Name $b -Path $Path
+                $bp = Get-BucketPath -Name $b -Path $Path
+                $bucketPaths += $bp
+                if ($Recurse) {
+                    $nested = Get-Bucket -Path $Path | Where-Object { $_.Name -like "$b/*" }
+                    $bucketPaths += $nested | ForEach-Object { $_.Path }
+                }
             }
         }
     }

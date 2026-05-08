@@ -53,9 +53,10 @@ Uses `SupportsShouldProcess` for `-WhatIf` support. Parameter sets enforce `-Key
 - `-Key` is a PROPERTY NAME on the input object, not the literal filename. Use `-Key "_Id"` with an `_Id` property, or use `-AsTimestamp`
 
 ## Release Workflow
-1. `git push`
-2. `gh workflow run "Release Buckets" --ref main -f release_type=<patch|minor|major>`
-3. Monitor at the returned URL and notify user when done
+1. **Confirm with the user before releasing** — do not run the workflow without explicit confirmation
+2. `git push`
+3. `gh workflow run "Release Buckets" --ref main -f release_type=<patch|minor|major>`
+4. Monitor at the returned URL and notify user when done
 
 ## Testing
 ```bash
