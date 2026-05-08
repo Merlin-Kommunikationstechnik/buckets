@@ -690,98 +690,143 @@ New-BucketObject -Bucket "org/eu/de/berlin/team-a" -InputObject @{ Team = "Team 
 Write-Host "`n[19] Edge cases" -ForegroundColor Blue
 
 Remove-Bucket "edge" -Force -Confirm:$false -WarningAction SilentlyContinue
-$edgeOk = 0; $edgeFail = 0; $edgeMsg = @()
+$edgeResults = [System.Collections.ArrayList]::new()
 
-# 1. -Overwrite behavior
-New-BucketObject -Bucket edge -InputObject @{ _Id = "x"; Val = 1 } -KeyProperty _Id -Quiet
-New-BucketObject -Bucket edge -InputObject @{ _Id = "x"; Val = 2 } -KeyProperty _Id -Quiet
-$v1 = (Get-BucketObject -Bucket edge -Key "x").Val
-New-BucketObject -Bucket edge -InputObject @{ _Id = "x"; Val = 3 } -KeyProperty _Id -Quiet -Overwrite
-$v2 = (Get-BucketObject -Bucket edge -Key "x").Val
-if ($v1 -eq 1 -and $v2 -eq 3) { $edgeOk++ } else { $edgeFail++; $edgeMsg += "Overwrite(v1=$v1 v2=$v2)" }
+function Test-Edge {
+    param([string]$Name, [scriptblock]$Test)
+    try {
+        $ok = & $Test
+        if ($ok) {
+            Write-Host "  $Name " -NoNewline -ForegroundColor DarkGray
+            Write-Host "PASS" -ForegroundColor Green
+            $null = $edgeResults.Add([PSCustomObject]@{ Name = $Name; Status = "PASS"; Detail = "" })
+        } else {
+            Write-Host "  $Name " -NoNewline -ForegroundColor DarkGray
+            Write-Host "FAIL" -ForegroundColor Red
+            $null = $edgeResults.Add([PSCustomObject]@{ Name = $Name; Status = "FAIL"; Detail = "returned false" })
+        }
+    } catch {
+        Write-Host "  $Name " -NoNewline -ForegroundColor DarkGray
+        Write-Host "FAIL" -ForegroundColor Red
+        $null = $edgeResults.Add([PSCustomObject]@{ Name = $Name; Status = "FAIL"; Detail = $_.Exception.Message })
+    }
+}
+
+# 1. -Overwrite behavior (no -Overwrite skips, -Overwrite replaces)
+Test-Edge "Overwrite behavior (no -Overwrite skips, -Overwrite replaces)" {
+    New-BucketObject -Bucket edge -InputObject @{ _Id = "x"; Val = 1 } -KeyProperty _Id -Quiet
+    New-BucketObject -Bucket edge -InputObject @{ _Id = "x"; Val = 2 } -KeyProperty _Id -Quiet
+    $v1 = (Get-BucketObject -Bucket edge -Key "x").Val
+    New-BucketObject -Bucket edge -InputObject @{ _Id = "x"; Val = 3 } -KeyProperty _Id -Quiet -Overwrite
+    $v2 = (Get-BucketObject -Bucket edge -Key "x").Val
+    $v1 -eq 1 -and $v2 -eq 3
+}
 
 # 2. -AsTimestamp dedup
-$tsItems = 1..3 | ForEach-Object { @{ Val = $_ } }
-$tsItems | New-BucketObject -Bucket edge -AsTimestamp -Quiet
-$tsCount = (Get-BucketObject -Bucket edge).Count
-if ($tsCount -ge 4) { $edgeOk++ } else { $edgeFail++; $edgeMsg += "AsTimestamp(count=$tsCount)" }
+Test-Edge "-AsTimestamp dedup (sequential calls get unique keys)" {
+    $tsItems = 1..3 | ForEach-Object { @{ Val = $_ } }
+    $tsItems | New-BucketObject -Bucket edge -AsTimestamp -Quiet
+    $tsCount = (Get-BucketObject -Bucket edge).Count
+    $tsCount -ge 4
+}
 
-# 3. -KeyProperty with $null value
-New-BucketObject -Bucket edge -InputObject @{ _Id = $null; Val = 1 } -KeyProperty _Id -Quiet
-$afterNull = (Get-BucketObject -Bucket edge).Count
-if ($afterNull -eq $tsCount) { $edgeOk++ } else { $edgeFail++; $edgeMsg += "KeyPropertyNull(after=$afterNull before=$tsCount)" }
+# 3. -KeyProperty with `$null` value (object skipped)
+Test-Edge "-KeyProperty with `$null` value (object skipped)" {
+    $before = (Get-BucketObject -Bucket edge).Count
+    New-BucketObject -Bucket edge -InputObject @{ _Id = $null; Val = 1 } -KeyProperty _Id -Quiet
+    $after = (Get-BucketObject -Bucket edge).Count
+    $after -eq $before
+}
 
 # 4. -Match with multiple properties
-New-BucketObject -Bucket edge -InputObject @{ _Id = "m1"; Color = "red"; Size = 10 } -KeyProperty _Id -Quiet
-New-BucketObject -Bucket edge -InputObject @{ _Id = "m2"; Color = "blue"; Size = 10 } -KeyProperty _Id -Quiet
-New-BucketObject -Bucket edge -InputObject @{ _Id = "m3"; Color = "red"; Size = 20 } -KeyProperty _Id -Quiet
-$matchMulti = Get-BucketObject -Bucket edge -Match @{ Color = "red"; Size = 10 }
-if (@($matchMulti).Count -eq 1 -and $matchMulti._Id -eq "m1") { $edgeOk++ } else { $edgeFail++; $edgeMsg += "MatchMulti(count=$(@($matchMulti).Count))" }
+Test-Edge "-Match with multiple properties (AND logic)" {
+    New-BucketObject -Bucket edge -InputObject @{ _Id = "m1"; Color = "red"; Size = 10 } -KeyProperty _Id -Quiet
+    New-BucketObject -Bucket edge -InputObject @{ _Id = "m2"; Color = "blue"; Size = 10 } -KeyProperty _Id -Quiet
+    New-BucketObject -Bucket edge -InputObject @{ _Id = "m3"; Color = "red"; Size = 20 } -KeyProperty _Id -Quiet
+    $matchMulti = Get-BucketObject -Bucket edge -Match @{ Color = "red"; Size = 10 }
+    @($matchMulti).Count -eq 1 -and $matchMulti._Id -eq "m1"
+}
 
 # 5. Path traversal protection
-try {
-    New-BucketObject -Bucket "../../etc" -InputObject @{ x = 1 } -Key "test" -Quiet -ErrorAction Stop
-    $edgeFail++; $edgeMsg += "PathTraversal(no throw)"
-} catch { $edgeOk++ }
+Test-Edge "Path traversal protection (../../etc rejected)" {
+    try {
+        New-BucketObject -Bucket "../../etc" -InputObject @{ x = 1 } -Key "test" -Quiet -ErrorAction Stop
+        $false
+    } catch { $true }
+}
 
 # 6. Deep nested object serialization
-$deep = @{ _Id = "deep"; L1 = @{ L2 = @{ L3 = "bottom" } } }
-New-BucketObject -Bucket edge -InputObject $deep -KeyProperty _Id -Quiet
-$retrievedDeep = Get-BucketObject -Bucket edge -Key "deep"
-if ($retrievedDeep.L1.L2.L3 -eq "bottom") { $edgeOk++ } else { $edgeFail++; $edgeMsg += "DeepObject(val=$($retrievedDeep.L1.L2.L3))" }
+Test-Edge "Deep nested object serialization (3-level hashtable)" {
+    $deep = @{ _Id = "deep"; L1 = @{ L2 = @{ L3 = "bottom" } } }
+    New-BucketObject -Bucket edge -InputObject $deep -KeyProperty _Id -Quiet
+    $retrievedDeep = Get-BucketObject -Bucket edge -Key "deep"
+    $retrievedDeep.L1.L2.L3 -eq "bottom"
+}
 
 # 7. Circular reference (JSON fails → binary fallback)
-$circ = [PSCustomObject]@{ _Id = "circ"; Name = "loop" }
-$circ | Add-Member -NotePropertyName "Self" -NotePropertyValue $circ
-New-BucketObject -Bucket edge -InputObject $circ -KeyProperty _Id -Quiet
-$retrievedCirc = Get-BucketObject -Bucket edge -Key "circ" -WarningAction SilentlyContinue
-if ($null -ne $retrievedCirc -and $retrievedCirc.Name -eq "loop") { $edgeOk++ } else { $edgeFail++; $edgeMsg += "CircularRef" }
+Test-Edge "Circular reference (JSON fails → binary fallback)" {
+    $circ = [PSCustomObject]@{ _Id = "circ"; Name = "loop" }
+    $circ | Add-Member -NotePropertyName "Self" -NotePropertyValue $circ
+    New-BucketObject -Bucket edge -InputObject $circ -KeyProperty _Id -Quiet
+    $retrievedCirc = Get-BucketObject -Bucket edge -Key "circ" -WarningAction SilentlyContinue
+    $null -ne $retrievedCirc -and $retrievedCirc.Name -eq "loop"
+}
 
 # 8. Unicode/non-ASCII keys
-New-BucketObject -Bucket edge -InputObject @{ _Id = "üñîçødé-测试-тест"; Val = "unicode" } -KeyProperty _Id -Quiet
-$unicode = Get-BucketObject -Bucket edge -Key "üñîçødé-测试-тест"
-if ($unicode.Val -eq "unicode") { $edgeOk++ } else { $edgeFail++; $edgeMsg += "Unicode(key=$($unicode._BucketKey))" }
+Test-Edge "Unicode/non-ASCII keys (üñîçødé-测试-тест)" {
+    New-BucketObject -Bucket edge -InputObject @{ _Id = "üñîçødé-测试-тест"; Val = "unicode" } -KeyProperty _Id -Quiet
+    $unicode = Get-BucketObject -Bucket edge -Key "üñîçødé-测试-тест"
+    $unicode.Val -eq "unicode"
+}
 
 # 9. Very deep nested path
-try {
+Test-Edge "Very deep nested path (a/b/c/d/e/f/g/h/i/j)" {
     New-BucketObject -Bucket "a/b/c/d/e/f/g/h/i/j" -InputObject @{ _Id = "deep-path"; Val = 1 } -KeyProperty _Id -Quiet
     Use-Bucket "a"
     $deepPath = Get-BucketObject -Bucket "a/b/c/d/e/f/g/h/i/j" -Key "deep-path"
-    if ($deepPath.Val -eq 1) { $edgeOk++ } else { $edgeFail++; $edgeMsg += "DeepPath(val=$($deepPath.Val))" }
-} catch { $edgeFail++; $edgeMsg += "DeepPath(exception=$($_.Exception.Message))" }
+    $deepPath.Val -eq 1
+}
 
 # 10. -First and -Skip
-$first2 = Get-BucketObject -Bucket users -First 2
-$skip2 = Get-BucketObject -Bucket users -Skip 2
-$firstSkip = Get-BucketObject -Bucket users -First 1 -Skip 2
-$total = (Get-BucketObject -Bucket users).Count
-if (@($first2).Count -eq 2 -and @($skip2).Count -eq ($total - 2) -and @($firstSkip).Count -eq 1) {
-    $edgeOk++ 
-} else { $edgeFail++; $edgeMsg += "FirstSkip(first2=$(@($first2).Count) skip2=$(@($skip2).Count) firstSkip=$(@($firstSkip).Count))" }
+Test-Edge "-First and -Skip pagination" {
+    $first2 = Get-BucketObject -Bucket users -First 2
+    $skip2 = Get-BucketObject -Bucket users -Skip 2
+    $firstSkip = Get-BucketObject -Bucket users -First 1 -Skip 2
+    $total = (Get-BucketObject -Bucket users).Count
+    @($first2).Count -eq 2 -and @($skip2).Count -eq ($total - 2) -and @($firstSkip).Count -eq 1
+}
 
 # 11. Empty bucket
-New-BucketObject -Bucket empty -InputObject @() -Quiet
-Use-Bucket "empty"
-$emptyCount = @(Get-BucketObject -Bucket empty -WarningAction SilentlyContinue).Count
-if ($emptyCount -eq 0) { $edgeOk++ } else { $edgeFail++; $edgeMsg += "EmptyBucket(count=$emptyCount)" }
-Remove-Bucket "empty" -Force -Confirm:$false -WarningAction SilentlyContinue
+Test-Edge "Empty bucket (InputObject `@() creates no objects)" {
+    New-BucketObject -Bucket empty -InputObject @() -Quiet
+    Use-Bucket "empty"
+    $emptyCount = @(Get-BucketObject -Bucket empty -WarningAction SilentlyContinue).Count
+    Remove-Bucket "empty" -Force -Confirm:$false -WarningAction SilentlyContinue
+    $emptyCount -eq 0
+}
 
 # 12. Wildcard + -Recurse
-$noRecurse = @(Get-BucketObject -Bucket "org/eu" -WarningAction SilentlyContinue).Count
-$withRecurse = @(Get-BucketObject -Bucket "org/eu" -Recurse -WarningAction SilentlyContinue).Count
-if ($withRecurse -gt $noRecurse -and $noRecurse -gt 0) { $edgeOk++ } else { $edgeFail++; $edgeMsg += "WildcardRecurse(noRecurse=$noRecurse recursed=$withRecurse)" }
+Test-Edge "Wildcard + -Recurse (org/eu returns 1, org/eu -Recurse returns >1)" {
+    $noRecurse = @(Get-BucketObject -Bucket "org/eu" -WarningAction SilentlyContinue).Count
+    $withRecurse = @(Get-BucketObject -Bucket "org/eu" -Recurse -WarningAction SilentlyContinue).Count
+    $withRecurse -gt $noRecurse -and $noRecurse -gt 0
+}
 
 # 13. Compressed round-trip via Set-BucketObject
-New-BucketObject -Bucket edge -InputObject @{ _Id = "comp-roundtrip"; Data = "original" } -KeyProperty _Id -Compress -Quiet
-$compObj = Get-BucketObject -Bucket edge -Key "comp-roundtrip"
-$compObj.Data = "modified"
-$compObj | Set-BucketObject -Compress -Quiet
-$compMod = Get-BucketObject -Bucket edge -Key "comp-roundtrip"
-if ($compMod.Data -eq "modified") { $edgeOk++ } else { $edgeFail++; $edgeMsg += "CompressedRoundtrip" }
+Test-Edge "Compressed round-trip via Set-BucketObject" {
+    New-BucketObject -Bucket edge -InputObject @{ _Id = "comp-roundtrip"; Data = "original" } -KeyProperty _Id -Compress -Quiet
+    $compObj = Get-BucketObject -Bucket edge -Key "comp-roundtrip"
+    $compObj.Data = "modified"
+    $compObj | Set-BucketObject -Compress -Quiet
+    $compMod = Get-BucketObject -Bucket edge -Key "comp-roundtrip"
+    $compMod.Data -eq "modified"
+}
 
 # 14. No-buckets root
-$noB = Get-Bucket -Path (Join-Path $HOME ".buckets/nonexistent-root")
-if ($null -eq $noB -or @($noB).Count -eq 0) { $edgeOk++ } else { $edgeFail++; $edgeMsg += "NoBucketsRoot" }
+Test-Edge "No-buckets root (nonexistent path returns empty)" {
+    $noB = Get-Bucket -Path (Join-Path $HOME ".buckets/nonexistent-root")
+    $null -eq $noB -or @($noB).Count -eq 0
+}
 
 # Cleanup edge bucket
 Remove-Bucket "edge" -Force -Confirm:$false -WarningAction SilentlyContinue
@@ -791,10 +836,17 @@ foreach ($bucket in $createdBuckets) {
     Remove-Bucket -Bucket $bucket -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse
 }
 
-if ($edgeFail -eq 0) {
-    Write-Host "  All $edgeOk/14 edge case checks passed" -ForegroundColor Magenta
+$passCount = ($edgeResults | Where-Object { $_.Status -eq "PASS" }).Count
+$failCount = ($edgeResults | Where-Object { $_.Status -eq "FAIL" }).Count
+
+if ($failCount -eq 0) {
+    Write-Host "  All $passCount/$($edgeResults.Count) edge case checks passed" -ForegroundColor Magenta
 } else {
-    Write-Host "  FAIL ($edgeOk/14 passed): $($edgeMsg -join ', ')" -ForegroundColor Red
+    Write-Host "  $($failCount)/$($edgeResults.Count) FAILED:" -ForegroundColor Red
+    $edgeResults | Where-Object { $_.Status -eq "FAIL" } | ForEach-Object {
+        Write-Host "    $($_.Name)" -ForegroundColor Red
+        if ($_.Detail) { Write-Host "      $($_.Detail)" -ForegroundColor DarkGray }
+    }
 }
 
 Write-InfoBlock -Mode bottom
