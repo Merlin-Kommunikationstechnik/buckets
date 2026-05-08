@@ -970,9 +970,9 @@ function Get-BucketObject {
 
             $relativePath = $file.FullName.Substring($bucketPath.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar)
             $keyWithoutExt = [System.IO.Path]::ChangeExtension($relativePath, $null).TrimEnd('.')
-            $obj | Add-Member -NotePropertyName "_BucketName" -NotePropertyValue $bucketName -Force
-            $obj | Add-Member -NotePropertyName "_BucketKey" -NotePropertyValue $keyWithoutExt -Force
-            $obj | Add-Member -NotePropertyName "_BucketFile" -NotePropertyValue $file.FullName -Force
+            $obj.PSObject.Properties.Add([System.Management.Automation.PSNoteProperty]::new('_BucketName', $bucketName))
+            $obj.PSObject.Properties.Add([System.Management.Automation.PSNoteProperty]::new('_BucketKey', $keyWithoutExt))
+            $obj.PSObject.Properties.Add([System.Management.Automation.PSNoteProperty]::new('_BucketFile', $file.FullName))
             $null = $allObjects.Add($obj)
         }
     }
