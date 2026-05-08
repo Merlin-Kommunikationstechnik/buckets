@@ -3,6 +3,13 @@
 ## Project Overview
 PowerShell module for file-based PSObject storage using directory-backed "buckets".
 
+## Priorities (in order)
+1. **Safety** — don't touch what we shouldn't; protect the user from errors (path traversal guards, `SupportsShouldProcess`, empty key rejection, corrupted file warnings instead of hard failures)
+2. **Cross-platform compatibility** — works on Windows, macOS, and Linux with the same behavior (path separators, case-sensitivity awareness, PowerShell 7+)
+3. **Data integrity on store and retrieval** — round-trip fidelity is guaranteed; binary fallback on JSON depth overflow, compression preserves structure, corrupted files warn and return `$null` rather than crash
+4. **Speed** — optimized for throughput (caching, binary as default, lazy enumeration, `ArrayList` for pipeline buffering)
+5. **Sleek and pretty** — hide filesystem details, clean tree/list output, no file extensions in UI, standardized cleanup patterns
+
 ## Structure
 - `Buckets/Buckets.psm1` — module code (all cmdlets)
 - `Buckets/Buckets.psd1` — module manifest
