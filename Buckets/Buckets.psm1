@@ -1548,12 +1548,11 @@ function Remove-Bucket {
             $matched = @()
             if (-not [System.IO.Directory]::Exists($Dir)) { return $matched }
             $di = [System.IO.DirectoryInfo]::new($Dir)
-            $hasFiles = $di.GetFiles("*.dat").Length -gt 0 -or $di.GetFiles("*.json").Length -gt 0
             $relName = ""
             if ($Dir -ne $Root) {
                 $relName = $Dir.Substring($Root.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar).Replace([System.IO.Path]::DirectorySeparatorChar, '/')
             }
-            if ($hasFiles) {
+            if ($Dir -ne $Root) {
                 foreach ($pattern in $Patterns) {
                     if ($pattern -match '[\*\?]') {
                         if ($relName -like $pattern) {
