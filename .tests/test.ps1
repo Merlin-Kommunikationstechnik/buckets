@@ -689,7 +689,7 @@ New-BucketObject -Bucket "org/eu/de/berlin/team-a" -InputObject @{ Team = "Team 
 # ============================================================
 Write-Host "`n[19] Edge cases" -ForegroundColor Blue
 
-Remove-Bucket "edge" -Force -Confirm:$false -WarningAction SilentlyContinue
+Remove-Bucket "edge" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
 $edgeResults = [System.Collections.ArrayList]::new()
 
 function Test-Edge {
@@ -900,11 +900,11 @@ Test-Edge "No-buckets root (nonexistent path returns empty)" {
 }
 
 # Cleanup edge bucket
-Remove-Bucket "edge" -Force -Confirm:$false -WarningAction SilentlyContinue
-Remove-Bucket "a" -Force -Confirm:$false -WarningAction SilentlyContinue
+Remove-Bucket "edge" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+Remove-Bucket "a" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
 
 foreach ($bucket in $createdBuckets) {
-    Remove-Bucket -Bucket $bucket -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse
+    Remove-Bucket -Bucket $bucket -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
 }
 
 $passCount = ($edgeResults | Where-Object { $_.Status -eq "PASS" }).Count
