@@ -41,6 +41,15 @@ $script:CMuted  = 'DarkGray'
 $script:CError  = 'Red'
 $script:CSkip   = 'Yellow'
 
+# --- Hidden property helper ---
+$script:HiddenFlags = [System.Reflection.BindingFlags]::Instance -bor [System.Reflection.BindingFlags]::NonPublic -bor [System.Reflection.BindingFlags]::Public
+function Add-HiddenProperty {
+    param([PSObject]$Target, [string]$Name, $Value)
+    $prop = [System.Management.Automation.PSNoteProperty]::new($Name, $Value)
+    [System.Management.Automation.PSNoteProperty].GetProperty('IsHidden', $script:HiddenFlags).SetValue($prop, $true)
+    $Target.PSObject.Properties.Add($prop)
+}
+
 # --- Core infrastructure (internal helpers) ---
 
 function Get-DefaultPath {
@@ -547,7 +556,7 @@ function Get-Bucket {
     .DESCRIPTION
     Scans the storage path for bucket directories and returns information about each,
     including name, path, and total object count (JSON + binary files). Supports nested
-    buckets — any directory containing .dat or .json files is a bucket.
+    buckets — any directory containing serialized objects is a bucket.
 
     By default only top-level buckets are shown with aggregated object counts (including
     all descendants). Use -Recurse to list all nested buckets with direct (non-aggregated)
@@ -561,7 +570,7 @@ function Get-Bucket {
     .PARAMETER AsTree
     Render a tree view of all buckets and directories.
     .PARAMETER NoObjects
-    Hide individual .dat and .json files in tree view. Files are shown by default.
+    Hide individual object files in tree view. Files are shown by default.
     .PARAMETER Raw
     Return structured tree objects instead of formatted text (for -AsTree mode).
     .PARAMETER MaxFiles
@@ -835,12 +844,9 @@ function Get-Bucket {
 
             $relPath = $Dir.Substring($Path.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar).Replace([System.IO.Path]::DirectorySeparatorChar, '/')
             if ($directCount -gt 0 -or $hasSubBuckets) {
-                $null = $results.Add([PSCustomObject]@{
-                    Name          = $relPath
-                    Path          = $Dir
-                    ObjectCount   = $directCount
-                    HasSubBuckets = $hasSubBuckets
-                })
+                $obj = [PSCustomObject]@{ Name = $relPath; ObjectCount = $directCount; HasSubBuckets = $hasSubBuckets }
+                Add-HiddenProperty -Target $obj -Name 'Path' -Value $Dir
+                $null = $results.Add($obj)
             }
         }
 
@@ -872,12 +878,9 @@ function Get-Bucket {
         foreach ($subDir in $rootDi.GetDirectories()) {
             if ($subDir.Name -eq ".buckets") { continue }
             $stats = Get-AggregatedStats -Dir $subDir.FullName
-            $null = $results.Add([PSCustomObject]@{
-                Name          = $subDir.Name
-                Path          = $subDir.FullName
-                ObjectCount   = $stats.TotalCount
-                HasSubBuckets = $stats.HasSubBuckets
-            })
+            $obj = [PSCustomObject]@{ Name = $subDir.Name; ObjectCount = $stats.TotalCount; HasSubBuckets = $stats.HasSubBuckets }
+            Add-HiddenProperty -Target $obj -Name 'Path' -Value $subDir.FullName
+            $null = $results.Add($obj)
         }
     }
 
@@ -949,7 +952,7 @@ function Get-BucketKeys {
             [PSCustomObject]@{
                 Bucket = $bucketName
                 Key    = $relPath
-                Format = if ($f.Extension -eq ".json") { "json" } else { "dat" }
+                Format = if ($f.Extension -eq ".json") { "JSON" } else { "Binary" }
                 Size   = $f.Length
             }
         }
@@ -970,7 +973,7 @@ function Get-BucketObject {
     .PARAMETER Path
     Root directory for bucket storage. Default: $HOME/.buckets.
     .PARAMETER Key
-    Object key to retrieve. Case-insensitive prefix match. Looks for both .json and .dat files.
+    Object key to retrieve. Case-insensitive prefix match. Looks for both JSON and binary files.
     .PARAMETER Match
     Hashtable of property-value pairs for exact-match filtering. All pairs must match. Supports $null values.
     .PARAMETER Filter
@@ -1118,14 +1121,15 @@ function Get-BucketStats {
         if ($null -eq $newest -or $f.CreationTime -gt $newest) { $newest = $f.CreationTime }
     }
 
-    [PSCustomObject]@{
+    $obj = [PSCustomObject]@{
         Name         = $Bucket
-        Path         = $bucketPath
         ObjectCount  = $fileObjects.Count
         TotalSize    = if ($totalSize) { "$([math]::Round($totalSize / 1KB, 2)) KB" } else { "0 KB" }
         OldestObject = $oldest
         NewestObject = $newest
     }
+    Add-HiddenProperty -Target $obj -Name 'Path' -Value $bucketPath
+    $obj
 }
 
 function Import-Bucket {
@@ -1343,7 +1347,7 @@ function New-BucketObject {
     .DESCRIPTION
     Serializes one or more PowerShell objects and stores them in a bucket directory.
     Arrays are stored as individual files. By default objects are serialized to binary
-    (.dat) using PSSerializer for full .NET type preservation. Use -AsJson for
+    format using PSSerializer for full .NET type preservation. Use -AsJson for
     human-readable JSON format. If JSON serialization fails on complex types,
     the object automatically falls back to binary format.
     .PARAMETER InputObject
@@ -1363,9 +1367,9 @@ function New-BucketObject {
     .PARAMETER AsTimestamp
     Use a timestamp-based filename (yyyyMMddHHmmssfff_index) instead of a GUID. Ignored if -Key or -KeyProperty is also specified.
     .PARAMETER AsJson
-    Store objects as JSON (.json) instead of binary (.dat).
+    Store objects as JSON instead of binary format.
     .PARAMETER Compress
-    Enable GZip compression for binary (.dat) files to reduce disk usage.
+    Enable GZip compression for binary files to reduce disk usage.
     .PARAMETER Quiet
     Suppress all output. No progress indicator, no summary.
     .PARAMETER Overwrite
@@ -1499,7 +1503,7 @@ function Remove-Bucket {
     .DESCRIPTION
     Deletes bucket directories and their contents. Supports exact names, multiple
     buckets, and wildcard patterns (including nested bucket paths like "projects/myapp").
-    Only removes directories containing .dat/.json files (or empty directories).
+    Only removes directories containing bucket objects (or empty directories).
     Skips buckets with other file types.
 
     By default, only removes files in the target bucket and leaves nested bucket
@@ -1757,7 +1761,7 @@ function Remove-BucketObject {
     .PARAMETER Path
     Root directory for bucket storage. Default: $HOME/.buckets.
     .PARAMETER Key
-    Object key to remove. Looks for both .json and .dat files. Case-insensitive.
+    Object key to remove. Looks for both JSON and binary files. Case-insensitive.
     .PARAMETER All
     Remove all objects from the bucket.
     .PARAMETER Match
@@ -1998,7 +2002,7 @@ function Set-BucketObject {
     .PARAMETER AsJson
     Force JSON format for the updated file.
     .PARAMETER Compress
-    Enable GZip compression for binary (.dat) files.
+    Enable GZip compression for binary files.
     .PARAMETER Quiet
     Suppress all output. No summary.
     .EXAMPLE
@@ -2118,7 +2122,7 @@ function Set-BucketObject {
                         [System.IO.File]::WriteAllBytes($filePath, $ms.ToArray())
                     }
                     else { [System.IO.File]::WriteAllBytes($filePath, $rawBytes) }
-                    Write-Verbose "Object '$Key' incompatible with JSON, saved as binary (.dat)"
+                    Write-Verbose "Object '$Key' incompatible with JSON, saved as binary format"
                     $writeSuccess = $true
                 }
                 catch { throw "Failed to serialize object '$Key' as binary: $_" }
