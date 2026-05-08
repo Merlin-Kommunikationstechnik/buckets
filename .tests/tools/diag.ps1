@@ -269,7 +269,7 @@ $report | Format-Table -AutoSize
 Write-Host "`nSummary: $passCount passed, $failCount failed" -ForegroundColor $(if ($failCount -eq 0) { "Green" } else { "Red" })
 
 foreach ($bucket in $createdBuckets) {
-    Remove-Bucket -Bucket $bucket -Force -Confirm:$false -WarningAction SilentlyContinue
+    Remove-Bucket -Bucket $bucket -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse
 }
 
 Write-InfoBlock -Mode bottom

@@ -258,6 +258,7 @@ Export-Bucket -Bucket users -OutputFile $exportPath
 Export-Bucket -Bucket logs -OutputFile $exportJson -AsJson
 Remove-Bucket "import-test" -Force -Confirm:$false -WarningAction SilentlyContinue
 Import-Bucket -Bucket import-test -InputFile $exportPath
+Use-Bucket "import-test"
 $imported = Get-BucketObject -Bucket import-test
 Write-Host "  Imported $($imported.Count) users from CLIXML archive" -ForegroundColor DarkGray
 Remove-Item $exportPath, $exportJson -Force
@@ -268,6 +269,7 @@ Remove-Item $exportPath, $exportJson -Force
 Write-Host "`n[11] Binary compression (-Compress — GZip reduces repetitive data)" -ForegroundColor Blue
 Remove-Bucket "compressed" -Force -Confirm:$false -WarningAction SilentlyContinue
 New-BucketObject -Bucket compressed -InputObject @{ _Id = "comp"; Data = "x" * 5000; Type = "compressed" } -KeyProperty "_Id" -Compress -Quiet
+Use-Bucket "compressed"
 New-BucketObject -Bucket compressed -InputObject @{ _Id = "uncomp"; Data = "x" * 5000; Type = "uncompressed" } -KeyProperty "_Id" -Quiet
 $basePath = Join-Path $HOME ".buckets"
 $compPath = Join-Path $basePath "compressed"
@@ -292,6 +294,7 @@ Write-Host "  Objects in 'users' after -WhatIf: $($remaining.Count) (unchanged)"
 # ============================================================
 Write-Host "`n[13] Round-trip integrity (save/load complex types and null)" -ForegroundColor Blue
 Remove-Bucket "roundtrip" -Force -Confirm:$false -WarningAction SilentlyContinue
+Use-Bucket "roundtrip"
 $roundTrip = [PSCustomObject]@{
     _Id = "test"
     String = "Hello, World!"
@@ -559,6 +562,7 @@ New-BucketObject -Bucket "org/eu" -InputObject $euData -Key "info" -Quiet
 New-BucketObject -Bucket "org/eu/de" -InputObject $deData -Key "info" -Quiet
 New-BucketObject -Bucket "org/eu/de/berlin" -InputObject $cityData -Key "info" -Quiet
 New-BucketObject -Bucket $nestedBucket -InputObject $teamData -Key "profile" -Quiet
+Use-Bucket "org"
 
 # ============================================================
 # 15a. Get-Bucket -AsTree
@@ -697,9 +701,10 @@ $v2 = (Get-BucketObject -Bucket edge -Key "x").Val
 if ($v1 -eq 1 -and $v2 -eq 3) { $edgeOk++ } else { $edgeFail++; $edgeMsg += "Overwrite(v1=$v1 v2=$v2)" }
 
 # 2. -AsTimestamp dedup
-1..3 | ForEach-Object { New-BucketObject -Bucket edge -InputObject @{ Val = $_ } -AsTimestamp -Quiet }
+$tsItems = 1..3 | ForEach-Object { @{ Val = $_ } }
+$tsItems | New-BucketObject -Bucket edge -AsTimestamp -Quiet
 $tsCount = (Get-BucketObject -Bucket edge).Count
-if ($tsCount -ge 3) { $edgeOk++ } else { $edgeFail++; $edgeMsg += "AsTimestamp(count=$tsCount)" }
+if ($tsCount -ge 4) { $edgeOk++ } else { $edgeFail++; $edgeMsg += "AsTimestamp(count=$tsCount)" }
 
 # 3. -KeyProperty with $null value
 New-BucketObject -Bucket edge -InputObject @{ _Id = $null; Val = 1 } -KeyProperty _Id -Quiet
@@ -740,6 +745,7 @@ if ($unicode.Val -eq "unicode") { $edgeOk++ } else { $edgeFail++; $edgeMsg += "U
 # 9. Very deep nested path
 try {
     New-BucketObject -Bucket "a/b/c/d/e/f/g/h/i/j" -InputObject @{ _Id = "deep-path"; Val = 1 } -KeyProperty _Id -Quiet
+    Use-Bucket "a"
     $deepPath = Get-BucketObject -Bucket "a/b/c/d/e/f/g/h/i/j" -Key "deep-path"
     if ($deepPath.Val -eq 1) { $edgeOk++ } else { $edgeFail++; $edgeMsg += "DeepPath(val=$($deepPath.Val))" }
 } catch { $edgeFail++; $edgeMsg += "DeepPath(exception=$($_.Exception.Message))" }
@@ -755,6 +761,7 @@ if (@($first2).Count -eq 2 -and @($skip2).Count -eq ($total - 2) -and @($firstSk
 
 # 11. Empty bucket
 New-BucketObject -Bucket empty -InputObject @() -Quiet
+Use-Bucket "empty"
 $emptyCount = @(Get-BucketObject -Bucket empty -WarningAction SilentlyContinue).Count
 if ($emptyCount -eq 0) { $edgeOk++ } else { $edgeFail++; $edgeMsg += "EmptyBucket(count=$emptyCount)" }
 Remove-Bucket "empty" -Force -Confirm:$false -WarningAction SilentlyContinue
@@ -781,7 +788,7 @@ Remove-Bucket "edge" -Force -Confirm:$false -WarningAction SilentlyContinue
 Remove-Bucket "a" -Force -Confirm:$false -WarningAction SilentlyContinue
 
 foreach ($bucket in $createdBuckets) {
-    Remove-Bucket -Bucket $bucket -Force -Confirm:$false -WarningAction SilentlyContinue
+    Remove-Bucket -Bucket $bucket -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse
 }
 
 if ($edgeFail -eq 0) {

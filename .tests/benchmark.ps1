@@ -227,7 +227,7 @@ $jsonReadTimeC = $perfJsonCBench.ElapsedMilliseconds
 Write-Host "  Write: ${jsonWriteTimeC}ms, Read: ${jsonReadTimeC}ms, Objects: $($jsonRetrievedC.Count)" -ForegroundColor DarkGray
 
 foreach ($b in $createdBuckets) {
-    Remove-Bucket $b -Force -Confirm:$false -WarningAction SilentlyContinue
+    Remove-Bucket $b -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse
 }
 
 Write-InfoBlock -Mode bottom

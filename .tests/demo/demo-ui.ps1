@@ -282,5 +282,5 @@ Write-Host "  Get-BucketObject -Bucket users" -ForegroundColor Cyan
 Write-Host "  Get-BucketStats -Bucket users" -ForegroundColor Cyan
 
 foreach ($bucket in $createdBuckets) {
-    Remove-Bucket -Bucket $bucket -Force -Confirm:$false -WarningAction SilentlyContinue
+    Remove-Bucket -Bucket $bucket -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse
 }

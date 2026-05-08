@@ -372,7 +372,7 @@ Write-Host "  Devices: $deviceCount" -ForegroundColor Magenta
 Write-Host "  Objects: $objectCount" -ForegroundColor Magenta
 
 foreach ($bucket in $createdBuckets) {
-    Remove-Bucket -Bucket $bucket -Force -Confirm:$false -WarningAction SilentlyContinue
+    Remove-Bucket -Bucket $bucket -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse
 }
 
 Write-InfoBlock -Mode bottom
