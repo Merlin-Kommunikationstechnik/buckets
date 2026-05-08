@@ -712,7 +712,12 @@ function Test-Edge {
     }
 }
 
-# 1. -Overwrite behavior (no -Overwrite skips, -Overwrite replaces)
+<#
+  1. Overwrite behavior
+  Verifies: Without -Overwrite, saving an existing key silently skips.
+            With -Overwrite, the existing object is replaced.
+  Why it matters: Prevents accidental data loss; explicit opt-in for updates.
+#>
 Test-Edge "Overwrite behavior (no -Overwrite skips, -Overwrite replaces)" {
     New-BucketObject -Bucket edge -InputObject @{ _Id = "x"; Val = 1 } -KeyProperty _Id -Quiet
     New-BucketObject -Bucket edge -InputObject @{ _Id = "x"; Val = 2 } -KeyProperty _Id -Quiet
@@ -722,7 +727,12 @@ Test-Edge "Overwrite behavior (no -Overwrite skips, -Overwrite replaces)" {
     $v1 -eq 1 -and $v2 -eq 3
 }
 
-# 2. -AsTimestamp dedup
+<#
+  2. -AsTimestamp dedup
+  Verifies: Multiple objects saved with -AsTimestamp each get a unique
+            millisecond-level timestamp key, so none collide.
+  Why it matters: Allows bulk logging without manual key management.
+#>
 Test-Edge "-AsTimestamp dedup (sequential calls get unique keys)" {
     $tsItems = 1..3 | ForEach-Object { @{ Val = $_ } }
     $tsItems | New-BucketObject -Bucket edge -AsTimestamp -Quiet
@@ -730,7 +740,12 @@ Test-Edge "-AsTimestamp dedup (sequential calls get unique keys)" {
     $tsCount -ge 4
 }
 
-# 3. -KeyProperty with `$null` value (object skipped)
+<#
+  3. -KeyProperty with $null value
+  Verifies: When the key property resolves to $null, the object is skipped
+            rather than creating a file with a sanitized empty name.
+  Why it matters: Defensive handling of malformed input.
+#>
 Test-Edge "-KeyProperty with `$null` value (object skipped)" {
     $before = (Get-BucketObject -Bucket edge).Count
     New-BucketObject -Bucket edge -InputObject @{ _Id = $null; Val = 1 } -KeyProperty _Id -Quiet
@@ -738,7 +753,12 @@ Test-Edge "-KeyProperty with `$null` value (object skipped)" {
     $after -eq $before
 }
 
-# 4. -Match with multiple properties
+<#
+  4. -Match with multiple properties
+  Verifies: -Match @{ Color = "red"; Size = 10 } uses AND logic,
+            returning only objects that satisfy both conditions.
+  Why it matters: Users expect multi-property filters to narrow results.
+#>
 Test-Edge "-Match with multiple properties (AND logic)" {
     New-BucketObject -Bucket edge -InputObject @{ _Id = "m1"; Color = "red"; Size = 10 } -KeyProperty _Id -Quiet
     New-BucketObject -Bucket edge -InputObject @{ _Id = "m2"; Color = "blue"; Size = 10 } -KeyProperty _Id -Quiet
@@ -747,7 +767,12 @@ Test-Edge "-Match with multiple properties (AND logic)" {
     @($matchMulti).Count -eq 1 -and $matchMulti._Id -eq "m1"
 }
 
-# 5. Path traversal protection
+<#
+  5. Path traversal protection
+  Verifies: Bucket names like "../../etc" are rejected by Resolve-SafePath,
+            which ensures the resolved path stays inside the bucket root.
+  Why it matters: Prevents writing (or reading) outside the intended directory.
+#>
 Test-Edge "Path traversal protection (../../etc rejected)" {
     try {
         New-BucketObject -Bucket "../../etc" -InputObject @{ x = 1 } -Key "test" -Quiet -ErrorAction Stop
@@ -755,7 +780,12 @@ Test-Edge "Path traversal protection (../../etc rejected)" {
     } catch { $true }
 }
 
-# 6. Deep nested object serialization
+<#
+  6. Deep nested object serialization
+  Verifies: A 3-level nested hashtable survives binary serialization
+            and deserialization with structure intact.
+  Why it matters: Complex config objects must round-trip without flattening.
+#>
 Test-Edge "Deep nested object serialization (3-level hashtable)" {
     $deep = @{ _Id = "deep"; L1 = @{ L2 = @{ L3 = "bottom" } } }
     New-BucketObject -Bucket edge -InputObject $deep -KeyProperty _Id -Quiet
@@ -763,8 +793,14 @@ Test-Edge "Deep nested object serialization (3-level hashtable)" {
     $retrievedDeep.L1.L2.L3 -eq "bottom"
 }
 
-# 7. Circular reference (JSON fails → binary fallback)
-Test-Edge "Circular reference (JSON fails → binary fallback)" {
+<#
+  7. Circular reference (JSON fails -> binary fallback)
+  Verifies: An object with a self-referencing property cannot be serialized
+            to JSON (infinite recursion), so the module falls back to binary
+            format and still stores/retrieves the object successfully.
+  Why it matters: Real-world objects (e.g. CIM instances) may have cycles.
+#>
+Test-Edge "Circular reference (JSON fails -> binary fallback)" {
     $circ = [PSCustomObject]@{ _Id = "circ"; Name = "loop" }
     $circ | Add-Member -NotePropertyName "Self" -NotePropertyValue $circ
     New-BucketObject -Bucket edge -InputObject $circ -KeyProperty _Id -Quiet
@@ -772,14 +808,24 @@ Test-Edge "Circular reference (JSON fails → binary fallback)" {
     $null -ne $retrievedCirc -and $retrievedCirc.Name -eq "loop"
 }
 
-# 8. Unicode/non-ASCII keys
+<#
+  8. Unicode/non-ASCII keys
+  Verifies: Keys containing Unicode characters (Latin, CJK, Cyrillic) are
+            sanitized safely and remain retrievable by the original name.
+  Why it matters: International users need native-language identifiers.
+#>
 Test-Edge "Unicode/non-ASCII keys (üñîçødé-测试-тест)" {
     New-BucketObject -Bucket edge -InputObject @{ _Id = "üñîçødé-测试-тест"; Val = "unicode" } -KeyProperty _Id -Quiet
     $unicode = Get-BucketObject -Bucket edge -Key "üñîçødé-测试-тест"
     $unicode.Val -eq "unicode"
 }
 
-# 9. Very deep nested path
+<#
+  9. Very deep nested path
+  Verifies: Bucket paths can be nested 10 levels deep and still work for
+            both write and read operations.
+  Why it matters: Hierarchical data (AD, inventory, org charts) needs depth.
+#>
 Test-Edge "Very deep nested path (a/b/c/d/e/f/g/h/i/j)" {
     New-BucketObject -Bucket "a/b/c/d/e/f/g/h/i/j" -InputObject @{ _Id = "deep-path"; Val = 1 } -KeyProperty _Id -Quiet
     Use-Bucket "a"
@@ -787,7 +833,12 @@ Test-Edge "Very deep nested path (a/b/c/d/e/f/g/h/i/j)" {
     $deepPath.Val -eq 1
 }
 
-# 10. -First and -Skip
+<#
+  10. -First and -Skip pagination
+  Verifies: -First N returns the first N objects, -Skip N skips the first N,
+            and combining both produces a page of results.
+  Why it matters: Large buckets need pagination to avoid memory pressure.
+#>
 Test-Edge "-First and -Skip pagination" {
     $first2 = Get-BucketObject -Bucket users -First 2
     $skip2 = Get-BucketObject -Bucket users -Skip 2
@@ -796,7 +847,12 @@ Test-Edge "-First and -Skip pagination" {
     @($first2).Count -eq 2 -and @($skip2).Count -eq ($total - 2) -and @($firstSkip).Count -eq 1
 }
 
-# 11. Empty bucket
+<#
+  11. Empty bucket
+  Verifies: Passing an empty array (@()) to -InputObject creates no files,
+            resulting in an empty bucket.
+  Why it matters: Users should be able to initialize a bucket without data.
+#>
 Test-Edge "Empty bucket (InputObject `@() creates no objects)" {
     New-BucketObject -Bucket empty -InputObject @() -Quiet
     Use-Bucket "empty"
@@ -805,14 +861,24 @@ Test-Edge "Empty bucket (InputObject `@() creates no objects)" {
     $emptyCount -eq 0
 }
 
-# 12. Wildcard + -Recurse
+<#
+  12. Wildcard + -Recurse
+  Verifies: Without -Recurse, a wildcard bucket only returns direct children.
+            With -Recurse, it descends into all sub-buckets.
+  Why it matters: Users need both shallow and deep search modes.
+#>
 Test-Edge "Wildcard + -Recurse (org/eu returns 1, org/eu -Recurse returns >1)" {
     $noRecurse = @(Get-BucketObject -Bucket "org/eu" -WarningAction SilentlyContinue).Count
     $withRecurse = @(Get-BucketObject -Bucket "org/eu" -Recurse -WarningAction SilentlyContinue).Count
     $withRecurse -gt $noRecurse -and $noRecurse -gt 0
 }
 
-# 13. Compressed round-trip via Set-BucketObject
+<#
+  13. Compressed round-trip via Set-BucketObject
+  Verifies: An object saved with -Compress can be modified with
+            Set-BucketObject -Compress and read back correctly.
+  Why it matters: Compressed objects must support partial updates.
+#>
 Test-Edge "Compressed round-trip via Set-BucketObject" {
     New-BucketObject -Bucket edge -InputObject @{ _Id = "comp-roundtrip"; Data = "original" } -KeyProperty _Id -Compress -Quiet
     $compObj = Get-BucketObject -Bucket edge -Key "comp-roundtrip"
@@ -822,7 +888,12 @@ Test-Edge "Compressed round-trip via Set-BucketObject" {
     $compMod.Data -eq "modified"
 }
 
-# 14. No-buckets root
+<#
+  14. No-buckets root
+  Verifies: Querying a nonexistent bucket root returns $null or empty array
+            instead of throwing an error.
+  Why it matters: Scripts should handle missing data gracefully.
+#>
 Test-Edge "No-buckets root (nonexistent path returns empty)" {
     $noB = Get-Bucket -Path (Join-Path $HOME ".buckets/nonexistent-root")
     $null -eq $noB -or @($noB).Count -eq 0
