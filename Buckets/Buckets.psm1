@@ -120,7 +120,7 @@ function Resolve-ItemKey {
 function Save-BucketFile {
     param(
         [string]$Path, $Item, [string]$Extension, [bool]$AsJson, [bool]$Compress,
-        [int]$Depth = 20, [int]$BinaryDepth = 2, [bool]$Overwrite,
+        [int]$Depth = 20, [int]$BinaryDepth = 5, [bool]$Overwrite,
         [string]$BucketPath, [string]$Bucket
     )
 
@@ -164,7 +164,7 @@ function Save-BucketFile {
     }
     else {
         $currentDepth = $BinaryDepth
-        while ($currentDepth -le 10) {
+        while ($currentDepth -le 100) {
             try {
                 $xml = [System.Management.Automation.PSSerializer]::Serialize($Item, $currentDepth)
                 $rawBytes = [System.Text.Encoding]::UTF8.GetBytes($xml)
@@ -1272,7 +1272,7 @@ function New-BucketObject {
         [string]$Key,
         [string]$KeyProperty,
         [ValidateRange(1, 100)][int]$Depth = 20,
-        [ValidateRange(1, 10)][int]$BinaryDepth = 2,
+        [ValidateRange(1, 100)][int]$BinaryDepth = 5,
         [switch]$AsTimestamp,
         [switch]$AsJson,
         [switch]$Compress,
@@ -1865,7 +1865,7 @@ function Set-BucketObject {
         [Parameter(ValueFromPipelineByPropertyName = $true)][Alias("_BucketKey")][string]$Key,
         [string]$Path,
         [ValidateRange(1, 100)][int]$Depth = 20,
-        [ValidateRange(1, 10)][int]$BinaryDepth = 2,
+        [ValidateRange(1, 100)][int]$BinaryDepth = 5,
         [switch]$AsJson,
         [switch]$Compress,
         [switch]$Quiet

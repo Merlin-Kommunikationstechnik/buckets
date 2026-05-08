@@ -28,7 +28,7 @@ Get-Bucket
 | **Binary** (PSSerializer) | Yes | — | `.dat` |
 | **JSON** | No | `-AsJson` | `.json` |
 
-Objects that exceed JSON depth are automatically saved as binary with a warning. Use `-BinaryDepth` to control binary serialization detail (default: `2`).
+Objects that exceed JSON depth are automatically saved as binary with a warning. Use `-BinaryDepth` to control binary serialization detail (default: `5`).
 
 Binary files can be compressed via `-Compress` (GZip, ~95% reduction on repetitive data). Compression is auto-detected on read via magic bytes.
 
@@ -63,31 +63,11 @@ New-BucketObject
 | `-Key` | Literal filename (no extension) | GUID |
 | `-KeyProperty` | Property name whose value becomes the filename | — |
 | `-Depth` | JSON serialization depth (1–100) | `20` |
-| `-BinaryDepth` | Binary serialization depth (1–10) | `2` |
-| `-AsTimestamp` | Use timestamp as filename `yyyyMMddHHmmssfff_index` | `false` |
-| `-AsJson` | Store as JSON instead of binary | `false` |
-| `-Compress` | GZip compress binary `.dat` files | `false` |
-| `-Overwrite` | Overwrite objects with the same key | `false` |
-| `-Quiet` | Suppress all output (no progress, no summary) | `false` |
+| `-BinaryDepth` | Binary serialization depth (1–100) | `5` |
+| `-Compress` | GZip compress binary output | `false` |
+| `-Quiet` | Suppress output | `false` |
 
-Default behaviour: shows a progress indicator and final summary. Use `-Verbose` for per-object details.
-
-#### Key vs KeyProperty
-
-`-Key` sets a literal filename. `-KeyProperty` names a property whose value becomes the filename:
-
-```powershell
-# Literal filename: creates Alice.dat
-New-BucketObject -Bucket users -InputObject @{ Name = "Alice" } -Key "Alice"
-
-# Property value: creates Alice.dat from the Name property
-New-BucketObject -Bucket users -InputObject @{ Name = "Alice" } -KeyProperty Name
-
-# Array keyed by property: creates bob.dat, charlie.dat
-$users = @(
-    @{ Name = "Bob"; Age = 25 }
-    @{ Name = "Charlie"; Age = 35 }
-)
+    )
 New-BucketObject -Bucket users -InputObject $users -KeyProperty Name
 
 # Special characters are sanitized (/, :, *, etc. become _)
@@ -221,7 +201,7 @@ Set-BucketObject
 | `-Key` | Object key (optional when piped from `Get-BucketObject`) | Bound from pipeline or required |
 | `-Path` | Storage root directory | `$HOME/.buckets` |
 | `-Depth` | JSON serialization depth | `20` |
-| `-BinaryDepth` | Binary serialization depth | `2` |
+| `-BinaryDepth` | Binary serialization depth (1–100) | `5` |
 | `-AsJson` | Force JSON format | — |
 | `-Compress` | GZip compress binary output | `false` |
 | `-Quiet` | Suppress output | `false` |

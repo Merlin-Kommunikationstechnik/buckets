@@ -14,7 +14,7 @@ PowerShell module for file-based PSObject storage using directory-backed "bucket
 - Default format: Binary via `PSSerializer` (`.dat`)
 - JSON format: `-AsJson` switch (`.json`)
 - Auto-fallback: JSON depth overflow → binary with warning
-- `BinaryDepth` default: 2, `Depth` default: 20
+- `BinaryDepth` default: 5 (ValidateRange 1-100), `Depth` default: 20
 - Arrays stored as individual files
 - Key sanitization: `/`, `:`, `*`, `?`, `"`, `<`, `>`, `|`, `.`, `[`, `]` → `_`
 - Empty keys after sanitization are rejected
