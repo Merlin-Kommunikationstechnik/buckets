@@ -743,6 +743,7 @@ function Get-Bucket {
             $allItems += $bucketChildren
 
             $truncatedFileCount = 0
+            $childPrefix = if ($IsRoot) { "" } elseif ($IsLast) { "$Prefix    " } else { "$Prefix│   " }
             if ($fileChildren.Count -gt $MaxFiles) {
                 $allItems += $fileChildren[0..($MaxFiles - 1)]
                 $truncatedFileCount = $fileChildren.Count - $MaxFiles
@@ -754,13 +755,11 @@ function Get-Bucket {
             for ($i = 0; $i -lt $allItems.Count; $i++) {
                 $child = $allItems[$i]
                 $childIsLast = $i -eq ($allItems.Count - 1)
-                $childPrefix = if ($IsRoot) { "" } elseif ($IsLast) { "$Prefix    " } else { "$Prefix│   " }
                 RenderTree -Node $child -Prefix $childPrefix -IsLast $childIsLast -IsRoot $false
             }
 
             if ($truncatedFileCount -gt 0) {
-                $truncLinePrefix = "$Prefix└── "
-                Write-Host "$truncLinePrefix" -NoNewline -ForegroundColor DarkGray
+                Write-Host "$childPrefix└── " -NoNewline -ForegroundColor DarkGray
                 Write-Host "... $truncatedFileCount more" -ForegroundColor $script:CNum
             }
         }
@@ -2177,6 +2176,7 @@ Sync-BucketDrive
 
 Set-Alias -Name fill -Value New-BucketObject
 Set-Alias -Name spill -Value Get-BucketObject
+Set-Alias -Name dip -Value Get-Bucket
 Set-Alias -Name ls -Value Get-ChildItem -Scope Global -Force
 
 # --- Argument completers ---
@@ -2285,4 +2285,4 @@ Export-ModuleMember -Function @(
     'Get-BucketKeys', 'Remove-Bucket', 'Copy-BucketObject',
     'Rename-BucketObject', 'Move-BucketObject', 'Export-Bucket',
     'Import-Bucket', 'Set-BucketRoot', 'Get-BucketRoot', 'Sync-BucketDrive'
-) -Alias 'fill', 'spill'
+) -Alias 'fill', 'spill', 'dip'

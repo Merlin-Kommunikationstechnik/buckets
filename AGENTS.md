@@ -52,6 +52,11 @@ Uses `SupportsShouldProcess` for `-WhatIf` support. Parameter sets enforce `-Key
 - Module removes built-in aliases `Save-BucketObject` and `Get-BucketObject` at load
 - `-Key` is a PROPERTY NAME on the input object, not the literal filename. Use `-Key "_Id"` with an `_Id` property, or use `-AsTimestamp`
 
+## Release Workflow
+1. `git push`
+2. `gh workflow run "Release Buckets" --ref main -f release_type=<patch|minor|major>`
+3. Monitor at the returned URL and notify user when done
+
 ## Testing
 ```bash
 pwsh -NoProfile -ExecutionPolicy Bypass -File .tests/test.ps1
