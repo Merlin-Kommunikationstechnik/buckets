@@ -164,7 +164,7 @@ function Save-BucketFile {
     }
     else {
         $currentDepth = $BinaryDepth
-        while ($currentDepth -le 100) {
+        while ($currentDepth -le 10) {
             try {
                 $xml = [System.Management.Automation.PSSerializer]::Serialize($Item, $currentDepth)
                 $rawBytes = [System.Text.Encoding]::UTF8.GetBytes($xml)
@@ -1287,6 +1287,7 @@ function New-BucketObject {
         $useVerbose = $VerbosePreference -eq 'Continue'
         $useQuiet = $Quiet.IsPresent
         $showProgress = -not $useVerbose -and -not $useQuiet
+        $pipeline = [System.Collections.ArrayList]::new()
 
         if ($AsTimestamp -and (-not [string]::IsNullOrWhiteSpace($Key) -or -not [string]::IsNullOrWhiteSpace($KeyProperty))) {
             Write-Verbose "Both -Key/-KeyProperty and -AsTimestamp specified. -Key/-KeyProperty takes precedence, -AsTimestamp ignored."
@@ -1299,10 +1300,9 @@ function New-BucketObject {
         $isCollection = $InputObject -is [System.Collections.IEnumerable] -and $InputObject -isnot [string] -and $InputObject -isnot [hashtable] -and $InputObject -isnot [System.Collections.IDictionary]
 
         if ($isCollection) {
-            $items = $InputObject
-            $totalForItems = $items.Count
+            $totalForItems = $InputObject.Count
             $index = 0
-            foreach ($item in $items) {
+            foreach ($item in $InputObject) {
                 $itemFilename = Get-BucketFilename -Item $item -Key $Key -KeyProperty $KeyProperty -AsTimestamp:$AsTimestamp.IsPresent -Index $index -Extension $extension
                 if ($null -eq $itemFilename) { $skippedCount++; $index++; continue }
                 $itemFilePath = Join-Path $bucketPath $itemFilename
@@ -1321,25 +1321,33 @@ function New-BucketObject {
             }
         }
         else {
-            $item = $InputObject
-            $totalCount = 1
-            $itemFilename = Get-BucketFilename -Item $item -Key $Key -KeyProperty $KeyProperty -AsTimestamp:$AsTimestamp.IsPresent -Index 0 -Extension $extension
-            if ($null -eq $itemFilename) { $skippedCount++; return }
-            $itemFilePath = Join-Path $bucketPath $itemFilename
-            $writeResult = Save-BucketFile -Path $itemFilePath -Item $item -Extension $extension -AsJson:$AsJson.IsPresent -Compress:$Compress.IsPresent -Depth $Depth -BinaryDepth $BinaryDepth -Overwrite:$Overwrite.IsPresent -BucketPath $bucketPath -Bucket $Bucket
-            if ($writeResult.Success) {
-                $savedCount++
-                if ($useVerbose) {
-                    Write-Verbose "Saved [$Bucket/$([System.IO.Path]::GetFileNameWithoutExtension($itemFilename))] -> $itemFilePath"
-                }
-            }
-            elseif ($writeResult.Skipped) { $skippedCount++ }
-            else { $failedCount++ }
-            if ($writeResult.Fallback) { $fallbackCount++ }
+            $null = $pipeline.Add($InputObject)
         }
     }
 
     end {
+        if ($pipeline.Count -gt 0) {
+            $totalForItems = $pipeline.Count
+            $index = 0
+            foreach ($item in $pipeline) {
+                $itemFilename = Get-BucketFilename -Item $item -Key $Key -KeyProperty $KeyProperty -AsTimestamp:$AsTimestamp.IsPresent -Index $index -Extension $extension
+                if ($null -eq $itemFilename) { $skippedCount++; $index++; continue }
+                $itemFilePath = Join-Path $bucketPath $itemFilename
+                $writeResult = Save-BucketFile -Path $itemFilePath -Item $item -Extension $extension -AsJson:$AsJson.IsPresent -Compress:$Compress.IsPresent -Depth $Depth -BinaryDepth $BinaryDepth -Overwrite:$Overwrite.IsPresent -BucketPath $bucketPath -Bucket $Bucket
+                if ($writeResult.Success) {
+                    $savedCount++
+                    if ($showProgress) {
+                        $percent = if ($totalForItems -gt 0) { [math]::Round(($savedCount / $totalForItems) * 100) } else { 0 }
+                        Write-Progress -Activity "Saving to '$Bucket'" -Status "$savedCount object(s) saved" -PercentComplete $percent -CurrentOperation ([System.IO.Path]::GetFileNameWithoutExtension($itemFilename))
+                    }
+                }
+                elseif ($writeResult.Skipped) { $skippedCount++ }
+                else { $failedCount++ }
+                if ($writeResult.Fallback) { $fallbackCount++ }
+                $index++
+            }
+        }
+
         if ($showProgress -or $useVerbose) { Write-Progress -Activity "Saving to '$Bucket'" -Completed }
         if (-not $useQuiet) {
             $summary = "Saved $savedCount object(s) to '$Bucket'"
