@@ -46,7 +46,7 @@ jobs:
 
           # Check if the manifest was already bumped in the latest commit
           $diff = git diff HEAD~1 HEAD -- $manifestPath
-          $alreadyBumped = $diff -match "ModuleVersion"
+          $alreadyBumped = $diff -match "^[+-]\s*ModuleVersion\s*="
 
           if ($alreadyBumped) {
             Write-Host "Manifest version already bumped to $currentVersion in latest commit. Skipping bump."
