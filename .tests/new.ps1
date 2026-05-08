@@ -40,12 +40,18 @@ Use-Bucket "smoke/empty"
 $pass = 0; $fail = 0
 function Test-Feature {
     param([string]$Name, [scriptblock]$Check)
-    if (& $Check) {
-        $pass++
-        Write-Host "  $Name ... PASS" -ForegroundColor Green
-    } else {
-        $fail++
-        Write-Host "  $Name ... FAIL" -ForegroundColor Red
+    try {
+        $ok = & $Check
+        if ($ok) {
+            $script:pass++
+            Write-Host "  $Name ... PASS" -ForegroundColor Green
+        } else {
+            $script:fail++
+            Write-Host "  $Name ... FAIL" -ForegroundColor Red
+        }
+    } catch {
+        $script:fail++
+        Write-Host "  $Name ... FAIL ($($_.Exception.Message))" -ForegroundColor Red
     }
 }
 
