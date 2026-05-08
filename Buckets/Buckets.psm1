@@ -970,9 +970,16 @@ function Get-BucketObject {
 
             $relativePath = $file.FullName.Substring($bucketPath.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar)
             $keyWithoutExt = [System.IO.Path]::ChangeExtension($relativePath, $null).TrimEnd('.')
-            $obj.PSObject.Properties.Add([System.Management.Automation.PSNoteProperty]::new('_BucketName', $bucketName))
-            $obj.PSObject.Properties.Add([System.Management.Automation.PSNoteProperty]::new('_BucketKey', $keyWithoutExt))
-            $obj.PSObject.Properties.Add([System.Management.Automation.PSNoteProperty]::new('_BucketFile', $file.FullName))
+            $n1 = [System.Management.Automation.PSNoteProperty]::new('_BucketName', $bucketName)
+            $n2 = [System.Management.Automation.PSNoteProperty]::new('_BucketKey', $keyWithoutExt)
+            $n3 = [System.Management.Automation.PSNoteProperty]::new('_BucketFile', $file.FullName)
+            $hidden = [System.Reflection.BindingFlags]::Instance -bor [System.Reflection.BindingFlags]::NonPublic -bor [System.Reflection.BindingFlags]::Public
+            [System.Management.Automation.PSNoteProperty].GetProperty('IsHidden', $hidden).SetValue($n1, $true)
+            [System.Management.Automation.PSNoteProperty].GetProperty('IsHidden', $hidden).SetValue($n2, $true)
+            [System.Management.Automation.PSNoteProperty].GetProperty('IsHidden', $hidden).SetValue($n3, $true)
+            $obj.PSObject.Properties.Add($n1)
+            $obj.PSObject.Properties.Add($n2)
+            $obj.PSObject.Properties.Add($n3)
             $null = $allObjects.Add($obj)
         }
     }
