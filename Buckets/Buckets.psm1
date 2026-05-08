@@ -33,6 +33,14 @@ $script:LastPWD = $PWD.Path
 $script:BucketRoot = $null
 $script:ClearCache = { $script:BucketPathCache.Clear(); $script:LastPWD = $PWD.Path }
 
+# --- Output colors ---
+$script:CPath   = 'Cyan'
+$script:CNum    = 'Magenta'
+$script:CAction = 'Blue'
+$script:CMuted  = 'DarkGray'
+$script:CError  = 'Red'
+$script:CSkip   = 'Yellow'
+
 # --- Core infrastructure (internal helpers) ---
 
 function Get-DefaultPath {
@@ -412,7 +420,9 @@ function Copy-BucketObject {
         }
     }
     elseif (-not $Quiet) {
-        Write-Host "Copied '$Key' from '$Bucket' to '$DestinationBucket/$safeDestKey'" -ForegroundColor Green
+        Write-Host "$Bucket/$Key" -NoNewline -ForegroundColor $script:CPath
+        Write-Host " → " -NoNewline -ForegroundColor $script:CMuted
+        Write-Host "$DestinationBucket/$safeDestKey" -ForegroundColor $script:CPath
     }
 }
 
@@ -496,7 +506,12 @@ function Export-Bucket {
     }
 
     if (-not $Quiet) {
-        Write-Host "Exported $exportedObjects object(s) from $exportedBuckets bucket(s) to '$OutputFile'" -ForegroundColor Green
+        $bucketArg = if ($Bucket -is [array]) { $Bucket -join ', ' } else { $Bucket }
+        Write-Host "$bucketArg" -NoNewline -ForegroundColor $script:CPath
+        Write-Host " · " -NoNewline -ForegroundColor $script:CMuted
+        Write-Host $exportedObjects -NoNewline -ForegroundColor $script:CNum
+        Write-Host " objects → " -NoNewline -ForegroundColor $script:CMuted
+        Write-Host "$([System.IO.Path]::GetFileName($OutputFile))" -ForegroundColor $script:CAction
     }
 }
 
@@ -701,7 +716,7 @@ function Get-Bucket {
 
             if ($IsRoot) {
                 $sizeStr = "$(TreeItemCount $Node.ObjectCount), $(TreeSize $Node.SizeBytes)"
-                Write-Host "$($Node.Name) " -NoNewline -ForegroundColor White
+                Write-Host "$($Node.Name) " -NoNewline -ForegroundColor $script:CAction
                 Write-Host "($sizeStr)" -ForegroundColor DarkGray
             }
             else {
@@ -746,7 +761,7 @@ function Get-Bucket {
             if ($truncatedFileCount -gt 0) {
                 $truncLinePrefix = "$Prefix└── "
                 Write-Host "$truncLinePrefix" -NoNewline -ForegroundColor DarkGray
-                Write-Host "... $truncatedFileCount more" -ForegroundColor DarkGray
+                Write-Host "... $truncatedFileCount more" -ForegroundColor $script:CNum
             }
         }
 
@@ -1133,8 +1148,17 @@ function Import-Bucket {
     }
 
     if (-not $Quiet) {
-        Write-Host "Imported $importedCount object(s) into '$Bucket'" -ForegroundColor Green
-        if ($skippedCount -gt 0) { Write-Host "  $skippedCount skipped (existing keys)" -ForegroundColor Yellow }
+        Write-Host "$([System.IO.Path]::GetFileName($InputFile))" -NoNewline -ForegroundColor $script:CAction
+        Write-Host " → " -NoNewline -ForegroundColor $script:CMuted
+        Write-Host "$Bucket" -NoNewline -ForegroundColor $script:CPath
+        Write-Host " · " -NoNewline -ForegroundColor $script:CMuted
+        Write-Host $importedCount -NoNewline -ForegroundColor $script:CNum
+        Write-Host " objects" -ForegroundColor $script:CMuted
+        if ($skippedCount -gt 0) {
+            Write-Host "  " -NoNewline
+            Write-Host $skippedCount -NoNewline -ForegroundColor $script:CNum
+            Write-Host " skipped (existing keys)" -ForegroundColor $script:CSkip
+        }
     }
 }
 
@@ -1216,7 +1240,11 @@ function Move-BucketObject {
         }
     }
     elseif (-not $Quiet) {
-        Write-Host "Moved '$Key' from '$Bucket' to '$DestinationBucket/$safeDestKey'" -ForegroundColor Green
+        Write-Host "$Bucket/$Key" -NoNewline -ForegroundColor $script:CPath
+        Write-Host " → " -NoNewline -ForegroundColor $script:CMuted
+        Write-Host "$DestinationBucket/$safeDestKey" -NoNewline -ForegroundColor $script:CPath
+        Write-Host " · " -NoNewline -ForegroundColor $script:CMuted
+        Write-Host "moved" -ForegroundColor $script:CNum
     }
 }
 
@@ -1309,7 +1337,7 @@ function New-BucketObject {
                 $writeResult = Save-BucketFile -Path $itemFilePath -Item $item -Extension $extension -AsJson:$AsJson.IsPresent -Compress:$Compress.IsPresent -Depth $Depth -BinaryDepth $BinaryDepth -Overwrite:$Overwrite.IsPresent -BucketPath $bucketPath -Bucket $Bucket
                 if ($writeResult.Success) {
                     $savedCount++
-                    if ($showProgress) {
+                    if ($showProgress -and $totalForItems -gt 50) {
                         $percent = if ($totalForItems -gt 0) { [math]::Round(($savedCount / $totalForItems) * 100) } else { 0 }
                         Write-Progress -Activity "Saving to '$Bucket'" -Status "$savedCount object(s) saved" -PercentComplete $percent -CurrentOperation ([System.IO.Path]::GetFileNameWithoutExtension($itemFilename))
                     }
@@ -1336,7 +1364,7 @@ function New-BucketObject {
                 $writeResult = Save-BucketFile -Path $itemFilePath -Item $item -Extension $extension -AsJson:$AsJson.IsPresent -Compress:$Compress.IsPresent -Depth $Depth -BinaryDepth $BinaryDepth -Overwrite:$Overwrite.IsPresent -BucketPath $bucketPath -Bucket $Bucket
                 if ($writeResult.Success) {
                     $savedCount++
-                    if ($showProgress) {
+                    if ($showProgress -and $totalForItems -gt 50) {
                         $percent = if ($totalForItems -gt 0) { [math]::Round(($savedCount / $totalForItems) * 100) } else { 0 }
                         Write-Progress -Activity "Saving to '$Bucket'" -Status "$savedCount object(s) saved" -PercentComplete $percent -CurrentOperation ([System.IO.Path]::GetFileNameWithoutExtension($itemFilename))
                     }
@@ -1350,12 +1378,28 @@ function New-BucketObject {
 
         if ($showProgress -or $useVerbose) { Write-Progress -Activity "Saving to '$Bucket'" -Completed }
         if (-not $useQuiet) {
-            $summary = "Saved $savedCount object(s) to '$Bucket'"
-            if ($Compress) { $summary += " (compressed)" }
-            Write-Host $summary -ForegroundColor Green
-            if ($skippedCount -gt 0) { Write-Host "  $skippedCount skipped (existing or missing key)" -ForegroundColor Yellow }
-            if ($fallbackCount -gt 0) { Write-Host "  $fallbackCount required auto-incremented depth or binary fallback" -ForegroundColor DarkYellow }
-            if ($failedCount -gt 0) { Write-Host "  $failedCount failed to serialize" -ForegroundColor Red }
+            $compressStr = if ($Compress) { " · compressed" } else { "" }
+            Write-Host "$Bucket" -NoNewline -ForegroundColor $script:CPath
+            Write-Host " · " -NoNewline -ForegroundColor $script:CMuted
+            Write-Host $savedCount -NoNewline -ForegroundColor $script:CNum
+            Write-Host " objects" -NoNewline -ForegroundColor $script:CMuted
+            if ($compressStr) { Write-Host $compressStr -NoNewline -ForegroundColor $script:CMuted }
+            Write-Host ""
+            if ($skippedCount -gt 0) {
+                Write-Host "  " -NoNewline
+                Write-Host $skippedCount -NoNewline -ForegroundColor $script:CNum
+                Write-Host " skipped (existing or missing key)" -ForegroundColor $script:CSkip
+            }
+            if ($fallbackCount -gt 0) {
+                Write-Host "  " -NoNewline
+                Write-Host $fallbackCount -NoNewline -ForegroundColor $script:CNum
+                Write-Host " depth fallback" -ForegroundColor $script:CSkip
+            }
+            if ($failedCount -gt 0) {
+                Write-Host "  " -NoNewline
+                Write-Host $failedCount -NoNewline -ForegroundColor $script:CNum
+                Write-Host " failed to serialize" -ForegroundColor $script:CError
+            }
         }
     }
 }
@@ -1600,10 +1644,17 @@ function Remove-Bucket {
         }
     }
 
-    if ($removedCount -gt 0) { Write-Host "  Removed $removedCount bucket(s)" -ForegroundColor Green }
+    if ($removedCount -gt 0) {
+        Write-Host $removedCount -NoNewline -ForegroundColor $script:CNum
+        Write-Host " removed" -ForegroundColor $script:CMuted
+    }
     if ($skippedBuckets.Count -gt 0) {
-        Write-Host "`n  Skipped:" -ForegroundColor Yellow
-        foreach ($s in $skippedBuckets) { Write-Host "    $($s.Name) — $($s.Reason)" -ForegroundColor Red }
+        foreach ($s in $skippedBuckets) {
+            Write-Host "  " -NoNewline -ForegroundColor $script:CMuted
+            Write-Host "$($s.Name)" -NoNewline -ForegroundColor $script:CPath
+            Write-Host " · " -NoNewline -ForegroundColor $script:CMuted
+            Write-Host "$($s.Reason)" -ForegroundColor $script:CSkip
+        }
     }
 }
 
@@ -1684,7 +1735,12 @@ function Remove-BucketObject {
                 [PSCustomObject]@{ Bucket = $Bucket; Key = $relPath; FilePath = $f.FullName }
             }
         }
-        elseif (-not $WhatIfPreference) { Write-Verbose "Removed $($allFiles.Count) object(s) from bucket '$Bucket'" }
+        elseif (-not $WhatIfPreference -and -not $Quiet) {
+            Write-Host "$Bucket" -NoNewline -ForegroundColor $script:CPath
+            Write-Host " · " -NoNewline -ForegroundColor $script:CMuted
+            Write-Host $allFiles.Count -NoNewline -ForegroundColor $script:CNum
+            Write-Host " removed" -ForegroundColor $script:CMuted
+        }
     }
     elseif (-not [string]::IsNullOrWhiteSpace($Key)) {
         $file = Find-ObjectFile -BucketPath $bucketPath -Key $Key
@@ -1705,6 +1761,11 @@ function Remove-BucketObject {
                 if ($remaining.Count -eq 0) {
                     [System.IO.Directory]::Delete($parentDir)
                 }
+            }
+            if (-not $PassThru -and -not $Quiet -and -not $WhatIfPreference) {
+                Write-Host "$Bucket/$Key" -NoNewline -ForegroundColor $script:CPath
+                Write-Host " · " -NoNewline -ForegroundColor $script:CMuted
+                Write-Host "removed" -ForegroundColor $script:CNum
             }
         }
     }
@@ -1748,6 +1809,12 @@ function Remove-BucketObject {
                     [PSCustomObject]@{ Bucket = $Bucket; Key = $relPath; FilePath = $f.FullName }
                 }
                 [System.IO.File]::Delete($f.FullName)
+            }
+            if (-not $PassThru -and -not $Quiet) {
+                Write-Host "$Bucket" -NoNewline -ForegroundColor $script:CPath
+                Write-Host " · " -NoNewline -ForegroundColor $script:CMuted
+                Write-Host $matchedFiles.Count -NoNewline -ForegroundColor $script:CNum
+                Write-Host " removed" -ForegroundColor $script:CMuted
             }
         }
         elseif (-not $WhatIfPreference) { Write-Verbose "Would remove $($matchedFiles.Count) object(s) from bucket '$Bucket'" }
@@ -1819,7 +1886,9 @@ function Rename-BucketObject {
         [PSCustomObject]@{ Bucket = $Bucket; OldKey = $Key; NewKey = $safeNewKey; FilePath = $destFile }
     }
     elseif (-not $Quiet) {
-        Write-Host "Renamed '$Key' to '$safeNewKey' in bucket '$Bucket'" -ForegroundColor Green
+        Write-Host "$Bucket/$Key" -NoNewline -ForegroundColor $script:CPath
+        Write-Host " → " -NoNewline -ForegroundColor $script:CMuted
+        Write-Host "$safeNewKey" -ForegroundColor $script:CPath
     }
 }
 
@@ -2014,7 +2083,10 @@ function Set-BucketObject {
 
     end {
         if ($savedCount -gt 0 -and -not $useVerbose -and -not $useQuiet) {
-            Write-Host "Updated $savedCount object(s) in '$Bucket'" -ForegroundColor Green
+            Write-Host "$Bucket/$Key" -NoNewline -ForegroundColor $script:CPath
+            Write-Host " · " -NoNewline -ForegroundColor $script:CMuted
+            Write-Host $savedCount -NoNewline -ForegroundColor $script:CNum
+            Write-Host " updated" -ForegroundColor $script:CMuted
         }
     }
 }

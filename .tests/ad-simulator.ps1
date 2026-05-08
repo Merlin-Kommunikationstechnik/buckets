@@ -214,7 +214,7 @@ $structure = @{
 # ============================================================
 # Create domain root object
 # ============================================================
-Write-Host "[1/5] Creating domain root object..." -ForegroundColor Yellow
+Write-Host "[1/5] Creating domain root object..." -ForegroundColor Blue
 New-BucketObject -Bucket $BucketRoot -InputObject @{
     _Id             = "domain"
     name            = "ad.example.com"
@@ -230,7 +230,7 @@ New-BucketObject -Bucket $BucketRoot -InputObject @{
 # ============================================================
 # Create region/country/city/location OUs
 # ============================================================
-Write-Host "[2/5] Creating organizational units..." -ForegroundColor Yellow
+Write-Host "[2/5] Creating organizational units..." -ForegroundColor Blue
 
 $ouCount = 0
 foreach ($region in $structure.regions) {
@@ -271,7 +271,7 @@ Write-Host "  Created $ouCount OUs" -ForegroundColor DarkGray
 # ============================================================
 # Create users, groups, computers per location
 # ============================================================
-Write-Host "[3/5] Creating users..." -ForegroundColor Yellow
+Write-Host "[3/5] Creating users..." -ForegroundColor Blue
 $userCount = 0
 foreach ($region in $structure.regions) {
     foreach ($country in $region.countries) {
@@ -294,7 +294,7 @@ foreach ($region in $structure.regions) {
 }
 Write-Host "  Created $userCount users" -ForegroundColor DarkGray
 
-Write-Host "[4/5] Creating groups..." -ForegroundColor Yellow
+Write-Host "[4/5] Creating groups..." -ForegroundColor Blue
 $groupCount = 0
 foreach ($region in $structure.regions) {
     foreach ($country in $region.countries) {
@@ -315,7 +315,7 @@ foreach ($region in $structure.regions) {
 }
 Write-Host "  Created $groupCount groups" -ForegroundColor DarkGray
 
-Write-Host "[5/5] Creating computers..." -ForegroundColor Yellow
+Write-Host "[5/5] Creating computers..." -ForegroundColor Blue
 $computerCount = 0
 foreach ($region in $structure.regions) {
     foreach ($country in $region.countries) {
@@ -349,10 +349,10 @@ Write-Host "  Computers:         $computerCount" -ForegroundColor DarkGray
 Write-Host "  Total objects:     $totalItems" -ForegroundColor DarkGray
 Write-Host "  Time:              ${elapsed}ms" -ForegroundColor DarkGray
 
-Write-Host "`n[Bucket Tree]" -ForegroundColor Green
+Write-Host "`n[Bucket Tree]" -ForegroundColor Blue
 Get-Bucket -AsTree -Name $BucketRoot -NoObjects
 
-Write-Host "`n[Sample Queries]" -ForegroundColor Green
+Write-Host "`n[Sample Queries]" -ForegroundColor Blue
 Write-Host "  Users in berlin:" -ForegroundColor DarkGray
 Write-Host "    > Get-BucketObject -Bucket 'ad/eu/de/berlin/users' | Select-Object displayName, department, title -First 3" -ForegroundColor Cyan
 Get-BucketObject -Bucket "ad/eu/de/berlin/users" | Select-Object displayName, department, title -First 3 | Format-Table

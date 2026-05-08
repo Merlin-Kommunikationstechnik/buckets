@@ -10,16 +10,16 @@ Import-Module "$PSScriptRoot/../Buckets" -Force
 $bucketDir = Join-Path $HOME ".buckets"
 if (Test-Path $bucketDir) { Remove-Item $bucketDir -Recurse -Force }
 
-Write-Host "========================================" -ForegroundColor Cyan
-Write-Host " Buckets Module - Test Suite" -ForegroundColor Cyan
-Write-Host "========================================`n" -ForegroundColor Cyan
+Write-Host "========================================" -ForegroundColor Blue
+Write-Host " Buckets Module - Test Suite" -ForegroundColor Blue
+Write-Host "========================================`n" -ForegroundColor Blue
 
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
 
 # ============================================================
 # 1. Simple objects (hashtables)
 # ============================================================
-Write-Host "[1] Simple hashtables (keyed array save)" -ForegroundColor Yellow
+Write-Host "[1] Simple hashtables (keyed array save)" -ForegroundColor Blue
 
 $users = @(
     @{ Name = "Alice"; Email = "alice@example.com"; Role = "admin"; Active = $true }
@@ -34,7 +34,7 @@ Write-Host "  Saved $($users.Count) users (keyed by Name)" -ForegroundColor Dark
 # ============================================================
 # 2. Nested PSCustomObjects
 # ============================================================
-Write-Host "`n[2] Nested PSCustomObjects (deep object serialization)" -ForegroundColor Yellow
+Write-Host "`n[2] Nested PSCustomObjects (deep object serialization)" -ForegroundColor Blue
 
 $orders = @(
     [PSCustomObject]@{
@@ -70,7 +70,7 @@ Write-Host "  Saved $($orders.Count) orders" -ForegroundColor DarkGray
 # ============================================================
 # 3. System objects (FileInfo) - triggers binary fallback
 # ============================================================
-Write-Host "`n[3] System objects (FileInfo — complex objects auto-fallback to binary)" -ForegroundColor Yellow
+Write-Host "`n[3] System objects (FileInfo — complex objects auto-fallback to binary)" -ForegroundColor Blue
 
 Get-ChildItem $PSScriptRoot | Where-Object { $_.Name -notmatch "^\." } | New-BucketObject -Bucket files -KeyProperty Name -Quiet
 Write-Host "  Saved directory listing (complex objects fallback to .dat)" -ForegroundColor DarkGray
@@ -78,7 +78,7 @@ Write-Host "  Saved directory listing (complex objects fallback to .dat)" -Foreg
 # ============================================================
 # 4. Log entries with unique keys
 # ============================================================
-Write-Host "`n[4] Log entries (bulk save with unique keys)" -ForegroundColor Yellow
+Write-Host "`n[4] Log entries (bulk save with unique keys)" -ForegroundColor Blue
 
 $logEntries = @(
     @{ Id = "log-001"; Level = "INFO"; Message = "Application started" }
@@ -93,7 +93,7 @@ Write-Host "  Saved $($logEntries.Count) log entries" -ForegroundColor DarkGray
 # ============================================================
 # 5. Config (JSON format)
 # ============================================================
-Write-Host "`n[5] Config (JSON format — explicit -AsJson switch)" -ForegroundColor Yellow
+Write-Host "`n[5] Config (JSON format — explicit -AsJson switch)" -ForegroundColor Blue
 
 $config = [PSCustomObject]@{
     _Id = "app-config"
@@ -109,7 +109,7 @@ Write-Host "  Saved config as JSON" -ForegroundColor DarkGray
 # ============================================================
 # 6. Metrics
 # ============================================================
-Write-Host "`n[6] Performance metrics (24 hours — numeric bulk save)" -ForegroundColor Yellow
+Write-Host "`n[6] Performance metrics (24 hours — numeric bulk save)" -ForegroundColor Blue
 
 $metrics = foreach ($hour in 0..23) {
     [PSCustomObject]@{
@@ -126,7 +126,7 @@ Write-Host "  Saved 24 hourly records" -ForegroundColor DarkGray
 # ============================================================
 # 7. Mixed formats in same bucket
 # ============================================================
-Write-Host "`n[7] Mixed formats (JSON + binary in same bucket)" -ForegroundColor Yellow
+Write-Host "`n[7] Mixed formats (JSON + binary in same bucket)" -ForegroundColor Blue
 
 New-BucketObject -Bucket mixed -InputObject @{ _Id = "m1"; Type = "json"; Value = 1 } -KeyProperty _Id -AsJson -Quiet
 New-BucketObject -Bucket mixed -InputObject @{ _Id = "m2"; Type = "binary"; Value = 2 } -KeyProperty _Id -Quiet
@@ -136,31 +136,31 @@ Write-Host "  Saved 3 objects (2 JSON, 1 binary)" -ForegroundColor DarkGray
 # ============================================================
 # VERIFICATION
 # ============================================================
-Write-Host "`n========================================" -ForegroundColor Cyan
-Write-Host " Verification" -ForegroundColor Cyan
-Write-Host "========================================`n" -ForegroundColor Cyan
+Write-Host "`n========================================" -ForegroundColor Blue
+Write-Host " Verification" -ForegroundColor Blue
+Write-Host "========================================`n" -ForegroundColor Blue
 
-Write-Host "[Buckets]" -ForegroundColor Green
+Write-Host "[Buckets]" -ForegroundColor Blue
 Get-Bucket | Format-Table -AutoSize
 
-Write-Host "[Users] Filter Role = 'admin'" -ForegroundColor Green
+Write-Host "[Users] Filter Role = 'admin'" -ForegroundColor Blue
 Get-BucketObject -Bucket users -Filter { $_.Role -eq "admin" } | ForEach-Object { Write-Host "  $($_.Name) ($($_.Email))" }
 
-Write-Host "`n[Orders] Shipped with Express shipping" -ForegroundColor Green
+Write-Host "`n[Orders] Shipped with Express shipping" -ForegroundColor Blue
 Get-BucketObject -Bucket orders -Filter { $_.Status -eq "shipped" -and $_.Shipping.Method -eq "Express" } | ForEach-Object { Write-Host "  $($_.OrderId) by $($_.Customer)" }
 
-Write-Host "`n[Config] JSON verification" -ForegroundColor Green
+Write-Host "`n[Config] JSON verification" -ForegroundColor Blue
 $cfg = Get-BucketObject -Bucket config -Key "app-config"
 Write-Host "  DB: $($cfg.Database.Host):$($cfg.Database.Port)/$($cfg.Database.Name)"
 Write-Host "  Cache: $($cfg.Cache.Provider) (TTL: $($cfg.Cache.TTL)s)"
 
-Write-Host "`n[Metrics] Hours with CPU > 80%" -ForegroundColor Green
+Write-Host "`n[Metrics] Hours with CPU > 80%" -ForegroundColor Blue
 Get-BucketObject -Bucket metrics -Filter { $_.CPU -gt 80 } | ForEach-Object { Write-Host "  Hour $($_.Hour): CPU=$($_.CPU)%, Mem=$($_.Memory)%" }
 
-Write-Host "`n[Logs] Filter WARN/ERROR" -ForegroundColor Green
+Write-Host "`n[Logs] Filter WARN/ERROR" -ForegroundColor Blue
 Get-BucketObject -Bucket logs -Filter { $_.Level -in @("WARN", "ERROR") } | ForEach-Object { Write-Host "  [$($_.Level)] $($_.Message)" }
 
-Write-Host "`n[Mixed] Formats" -ForegroundColor Green
+Write-Host "`n[Mixed] Formats" -ForegroundColor Blue
 Get-BucketObject -Bucket mixed | ForEach-Object {
     $ext = [System.IO.Path]::GetExtension($_._BucketFile)
     Write-Host "  $($_.Type) ($ext)"
@@ -169,9 +169,9 @@ Get-BucketObject -Bucket mixed | ForEach-Object {
 # ============================================================
 # STATS
 # ============================================================
-Write-Host "`n========================================" -ForegroundColor Cyan
-Write-Host " Stats" -ForegroundColor Cyan
-Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "`n========================================" -ForegroundColor Blue
+Write-Host " Stats" -ForegroundColor Blue
+Write-Host "========================================" -ForegroundColor Blue
 
 foreach ($b in (Get-Bucket)) {
     $stats = Get-BucketStats -Bucket $b.Name
@@ -179,19 +179,19 @@ foreach ($b in (Get-Bucket)) {
 }
 
 $elapsed = $sw.ElapsedMilliseconds
-Write-Host "`nTotal time: ${elapsed}ms" -ForegroundColor Cyan
+Write-Host "`nTotal time: ${elapsed}ms" -ForegroundColor Blue
 
 # ============================================================
 # NEW CMDLETS & FEATURES
 # ============================================================
-Write-Host "`n========================================" -ForegroundColor Cyan
-Write-Host " New Features" -ForegroundColor Cyan
-Write-Host "========================================`n" -ForegroundColor Cyan
+Write-Host "`n========================================" -ForegroundColor Blue
+Write-Host " New Features" -ForegroundColor Blue
+Write-Host "========================================`n" -ForegroundColor Blue
 
 # ============================================================
 # 8. Copy-BucketObject
 # ============================================================
-Write-Host "`n[8] Copy-BucketObject (cross-bucket copy, key rename)" -ForegroundColor Yellow
+Write-Host "`n[8] Copy-BucketObject (cross-bucket copy, key rename)" -ForegroundColor Blue
 Remove-Bucket "archive" -Force -Confirm:$false -WarningAction SilentlyContinue
 Copy-BucketObject -Bucket users -Key "Alice" -DestinationBucket archive -PassThru | Format-Table
 Copy-BucketObject -Bucket config -Key "app-config" -DestinationKey "app-config-backup" -PassThru | Format-Table
@@ -203,7 +203,7 @@ Write-Host "  Backed up config version: $($backup.Version)" -ForegroundColor Dar
 # ============================================================
 # 9. Rename-BucketObject
 # ============================================================
-Write-Host "`n[9] Rename-BucketObject (in-place key change, preserves format)" -ForegroundColor Yellow
+Write-Host "`n[9] Rename-BucketObject (in-place key change, preserves format)" -ForegroundColor Blue
 Rename-BucketObject -Bucket archive -Key "Alice" -NewKey "alice-admin" -PassThru | Format-Table
 $renamed = Get-BucketObject -Bucket archive -Key "alice-admin"
 Write-Host "  Renamed user: $($renamed.Name) (key: alice-admin)" -ForegroundColor DarkGray
@@ -211,7 +211,7 @@ Write-Host "  Renamed user: $($renamed.Name) (key: alice-admin)" -ForegroundColo
 # ============================================================
 # 10. Export-Bucket & Import-Bucket
 # ============================================================
-Write-Host "`n[10] Export/Import bucket (archive to CLIXML/JSON, restore)" -ForegroundColor Yellow
+Write-Host "`n[10] Export/Import bucket (archive to CLIXML/JSON, restore)" -ForegroundColor Blue
 $exportPath = Join-Path $PSScriptRoot "test-export.clixml"
 $exportJson = Join-Path $PSScriptRoot "test-export.json"
 Export-Bucket -Bucket users -OutputFile $exportPath
@@ -225,7 +225,7 @@ Remove-Item $exportPath, $exportJson -Force
 # ============================================================
 # 11. -Compress switch
 # ============================================================
-Write-Host "`n[11] Binary compression (-Compress — GZip reduces repetitive data)" -ForegroundColor Yellow
+Write-Host "`n[11] Binary compression (-Compress — GZip reduces repetitive data)" -ForegroundColor Blue
 Remove-Bucket "compressed" -Force -Confirm:$false -WarningAction SilentlyContinue
 New-BucketObject -Bucket compressed -InputObject @{ _Id = "comp"; Data = "x" * 5000; Type = "compressed" } -KeyProperty "_Id" -Compress -Quiet
 New-BucketObject -Bucket compressed -InputObject @{ _Id = "uncomp"; Data = "x" * 5000; Type = "uncompressed" } -KeyProperty "_Id" -Quiet
@@ -241,7 +241,7 @@ Write-Host "  Decompressed data length: $($decompressed.Data.Length) chars" -For
 # ============================================================
 # 12. -WhatIf support
 # ============================================================
-Write-Host "`n[12] -WhatIf support (preview deletes without execution)" -ForegroundColor Yellow
+Write-Host "`n[12] -WhatIf support (preview deletes without execution)" -ForegroundColor Blue
 Remove-BucketObject -Bucket users -Key "Bob" -WhatIf
 Remove-Bucket "users" -WhatIf -Force -WarningAction SilentlyContinue -ErrorAction SilentlyContinue | Out-Null
 $remaining = Get-BucketObject -Bucket users -WarningAction SilentlyContinue
@@ -250,7 +250,7 @@ Write-Host "  Objects in 'users' after -WhatIf: $($remaining.Count) (unchanged)"
 # ============================================================
 # 13. Round-trip integrity
 # ============================================================
-Write-Host "`n[13] Round-trip integrity (save/load complex types and null)" -ForegroundColor Yellow
+Write-Host "`n[13] Round-trip integrity (save/load complex types and null)" -ForegroundColor Blue
 Remove-Bucket "roundtrip" -Force -Confirm:$false -WarningAction SilentlyContinue
 $roundTrip = [PSCustomObject]@{
     _Id = "test"
@@ -290,12 +290,12 @@ if ($null -eq $retrieved) {
 # ============================================================
 # 14. Error condition tests
 # ============================================================
-Write-Host "`n[14] Error conditions (missing keys, corrupted files, bad params)" -ForegroundColor Yellow
+Write-Host "`n[14] Error conditions (missing keys, corrupted files, bad params)" -ForegroundColor Blue
 
 Write-Host "  Missing bucket key..." -NoNewline
 try {
     Get-BucketObject -Bucket nonexistent-bucket-xyz -Key "missing" 2>$null
-    Write-Host " OK (returns empty)" -ForegroundColor Green
+    Write-Host " OK (returns empty)" -ForegroundColor Magenta
 } catch {
     Write-Host " FAIL: $_" -ForegroundColor Red
 }
@@ -303,7 +303,7 @@ try {
 Write-Host "  Remove non-existent key..." -NoNewline
 try {
     Remove-BucketObject -Bucket users -Key "nonexistent-key" -WarningVariable warn -WarningAction SilentlyContinue 2>$null
-    if ($warn) { Write-Host " OK (warning issued)" -ForegroundColor Green } else { Write-Host " FAIL (no warning)" -ForegroundColor Red }
+    if ($warn) { Write-Host " OK (warning issued)" -ForegroundColor Magenta } else { Write-Host " FAIL (no warning)" -ForegroundColor Red }
 } catch {
     Write-Host " FAIL: $_" -ForegroundColor Red
 }
@@ -313,7 +313,7 @@ try {
     Remove-BucketObject -Bucket users 2>$null
     Write-Host " FAIL (should have thrown)" -ForegroundColor Red
 } catch {
-    Write-Host " OK (threw: $($_.Exception.Message))" -ForegroundColor Green
+    Write-Host " OK (threw: $($_.Exception.Message))" -ForegroundColor Magenta
 }
 
 Write-Host "  Set-BucketObject without bucket/key..." -NoNewline
@@ -321,7 +321,7 @@ try {
     @{ Name = "test" } | Set-BucketObject 2>$null
     Write-Host " FAIL (should have thrown)" -ForegroundColor Red
 } catch {
-    Write-Host " OK (threw)" -ForegroundColor Green
+    Write-Host " OK (threw)" -ForegroundColor Magenta
 }
 
 Write-Host "  Corrupted file handling..." -NoNewline
@@ -332,7 +332,7 @@ $corruptPath = Join-Path $usersPath "corrupt.dat"
 $beforeCount = (Get-BucketObject -Bucket users).Count
 $retrieved = Get-BucketObject -Bucket users -Key "corrupt" -WarningVariable cWarn -WarningAction SilentlyContinue
 if ($null -eq $retrieved -and $cWarn) {
-    Write-Host " OK (warning issued, null returned)" -ForegroundColor Green
+    Write-Host " OK (warning issued, null returned)" -ForegroundColor Magenta
 } else {
     Write-Host " WARN (retrieved: $retrieved, warnings: $($cWarn.Count))" -ForegroundColor Yellow
 }
@@ -348,7 +348,7 @@ try {
     $newErrors = $Error.Count - $errorsBefore
     if ($null -eq $result -or $result.X -eq 1) {
         if ($newErrors -eq 0 -and $result.X -eq 1) {
-            Write-Host " OK (found in bucket-a, zero errors across all buckets)" -ForegroundColor Green
+            Write-Host " OK (found in bucket-a, zero errors across all buckets)" -ForegroundColor Magenta
         } else {
             Write-Host " FAIL (errors: $newErrors, result: $($result.X))" -ForegroundColor Red
         }
@@ -369,7 +369,7 @@ try {
     $result = Get-BucketObject -Bucket casetest -Key "mixedcase-key" -WarningAction SilentlyContinue 2>$null
     $newErrors = $Error.Count - $errorsBefore
     if ($null -ne $result -and $result.Val -eq 42 -and $newErrors -eq 0) {
-        Write-Host " OK (case-insensitive match, zero errors)" -ForegroundColor Green
+        Write-Host " OK (case-insensitive match, zero errors)" -ForegroundColor Magenta
     } else {
         Write-Host " FAIL (result: $($result.Val), errors: $newErrors)" -ForegroundColor Red
     }
@@ -384,7 +384,7 @@ $user.Role = "admin"
 $user | Set-BucketObject -Quiet
 $updated = Get-BucketObject -Bucket users -Key "Bob"
 if ($updated.Role -eq "admin") {
-    Write-Host " OK (role updated to admin)" -ForegroundColor Green
+    Write-Host " OK (role updated to admin)" -ForegroundColor Magenta
 } else {
     Write-Host " FAIL (role: $($updated.Role))" -ForegroundColor Red
 }
@@ -395,7 +395,7 @@ $origEmail = $before.Email
 @{ Email = "alice@patched.com" } | Set-BucketObject -Bucket users -Key "Alice" -Quiet
 $after = Get-BucketObject -Bucket users -Key "Alice"
 if ($after.Email -eq "alice@patched.com" -and $after.Name -eq "Alice" -and $after.Role -eq "admin") {
-    Write-Host " OK (email patched, other fields preserved)" -ForegroundColor Green
+    Write-Host " OK (email patched, other fields preserved)" -ForegroundColor Magenta
     @{ Email = $origEmail } | Set-BucketObject -Bucket users -Key "Alice" -Quiet
 } else {
     Write-Host " FAIL (email: $($after.Email), name: $($after.Name))" -ForegroundColor Red
@@ -406,7 +406,7 @@ New-BucketObject -Bucket users -InputObject ([PSCustomObject]@{ _Id = "patch-obj
 [PSCustomObject]@{ Val = 99; NewField = "added" } | Set-BucketObject -Bucket users -Key "patch-obj" -Quiet
 $patched = Get-BucketObject -Bucket users -Key "patch-obj"
 if ($patched.Val -eq 99 -and $patched.Name -eq "Test" -and $patched.NewField -eq "added") {
-    Write-Host " OK (value patched, new field added, name preserved)" -ForegroundColor Green
+    Write-Host " OK (value patched, new field added, name preserved)" -ForegroundColor Magenta
 } else {
     Write-Host " FAIL (val: $($patched.Val), name: $($patched.Name), new: $($patched.NewField))" -ForegroundColor Red
 }
@@ -418,16 +418,16 @@ try {
     Write-Host " FAIL (should have thrown)" -ForegroundColor Red
 } catch {
     if ($_.Exception.Message -like "*partial*" -or $_.Exception.Message -like "*Bucket*") {
-        Write-Host " OK (threw with patch message)" -ForegroundColor Green
+        Write-Host " OK (threw with patch message)" -ForegroundColor Magenta
     } else {
-        Write-Host " OK (threw: $($_.Exception.Message))" -ForegroundColor Green
+        Write-Host " OK (threw: $($_.Exception.Message))" -ForegroundColor Magenta
     }
 }
 
 # ============================================================
 # 15. Nested buckets (5 levels deep)
 # ============================================================
-Write-Host "`n[15] Nested buckets (5 levels deep)" -ForegroundColor Yellow
+Write-Host "`n[15] Nested buckets (5 levels deep)" -ForegroundColor Blue
 Remove-Bucket "org" -Force -Confirm:$false -WarningAction SilentlyContinue
 
 $nestedBucket = "org/eu/de/berlin/team-a"
@@ -482,7 +482,7 @@ Get-ChildItem "buckets:\org\eu" -ErrorAction SilentlyContinue | ForEach-Object {
 if ($euItems -contains "de") { $passCount++ } else { $failMsg += "provider: missing de at eu level" }
 
 if ($passCount -eq 7) {
-    Write-Host "  5-level deep nested buckets: OK (7/7 checks passed)" -ForegroundColor Green
+    Write-Host "  5-level deep nested buckets: OK (7/7 checks passed)" -ForegroundColor Magenta
 } else {
     Write-Host "  FAIL ($passCount/7 passed): $($failMsg -join ', ')" -ForegroundColor Red
 }
@@ -492,7 +492,7 @@ Remove-Bucket $nestedBucket -Force -Confirm:$false -WarningAction SilentlyContin
 $deepGone = $null -eq (Get-BucketObject -Bucket $nestedBucket -Key "profile" -WarningAction SilentlyContinue 2>$null)
 $parentIntact = (Get-BucketObject -Bucket "org/eu/de/berlin" -Key "info").City -eq "Berlin"
 if ($deepGone -and $parentIntact) {
-    Write-Host "  Deep remove: OK (removed leaf, parent preserved)" -ForegroundColor Green
+    Write-Host "  Deep remove: OK (removed leaf, parent preserved)" -ForegroundColor Magenta
 } else {
     Write-Host "  FAIL (deep gone: $deepGone, parent intact: $parentIntact)" -ForegroundColor Red
 }
@@ -501,7 +501,7 @@ if ($deepGone -and $parentIntact) {
 Remove-Bucket "org" -Recurse -Force -Confirm:$false -WarningAction SilentlyContinue
 $orgGone = -not (Test-Path (Join-Path $HOME ".buckets/org"))
 if ($orgGone) {
-    Write-Host "  Recursive remove: OK (entire tree removed)" -ForegroundColor Green
+    Write-Host "  Recursive remove: OK (entire tree removed)" -ForegroundColor Magenta
 } else {
     Write-Host "  FAIL (org directory still exists)" -ForegroundColor Red
 }
@@ -516,14 +516,14 @@ New-BucketObject -Bucket $nestedBucket -InputObject $teamData -Key "profile" -Qu
 # ============================================================
 # 15a. Get-Bucket -AsTree
 # ============================================================
-Write-Host "`n[15a] Get-Bucket -AsTree" -ForegroundColor Yellow
+Write-Host "`n[15a] Get-Bucket -AsTree" -ForegroundColor Blue
 $tree = Get-Bucket -AsTree -Raw -Name "org"
 $orgChildren = @($tree.Children | Where-Object { $_.Name -eq "org" })
 if ($orgChildren.Count -eq 1) {
     $orgNode = $orgChildren[0]
     # org bucket has 5 objects total (recursive), with eu as a child bucket
     if ($orgNode._BucketName -eq "org" -and $orgNode.ObjectCount -eq 5 -and $orgNode.Children.Count -ge 1 -and $orgNode.Children[0].Name -eq "eu") {
-        Write-Host "  Tree structure: OK (org → eu with correct nesting)" -ForegroundColor Green
+        Write-Host "  Tree structure: OK (org → eu with correct nesting)" -ForegroundColor Magenta
     } else {
         Write-Host "  FAIL (org node structure incorrect: _BucketName=$($orgNode._BucketName) ObjectCount=$($orgNode.ObjectCount) Children=$($orgNode.Children.Count) FirstChild=$($orgNode.Children[0].Name))" -ForegroundColor Red
     }
@@ -534,7 +534,7 @@ if ($orgChildren.Count -eq 1) {
 # Verify -Raw output has correct type
 $rawAll = Get-Bucket -AsTree -Raw
 if ($rawAll.PSObject.TypeNames[0] -eq "Buckets.Tree" -and $rawAll.Type -eq "Root") {
-    Write-Host "  Raw output type: OK (Buckets.Tree Root)" -ForegroundColor Green
+    Write-Host "  Raw output type: OK (Buckets.Tree Root)" -ForegroundColor Magenta
 } else {
     Write-Host "  FAIL (raw output type incorrect: $($rawAll.PSObject.TypeNames[0]))" -ForegroundColor Red
 }
@@ -542,7 +542,7 @@ if ($rawAll.PSObject.TypeNames[0] -eq "Buckets.Tree" -and $rawAll.Type -eq "Root
 # ============================================================
 # 15. Performance benchmark (1,000 objects — baseline throughput)
 # ============================================================
-Write-Host "`n[15] Performance benchmark (1,000 objects — baseline throughput)" -ForegroundColor Yellow
+Write-Host "`n[15] Performance benchmark (1,000 objects — baseline throughput)" -ForegroundColor Blue
 Remove-Bucket "perf-test" -Force -Confirm:$false -WarningAction SilentlyContinue
 $perfBench = [System.Diagnostics.Stopwatch]::StartNew()
 $perfObjects = 1..1000 | ForEach-Object {
@@ -568,7 +568,7 @@ if ($retrieved.Count -ne 1000) {
 # ============================================================
 # 16. Performance benchmark (10,000 objects)
 # ============================================================
-Write-Host "`n[16] Performance benchmark (10,000 objects — scale test)" -ForegroundColor Yellow
+Write-Host "`n[16] Performance benchmark (10,000 objects — scale test)" -ForegroundColor Blue
 Remove-Bucket "perf-10k" -Force -Confirm:$false -WarningAction SilentlyContinue
 $perfBench10k = [System.Diagnostics.Stopwatch]::StartNew()
 $perf10kObjects = 1..10000 | ForEach-Object {
@@ -594,7 +594,7 @@ if ($retrieved10k.Count -ne 10000) {
 # ============================================================
 # 17. Performance benchmark (10,000 complex objects)
 # ============================================================
-Write-Host "`n[17] Performance benchmark (10,000 complex objects — nested depth test)" -ForegroundColor Yellow
+Write-Host "`n[17] Performance benchmark (10,000 complex objects — nested depth test)" -ForegroundColor Blue
 Remove-Bucket "perf-10k-complex" -Force -Confirm:$false -WarningAction SilentlyContinue
 $perfBench10kC = [System.Diagnostics.Stopwatch]::StartNew()
 $perf10kCObjects = 1..10000 | ForEach-Object {
@@ -634,7 +634,7 @@ if ($retrieved10kC.Count -ne 10000) {
 else {
     $sample = $retrieved10kC[0]
     if ($sample.Profile.Preferences.Theme -and $sample.Orders.Count -eq 2 -and $sample.Metadata.Tags.Count -eq 3) {
-        Write-Host "  Integrity: OK (nested data preserved)" -ForegroundColor Green
+        Write-Host "  Integrity: OK (nested data preserved)" -ForegroundColor Magenta
     }
     else {
         Write-Host "  FAIL: Nested data integrity issue" -ForegroundColor Red
@@ -644,7 +644,7 @@ else {
 # ============================================================
 # 18. Performance benchmark JSON (1,000 objects)
 # ============================================================
-Write-Host "`n[18] Performance benchmark JSON (1,000 objects)" -ForegroundColor Yellow
+Write-Host "`n[18] Performance benchmark JSON (1,000 objects)" -ForegroundColor Blue
 Remove-Bucket "perf-json-1k" -Force -Confirm:$false -WarningAction SilentlyContinue
 $perfJsonBench = [System.Diagnostics.Stopwatch]::StartNew()
 $perfJsonObjects = 1..1000 | ForEach-Object {
@@ -670,7 +670,7 @@ if ($jsonRetrieved.Count -ne 1000) {
 # ============================================================
 # 19. Performance benchmark JSON (10,000 objects)
 # ============================================================
-Write-Host "`n[19] Performance benchmark JSON (10,000 objects)" -ForegroundColor Yellow
+Write-Host "`n[19] Performance benchmark JSON (10,000 objects)" -ForegroundColor Blue
 Remove-Bucket "perf-json-10k" -Force -Confirm:$false -WarningAction SilentlyContinue
 $perfJson10kBench = [System.Diagnostics.Stopwatch]::StartNew()
 $perfJson10kObjects = 1..10000 | ForEach-Object {
@@ -696,7 +696,7 @@ if ($jsonRetrieved10k.Count -ne 10000) {
 # ============================================================
 # 20. Performance benchmark JSON (10,000 complex objects)
 # ============================================================
-Write-Host "`n[20] Performance benchmark JSON (10,000 complex objects)" -ForegroundColor Yellow
+Write-Host "`n[20] Performance benchmark JSON (10,000 complex objects)" -ForegroundColor Blue
 Remove-Bucket "perf-json-complex" -Force -Confirm:$false -WarningAction SilentlyContinue
 $perfJsonCBench = [System.Diagnostics.Stopwatch]::StartNew()
 $perfJsonCObjects = 1..10000 | ForEach-Object {
@@ -736,7 +736,7 @@ if ($jsonRetrievedC.Count -ne 10000) {
 else {
     $sample = $jsonRetrievedC[0]
     if ($sample.Profile.Preferences.Theme -and $sample.Orders.Count -eq 2 -and $sample.Metadata.Tags.Count -eq 3) {
-        Write-Host "  Integrity: OK (nested data preserved)" -ForegroundColor Green
+        Write-Host "  Integrity: OK (nested data preserved)" -ForegroundColor Magenta
     }
     else {
         Write-Host "  FAIL: Nested data integrity issue" -ForegroundColor Red
