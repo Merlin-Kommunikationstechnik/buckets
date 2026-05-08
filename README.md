@@ -742,6 +742,89 @@ Import-Module Buckets
 . ./Buckets/Buckets.psm1
 ```
 
+## PSDrive Provider
+
+The module registers a `buckets:` PSDrive backed by a custom PowerShell provider. Navigate buckets like a filesystem:
+
+```powershell
+# List all buckets
+buckets:\> dir
+
+    Type LastWriteTime          CreationTime               Size Name
+    ---- -------------          ------------               ---- ----
+    b--  05/08/2026 10:30:00   05/08/2026 10:30:00       1 KB users
+    b--  05/08/2026 10:31:00   05/08/2026 10:31:00       2 KB orders
+    b--  05/08/2026 10:32:00   05/08/2026 10:32:00       4 KB ad
+
+# Enter a bucket
+buckets:\> cd users
+
+# List objects and nested buckets
+buckets:\users> dir
+
+    Type LastWriteTime          CreationTime               Size Name
+    ---- -------------          ------------               ---- ----
+    --o  05/08/2026 10:30:00   05/08/2026 10:30:00        1 KB alice
+    --o  05/08/2026 10:30:00   05/08/2026 10:30:00        2 KB bob
+    --o  05/08/2026 10:30:00   05/08/2026 10:30:00        1 KB charlie
+
+# Read an object's content (deserialized)
+buckets:\users> cat alice
+
+Name  Age Email
+----  --- -----
+Alice  30 alice@example.com
+
+# Nested buckets work as subdirectories
+buckets:\> cd ad/eu/de/berlin/users
+buckets:\ad\eu\de\berlin\users> dir
+```
+
+The `Type` column uses a visual indicator:
+- `b--` — bucket (container directory)
+- `--o` — object (`.dat` or `.json` file)
+
+### Key provider capabilities
+
+| Feature | Description |
+|---------|-------------|
+| Navigation | `cd`, `dir`, `ls` work as expected; nested buckets are real subdirectories |
+| Content | `cat` / `Get-Content` deserializes and displays object content |
+| New items | `New-Item` creates buckets (`-ItemType Directory`) or objects (omit type) |
+| Copy/Move | `Copy-Item`, `Move-Item`, `Rename-Item` work across buckets |
+| Remove | `Remove-Item` deletes objects; directory removal protected by safety checks |
+| WhatIf | All write operations support `-WhatIf` / `-Confirm` |
+| Tab completion | Tab-complete bucket names, object keys, and provider paths |
+| Cross-drive | Full `buckets:` path completion in native cmdlets like `Get-ChildItem` |
+
+### Column display format
+
+Default columns shown by `dir` / `Get-ChildItem`:
+
+| Column | Description |
+|--------|-------------|
+| Type | `b--` (bucket) or `--o` (object) |
+| LastWriteTime | Last modification timestamp (25 char width) |
+| CreationTime | Creation timestamp (25 char width) |
+| Size | Human-readable size, right-aligned (12 char width) |
+| Name | Bucket name or object key (filename without extension) |
+
+### Content reading
+
+`cat` / `Get-Content` deserializes the object and returns it as a PSObject for interactive inspection or piping:
+
+```powershell
+# Read and pipe to filter
+buckets:\users> cat alice | Select-Object Name, Age
+
+# Pipe to update
+buckets:\users> cat alice | ForEach-Object { $_.Age = 31; $_ } | Set-Content alice
+```
+
+Writing multiple items to a file wraps them in an array. JSON and binary formats are auto-detected from the file extension.
+
+The provider is created automatically on module import via `Sync-BucketDrive`. Re-create it manually after changing `$env:BUCKETS_ROOT`.
+
 ## API Reference
 
 | Cmdlet | Description |
