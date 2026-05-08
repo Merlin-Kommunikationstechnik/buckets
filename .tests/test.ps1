@@ -540,6 +540,25 @@ if ($rawAll.PSObject.TypeNames[0] -eq "Buckets.Tree" -and $rawAll.Type -eq "Root
 }
 
 # ============================================================
+# 15b. Get-BucketObject -Key across all buckets (nested)
+# ============================================================
+Write-Host "`n[15b] Get-BucketObject -Key across all buckets (nested)" -ForegroundColor Blue
+
+$errorsBefore = $Error.Count
+$result = Get-BucketObject -Key "info" -WarningAction SilentlyContinue 2>$null
+$newErrors = $Error.Count - $errorsBefore
+if ($result.Count -eq 3 -and $newErrors -eq 0) {
+    $names = $result | ForEach-Object { $_.PSObject.Properties["_BucketName"].Value }
+    if ($names -contains "eu" -and $names -contains "de" -and $names -contains "berlin") {
+        Write-Host "  OK (3 info objects found across nested buckets, zero errors)" -ForegroundColor Magenta
+    } else {
+        Write-Host "  FAIL (unexpected bucket names: $($names -join ', '))" -ForegroundColor Red
+    }
+} else {
+    Write-Host "  FAIL (found $($result.Count) objects, $newErrors errors)" -ForegroundColor Red
+}
+
+# ============================================================
 # 15. Performance benchmark (1,000 objects — baseline throughput)
 # ============================================================
 Write-Host "`n[15] Performance benchmark (1,000 objects — baseline throughput)" -ForegroundColor Blue

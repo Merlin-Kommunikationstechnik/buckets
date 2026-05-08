@@ -935,9 +935,7 @@ function Get-BucketObject {
         }
     }
     else {
-        if ([System.IO.Directory]::Exists($Path)) {
-            $bucketPaths += [System.IO.DirectoryInfo]::new($Path).GetDirectories() | ForEach-Object { $_.FullName }
-        }
+        $bucketPaths += Get-Bucket -Path $Path | ForEach-Object { $_.Path }
     }
 
     $allObjects = [System.Collections.ArrayList]::new()
