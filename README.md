@@ -12,7 +12,7 @@ A PowerShell module for file-based PSObject storage. Store, retrieve, and manage
 Import-Module ./Buckets
 
 # Save objects (binary by default)
-New-BucketObject -InputObject @{ Name = "Alice"; Age = 30 } -Key Name
+New-BucketObject -InputObject @{ Name = "Alice"; Age = 30 } -KeyProperty Name
 
 # Retrieve
 Get-BucketObject | Select-Object Name, Age
@@ -30,6 +30,8 @@ Get-Bucket
 
 Objects that exceed JSON depth are automatically saved as binary with a warning. Use `-BinaryDepth` to control binary serialization detail (default: `2`).
 
+Binary files can be compressed via `-Compress` (GZip, ~95% reduction on repetitive data). Compression is auto-detected on read via magic bytes.
+
 ## Cmdlets
 
 ### New-BucketObject
@@ -42,10 +44,13 @@ New-BucketObject
     [[-Bucket] <string>]
     [[-Path] <string>]
     [[-Key] <string>]
+    [-KeyProperty <string>]
     [-Depth <int>]
     [-BinaryDepth <int>]
     [-AsTimestamp]
     [-AsJson]
+    [-Compress]
+    [-Overwrite]
     [-Quiet]
     [<CommonParameters>]
 ```
@@ -55,45 +60,45 @@ New-BucketObject
 | `-InputObject` | Object(s) to store | Required, accepts pipeline |
 | `-Bucket` | Bucket name | `"default"` |
 | `-Path` | Storage root directory | `$HOME/.buckets` |
-| `-Key` | Property name whose value becomes the filename | GUID |
-| `-Depth` | JSON serialization depth | `20` |
-| `-BinaryDepth` | Binary serialization depth | `2` |
-| `-AsTimestamp` | Use timestamp as filename | `false` |
+| `-Key` | Literal filename (no extension) | GUID |
+| `-KeyProperty` | Property name whose value becomes the filename | — |
+| `-Depth` | JSON serialization depth (1–100) | `20` |
+| `-BinaryDepth` | Binary serialization depth (1–10) | `2` |
+| `-AsTimestamp` | Use timestamp as filename `yyyyMMddHHmmssfff_index` | `false` |
 | `-AsJson` | Store as JSON instead of binary | `false` |
+| `-Compress` | GZip compress binary `.dat` files | `false` |
+| `-Overwrite` | Overwrite objects with the same key | `false` |
 | `-Quiet` | Suppress all output (no progress, no summary) | `false` |
-| `-Overwrite` | Overwrite existing objects with the same key | `false` |
-| `-ArrayTracking` | Tag array items for later reconstruction via `-GroupArrays` | `false` |
 
 Default behaviour: shows a progress indicator and final summary. Use `-Verbose` for per-object details.
 
-#### Key Parameter
+#### Key vs KeyProperty
 
-`-Key` takes a **property name**. The value of that property on each object becomes the filename:
+`-Key` sets a literal filename. `-KeyProperty` names a property whose value becomes the filename:
 
 ```powershell
-# Single object: creates Alice.dat
-New-BucketObject -Bucket users -InputObject @{ Name = "Alice" } -Key Name
+# Literal filename: creates Alice.dat
+New-BucketObject -Bucket users -InputObject @{ Name = "Alice" } -Key "Alice"
 
-# Array: creates bob.dat, charlie.dat
+# Property value: creates Alice.dat from the Name property
+New-BucketObject -Bucket users -InputObject @{ Name = "Alice" } -KeyProperty Name
+
+# Array keyed by property: creates bob.dat, charlie.dat
 $users = @(
     @{ Name = "Bob"; Age = 25 }
     @{ Name = "Charlie"; Age = 35 }
 )
-New-BucketObject -Bucket users -InputObject $users -Key Name
-
-# Or pipe the array (add -ArrayTracking for grouping metadata)
-$users | New-BucketObject -Bucket users -Key Name
-$users | New-BucketObject -Bucket users -Key Name -ArrayTracking
+New-BucketObject -Bucket users -InputObject $users -KeyProperty Name
 
 # Special characters are sanitized (/, :, *, etc. become _)
 ```
 
-Without `-Key`, each object gets a unique GUID filename.
+Without `-Key` or `-KeyProperty`, each object gets a unique GUID filename.
 
 #### Examples
 
 ```powershell
-# Default: progress bar and summary
+# Default: progress and summary
 New-BucketObject -InputObject @{ Name = "test" }
 
 # Verbose: per-object details
@@ -103,19 +108,19 @@ New-BucketObject -InputObject @{ Name = "test" } -Verbose
 New-BucketObject -InputObject @{ Name = "test" } -Quiet
 
 # Named bucket, keyed by property
-New-BucketObject -Bucket users -InputObject $users -Key Email
+New-BucketObject -Bucket users -InputObject $users -KeyProperty Email
 
 # JSON format
-New-BucketObject -Bucket users -InputObject $users -Key Name -AsJson
+New-BucketObject -Bucket users -InputObject $users -KeyProperty Name -AsJson
 
 # Timestamp-based filenames
 Get-Process | New-BucketObject -Bucket processes -AsTimestamp
 
-# Array (each element stored individually)
-$items | New-BucketObject -Bucket items
+# Compressed binary
+New-BucketObject -Bucket logs -InputObject $logs -Compress
 
 # Custom storage location
-New-BucketObject -Path /tmp/buckets -InputObject $data -Key Name
+New-BucketObject -Path /tmp/buckets -InputObject $data -KeyProperty Name
 ```
 
 ---
@@ -133,49 +138,20 @@ Get-BucketObject
     [-Filter <scriptblock>]
     [-First <int>]
     [-Skip <int>]
-    [-GroupArrays]
     [<CommonParameters>]
 ```
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
-| `-Key` | Object key to retrieve | All objects |
-| `-Bucket` | Bucket name(s) to search | All buckets |
+| `-Key` | Object key to retrieve (prefix match, case-insensitive) | All objects |
+| `-Bucket` | Bucket name(s) to search (supports wildcards `*`, `?`) | All buckets |
 | `-Path` | Storage root directory | `$HOME/.buckets` |
-| `-Match` | Hashtable of exact-match filters | — |
-| `-Filter` | ScriptBlock for custom filtering | — |
-| `-First` | Return only the first N objects (or array groups) | — |
-| `-Skip` | Skip the first N objects (or array groups) | — |
-| `-GroupArrays` | Reassemble arrays stored as individual files | `false` |
+| `-Match` | Hashtable of exact-match filters (supports `$null` for absent properties) | — |
+| `-Filter` | ScriptBlock for custom filtering (`$_` references the object) | — |
+| `-First` | Return only the first N objects | — |
+| `-Skip` | Skip the first N objects | — |
 
-Retrieved objects include metadata properties: `_BucketName`, `_BucketKey`, `_BucketFile`. Objects that were saved as part of an array also include `_ArrayId` and `_ArrayIndex` for grouping.
-
-#### Array Tracking
-
-Use `-ArrayTracking` to tag array items with `_ArrayId` (shared GUID) and `_ArrayIndex` (original position) so they can be reconstructed later:
-
-```powershell
-# Save array with tracking
-$items = @(
-    @{ _Id = "a1"; Name = "First" }
-    @{ _Id = "a2"; Name = "Second" }
-    @{ _Id = "a3"; Name = "Third" }
-)
-New-BucketObject -Bucket orders -InputObject $items -Key _Id -ArrayTracking
-
-# Or pipe with tracking
-$items | New-BucketObject -Bucket orders -Key _Id -ArrayTracking
-
-# Read back with grouping
-$result = Get-BucketObject -Bucket orders -GroupArrays
-$result._ArrayItems  # The reassembled array, sorted by original index
-```
-
-Without `-ArrayTracking`, objects are saved individually with no grouping metadata.
-
-`-GroupArrays` returns wrapper objects with:
-- `_ArrayGroup` — `$true` for array groups, absent for standalone objects
-- `_ArrayItems` — the reassembled array (sorted by `_ArrayIndex`), with `_ArrayId`/`_ArrayIndex` stripped
+Retrieved objects include metadata properties: `_BucketName`, `_BucketKey`, `_BucketFile`.
 
 #### Examples
 
@@ -191,14 +167,16 @@ Get-BucketObject -Bucket users, orders
 
 # Wildcard patterns
 Get-BucketObject -Bucket "user*"
-Get-BucketObject "Alice" "*_log"
 
 # By key
-Get-BucketObject "Alice"
-Get-BucketObject "Alice" users
+Get-BucketObject -Key "Alice"
+Get-BucketObject -Key "Alice" -Bucket users
 
 # Hashtable filter (exact match)
 Get-BucketObject -Bucket users -Match @{ Role = "admin" }
+
+# Match null (property must be absent)
+Get-BucketObject -Bucket users -Match @{ Deleted = $null }
 
 # ScriptBlock filter (full expression support)
 Get-BucketObject -Bucket users -Filter { $_.Age -gt 30 }
@@ -211,19 +189,9 @@ Get-BucketObject -Filter { $_.Price -gt 20 }
 # Search for a key across all buckets
 Get-BucketObject -Key "special-item"
 
-# Reassemble stored arrays
-$result = Get-BucketObject -Bucket orders -GroupArrays
-$result._ArrayItems  # Array items in original order
-
-# Mixed: array groups + standalone objects
-Get-BucketObject -Bucket orders -GroupArrays | ForEach-Object {
-    if ($_.PSObject.Properties['_ArrayGroup'] -and $_._ArrayGroup) {
-        "Array group: $($_._ArrayItems.Count) items"
-    }
-    else {
-        "Standalone: $($_._Id)"
-    }
-}
+# Limit results
+Get-BucketObject -Bucket users -First 10
+Get-BucketObject -Bucket users -Skip 5 -First 5
 ```
 
 ---
@@ -241,6 +209,8 @@ Set-BucketObject
     [-Depth <int>]
     [-BinaryDepth <int>]
     [-AsJson]
+    [-Compress]
+    [-Quiet]
     [<CommonParameters>]
 ```
 
@@ -253,6 +223,8 @@ Set-BucketObject
 | `-Depth` | JSON serialization depth | `20` |
 | `-BinaryDepth` | Binary serialization depth | `2` |
 | `-AsJson` | Force JSON format | — |
+| `-Compress` | GZip compress binary output | `false` |
+| `-Quiet` | Suppress output | `false` |
 
 #### Examples
 
@@ -281,8 +253,26 @@ Remove-BucketObject
     [[-Path] <string>]
     [[-Key] <string>]
     [-All]
+    [-Match <hashtable>]
+    [-Filter <scriptblock>]
+    [-PassThru]
+    [-Quiet]
+    [-WhatIf]
+    [-Confirm]
     [<CommonParameters>]
 ```
+
+| Parameter | Description |
+|-----------|-------------|
+| `-Bucket` | Bucket name |
+| `-Path` | Storage root directory |
+| `-Key` | Object key to remove |
+| `-All` | Remove all objects from the bucket |
+| `-Match` | Hashtable filter (exact match, supports `$null`) |
+| `-Filter` | ScriptBlock filter (`$_` references the object) |
+| `-PassThru` | Return the removed object's metadata |
+| `-Quiet` | Suppress output |
+| `-WhatIf` | Preview without removing |
 
 #### Examples
 
@@ -292,29 +282,192 @@ Remove-BucketObject -Bucket users -Key "Alice"
 
 # Remove all objects from bucket
 Remove-BucketObject -Bucket users -All
+
+# Remove matching objects
+Remove-BucketObject -Bucket users -Match @{ Status = "inactive" }
+
+# Remove with WhatIf preview
+Remove-BucketObject -Bucket temp -All -WhatIf
 ```
 
 ---
 
-### Get-Bucket
+### Copy-BucketObject
 
-Lists available buckets with object counts.
+Copies an object within or between buckets.
 
 ```powershell
-Get-Bucket
-    [[-Name] <string>]
-    [-Path <string>]
+Copy-BucketObject
+    [-Bucket] <string>
+    [[-Path] <string>]
+    [-Key] <string>
+    [-DestinationBucket <string>]
+    [-DestinationKey <string>]
+    [-PassThru]
+    [-Quiet]
+    [<CommonParameters>]
+```
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `-Bucket` | Source bucket name | Required |
+| `-Key` | Source object key | Required |
+| `-DestinationBucket` | Destination bucket name | Same as `-Bucket` |
+| `-DestinationKey` | Destination object key | Same as `-Key` |
+| `-Path` | Storage root directory | `$HOME/.buckets` |
+| `-PassThru` | Return metadata for the copied object | `false` |
+
+#### Examples
+
+```powershell
+# Copy within same bucket
+Copy-BucketObject -Bucket users -Key "Alice" -DestinationKey "Alice-Backup"
+
+# Copy to another bucket
+Copy-BucketObject -Bucket users -Key "Alice" -DestinationBucket archive
+```
+
+---
+
+### Rename-BucketObject
+
+Renames an object within a bucket.
+
+```powershell
+Rename-BucketObject
+    [-Bucket] <string>
+    [[-Path] <string>]
+    [-Key] <string>
+    [-NewKey] <string>
+    [-PassThru]
+    [-Quiet]
     [<CommonParameters>]
 ```
 
 #### Examples
 
 ```powershell
-# List all buckets
+Rename-BucketObject -Bucket users -Key "Alice" -NewKey "Alice-Smith"
+```
+
+---
+
+### Move-BucketObject
+
+Moves an object between buckets (copy + delete original).
+
+```powershell
+Move-BucketObject
+    [-Bucket] <string>
+    [[-Path] <string>]
+    [-Key] <string>
+    [-DestinationBucket <string>]
+    [-DestinationKey <string>]
+    [-PassThru]
+    [-Quiet]
+    [<CommonParameters>]
+```
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `-Bucket` | Source bucket name | Required |
+| `-Key` | Source object key | Required |
+| `-DestinationBucket` | Destination bucket name | Same as `-Bucket` |
+| `-DestinationKey` | Destination object key | Same as `-Key` |
+
+#### Examples
+
+```powershell
+# Move to another bucket
+Move-BucketObject -Bucket users -Key "Alice" -DestinationBucket archive
+
+# Rename during move
+Move-BucketObject -Bucket users -Key "Alice" -DestinationBucket archive -DestinationKey "Alice-2024"
+```
+
+---
+
+### Get-Bucket
+
+Lists available buckets with object counts. Supports tree visualization.
+
+```powershell
+Get-Bucket
+    [[-Name] <string>]
+    [-Path <string>]
+    [-AsTree]
+    [-NoObjects]
+    [-Raw]
+    [-MaxFiles <int>]
+    [-Depth <int>]
+    [<CommonParameters>]
+```
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `-Name` | Filter buckets by name (substring match on full nested path) | All buckets |
+| `-Path` | Storage root directory | `$HOME/.buckets` |
+| `-AsTree` | Render a colorized tree view of all buckets and files | `false` |
+| `-NoObjects` | Hide individual files in tree view | `false` (files shown) |
+| `-Raw` | Return structured tree objects (`Buckets.Tree`) instead of formatted text | `false` |
+| `-MaxFiles` | Max files per bucket in tree view | `5` |
+| `-Depth` | Max depth to display in tree view | Unlimited |
+
+#### Examples
+
+```powershell
+# List all buckets (recursive scan)
 Get-Bucket
 
 # Filter by name pattern
 Get-Bucket "user"
+
+# Tree view
+Get-Bucket -AsTree
+
+# Tree view, no files
+Get-Bucket -AsTree -NoObjects
+
+# Tree view, more files per bucket
+Get-Bucket -AsTree -MaxFiles 20
+
+# Raw structured objects (pipeable)
+Get-Bucket -AsTree -Raw | ConvertTo-Json -Depth 5
+```
+
+---
+
+### Get-BucketKeys
+
+Lists object keys within a bucket.
+
+```powershell
+Get-BucketKeys
+    [[-Bucket] <string>]
+    [-Path <string>]
+    [-Match <string>]
+    [<CommonParameters>]
+```
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `-Bucket` | Bucket name (supports wildcards `*`, `?`) | All top-level buckets |
+| `-Path` | Storage root directory | `$HOME/.buckets` |
+| `-Match` | Wildcard filter on key names (case-insensitive, `-like`) | All keys |
+
+Returns `PSCustomObject` with `Bucket`, `Key`, `Format`, `Size`.
+
+#### Examples
+
+```powershell
+# All keys in a bucket
+Get-BucketKeys -Bucket users
+
+# Keys matching a pattern
+Get-BucketKeys -Bucket orders -Match "ORD-*"
+
+# Keys across multiple buckets
+Get-BucketKeys -Bucket "temp*"
 ```
 
 ---
@@ -350,21 +503,24 @@ NewestObject : 2024-01-20 14:22:00
 
 ### Remove-Bucket
 
-Removes one or more buckets and all their contents. Supports wildcard patterns.
+Removes one or more buckets and all their contents. Supports wildcards and nested buckets.
 
 ```powershell
 Remove-Bucket
     [-Bucket] <string[]>
     [[-Path] <string>]
+    [-Recurse]
     [-Force]
     [-WhatIf]
+    [-Confirm]
     [<CommonParameters>]
 ```
 
 | Parameter | Description |
 |-----------|-------------|
-| `-Bucket` | Bucket name(s) or wildcard patterns |
+| `-Bucket` | Bucket name(s) or wildcard patterns (`*`, `?`). Nested paths like `"projects/myapp"` |
 | `-Path` | Storage root directory |
+| `-Recurse` | Remove target bucket AND all nested sub-buckets |
 | `-Force` | Skip confirmation prompt |
 | `-WhatIf` | Preview what would be removed |
 
@@ -381,6 +537,9 @@ Remove-Bucket -Bucket users, temp -Force
 Remove-Bucket -Bucket "temp*" -Force
 Remove-Bucket -Bucket "*_archive" -Force
 
+# Nested bucket with all sub-buckets
+Remove-Bucket -Bucket "projects/myapp" -Recurse
+
 # All buckets (with confirmation)
 Remove-Bucket *
 
@@ -388,13 +547,121 @@ Remove-Bucket *
 Remove-Bucket * -WhatIf
 ```
 
+Safe by design: only removes directories containing exclusively `.dat`/`.json` files (or empty). Skips buckets with other file types with a warning.
+
+---
+
+### Export-Bucket
+
+Exports an entire bucket to a single archive file.
+
+```powershell
+Export-Bucket
+    [-Bucket] <string[]>
+    [-OutputFile] <string>
+    [-Path <string>]
+    [-AsJson]
+    [-Compress]
+    [-Quiet]
+    [<CommonParameters>]
+```
+
+| Parameter | Description |
+|-----------|-------------|
+| `-Bucket` | Bucket name(s) to export (supports wildcards) |
+| `-OutputFile` | Output archive file path |
+| `-Path` | Storage root directory |
+| `-AsJson` | Export as JSON archive (default: CLIXML/PSSerializer) |
+| `-Compress` | GZip compress CLIXML archives |
+| `-Quiet` | Suppress output |
+
+#### Examples
+
+```powershell
+Export-Bucket -Bucket users -OutputFile users-backup.clixml
+Export-Bucket -Bucket "projects/*" -OutputFile projects.json -AsJson
+```
+
+---
+
+### Import-Bucket
+
+Imports objects from an archive file into a bucket.
+
+```powershell
+Import-Bucket
+    [-Bucket] <string>
+    [-InputFile] <string>
+    [-AsJson]
+    [-Overwrite]
+    [-Quiet]
+    [<CommonParameters>]
+```
+
+| Parameter | Description |
+|-----------|-------------|
+| `-Bucket` | Destination bucket name |
+| `-InputFile` | Archive file to import |
+| `-AsJson` | Force JSON import (auto-detected by `.json` extension) |
+| `-Overwrite` | Overwrite existing objects |
+| `-Quiet` | Suppress output |
+
+#### Examples
+
+```powershell
+Import-Bucket -Bucket users -InputFile users-backup.clixml
+Import-Bucket -Bucket projects -InputFile projects.json -Overwrite
+```
+
+---
+
+### Set-BucketRoot / Get-BucketRoot
+
+Override or query the session's bucket storage root.
+
+```powershell
+Set-BucketRoot [-Path] <string>
+Get-BucketRoot
+```
+
+`Set-BucketRoot` changes the default root for the current session. `Get-BucketRoot` returns the effective root (priority: session override > `$env:BUCKETS_ROOT` > `$HOME/.buckets`).
+
+```powershell
+# Override root for the session
+Set-BucketRoot /mnt/storage/buckets
+
+# Query current root
+Get-BucketRoot
+```
+
+---
+
+### Sync-BucketDrive
+
+Creates or updates the `buckets:` PSDrive using the custom Buckets provider.
+
+```powershell
+Sync-BucketDrive
+```
+
+Called automatically on module import and by `Set-BucketRoot`. Run manually after changing `$env:BUCKETS_ROOT`.
+
+```powershell
+# Navigate buckets like a filesystem
+buckets:\> dir
+buckets:\users\> cd alice.dat
+buckets:\users\alice.dat> cat
+```
+
+---
+
 ## Pipeline Support
 
 Most cmdlets accept pipeline input:
 
 ```powershell
 # Save pipeline output directly
-Get-ChildItem / | New-BucketObject -Bucket root -Key Name
+Get-ChildItem / | New-BucketObject -Bucket root -KeyProperty Name
 
 # Retrieve and filter
 Get-BucketObject -Bucket users | Where-Object { $_.Age -gt 30 }
@@ -406,7 +673,13 @@ Get-BucketObject -Bucket users | ForEach-Object {
 } | Set-BucketObject
 ```
 
+`Set-BucketObject` auto-detects bucket and key from `_BucketName` and `_BucketKey` metadata properties, so you can pipe results from `Get-BucketObject` directly.
+
+---
+
 ## Storage Structure
+
+Buckets support nesting via path separators in bucket names. Nested buckets are real subdirectories:
 
 ```
 .buckets/
@@ -415,12 +688,46 @@ Get-BucketObject -Bucket users | ForEach-Object {
 │   ├── bob.dat            (binary)
 │   └── charlie.json       (JSON, saved with -AsJson)
 ├── orders/
-│   ├── 20240101.dat       (GUID key)
-│   └── ORD-001.dat        (custom key)
+│   ├── 2024/
+│   │   ├── ORD-001.dat
+│   │   └── ORD-002.dat
+│   └── 2025/
+│       └── ORD-003.dat
+├── ad/                    (nested hierarchy example)
+│   ├── eu/
+│   │   ├── de/
+│   │   │   └── berlin/
+│   │   │       ├── computers/
+│   │   │       ├── groups/
+│   │   │       └── users/
+│   │   └── uk/
+│   │       └── london/
+│   │           ├── computers/
+│   │           ├── groups/
+│   │           └── users/
+│   └── us/
 └── default/
     ├── a1b2c3.dat
     └── d4e5f6.dat
 ```
+
+Use nested bucket paths like `Get-BucketObject -Bucket "ad/eu/de/berlin/users"` or wildcards like `Get-BucketObject -Bucket "ad/*/*/users"`.
+
+---
+
+## Building from Source
+
+The module includes a C# PSProvider component that must be compiled for PSDrive support:
+
+```powershell
+# Using the build script
+./build.ps1
+
+# Manual dotnet build
+dotnet build Buckets/BucketsProvider.csproj
+```
+
+On macOS, use `build.ps1` or `dotnet build` directly (`Add-Type` may fail due to missing framework assemblies).
 
 ## Importing the Module
 
@@ -434,3 +741,24 @@ Import-Module Buckets
 # Dot-source for development
 . ./Buckets/Buckets.psm1
 ```
+
+## API Reference
+
+| Cmdlet | Description |
+|--------|-------------|
+| `New-BucketObject` | Save objects to a bucket |
+| `Get-BucketObject` | Retrieve objects from buckets |
+| `Set-BucketObject` | Update an existing object |
+| `Remove-BucketObject` | Remove objects by key, filter, or all |
+| `Copy-BucketObject` | Copy objects within or between buckets |
+| `Rename-BucketObject` | Rename an object's key |
+| `Move-BucketObject` | Move objects between buckets |
+| `Get-Bucket` | List buckets (text or tree view) |
+| `Get-BucketKeys` | List object keys in a bucket |
+| `Get-BucketStats` | Show bucket statistics |
+| `Remove-Bucket` | Remove buckets (supports wildcards, nested, WhatIf) |
+| `Export-Bucket` | Export bucket to archive |
+| `Import-Bucket` | Import objects from archive |
+| `Set-BucketRoot` | Override session storage root |
+| `Get-BucketRoot` | Query effective storage root |
+| `Sync-BucketDrive` | Refresh the `buckets:` PSDrive |
