@@ -71,14 +71,55 @@ Remove-Module Buckets -ErrorAction SilentlyContinue
 Import-Module "$PSScriptRoot/../../Buckets" -Force
 
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
-Write-Host "========================================" -ForegroundColor Cyan
-Write-Host " Active Directory Simulator" -ForegroundColor Cyan
-Write-Host "========================================`n" -ForegroundColor Cyan
+$startTs = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+
+function Write-InfoBlock {
+    param([string]$Mode)
+    $mod = Get-Module Buckets
+    $pwsh = "$($PSVersionTable.PSVersion) ($($PSVersionTable.PSEdition))"
+    $os = if ($IsMacOS) { "macOS" } elseif ($IsLinux) { "Linux" } else { "Windows" }
+    $sep = "=" * 52
+    if ($Mode -eq "top") {
+        Write-Host $sep -ForegroundColor DarkGray
+        Write-Host " Buckets Module" -NoNewline -ForegroundColor Blue
+        Write-Host " v$($mod.Version)" -NoNewline -ForegroundColor Magenta
+        Write-Host " AD Simulator" -ForegroundColor DarkGray
+        Write-Host " $startTs" -NoNewline -ForegroundColor DarkGray
+        Write-Host " · " -NoNewline -ForegroundColor DarkGray
+        Write-Host $pwsh -NoNewline -ForegroundColor Cyan
+        Write-Host " · " -NoNewline -ForegroundColor DarkGray
+        Write-Host $os -ForegroundColor DarkGray
+        Write-Host $sep -ForegroundColor DarkGray
+    }
+    else {
+        $elapsed = $sw.ElapsedMilliseconds
+        $endTs = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+        Write-Host $sep -ForegroundColor DarkGray
+        Write-Host " Done" -NoNewline -ForegroundColor Blue
+        Write-Host " · " -NoNewline -ForegroundColor DarkGray
+        Write-Host "${elapsed}ms" -ForegroundColor Magenta
+        Write-Host " $endTs" -NoNewline -ForegroundColor DarkGray
+        Write-Host " · " -NoNewline -ForegroundColor DarkGray
+        Write-Host $pwsh -NoNewline -ForegroundColor Cyan
+        Write-Host " · " -NoNewline -ForegroundColor DarkGray
+        Write-Host $os -ForegroundColor DarkGray
+        Write-Host $sep -ForegroundColor DarkGray
+    }
+}
+
+Write-InfoBlock -Mode top
+
+$createdBuckets = [System.Collections.ArrayList]::new()
+function Use-Bucket {
+    param([string]$Bucket)
+    $null = $createdBuckets.Add($Bucket)
+}
 
 # ============================================================
 # Configuration
 # ============================================================
 $BucketRoot = "ad"
+Use-Bucket $BucketRoot
 $usersPerLocation = 8
 $groupsPerLocation = 3
 $computersPerLocation = 5
@@ -263,8 +304,11 @@ foreach ($region in $structure.regions) {
                 address         = "$city, $($country.description)"
                 contact         = "admin-$city@example.com"
             } -Key "location-info" -Quiet
+            Use-Bucket "$BucketRoot/$cityPath"
         }
+        Use-Bucket "$BucketRoot/$countryPath"
     }
+    Use-Bucket "$BucketRoot/$regionPath"
 }
 Write-Host "  Created $ouCount OUs" -ForegroundColor DarkGray
 
@@ -288,6 +332,7 @@ foreach ($region in $structure.regions) {
                 $users += $u
             }
             $users | New-BucketObject -Bucket "$BucketRoot/$location/users" -KeyProperty _Id -Quiet
+            Use-Bucket "$BucketRoot/$location/users"
             $userCount += $users.Count
         }
     }
@@ -309,6 +354,7 @@ foreach ($region in $structure.regions) {
                 $groups += $g
             }
             $groups | New-BucketObject -Bucket "$BucketRoot/$location/groups" -KeyProperty _Id -Quiet
+            Use-Bucket "$BucketRoot/$location/groups"
             $groupCount += $groups.Count
         }
     }
@@ -326,6 +372,7 @@ foreach ($region in $structure.regions) {
                 $computers += New-ADComputer -Location $location -Index $i
             }
             $computers | New-BucketObject -Bucket "$BucketRoot/$location/computers" -KeyProperty _Id -Quiet
+            Use-Bucket "$BucketRoot/$location/computers"
             $computerCount += $computers.Count
         }
     }
@@ -335,19 +382,16 @@ Write-Host "  Created $computerCount computers" -ForegroundColor DarkGray
 # ============================================================
 # Summary
 # ============================================================
-$elapsed = $sw.ElapsedMilliseconds
 $totalItems = $userCount + $groupCount + $computerCount + $ouCount + 2
 
-Write-Host "`n========================================" -ForegroundColor Cyan
-Write-Host " Active Directory Simulation Complete" -ForegroundColor Cyan
-Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "  Regions:           $($structure.regions.Count)" -ForegroundColor DarkGray
 Write-Host "  OUs:               $ouCount" -ForegroundColor DarkGray
 Write-Host "  Users:             $userCount" -ForegroundColor DarkGray
 Write-Host "  Groups:            $groupCount" -ForegroundColor DarkGray
 Write-Host "  Computers:         $computerCount" -ForegroundColor DarkGray
 Write-Host "  Total objects:     $totalItems" -ForegroundColor DarkGray
-Write-Host "  Time:              ${elapsed}ms" -ForegroundColor DarkGray
+
+Write-InfoBlock -Mode bottom
 
 Write-Host "`n[Bucket Tree]" -ForegroundColor Blue
 Get-Bucket -AsTree -Name $BucketRoot -NoObjects
@@ -391,3 +435,9 @@ Write-Host "    > Get-BucketObject -Bucket 'ad/*/*/computers' | Where-Object { `
 $servers = Get-BucketObject -Bucket "ad/*/*/computers" | Where-Object { $_.operatingSystem -like "*Server*" -and $_.enabled }
 $servers | Select-Object sAMAccountName, operatingSystem, type | Format-Table
 Write-Host "    Total: $($servers.Count) active servers" -ForegroundColor DarkGray
+
+foreach ($bucket in $createdBuckets) {
+    Remove-Bucket -Bucket $bucket -Force -Confirm:$false -WarningAction SilentlyContinue
+}
+
+Write-InfoBlock -Mode bottom

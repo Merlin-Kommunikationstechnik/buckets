@@ -2,7 +2,51 @@
 # Run this and paste the output back
 
 Import-Module "$PSScriptRoot/../../Buckets/Buckets.psm1" -Force
-Remove-Bucket "diag" -Force -Confirm:$false -WarningAction SilentlyContinue
+
+$createdBuckets = [System.Collections.ArrayList]::new()
+function Use-Bucket {
+    param([string]$Bucket)
+    $null = $createdBuckets.Add($Bucket)
+}
+
+$sw = [System.Diagnostics.Stopwatch]::StartNew()
+$startTs = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+$mod = Get-Module Buckets
+$pwsh = "$($PSVersionTable.PSVersion) ($($PSVersionTable.PSEdition))"
+$os = if ($IsMacOS) { "macOS" } elseif ($IsLinux) { "Linux" } else { "Windows" }
+$sep = "=" * 52
+
+function Write-InfoBlock {
+    param([string]$Mode)
+    if ($Mode -eq "top") {
+        Write-Host $sep -ForegroundColor DarkGray
+        Write-Host " Buckets Module" -NoNewline -ForegroundColor Blue
+        Write-Host " v$($mod.Version)" -NoNewline -ForegroundColor Magenta
+        Write-Host " Diagnostics" -ForegroundColor DarkGray
+        Write-Host " $startTs" -NoNewline -ForegroundColor DarkGray
+        Write-Host " · " -NoNewline -ForegroundColor DarkGray
+        Write-Host $pwsh -NoNewline -ForegroundColor Cyan
+        Write-Host " · " -NoNewline -ForegroundColor DarkGray
+        Write-Host $os -ForegroundColor DarkGray
+        Write-Host $sep -ForegroundColor DarkGray
+    }
+    else {
+        $elapsed = $sw.ElapsedMilliseconds
+        $endTs = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+        Write-Host $sep -ForegroundColor DarkGray
+        Write-Host " Done" -NoNewline -ForegroundColor Blue
+        Write-Host " · " -NoNewline -ForegroundColor DarkGray
+        Write-Host "${elapsed}ms" -ForegroundColor Magenta
+        Write-Host " $endTs" -NoNewline -ForegroundColor DarkGray
+        Write-Host " · " -NoNewline -ForegroundColor DarkGray
+        Write-Host $pwsh -NoNewline -ForegroundColor Cyan
+        Write-Host " · " -NoNewline -ForegroundColor DarkGray
+        Write-Host $os -ForegroundColor DarkGray
+        Write-Host $sep -ForegroundColor DarkGray
+    }
+}
+
+Write-InfoBlock -Mode top
 
 $report = [System.Collections.ArrayList]::new()
 
@@ -19,6 +63,7 @@ Write-Host "`n=== TEST 1: Pipe array with -ArrayKey ===" -ForegroundColor Cyan
     [PSCustomObject]@{ _Id = "t1a"; Seq = 1 }
     [PSCustomObject]@{ _Id = "t1b"; Seq = 2 }
 ) | New-BucketObject -Bucket diag -KeyProperty _Id -ArrayKey "test1" -Quiet
+Use-Bucket "diag"
 
 $raw = Get-BucketObject -Bucket diag
 if ($raw.Count -eq 2 -and $raw[0]._BucketKey -like ".arrays/*") {
@@ -44,6 +89,7 @@ $arr = @(
     [PSCustomObject]@{ _Id = "t2b"; Seq = 2 }
 )
 New-BucketObject -Bucket diag2 -InputObject $arr -KeyProperty _Id -ArrayKey "test2" -Quiet
+Use-Bucket "diag2"
 
 $raw2 = Get-BucketObject -Bucket diag2
 if ($raw2.Count -eq 2) {
@@ -68,6 +114,7 @@ Remove-Bucket "diag3" -Force -Confirm:$false -WarningAction SilentlyContinue
     [PSCustomObject]@{ _Id = "t3a"; Seq = 1 }
     [PSCustomObject]@{ _Id = "t3b"; Seq = 2 }
 ) | New-BucketObject -Bucket diag3 -KeyProperty _Id -Quiet
+Use-Bucket "diag3"
 
 $raw3 = Get-BucketObject -Bucket diag3
 if ($raw3.Count -eq 2 -and $raw3[0]._BucketKey -notlike ".arrays/*") {
@@ -86,6 +133,7 @@ Remove-Bucket "diag4" -Force -Confirm:$false -WarningAction SilentlyContinue
     [PSCustomObject]@{ Name = "Alice"; Seq = 2 }
     [PSCustomObject]@{ Name = "Bob"; Seq = 3 }
 ) | New-BucketObject -Bucket diag4 -KeyProperty Name -ArrayKey "dups" -Quiet
+Use-Bucket "diag4"
 
 $raw4 = Get-BucketObject -Bucket diag4
 $keys = $raw4._BucketKey | Sort-Object
@@ -117,6 +165,7 @@ Remove-Bucket "diag6" -Force -Confirm:$false -WarningAction SilentlyContinue
     [PSCustomObject]@{ _Id = "m3"; Seq = 3 }
 ) | New-BucketObject -Bucket diag6 -KeyProperty _Id -ArrayKey "myarray" -Quiet
 @{ _Id = "standalone"; Seq = 99 } | New-BucketObject -Bucket diag6 -KeyProperty _Id -Quiet
+Use-Bucket "diag6"
 
 $grouped6 = [System.Collections.ArrayList]::new()
 Get-BucketObject -Bucket diag6 -GroupArrays | ForEach-Object { $null = $grouped6.Add($_) }
@@ -148,6 +197,7 @@ Remove-Bucket "diag7" -Force -Confirm:$false -WarningAction SilentlyContinue
     [PSCustomObject]@{ _Id = "j1"; Seq = 1 }
     [PSCustomObject]@{ _Id = "j2"; Seq = 2 }
 ) | New-BucketObject -Bucket diag7 -KeyProperty _Id -ArrayKey "jsonarr" -AsJson -Quiet
+Use-Bucket "diag7"
 
 $raw7 = Get-BucketObject -Bucket diag7
 if ($raw7.Count -eq 2) {
@@ -173,6 +223,7 @@ Remove-Bucket "diag8" -Force -Confirm:$false -WarningAction SilentlyContinue
     [PSCustomObject]@{ _Id = "z2"; Seq = 20 }
     [PSCustomObject]@{ _Id = "z3"; Seq = 30 }
 ) | New-BucketObject -Bucket diag8 -KeyProperty _Id -ArrayKey "ordered" -Quiet
+Use-Bucket "diag8"
 
 $grouped8 = Get-BucketObject -Bucket diag8 -GroupArrays
 if ($grouped8._ArrayItems[0].Seq -eq 10 -and $grouped8._ArrayItems[1].Seq -eq 20 -and $grouped8._ArrayItems[2].Seq -eq 30) {
@@ -190,6 +241,7 @@ Remove-Bucket "diag9" -Force -Confirm:$false -WarningAction SilentlyContinue
     [PSCustomObject]@{ _Id = "a1"; Group = "alpha" }
     [PSCustomObject]@{ _Id = "a2"; Group = "alpha" }
 ) | New-BucketObject -Bucket diag9 -KeyProperty _Id -ArrayKey "alpha" -Quiet
+Use-Bucket "diag9"
 @(
     [PSCustomObject]@{ _Id = "b1"; Group = "beta" }
     [PSCustomObject]@{ _Id = "b2"; Group = "beta" }
@@ -215,3 +267,9 @@ $failCount = ($report | Where-Object { $_.Status -eq "FAIL" }).Count
 $report | Format-Table -AutoSize
 
 Write-Host "`nSummary: $passCount passed, $failCount failed" -ForegroundColor $(if ($failCount -eq 0) { "Green" } else { "Red" })
+
+foreach ($bucket in $createdBuckets) {
+    Remove-Bucket -Bucket $bucket -Force -Confirm:$false -WarningAction SilentlyContinue
+}
+
+Write-InfoBlock -Mode bottom

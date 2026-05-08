@@ -10,20 +10,59 @@
 Remove-Module Buckets -ErrorAction SilentlyContinue
 Import-Module "$PSScriptRoot/../Buckets" -Force
 
-$bucketDir = Join-Path $HOME ".buckets"
-if (Test-Path $bucketDir) { Remove-Item $bucketDir -Recurse -Force }
-
-Write-Host "========================================" -ForegroundColor Blue
-Write-Host " Buckets Module - Benchmark Suite" -ForegroundColor Blue
-Write-Host "========================================`n" -ForegroundColor Blue
-
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
+$startTs = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+
+$createdBuckets = [System.Collections.ArrayList]::new()
+$existingBuckets = @(Get-Bucket -WarningAction SilentlyContinue | ForEach-Object { $_.Name })
+
+function Use-Bucket {
+    param([string]$Name)
+    $null = $createdBuckets.Add($Name)
+    Remove-Bucket $Name -Force -Confirm:$false -WarningAction SilentlyContinue
+}
+
+function Write-InfoBlock {
+    param([string]$Mode)
+    $mod = Get-Module Buckets
+    $pwsh = "$($PSVersionTable.PSVersion) ($($PSVersionTable.PSEdition))"
+    $os = if ($IsMacOS) { "macOS" } elseif ($IsLinux) { "Linux" } else { "Windows" }
+    $sep = "=" * 52
+    if ($Mode -eq "top") {
+        Write-Host $sep -ForegroundColor DarkGray
+        Write-Host " Buckets Module" -NoNewline -ForegroundColor Blue
+        Write-Host " v$($mod.Version)" -NoNewline -ForegroundColor Magenta
+        Write-Host " Benchmarks" -ForegroundColor DarkGray
+        Write-Host " $startTs" -NoNewline -ForegroundColor DarkGray
+        Write-Host " · " -NoNewline -ForegroundColor DarkGray
+        Write-Host $pwsh -NoNewline -ForegroundColor Cyan
+        Write-Host " · " -NoNewline -ForegroundColor DarkGray
+        Write-Host $os -ForegroundColor DarkGray
+        Write-Host $sep -ForegroundColor DarkGray
+    }
+    else {
+        $elapsed = $sw.ElapsedMilliseconds
+        $endTs = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+        Write-Host $sep -ForegroundColor DarkGray
+        Write-Host " Done" -NoNewline -ForegroundColor Blue
+        Write-Host " · " -NoNewline -ForegroundColor DarkGray
+        Write-Host "${elapsed}ms" -ForegroundColor Magenta
+        Write-Host " $endTs" -NoNewline -ForegroundColor DarkGray
+        Write-Host " · " -NoNewline -ForegroundColor DarkGray
+        Write-Host $pwsh -NoNewline -ForegroundColor Cyan
+        Write-Host " · " -NoNewline -ForegroundColor DarkGray
+        Write-Host $os -ForegroundColor DarkGray
+        Write-Host $sep -ForegroundColor DarkGray
+    }
+}
+
+Write-InfoBlock -Mode top
 
 # ============================================================
 # 1. Performance benchmark (1,000 objects)
 # ============================================================
 Write-Host "[1] Performance benchmark (1,000 objects — baseline throughput)" -ForegroundColor Blue
-Remove-Bucket "perf-test" -Force -Confirm:$false -WarningAction SilentlyContinue
+Use-Bucket "perf-test"
 $perfBench = [System.Diagnostics.Stopwatch]::StartNew()
 $perfObjects = 1..1000 | ForEach-Object {
     [PSCustomObject]@{
@@ -46,7 +85,7 @@ Write-Host "  Write: ${writeTime}ms, Read: ${readTime}ms, Objects: $($retrieved.
 # 2. Performance benchmark (10,000 objects)
 # ============================================================
 Write-Host "`n[2] Performance benchmark (10,000 objects — scale test)" -ForegroundColor Blue
-Remove-Bucket "perf-10k" -Force -Confirm:$false -WarningAction SilentlyContinue
+Use-Bucket "perf-10k"
 $perfBench10k = [System.Diagnostics.Stopwatch]::StartNew()
 $perf10kObjects = 1..10000 | ForEach-Object {
     [PSCustomObject]@{
@@ -69,7 +108,7 @@ Write-Host "  Write: ${writeTime10k}ms, Read: ${readTime10k}ms, Objects: $($retr
 # 3. Performance benchmark (10,000 complex objects)
 # ============================================================
 Write-Host "`n[3] Performance benchmark (10,000 complex objects — nested depth test)" -ForegroundColor Blue
-Remove-Bucket "perf-10k-complex" -Force -Confirm:$false -WarningAction SilentlyContinue
+Use-Bucket "perf-10k-complex"
 $perfBench10kC = [System.Diagnostics.Stopwatch]::StartNew()
 $perf10kCObjects = 1..10000 | ForEach-Object {
     [PSCustomObject]@{
@@ -107,7 +146,7 @@ Write-Host "  Write: ${writeTime10kC}ms, Read: ${readTime10kC}ms, Objects: $($re
 # 4. Performance benchmark JSON (1,000 objects)
 # ============================================================
 Write-Host "`n[4] Performance benchmark JSON (1,000 objects)" -ForegroundColor Blue
-Remove-Bucket "perf-json-1k" -Force -Confirm:$false -WarningAction SilentlyContinue
+Use-Bucket "perf-json-1k"
 $perfJsonBench = [System.Diagnostics.Stopwatch]::StartNew()
 $perfJsonObjects = 1..1000 | ForEach-Object {
     [PSCustomObject]@{
@@ -130,7 +169,7 @@ Write-Host "  Write: ${jsonWriteTime}ms, Read: ${jsonReadTime}ms, Objects: $($js
 # 5. Performance benchmark JSON (10,000 objects)
 # ============================================================
 Write-Host "`n[5] Performance benchmark JSON (10,000 objects)" -ForegroundColor Blue
-Remove-Bucket "perf-json-10k" -Force -Confirm:$false -WarningAction SilentlyContinue
+Use-Bucket "perf-json-10k"
 $perfJson10kBench = [System.Diagnostics.Stopwatch]::StartNew()
 $perfJson10kObjects = 1..10000 | ForEach-Object {
     [PSCustomObject]@{
@@ -153,7 +192,7 @@ Write-Host "  Write: ${jsonWriteTime10k}ms, Read: ${jsonReadTime10k}ms, Objects:
 # 6. Performance benchmark JSON (10,000 complex objects)
 # ============================================================
 Write-Host "`n[6] Performance benchmark JSON (10,000 complex objects)" -ForegroundColor Blue
-Remove-Bucket "perf-json-complex" -Force -Confirm:$false -WarningAction SilentlyContinue
+Use-Bucket "perf-json-complex"
 $perfJsonCBench = [System.Diagnostics.Stopwatch]::StartNew()
 $perfJsonCObjects = 1..10000 | ForEach-Object {
     [PSCustomObject]@{
@@ -187,9 +226,8 @@ $jsonReadTimeC = $perfJsonCBench.ElapsedMilliseconds
 
 Write-Host "  Write: ${jsonWriteTimeC}ms, Read: ${jsonReadTimeC}ms, Objects: $($jsonRetrievedC.Count)" -ForegroundColor DarkGray
 
-# ============================================================
-Write-Host "`n========================================" -ForegroundColor Blue
-Write-Host " Done" -ForegroundColor Blue
-Write-Host "========================================" -ForegroundColor Blue
-$elapsed = $sw.ElapsedMilliseconds
-Write-Host "Total time: ${elapsed}ms" -ForegroundColor Blue
+foreach ($b in $createdBuckets) {
+    Remove-Bucket $b -Force -Confirm:$false -WarningAction SilentlyContinue
+}
+
+Write-InfoBlock -Mode bottom

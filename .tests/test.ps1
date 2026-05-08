@@ -10,11 +10,45 @@ Import-Module "$PSScriptRoot/../Buckets" -Force
 $bucketDir = Join-Path $HOME ".buckets"
 if (Test-Path $bucketDir) { Remove-Item $bucketDir -Recurse -Force }
 
-Write-Host "========================================" -ForegroundColor Blue
-Write-Host " Buckets Module - Test Suite" -ForegroundColor Blue
-Write-Host "========================================`n" -ForegroundColor Blue
-
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
+$startTs = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+
+function Write-InfoBlock {
+    param([string]$Mode)
+    $mod = Get-Module Buckets
+    $pwsh = "$($PSVersionTable.PSVersion) ($($PSVersionTable.PSEdition))"
+    $os = if ($IsMacOS) { "macOS" } elseif ($IsLinux) { "Linux" } else { "Windows" }
+    $sep = "=" * 52
+
+    if ($Mode -eq "top") {
+        Write-Host $sep -ForegroundColor DarkGray
+        Write-Host " Buckets Module" -NoNewline -ForegroundColor Blue
+        Write-Host " v$($mod.Version)" -NoNewline -ForegroundColor Magenta
+        Write-Host " Test Suite" -ForegroundColor DarkGray
+        Write-Host " $startTs" -NoNewline -ForegroundColor DarkGray
+        Write-Host " · " -NoNewline -ForegroundColor DarkGray
+        Write-Host $pwsh -NoNewline -ForegroundColor Cyan
+        Write-Host " · " -NoNewline -ForegroundColor DarkGray
+        Write-Host $os -ForegroundColor DarkGray
+        Write-Host $sep -ForegroundColor DarkGray
+    }
+    else {
+        $elapsed = $sw.ElapsedMilliseconds
+        $endTs = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+        Write-Host $sep -ForegroundColor DarkGray
+        Write-Host " Tests Complete" -NoNewline -ForegroundColor Blue
+        Write-Host " · " -NoNewline -ForegroundColor DarkGray
+        Write-Host "${elapsed}ms" -ForegroundColor Magenta
+        Write-Host " $endTs" -NoNewline -ForegroundColor DarkGray
+        Write-Host " · " -NoNewline -ForegroundColor DarkGray
+        Write-Host $pwsh -NoNewline -ForegroundColor Cyan
+        Write-Host " · " -NoNewline -ForegroundColor DarkGray
+        Write-Host $os -ForegroundColor DarkGray
+        Write-Host $sep -ForegroundColor DarkGray
+    }
+}
+
+Write-InfoBlock -Mode top
 
 # ============================================================
 # 1. Simple objects (hashtables)
@@ -739,9 +773,4 @@ if ($edgeFail -eq 0) {
     Write-Host "  FAIL ($edgeOk/14 passed): $($edgeMsg -join ', ')" -ForegroundColor Red
 }
 
-# ============================================================
-Write-Host "`n========================================" -ForegroundColor Blue
-Write-Host " Tests Complete" -ForegroundColor Blue
-Write-Host "========================================" -ForegroundColor Blue
-$elapsed = $sw.ElapsedMilliseconds
-Write-Host "Total time: ${elapsed}ms" -ForegroundColor Blue
+Write-InfoBlock -Mode bottom

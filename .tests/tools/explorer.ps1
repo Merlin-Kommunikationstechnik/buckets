@@ -12,6 +12,12 @@ else {
     Import-Module $modulePath -Force
 }
 
+$startTs = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+$mod = Get-Module Buckets
+$pwsh = "$($PSVersionTable.PSVersion) ($($PSVersionTable.PSEdition))"
+$os = if ($IsMacOS) { "macOS" } elseif ($IsLinux) { "Linux" } else { "Windows" }
+$sep = "=" * 52
+
 # --- Helpers ---
 
 function Format-Size {
@@ -612,9 +618,15 @@ function Handle-Command {
 
 # --- Main loop ---
 
-Write-Host ""
-Write-Host "  Buckets Explorer" -ForegroundColor Cyan
-Write-Host "  Module: $((Get-Module Buckets).Version)" -ForegroundColor DarkGray
+Write-Host $sep -ForegroundColor DarkGray
+Write-Host " Buckets Module" -NoNewline -ForegroundColor Blue
+Write-Host " v$($mod.Version)" -NoNewline -ForegroundColor Magenta
+Write-Host " Explorer" -ForegroundColor DarkGray
+Write-Host " $startTs" -NoNewline -ForegroundColor DarkGray
+Write-Host " · " -NoNewline -ForegroundColor DarkGray
+Write-Host $pwsh -NoNewline -ForegroundColor Cyan
+Write-Host " · " -NoNewline -ForegroundColor DarkGray
+Write-Host $os -ForegroundColor DarkGray
 Write-Host "  Root: $(Get-RootPath)" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  Type ? for help, q to quit." -ForegroundColor DarkGray
@@ -631,4 +643,9 @@ while ($running) {
     $running = Handle-Command -UserInput $userCmd
 }
 
-Write-Host "`n  Bye!`n" -ForegroundColor Cyan
+$endTs = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+Write-Host $sep -ForegroundColor DarkGray
+Write-Host " Bye" -NoNewline -ForegroundColor Cyan
+Write-Host " · " -NoNewline -ForegroundColor DarkGray
+Write-Host $endTs -ForegroundColor DarkGray
+Write-Host $sep -ForegroundColor DarkGray

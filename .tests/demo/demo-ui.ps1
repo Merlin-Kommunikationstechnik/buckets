@@ -11,6 +11,50 @@ Remove-Module Buckets -ErrorAction SilentlyContinue
 Import-Module "$PSScriptRoot/../../Buckets" -Force
 
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
+$startTs = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+
+function Write-InfoBlock {
+    param([string]$Mode)
+    $mod = Get-Module Buckets
+    $pwsh = "$($PSVersionTable.PSVersion) ($($PSVersionTable.PSEdition))"
+    $os = if ($IsMacOS) { "macOS" } elseif ($IsLinux) { "Linux" } else { "Windows" }
+    $sep = "=" * 52
+    if ($Mode -eq "top") {
+        Write-Host $sep -ForegroundColor DarkGray
+        Write-Host " Buckets Module" -NoNewline -ForegroundColor Blue
+        Write-Host " v$($mod.Version)" -NoNewline -ForegroundColor Magenta
+        Write-Host " UI/UX Demo" -ForegroundColor DarkGray
+        Write-Host " $startTs" -NoNewline -ForegroundColor DarkGray
+        Write-Host " · " -NoNewline -ForegroundColor DarkGray
+        Write-Host $pwsh -NoNewline -ForegroundColor Cyan
+        Write-Host " · " -NoNewline -ForegroundColor DarkGray
+        Write-Host $os -ForegroundColor DarkGray
+        Write-Host $sep -ForegroundColor DarkGray
+    }
+    else {
+        $elapsed = $sw.Elapsed.TotalSeconds
+        $endTs = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+        Write-Host $sep -ForegroundColor DarkGray
+        Write-Host " Done" -NoNewline -ForegroundColor Blue
+        Write-Host " · " -NoNewline -ForegroundColor DarkGray
+        Write-Host "$([math]::Round($elapsed, 1))s" -ForegroundColor Magenta
+        Write-Host " $endTs" -NoNewline -ForegroundColor DarkGray
+        Write-Host " · " -NoNewline -ForegroundColor DarkGray
+        Write-Host $pwsh -NoNewline -ForegroundColor Cyan
+        Write-Host " · " -NoNewline -ForegroundColor DarkGray
+        Write-Host $os -ForegroundColor DarkGray
+        Write-Host $sep -ForegroundColor DarkGray
+    }
+}
+
+$createdBuckets = [System.Collections.ArrayList]::new()
+
+function Use-Bucket {
+    param([string]$Bucket)
+    $null = $createdBuckets.Add($Bucket)
+}
+
+Write-InfoBlock -Mode top
 
 Write-Host "╔══════════════════════════════════════════╗" -ForegroundColor Blue
 Write-Host "║      Buckets Module — UI/UX Demo         ║" -ForegroundColor Blue
@@ -30,6 +74,7 @@ $users = @(
     @{ Name = "Eve";     Email = "eve@example.com";     Role = "user";    Active = $true }
 )
 New-BucketObject -Bucket users -InputObject $users -KeyProperty Name
+Use-Bucket "users"
 
 Write-Host "`n  Saving nested orders (PSCustomObject):" -ForegroundColor DarkGray
 $orders = @(
@@ -45,6 +90,7 @@ $orders = @(
     }
 )
 New-BucketObject -Bucket orders -InputObject $orders -KeyProperty OrderId
+Use-Bucket "orders"
 
 Write-Host "`n  Saving compressed config (binary + GZip):" -ForegroundColor DarkGray
 $config = [PSCustomObject]@{
@@ -53,6 +99,7 @@ $config = [PSCustomObject]@{
     Cache    = [PSCustomObject]@{ Provider = "Redis"; TTL = 3600 }
 }
 New-BucketObject -Bucket config -InputObject $config -KeyProperty _Id -Compress
+Use-Bucket "config"
 
 Write-Host "`n  Saving JSON config (explicit -AsJson):" -ForegroundColor DarkGray
 $jsonConfig = [PSCustomObject]@{
@@ -111,13 +158,16 @@ Write-Host "`n── 5. Copy / Rename / Move ───────────�
 
 Write-Host "`n  Copy-BucketObject (cross-bucket):" -ForegroundColor DarkGray
 Copy-BucketObject -Bucket users -Key "Alice" -DestinationBucket backup
+Use-Bucket "backup"
 
 Write-Host "`n  Rename-BucketObject (in-place):" -ForegroundColor DarkGray
 Rename-BucketObject -Bucket backup -Key "Alice" -NewKey "alice-backup"
 
 Write-Host "`n  Move-BucketObject:" -ForegroundColor DarkGray
 New-BucketObject -Bucket staging -InputObject ([PSCustomObject]@{ _Id = "tmp-item"; Value = "move me" }) -KeyProperty _Id -Quiet
+Use-Bucket "staging"
 Move-BucketObject -Bucket staging -Key "tmp-item" -DestinationBucket archive
+Use-Bucket "archive"
 
 Write-Host "`n  Tree after moves:" -ForegroundColor DarkGray
 Get-Bucket -AsTree
@@ -199,8 +249,10 @@ foreach ($server in $servers) {
         }
     }
     New-BucketObject -Bucket $logBucket -InputObject $logs -KeyProperty _Id -Quiet
+    Use-Bucket $logBucket
 }
 New-BucketObject -Bucket "servers" -InputObject ([PSCustomObject]@{ _Id = "overview"; ServerCount = $servers.Count }) -KeyProperty _Id -Quiet
+Use-Bucket "servers"
 
 Get-Bucket -AsTree -Name servers
 
@@ -222,14 +274,13 @@ foreach ($srv in $servers) {
 # ============================================================
 # Summary
 # ============================================================
-$elapsed = $sw.Elapsed.TotalSeconds
-Write-Host "`n╔══════════════════════════════════════════╗" -ForegroundColor Blue
-Write-Host "║  Demo complete" -NoNewline
-Write-Host " · $([math]::Round($elapsed, 1))s" -NoNewline -ForegroundColor Magenta
-Write-Host "          ║" -ForegroundColor Blue
-Write-Host "╚══════════════════════════════════════════╝" -ForegroundColor Blue
+Write-InfoBlock -Mode bottom
 
 Write-Host "`nExplore the data yourself:" -ForegroundColor DarkGray
 Write-Host "  Get-Bucket -AsTree" -ForegroundColor Cyan
 Write-Host "  Get-BucketObject -Bucket users" -ForegroundColor Cyan
 Write-Host "  Get-BucketStats -Bucket users" -ForegroundColor Cyan
+
+foreach ($bucket in $createdBuckets) {
+    Remove-Bucket -Bucket $bucket -Force -Confirm:$false -WarningAction SilentlyContinue
+}

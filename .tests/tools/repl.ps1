@@ -12,6 +12,12 @@ else {
     Import-Module $modulePath -Force
 }
 
+$startTs = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+$mod = Get-Module Buckets
+$pwsh = "$($PSVersionTable.PSVersion) ($($PSVersionTable.PSEdition))"
+$os = if ($IsMacOS) { "macOS" } elseif ($IsLinux) { "Linux" } else { "Windows" }
+$sep = "=" * 52
+
 # --- Helpers ---
 
 function Clear-Buckets {
@@ -433,8 +439,16 @@ function Show-Menu {
 
 # --- Main loop ---
 
-Write-Host "  Buckets Interactive REPL" -ForegroundColor DarkGray
-Write-Host "  Module: $((Get-Module Buckets).Version)" -ForegroundColor DarkGray
+Write-Host $sep -ForegroundColor DarkGray
+Write-Host " Buckets Module" -NoNewline -ForegroundColor Blue
+Write-Host " v$($mod.Version)" -NoNewline -ForegroundColor Magenta
+Write-Host " REPL" -ForegroundColor DarkGray
+Write-Host " $startTs" -NoNewline -ForegroundColor DarkGray
+Write-Host " · " -NoNewline -ForegroundColor DarkGray
+Write-Host $pwsh -NoNewline -ForegroundColor Cyan
+Write-Host " · " -NoNewline -ForegroundColor DarkGray
+Write-Host $os -ForegroundColor DarkGray
+Write-Host $sep -ForegroundColor DarkGray
 
 $running = $true
 while ($running) {
@@ -469,4 +483,9 @@ while ($running) {
     }
 }
 
-Write-Host "`n  Bye!`n" -ForegroundColor Cyan
+$endTs = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+Write-Host $sep -ForegroundColor DarkGray
+Write-Host " Bye" -NoNewline -ForegroundColor Cyan
+Write-Host " · " -NoNewline -ForegroundColor DarkGray
+Write-Host $endTs -ForegroundColor DarkGray
+Write-Host $sep -ForegroundColor DarkGray

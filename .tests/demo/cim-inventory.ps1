@@ -10,8 +10,54 @@
 Remove-Module Buckets -ErrorAction SilentlyContinue
 Import-Module "$PSScriptRoot/../../Buckets" -Force
 
+$createdBuckets = [System.Collections.ArrayList]::new()
+function Use-Bucket {
+    param([string]$Bucket)
+    $null = $createdBuckets.Add($Bucket)
+}
+Use-Bucket "inventory"
+
 # Remove previous run
 Remove-Bucket "inventory" -Force -Confirm:$false -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
+
+$sw = [System.Diagnostics.Stopwatch]::StartNew()
+$startTs = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+
+function Write-InfoBlock {
+    param([string]$Mode)
+    $mod = Get-Module Buckets
+    $pwsh = "$($PSVersionTable.PSVersion) ($($PSVersionTable.PSEdition))"
+    $os = if ($IsMacOS) { "macOS" } elseif ($IsLinux) { "Linux" } else { "Windows" }
+    $sep = "=" * 52
+    if ($Mode -eq "top") {
+        Write-Host $sep -ForegroundColor DarkGray
+        Write-Host " Buckets Module" -NoNewline -ForegroundColor Blue
+        Write-Host " v$($mod.Version)" -NoNewline -ForegroundColor Magenta
+        Write-Host " CIM Inventory" -ForegroundColor DarkGray
+        Write-Host " $startTs" -NoNewline -ForegroundColor DarkGray
+        Write-Host " · " -NoNewline -ForegroundColor DarkGray
+        Write-Host $pwsh -NoNewline -ForegroundColor Cyan
+        Write-Host " · " -NoNewline -ForegroundColor DarkGray
+        Write-Host $os -ForegroundColor DarkGray
+        Write-Host $sep -ForegroundColor DarkGray
+    }
+    else {
+        $elapsed = $sw.ElapsedMilliseconds
+        $endTs = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+        Write-Host $sep -ForegroundColor DarkGray
+        Write-Host " Done" -NoNewline -ForegroundColor Blue
+        Write-Host " · " -NoNewline -ForegroundColor DarkGray
+        Write-Host "${elapsed}ms" -ForegroundColor Magenta
+        Write-Host " $endTs" -NoNewline -ForegroundColor DarkGray
+        Write-Host " · " -NoNewline -ForegroundColor DarkGray
+        Write-Host $pwsh -NoNewline -ForegroundColor Cyan
+        Write-Host " · " -NoNewline -ForegroundColor DarkGray
+        Write-Host $os -ForegroundColor DarkGray
+        Write-Host $sep -ForegroundColor DarkGray
+    }
+}
+
+Write-InfoBlock -Mode top
 
 $rng = [System.Random]::new()
 
@@ -133,6 +179,7 @@ foreach ($site in $sites) {
             Site      = $site.Name
             Type      = "Workstation"
         }) -KeyProperty _Id -Quiet
+        Use-Bucket $bucket
         $objectCount++
 
         # Memory DIMMs
@@ -234,6 +281,7 @@ foreach ($site in $sites) {
             Site       = $site.Name
             Type       = "Server"
         }) -KeyProperty _Id -Quiet
+        Use-Bucket $bucket
         $objectCount++
 
         # Memory
@@ -322,3 +370,9 @@ foreach ($site in $sites) {
 Write-Host "Inventory generated:" -ForegroundColor Cyan
 Write-Host "  Devices: $deviceCount" -ForegroundColor Magenta
 Write-Host "  Objects: $objectCount" -ForegroundColor Magenta
+
+foreach ($bucket in $createdBuckets) {
+    Remove-Bucket -Bucket $bucket -Force -Confirm:$false -WarningAction SilentlyContinue
+}
+
+Write-InfoBlock -Mode bottom
