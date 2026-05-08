@@ -282,6 +282,6 @@ Write-Host "  Buckets created: $($totalBuckets.Count)" -ForegroundColor DarkGray
 Write-Host "  Objects created: $totalObjects" -ForegroundColor DarkGray
 
 Write-Host "`n[Bucket Overview]" -ForegroundColor Blue
-Get-Bucket -AsTree | Select-Object -First 20
+Get-Bucket -Tree | Select-Object -First 20
 
 Write-InfoBlock -Mode bottom

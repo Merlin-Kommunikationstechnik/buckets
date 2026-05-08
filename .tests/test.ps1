@@ -565,10 +565,10 @@ New-BucketObject -Bucket $nestedBucket -InputObject $teamData -Key "profile" -Qu
 Use-Bucket "org"
 
 # ============================================================
-# 15a. Get-Bucket -AsTree
+# 15a. Get-Bucket -Tree
 # ============================================================
-Write-Host "`n[15a] Get-Bucket -AsTree" -ForegroundColor Blue
-$tree = Get-Bucket -AsTree -Raw -Name "org"
+Write-Host "`n[15a] Get-Bucket -Tree" -ForegroundColor Blue
+$tree = Get-Bucket -Tree -Raw -Name "org"
 $orgChildren = @($tree.Children | Where-Object { $_.Name -eq "org" })
 if ($orgChildren.Count -eq 1) {
     $orgNode = $orgChildren[0]
@@ -583,7 +583,7 @@ if ($orgChildren.Count -eq 1) {
 }
 
 # Verify -Raw output has correct type
-$rawAll = Get-Bucket -AsTree -Raw
+$rawAll = Get-Bucket -Tree -Raw
 if ($rawAll.PSObject.TypeNames[0] -eq "Buckets.Tree" -and $rawAll.Type -eq "Root") {
     Write-Host "  Raw output type: OK (Buckets.Tree Root)" -ForegroundColor Magenta
 } else {
@@ -653,16 +653,16 @@ Write-Host "  -Recurse -Filter { `$_.Employees -gt 100 }: $r3count objects" -NoN
 if ($r3ok) { Write-Host " — OK" -ForegroundColor Magenta } else { Write-Host " — FAIL" -ForegroundColor Red }
 
 # ============================================================
-# 18. Get-Bucket -AsTree edge cases
+# 18. Get-Bucket -Tree edge cases
 # ============================================================
-Write-Host "`n[18] Get-Bucket -AsTree edge cases" -ForegroundColor Blue
+Write-Host "`n[18] Get-Bucket -Tree edge cases" -ForegroundColor Blue
 
 # Filtered tree with -Name
-$treeFiltered = Get-Bucket -AsTree -Raw -Name "org/eu"
+$treeFiltered = Get-Bucket -Tree -Raw -Name "org/eu"
 $hasOrgEu = $treeFiltered.Children | Where-Object { $_.Name -eq "org" -and $_.Children[0].Name -eq "eu" }
 $noOtherBuckets = ($treeFiltered.Children | Where-Object { $_.Name -ne ".buckets" }).Count -eq 1
 if ($hasOrgEu -and $noOtherBuckets) {
-    Write-Host "  -AsTree -Name org/eu: OK (filtered to org subtree)" -ForegroundColor Magenta
+    Write-Host "  -Tree -Name org/eu: OK (filtered to org subtree)" -ForegroundColor Magenta
 } else {
     Write-Host "  FAIL (hasOrgEu=$($null -ne $hasOrgEu), noOtherBuckets=$noOtherBuckets, children=$($treeFiltered.Children.Name -join ','))" -ForegroundColor Red
 }
@@ -670,7 +670,7 @@ if ($hasOrgEu -and $noOtherBuckets) {
 # Missing directory resilience (remove a subdirectory then scan tree)
 $teamAPath = Join-Path $HOME ".buckets/org/eu/de/berlin/team-a"
 if (Test-Path $teamAPath) { Remove-Item $teamAPath -Recurse -Force }
-$treeAfterDelete = Get-Bucket -AsTree -Raw -Name "org" -ErrorAction SilentlyContinue
+$treeAfterDelete = Get-Bucket -Tree -Raw -Name "org" -ErrorAction SilentlyContinue
 $orgNode = $treeAfterDelete.Children | Where-Object { $_.Name -eq "org" }
 $noCrash = $null -ne $orgNode
 $objectCount = if ($noCrash) { $orgNode.ObjectCount } else { 0 }

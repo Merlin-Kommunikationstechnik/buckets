@@ -394,7 +394,7 @@ Write-Host "  Total objects:     $totalItems" -ForegroundColor DarkGray
 Write-InfoBlock -Mode bottom
 
 Write-Host "`n[Bucket Tree]" -ForegroundColor Blue
-Get-Bucket -AsTree -Name $BucketRoot -NoObjects
+Get-Bucket -Tree -Name $BucketRoot -NoObjects
 
 Write-Host "`n[Sample Queries]" -ForegroundColor Blue
 Write-Host "  Users in berlin:" -ForegroundColor DarkGray

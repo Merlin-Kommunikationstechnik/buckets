@@ -115,7 +115,7 @@ Write-Host "`n  Table view:" -ForegroundColor DarkGray
 Get-Bucket | Format-Table -AutoSize
 
 Write-Host "  Tree view:" -ForegroundColor DarkGray
-Get-Bucket -AsTree
+Get-Bucket -Tree
 
 # ============================================================
 # 3. Get-BucketObject — retrieval
@@ -173,7 +173,7 @@ Move-BucketObject -Bucket staging -Key "tmp-item" -DestinationBucket archive
 Use-Bucket "archive"
 
 Write-Host "`n  Tree after moves:" -ForegroundColor DarkGray
-Get-Bucket -AsTree
+Get-Bucket -Tree
 
 # ============================================================
 # 6. Export / Import
@@ -217,7 +217,7 @@ Write-Host "`n  Remove empty bucket:" -ForegroundColor DarkGray
 Remove-Bucket staging -Force -Confirm:$false -WarningAction SilentlyContinue
 
 Write-Host "`n  Bucket overview after cleanup:" -ForegroundColor DarkGray
-Get-Bucket -AsTree
+Get-Bucket -Tree
 
 # ============================================================
 # 9. Set-BucketObject — partial update
@@ -257,7 +257,7 @@ foreach ($server in $servers) {
 New-BucketObject -Bucket "servers" -InputObject ([PSCustomObject]@{ _Id = "overview"; ServerCount = $servers.Count }) -KeyProperty _Id -Quiet
 Use-Bucket "servers"
 
-Get-Bucket -AsTree -Name servers
+Get-Bucket -Tree -Name servers
 
 Write-Host "`n  Server error queries:" -ForegroundColor DarkGray
 foreach ($srv in $servers) {
@@ -280,7 +280,7 @@ foreach ($srv in $servers) {
 Write-InfoBlock -Mode bottom
 
 Write-Host "`nExplore the data yourself:" -ForegroundColor DarkGray
-Write-Host "  Get-Bucket -AsTree" -ForegroundColor Cyan
+Write-Host "  Get-Bucket -Tree" -ForegroundColor Cyan
 Write-Host "  Get-BucketObject -Bucket users" -ForegroundColor Cyan
 Write-Host "  Get-BucketStats -Bucket users" -ForegroundColor Cyan
 

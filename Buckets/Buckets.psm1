@@ -562,17 +562,17 @@ function Get-Bucket {
     all descendants). Use -Recurse to list all nested buckets with direct (non-aggregated)
     counts. The HasSubBuckets property indicates whether a bucket contains nested sub-buckets.
 
-    Use -AsTree to render a beautiful colorized tree view of all buckets.
+    Use -Tree to render a beautiful colorized tree view of all buckets.
     .PARAMETER Path
     Root directory for bucket storage. Default: $HOME/.buckets.
     .PARAMETER Name
     Filter buckets by name pattern (substring match on full nested path).
-    .PARAMETER AsTree
+    .PARAMETER Tree
     Render a tree view of all buckets and directories.
     .PARAMETER NoObjects
     Hide individual object files in tree view. Files are shown by default.
     .PARAMETER Raw
-    Return structured tree objects instead of formatted text (for -AsTree mode).
+    Return structured tree objects instead of formatted text (for -Tree mode).
     .PARAMETER MaxFiles
     Maximum files to display per bucket in tree view. Truncated files shown as "... N more". Default: 5.
     .PARAMETER Depth
@@ -588,15 +588,15 @@ function Get-Bucket {
     .EXAMPLE
     Get-Bucket -Recurse
     .EXAMPLE
-    Get-Bucket -AsTree
+    Get-Bucket -Tree
     .EXAMPLE
-    Get-Bucket -AsTree -NoObjects
+    Get-Bucket -Tree -NoObjects
     #>
     [CmdletBinding()]
     param(
         [Parameter(Position = 0)][string]$Name,
         [string]$Path,
-        [switch]$AsTree,
+        [switch]$Tree,
         [switch]$NoObjects,
         [switch]$Raw,
         [switch]$Recurse,
@@ -607,11 +607,11 @@ function Get-Bucket {
     if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
     $Path = Resolve-SafePath -Path $Path
     if (-not [System.IO.Directory]::Exists($Path)) {
-        if ($AsTree) { Write-Host "No bucket storage found at '$Path'" -ForegroundColor DarkGray }
+        if ($Tree) { Write-Host "No bucket storage found at '$Path'" -ForegroundColor DarkGray }
         return
     }
 
-    if ($AsTree) {
+    if ($Tree) {
         function TreeSize {
             param([long]$Bytes)
             if ($Bytes -eq 0) { return "0 B" }

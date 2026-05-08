@@ -375,7 +375,7 @@ Lists available buckets with object counts. Supports tree visualization.
 Get-Bucket
     [[-Name] <string>]
     [-Path <string>]
-    [-AsTree]
+    [-Tree]
     [-NoObjects]
     [-Raw]
     [-MaxFiles <int>]
@@ -387,7 +387,7 @@ Get-Bucket
 |-----------|-------------|---------|
 | `-Name` | Filter buckets by name (substring match on full nested path) | All buckets |
 | `-Path` | Storage root directory | `$HOME/.buckets` |
-| `-AsTree` | Render a colorized tree view of all buckets and files | `false` |
+| `-Tree` | Render a colorized tree view of all buckets and files | `false` |
 | `-NoObjects` | Hide individual files in tree view | `false` (files shown) |
 | `-Raw` | Return structured tree objects (`Buckets.Tree`) instead of formatted text | `false` |
 | `-MaxFiles` | Max files per bucket in tree view | `5` |
@@ -403,16 +403,16 @@ Get-Bucket
 Get-Bucket "user"
 
 # Tree view
-Get-Bucket -AsTree
+Get-Bucket -Tree
 
-# Tree view, no files
-Get-Bucket -AsTree -NoObjects
+# Tree view without individual objects
+Get-Bucket -Tree -NoObjects
 
-# Tree view, more files per bucket
-Get-Bucket -AsTree -MaxFiles 20
+# Tree view showing up to 20 files per bucket
+Get-Bucket -Tree -MaxFiles 20
 
-# Raw structured objects (pipeable)
-Get-Bucket -AsTree -Raw | ConvertTo-Json -Depth 5
+# Raw tree data as JSON
+Get-Bucket -Tree -Raw | ConvertTo-Json -Depth 5
 ```
 
 ---
