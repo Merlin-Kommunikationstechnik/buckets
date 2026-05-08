@@ -517,9 +517,9 @@ $hasGlobal = $null -ne ($recursiveResult | Where-Object { $_.Name -eq "Global Co
 $recursiveOk = $recursiveCount -eq 5 -and $hasGlobal
 if ($recursiveOk) { $passCount++ } else { $failMsg += "Recurse expected 5 objects, got $recursiveCount" }
 
-# Verify Get-Bucket finds all nested buckets
-$buckets = Get-Bucket -Name "org"
-$orgBuckets = @($buckets | Where-Object { $_.Name -like "org*" })
+# Verify Get-Bucket -Recurse finds all nested buckets
+$buckets = Get-Bucket -Recurse -Name "org"
+$orgBuckets = $buckets | Where-Object { $_.Name -like "org*" }
 if ($orgBuckets.Count -ge 5) { $passCount++ } else { $failMsg += "Get-Bucket found $($orgBuckets.Count)/5 nested buckets" }
 
 # Verify provider navigation

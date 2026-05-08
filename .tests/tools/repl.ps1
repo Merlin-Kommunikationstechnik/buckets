@@ -32,16 +32,27 @@ function Clear-Buckets {
 }
 
 function Show-Buckets {
-    $buckets = @(Get-Bucket -WarningAction SilentlyContinue)
+    param([switch]$Recurse)
+    $buckets = @(Get-Bucket -WarningAction SilentlyContinue -Recurse:$Recurse)
     if ($buckets.Count -eq 0) {
         Write-Host "  No buckets found." -ForegroundColor DarkGray
         return
     }
     Write-Host ""
     $buckets | ForEach-Object {
-        $stats = Get-BucketStats -Bucket $_.Name -WarningAction SilentlyContinue
-        Write-Host "  $($_.Name)" -ForegroundColor Cyan -NoNewline
-        Write-Host " — $($stats.ObjectCount) objects, $($stats.TotalSize)" -ForegroundColor DarkGray
+        if ($Recurse) {
+            $indent = "  " + ("  " * ($_.Name -split "/").Count)
+            Write-Host "$($indent)$($_.Name)" -ForegroundColor Cyan -NoNewline
+            Write-Host " — $($_.ObjectCount) objects" -ForegroundColor DarkGray
+        } else {
+            Write-Host "  $($_.Name)" -ForegroundColor Cyan -NoNewline
+            Write-Host " — $($_.ObjectCount) objects" -ForegroundColor DarkGray
+            if ($_.HasSubBuckets) {
+                Write-Host " [+]" -ForegroundColor DarkGray
+            } else {
+                Write-Host ""
+            }
+        }
     }
 }
 
@@ -414,7 +425,8 @@ function Show-Menu {
     Write-Host " Buckets REPL" -ForegroundColor Cyan
     Write-Host "========================================" -ForegroundColor Cyan
     Write-Host ""
-    Write-Host "  [buckets] List all buckets with stats" -ForegroundColor White
+    Write-Host "  [buckets]    List top-level buckets with stats" -ForegroundColor White
+    Write-Host "  [buckets -r] List all buckets recursively" -ForegroundColor White
     Write-Host "  [objects]  Show objects in a bucket" -ForegroundColor White
     Write-Host "  [keys]     List keys in a bucket" -ForegroundColor White
     Write-Host ""
@@ -457,8 +469,10 @@ while ($running) {
     Write-Host ""
 
     try {
-        switch ($choice) {
+        switch -Wildcard ($choice) {
             "buckets" { Show-Buckets }
+            "buckets -r" { Show-Buckets -Recurse }
+            "buckets --recursive" { Show-Buckets -Recurse }
             "objects" { Show-BucketObjects }
             "keys"    { Show-BucketKeys }
             "save"    { QuickSave }

@@ -144,11 +144,14 @@ Write-Host "$($alice.Role)" -ForegroundColor Yellow
 Write-Host "`n── 4. Get-BucketStats ──────────────────────" -ForegroundColor Blue
 Write-Host ""
 foreach ($b in (Get-Bucket)) {
-    $stats = Get-BucketStats -Bucket $b.Name
     Write-Host "  " -NoNewline
     Write-Host "$($b.Name)" -NoNewline -ForegroundColor Cyan
-    Write-Host " · $($stats.ObjectCount) objects" -NoNewline -ForegroundColor Magenta
-    Write-Host " · $([math]::Round($stats.SizeBytes / 1KB, 1)) KB" -ForegroundColor DarkGray
+    Write-Host " · $($b.ObjectCount) objects" -NoNewline -ForegroundColor Magenta
+    if ($b.HasSubBuckets) {
+        Write-Host " · [+]" -ForegroundColor DarkGray
+    } else {
+        Write-Host "" -ForegroundColor DarkGray
+    }
 }
 
 # ============================================================

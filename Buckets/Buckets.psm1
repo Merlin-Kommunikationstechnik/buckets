@@ -549,6 +549,10 @@ function Get-Bucket {
     including name, path, and total object count (JSON + binary files). Supports nested
     buckets — any directory containing .dat or .json files is a bucket.
 
+    By default only top-level buckets are shown with aggregated object counts (including
+    all descendants). Use -Recurse to list all nested buckets with direct (non-aggregated)
+    counts. The HasSubBuckets property indicates whether a bucket contains nested sub-buckets.
+
     Use -AsTree to render a beautiful colorized tree view of all buckets.
     .PARAMETER Path
     Root directory for bucket storage. Default: $HOME/.buckets.
@@ -564,12 +568,16 @@ function Get-Bucket {
     Maximum files to display per bucket in tree view. Truncated files shown as "... N more". Default: 5.
     .PARAMETER Depth
     Maximum depth to display in tree view.
+    .PARAMETER Recurse
+    List all nested buckets with direct (non-aggregated) object counts.
     .OUTPUTS
-    PSCustomObject with Name, Path, and ObjectCount properties, or tree output.
+    PSCustomObject with Name, Path, ObjectCount, and HasSubBuckets properties, or tree output.
     .EXAMPLE
     Get-Bucket
     .EXAMPLE
     Get-Bucket "user"
+    .EXAMPLE
+    Get-Bucket -Recurse
     .EXAMPLE
     Get-Bucket -AsTree
     .EXAMPLE
@@ -582,6 +590,7 @@ function Get-Bucket {
         [switch]$AsTree,
         [switch]$NoObjects,
         [switch]$Raw,
+        [switch]$Recurse,
         [int]$MaxFiles = 5,
         [int]$Depth = [int]::MaxValue
     )
@@ -808,29 +817,74 @@ function Get-Bucket {
         return
     }
 
-    function Find-BucketsRecursive {
-        param([string]$Dir)
-        $di = [System.IO.DirectoryInfo]::new($Dir)
-        $hasFiles = $di.GetFiles("*.dat").Length -gt 0 -or $di.GetFiles("*.json").Length -gt 0
-        if ($hasFiles -and $Dir -ne $Path) {
-            $datFiles = [System.IO.Directory]::GetFiles($Dir, "*.dat")
-            $jsonFiles = [System.IO.Directory]::GetFiles($Dir, "*.json")
-            [PSCustomObject]@{
-                Name        = $Dir.Substring($Path.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar).Replace([System.IO.Path]::DirectorySeparatorChar, '/')
-                Path        = $Dir
-                ObjectCount = $datFiles.Length + $jsonFiles.Length
+    $results = [System.Collections.ArrayList]::new()
+
+    if ($Recurse) {
+        # Recursive mode: all directories, direct counts
+        function Scan-Recurse {
+            param([string]$Dir)
+            $di = [System.IO.DirectoryInfo]::new($Dir)
+            $directCount = $di.GetFiles("*.dat").Length + $di.GetFiles("*.json").Length
+            $hasSubBuckets = $false
+
+            foreach ($child in $di.GetDirectories()) {
+                if ($child.Name -eq ".buckets") { continue }
+                $hasSubBuckets = $true
+                Scan-Recurse -Dir $child.FullName
+            }
+
+            $relPath = $Dir.Substring($Path.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar).Replace([System.IO.Path]::DirectorySeparatorChar, '/')
+            if ($directCount -gt 0 -or $hasSubBuckets) {
+                $null = $results.Add([PSCustomObject]@{
+                    Name          = $relPath
+                    Path          = $Dir
+                    ObjectCount   = $directCount
+                    HasSubBuckets = $hasSubBuckets
+                })
             }
         }
-        foreach ($subDir in $di.GetDirectories()) {
+
+        $rootDi = [System.IO.DirectoryInfo]::new($Path)
+        foreach ($subDir in $rootDi.GetDirectories()) {
             if ($subDir.Name -eq ".buckets") { continue }
-            Find-BucketsRecursive -Dir $subDir.FullName
+            Scan-Recurse -Dir $subDir.FullName
+        }
+    }
+    else {
+        # Non-recursive mode: top-level only, aggregated counts
+        function Get-AggregatedStats {
+            param([string]$Dir)
+            $di = [System.IO.DirectoryInfo]::new($Dir)
+            $count = $di.GetFiles("*.dat").Length + $di.GetFiles("*.json").Length
+            $hasSubBuckets = $false
+
+            foreach ($child in $di.GetDirectories()) {
+                if ($child.Name -eq ".buckets") { continue }
+                $hasSubBuckets = $true
+                $childStats = Get-AggregatedStats -Dir $child.FullName
+                $count += $childStats.Count
+            }
+
+            @{ Count = $count; HasSubBuckets = $hasSubBuckets }
+        }
+
+        $rootDi = [System.IO.DirectoryInfo]::new($Path)
+        foreach ($subDir in $rootDi.GetDirectories()) {
+            if ($subDir.Name -eq ".buckets") { continue }
+            $stats = Get-AggregatedStats -Dir $subDir.FullName
+            $null = $results.Add([PSCustomObject]@{
+                Name          = $subDir.Name
+                Path          = $subDir.FullName
+                ObjectCount   = $stats.Count
+                HasSubBuckets = $stats.HasSubBuckets
+            })
         }
     }
 
-    $results = Find-BucketsRecursive -Dir $Path
     if (-not [string]::IsNullOrWhiteSpace($Name)) {
         $results = $results | Where-Object { $_.Name -like "*$Name*" }
     }
+
     $results
 }
 
@@ -869,7 +923,7 @@ function Get-BucketKeys {
     $bucketPaths = @()
     if (-not [string]::IsNullOrWhiteSpace($Bucket)) {
         if ($Bucket -match '[\*\?]') {
-            $cachedBuckets = Get-Bucket -Path $Path
+            $cachedBuckets = Get-Bucket -Path $Path -Recurse
             $matched = $cachedBuckets | Where-Object { $_.Name -like $Bucket }
             $bucketPaths += $matched | ForEach-Object { $_.Path }
         }
@@ -962,7 +1016,7 @@ function Get-BucketObject {
         $cachedBuckets = $null
         foreach ($b in $Bucket) {
             if ($b -match '[\*\?]') {
-                if ($null -eq $cachedBuckets) { $cachedBuckets = Get-Bucket -Path $Path }
+                if ($null -eq $cachedBuckets) { $cachedBuckets = Get-Bucket -Path $Path -Recurse }
                 $matched = $cachedBuckets | Where-Object { $_.Name -like $b }
                 $bucketPaths += $matched | ForEach-Object { $_.Path }
             }
@@ -970,14 +1024,14 @@ function Get-BucketObject {
                 $bp = Get-BucketPath -Name $b -Path $Path
                 $bucketPaths += $bp
                 if ($Recurse) {
-                    $nested = Get-Bucket -Path $Path | Where-Object { $_.Name -like "$b/*" }
+                    $nested = Get-Bucket -Path $Path -Recurse | Where-Object { $_.Name -like "$b/*" }
                     $bucketPaths += $nested | ForEach-Object { $_.Path }
                 }
             }
         }
     }
     else {
-        $bucketPaths += Get-Bucket -Path $Path | ForEach-Object { $_.Path }
+        $bucketPaths += Get-Bucket -Path $Path -Recurse | ForEach-Object { $_.Path }
     }
 
     $allObjects = [System.Collections.ArrayList]::new()
