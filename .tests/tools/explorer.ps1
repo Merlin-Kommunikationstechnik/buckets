@@ -3,7 +3,7 @@
 # Navigate buckets and their contents via a logical tree structure.
 
 $ErrorActionPreference = "Stop"
-$modulePath = Join-Path $PSScriptRoot "../Buckets"
+$modulePath = Join-Path $PSScriptRoot "../../Buckets"
 
 if (-not (Get-Module Buckets)) {
     Import-Module $modulePath -Force

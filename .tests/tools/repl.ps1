@@ -3,7 +3,7 @@
 # A command-line playground for testing, demoing, and debugging the Buckets module.
 
 $ErrorActionPreference = "Stop"
-$modulePath = Join-Path $PSScriptRoot "../Buckets"
+$modulePath = Join-Path $PSScriptRoot "../../Buckets"
 
 if (-not (Get-Module Buckets)) {
     Import-Module $modulePath -Force

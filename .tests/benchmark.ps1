@@ -1,0 +1,195 @@
+#!/usr/bin/env pwsh
+<#
+.SYNOPSIS
+    Performance benchmarks for the Buckets module.
+.DESCRIPTION
+    Measures write/read throughput for 1k and 10k objects, both simple and
+    complex, in binary and JSON formats.
+#>
+
+Remove-Module Buckets -ErrorAction SilentlyContinue
+Import-Module "$PSScriptRoot/../Buckets" -Force
+
+$bucketDir = Join-Path $HOME ".buckets"
+if (Test-Path $bucketDir) { Remove-Item $bucketDir -Recurse -Force }
+
+Write-Host "========================================" -ForegroundColor Blue
+Write-Host " Buckets Module - Benchmark Suite" -ForegroundColor Blue
+Write-Host "========================================`n" -ForegroundColor Blue
+
+$sw = [System.Diagnostics.Stopwatch]::StartNew()
+
+# ============================================================
+# 1. Performance benchmark (1,000 objects)
+# ============================================================
+Write-Host "[1] Performance benchmark (1,000 objects — baseline throughput)" -ForegroundColor Blue
+Remove-Bucket "perf-test" -Force -Confirm:$false -WarningAction SilentlyContinue
+$perfBench = [System.Diagnostics.Stopwatch]::StartNew()
+$perfObjects = 1..1000 | ForEach-Object {
+    [PSCustomObject]@{
+        Id = $_
+        Name = "item-$_"
+        Value = (Get-Random)
+        Timestamp = [DateTimeOffset]::Now
+    }
+}
+$perfObjects | New-BucketObject -Bucket perf-test -KeyProperty Id -Quiet
+$writeTime = $perfBench.ElapsedMilliseconds
+
+$perfBench.Restart()
+$retrieved = Get-BucketObject -Bucket perf-test
+$readTime = $perfBench.ElapsedMilliseconds
+
+Write-Host "  Write: ${writeTime}ms, Read: ${readTime}ms, Objects: $($retrieved.Count)" -ForegroundColor DarkGray
+
+# ============================================================
+# 2. Performance benchmark (10,000 objects)
+# ============================================================
+Write-Host "`n[2] Performance benchmark (10,000 objects — scale test)" -ForegroundColor Blue
+Remove-Bucket "perf-10k" -Force -Confirm:$false -WarningAction SilentlyContinue
+$perfBench10k = [System.Diagnostics.Stopwatch]::StartNew()
+$perf10kObjects = 1..10000 | ForEach-Object {
+    [PSCustomObject]@{
+        Id = $_
+        Name = "obj-$_"
+        Value = (Get-Random)
+        Tags = @("tag-$_", "group-$($_ % 100)")
+    }
+}
+$perf10kObjects | New-BucketObject -Bucket perf-10k -KeyProperty Id -Quiet
+$writeTime10k = $perfBench10k.ElapsedMilliseconds
+
+$perfBench10k.Restart()
+$retrieved10k = Get-BucketObject -Bucket perf-10k
+$readTime10k = $perfBench10k.ElapsedMilliseconds
+
+Write-Host "  Write: ${writeTime10k}ms, Read: ${readTime10k}ms, Objects: $($retrieved10k.Count)" -ForegroundColor DarkGray
+
+# ============================================================
+# 3. Performance benchmark (10,000 complex objects)
+# ============================================================
+Write-Host "`n[3] Performance benchmark (10,000 complex objects — nested depth test)" -ForegroundColor Blue
+Remove-Bucket "perf-10k-complex" -Force -Confirm:$false -WarningAction SilentlyContinue
+$perfBench10kC = [System.Diagnostics.Stopwatch]::StartNew()
+$perf10kCObjects = 1..10000 | ForEach-Object {
+    [PSCustomObject]@{
+        Id = $_
+        Profile = [PSCustomObject]@{
+            Name = "User-$_"
+            Email = "user-$_@example.com"
+            Preferences = [PSCustomObject]@{
+                Theme = @("dark", "light", "auto")[$_ % 3]
+                Language = @("en", "de", "fr")[$_ % 3]
+                Notifications = @{ Email = ($true, $false)[$_ % 2]; Push = ($true, $false)[($_ + 1) % 2] }
+            }
+        }
+        Orders = @(
+            [PSCustomObject]@{ OrderId = "ORD-$($_)-1"; Total = (Get-Random -Min 10 -Max 500); Status = @("pending", "shipped", "delivered")[$_ % 3] }
+            [PSCustomObject]@{ OrderId = "ORD-$($_)-2"; Total = (Get-Random -Min 5 -Max 200); Status = @("pending", "cancelled")[$_ % 2] }
+        )
+        Metadata = [PSCustomObject]@{
+            Created = [DateTimeOffset]::Now
+            Updated = [DateTimeOffset]::Now
+            Tags = @("tag-$_", "group-$($_ % 50)", "region-$($_ % 10)")
+        }
+    }
+}
+$perf10kCObjects | New-BucketObject -Bucket perf-10k-complex -KeyProperty Id -Quiet
+$writeTime10kC = $perfBench10kC.ElapsedMilliseconds
+
+$perfBench10kC.Restart()
+$retrieved10kC = Get-BucketObject -Bucket perf-10k-complex
+$readTime10kC = $perfBench10kC.ElapsedMilliseconds
+
+Write-Host "  Write: ${writeTime10kC}ms, Read: ${readTime10kC}ms, Objects: $($retrieved10kC.Count)" -ForegroundColor DarkGray
+
+# ============================================================
+# 4. Performance benchmark JSON (1,000 objects)
+# ============================================================
+Write-Host "`n[4] Performance benchmark JSON (1,000 objects)" -ForegroundColor Blue
+Remove-Bucket "perf-json-1k" -Force -Confirm:$false -WarningAction SilentlyContinue
+$perfJsonBench = [System.Diagnostics.Stopwatch]::StartNew()
+$perfJsonObjects = 1..1000 | ForEach-Object {
+    [PSCustomObject]@{
+        Id = $_
+        Name = "item-$_"
+        Value = (Get-Random)
+        Timestamp = [DateTimeOffset]::Now
+    }
+}
+$perfJsonObjects | New-BucketObject -Bucket perf-json-1k -KeyProperty Id -AsJson -Quiet
+$jsonWriteTime = $perfJsonBench.ElapsedMilliseconds
+
+$perfJsonBench.Restart()
+$jsonRetrieved = Get-BucketObject -Bucket perf-json-1k
+$jsonReadTime = $perfJsonBench.ElapsedMilliseconds
+
+Write-Host "  Write: ${jsonWriteTime}ms, Read: ${jsonReadTime}ms, Objects: $($jsonRetrieved.Count)" -ForegroundColor DarkGray
+
+# ============================================================
+# 5. Performance benchmark JSON (10,000 objects)
+# ============================================================
+Write-Host "`n[5] Performance benchmark JSON (10,000 objects)" -ForegroundColor Blue
+Remove-Bucket "perf-json-10k" -Force -Confirm:$false -WarningAction SilentlyContinue
+$perfJson10kBench = [System.Diagnostics.Stopwatch]::StartNew()
+$perfJson10kObjects = 1..10000 | ForEach-Object {
+    [PSCustomObject]@{
+        Id = $_
+        Name = "obj-$_"
+        Value = (Get-Random)
+        Tags = @("tag-$_", "group-$($_ % 100)")
+    }
+}
+$perfJson10kObjects | New-BucketObject -Bucket perf-json-10k -KeyProperty Id -AsJson -Quiet
+$jsonWriteTime10k = $perfJson10kBench.ElapsedMilliseconds
+
+$perfJson10kBench.Restart()
+$jsonRetrieved10k = Get-BucketObject -Bucket perf-json-10k
+$jsonReadTime10k = $perfJson10kBench.ElapsedMilliseconds
+
+Write-Host "  Write: ${jsonWriteTime10k}ms, Read: ${jsonReadTime10k}ms, Objects: $($jsonRetrieved10k.Count)" -ForegroundColor DarkGray
+
+# ============================================================
+# 6. Performance benchmark JSON (10,000 complex objects)
+# ============================================================
+Write-Host "`n[6] Performance benchmark JSON (10,000 complex objects)" -ForegroundColor Blue
+Remove-Bucket "perf-json-complex" -Force -Confirm:$false -WarningAction SilentlyContinue
+$perfJsonCBench = [System.Diagnostics.Stopwatch]::StartNew()
+$perfJsonCObjects = 1..10000 | ForEach-Object {
+    [PSCustomObject]@{
+        Id = $_
+        Profile = [PSCustomObject]@{
+            Name = "User-$_"
+            Email = "user-$_@example.com"
+            Preferences = [PSCustomObject]@{
+                Theme = @("dark", "light", "auto")[$_ % 3]
+                Language = @("en", "de", "fr")[$_ % 3]
+                Notifications = @{ Email = ($true, $false)[$_ % 2]; Push = ($true, $false)[($_ + 1) % 2] }
+            }
+        }
+        Orders = @(
+            [PSCustomObject]@{ OrderId = "ORD-$($_)-1"; Total = (Get-Random -Min 10 -Max 500); Status = @("pending", "shipped", "delivered")[$_ % 3] }
+            [PSCustomObject]@{ OrderId = "ORD-$($_)-2"; Total = (Get-Random -Min 5 -Max 200); Status = @("pending", "cancelled")[$_ % 2] }
+        )
+        Metadata = [PSCustomObject]@{
+            Created = [DateTimeOffset]::Now
+            Updated = [DateTimeOffset]::Now
+            Tags = @("tag-$_", "group-$($_ % 50)", "region-$($_ % 10)")
+        }
+    }
+}
+$perfJsonCObjects | New-BucketObject -Bucket perf-json-complex -KeyProperty Id -AsJson -Quiet
+$jsonWriteTimeC = $perfJsonCBench.ElapsedMilliseconds
+
+$perfJsonCBench.Restart()
+$jsonRetrievedC = Get-BucketObject -Bucket perf-json-complex
+$jsonReadTimeC = $perfJsonCBench.ElapsedMilliseconds
+
+Write-Host "  Write: ${jsonWriteTimeC}ms, Read: ${jsonReadTimeC}ms, Objects: $($jsonRetrievedC.Count)" -ForegroundColor DarkGray
+
+# ============================================================
+Write-Host "`n========================================" -ForegroundColor Blue
+Write-Host " Done" -ForegroundColor Blue
+Write-Host "========================================" -ForegroundColor Blue
+$elapsed = $sw.ElapsedMilliseconds
+Write-Host "Total time: ${elapsed}ms" -ForegroundColor Blue

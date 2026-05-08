@@ -343,6 +343,31 @@ function Get-ObjectProperty {
     return @{ HasValue = $hasValue; Value = $value }
 }
 
+function Get-BucketFiles {
+    param([string]$BucketPath)
+    $di = [System.IO.DirectoryInfo]::new($BucketPath)
+    @($di.GetFiles("*.json")) + @($di.GetFiles("*.dat"))
+}
+
+function Sanitize-Key {
+    param([string]$Key)
+    $safe = $Key -replace '[\\/:\*\?"<>\|\.\[\]]', '_'
+    if ([string]::IsNullOrWhiteSpace($safe) -or $safe -match '^_+$') { return $null }
+    return $safe
+}
+
+function Test-MatchFilter {
+    param([PSObject]$Object, [hashtable]$Match)
+    foreach ($kvp in $Match.GetEnumerator()) {
+        $prop = Get-ObjectProperty -Object $Object -PropertyName $kvp.Name
+        $matchesValue = if ($null -eq $kvp.Value) { -not $prop.HasValue }
+        elseif (-not $prop.HasValue) { $false }
+        else { $prop.Value -eq $kvp.Value }
+        if (-not $matchesValue) { return $false }
+    }
+    return $true
+}
+
 # --- Public cmdlets (alphabetical) ---
 
 function Copy-BucketObject {
@@ -967,19 +992,7 @@ function Get-BucketObject {
             $obj = Read-BucketFile -File $file
             if ($null -eq $obj) { continue }
 
-            if ($Match) {
-                $hit = $true
-                foreach ($kvp in $Match.GetEnumerator()) {
-                    $propName = $kvp.Name
-                    $expectedValue = $kvp.Value
-                    $prop = Get-ObjectProperty -Object $obj -PropertyName $propName
-                    $matchesValue = if ($null -eq $expectedValue) { -not $prop.HasValue }
-                    elseif (-not $prop.HasValue) { $false }
-                    else { $prop.Value -eq $expectedValue }
-                    if (-not $matchesValue) { $hit = $false; break }
-                }
-                if (-not $hit) { continue }
-            }
+            if ($Match -and -not (Test-MatchFilter -Object $obj -Match $Match)) { continue }
 
             if ($Filter) {
                 if ($null -eq ($obj | Where-Object $Filter)) { continue }
@@ -1292,7 +1305,7 @@ function New-BucketObject {
     .PARAMETER Depth
     Maximum depth for JSON serialization. Default: 20.
     .PARAMETER BinaryDepth
-    Maximum depth for binary (PSSerializer) serialization. Default: 2.
+    Maximum depth for binary (PSSerializer) serialization. Default: 5.
     .PARAMETER AsTimestamp
     Use a timestamp-based filename (yyyyMMddHHmmssfff_index) instead of a GUID. Ignored if -Key or -KeyProperty is also specified.
     .PARAMETER AsJson
@@ -1801,19 +1814,7 @@ function Remove-BucketObject {
         foreach ($file in $allFiles) {
             $obj = Read-BucketFile -File $file
             if ($null -eq $obj) { continue }
-            if ($Match) {
-                $hit = $true
-                foreach ($kvp in $Match.GetEnumerator()) {
-                    $propName = $kvp.Name
-                    $expectedValue = $kvp.Value
-                    $prop = Get-ObjectProperty -Object $obj -PropertyName $propName
-                    $matchesValue = if ($null -eq $expectedValue) { -not $prop.HasValue }
-                    elseif (-not $prop.HasValue) { $false }
-                    else { $prop.Value -eq $expectedValue }
-                    if (-not $matchesValue) { $hit = $false; break }
-                }
-                if (-not $hit) { continue }
-            }
+            if ($Match -and -not (Test-MatchFilter -Object $obj -Match $Match)) { continue }
             if ($Filter) {
                 if ($null -eq ($obj | Where-Object $Filter)) { continue }
             }
@@ -1940,7 +1941,7 @@ function Set-BucketObject {
     .PARAMETER Depth
     Maximum depth for JSON serialization. Default: 20.
     .PARAMETER BinaryDepth
-    Maximum depth for binary (PSSerializer) serialization. Default: 2.
+    Maximum depth for binary (PSSerializer) serialization. Default: 5.
     .PARAMETER AsJson
     Force JSON format for the updated file.
     .PARAMETER Compress

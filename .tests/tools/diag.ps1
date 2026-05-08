@@ -1,7 +1,7 @@
 # Array Subdirectory Diagnostic Script
 # Run this and paste the output back
 
-Import-Module ./Buckets/Buckets.psm1 -Force
+Import-Module "$PSScriptRoot/../../Buckets/Buckets.psm1" -Force
 Remove-Bucket "diag" -Force -Confirm:$false -WarningAction SilentlyContinue
 
 $report = [System.Collections.ArrayList]::new()

@@ -68,7 +68,7 @@
 #>
 
 Remove-Module Buckets -ErrorAction SilentlyContinue
-Import-Module "$PSScriptRoot/../Buckets" -Force
+Import-Module "$PSScriptRoot/../../Buckets" -Force
 
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
 Write-Host "========================================" -ForegroundColor Cyan

@@ -60,9 +60,18 @@ Uses `SupportsShouldProcess` for `-WhatIf` support. Parameter sets enforce `-Key
 
 ## Testing
 ```bash
-pwsh -NoProfile -ExecutionPolicy Bypass -File .tests/test.ps1
+pwsh -NoProfile -ExecutionPolicy Bypass -File .tests/test.ps1    # Functional tests
+pwsh -NoProfile -ExecutionPolicy Bypass -File .tests/benchmark.ps1  # Performance benchmarks
 ```
-Test script wipes `.buckets` directory, then runs: hashtables, nested objects, FileInfo (binary fallback), logs, JSON config, metrics, mixed formats, Copy/Rename/Export/Import, compression, -WhatIf, round-trip integrity (10/10 checks), error conditions, performance benchmark (1000 objects).
+Tests wipe `.buckets` directory, then run functional tests: hashtables, nested objects, FileInfo (binary fallback), logs, JSON config, metrics, mixed formats, Copy/Rename/Export/Import, compression, -WhatIf, round-trip integrity (10/10 checks), error conditions, nested buckets with -Recurse, metadata isolation, and -AsTree edge cases.
+
+Benchmarks measure write/read throughput for 1k and 10k objects (simple + complex) in both binary and JSON formats.
+
+## Scripts
+- `.tests/test.ps1` — functional correctness tests
+- `.tests/benchmark.ps1` — performance benchmarks
+- `.tests/demo/` — demo/showcase scripts
+- `.tests/tools/` — utility/debug scripts (explorer, REPL, diag)
 
 ## Code Style
 - No emojis in code or comments

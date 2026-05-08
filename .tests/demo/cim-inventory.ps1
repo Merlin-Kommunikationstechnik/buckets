@@ -8,7 +8,7 @@
 #>
 
 Remove-Module Buckets -ErrorAction SilentlyContinue
-Import-Module "$PSScriptRoot/../Buckets" -Force
+Import-Module "$PSScriptRoot/../../Buckets" -Force
 
 # Remove previous run
 Remove-Bucket "inventory" -Force -Confirm:$false -WarningAction SilentlyContinue -ErrorAction SilentlyContinue

@@ -182,13 +182,6 @@ $elapsed = $sw.ElapsedMilliseconds
 Write-Host "`nTotal time: ${elapsed}ms" -ForegroundColor Blue
 
 # ============================================================
-# NEW CMDLETS & FEATURES
-# ============================================================
-Write-Host "`n========================================" -ForegroundColor Blue
-Write-Host " New Features" -ForegroundColor Blue
-Write-Host "========================================`n" -ForegroundColor Blue
-
-# ============================================================
 # 8. Copy-BucketObject
 # ============================================================
 Write-Host "`n[8] Copy-BucketObject (cross-bucket copy, key rename)" -ForegroundColor Blue
@@ -566,205 +559,189 @@ if ($result.Count -eq 3 -and $newErrors -eq 0) {
 }
 
 # ============================================================
-# 15. Performance benchmark (1,000 objects — baseline throughput)
+# 16. Metadata isolation
 # ============================================================
-Write-Host "`n[15] Performance benchmark (1,000 objects — baseline throughput)" -ForegroundColor Blue
-Remove-Bucket "perf-test" -Force -Confirm:$false -WarningAction SilentlyContinue
-$perfBench = [System.Diagnostics.Stopwatch]::StartNew()
-$perfObjects = 1..1000 | ForEach-Object {
-    [PSCustomObject]@{
-        Id = $_
-        Name = "item-$_"
-        Value = (Get-Random)
-        Timestamp = [DateTimeOffset]::Now
-    }
-}
-$perfObjects | New-BucketObject -Bucket perf-test -KeyProperty Id -Quiet
-$writeTime = $perfBench.ElapsedMilliseconds
+Write-Host "`n[16] Metadata isolation (hidden _BucketName, _BucketKey, _BucketFile)" -ForegroundColor Blue
 
-$perfBench.Restart()
-$retrieved = Get-BucketObject -Bucket perf-test
-$readTime = $perfBench.ElapsedMilliseconds
+$user = Get-BucketObject -Bucket users -Key "Alice"
 
-Write-Host "  Write: ${writeTime}ms, Read: ${readTime}ms, Objects: $($retrieved.Count)" -ForegroundColor DarkGray
-if ($retrieved.Count -ne 1000) {
-    Write-Host "  FAIL: Expected 1000 objects, got $($retrieved.Count)" -ForegroundColor Red
+$selectStar = $user | Select-Object *
+$hasHidden = $selectStar.PSObject.Properties.Name -contains "_BucketName" -or $selectStar.PSObject.Properties.Name -contains "_BucketKey"
+$accessible = $null -ne $user._BucketName -and $null -ne $user._BucketKey -and $null -ne $user._BucketFile
+
+if (-not $hasHidden -and $accessible) {
+    Write-Host "  Metadata isolation: OK (hidden from Select-Object *, accessible via direct access)" -ForegroundColor Magenta
+} else {
+    Write-Host "  FAIL (hidden=$(-not $hasHidden), accessible=$accessible, _BucketName=$($user._BucketName))" -ForegroundColor Red
 }
 
 # ============================================================
-# 16. Performance benchmark (10,000 objects)
+# 17. Get-BucketObject -Recurse with filters
 # ============================================================
-Write-Host "`n[16] Performance benchmark (10,000 objects — scale test)" -ForegroundColor Blue
-Remove-Bucket "perf-10k" -Force -Confirm:$false -WarningAction SilentlyContinue
-$perfBench10k = [System.Diagnostics.Stopwatch]::StartNew()
-$perf10kObjects = 1..10000 | ForEach-Object {
-    [PSCustomObject]@{
-        Id = $_
-        Name = "obj-$_"
-        Value = (Get-Random)
-        Tags = @("tag-$_", "group-$($_ % 100)")
-    }
-}
-$perf10kObjects | New-BucketObject -Bucket perf-10k -KeyProperty Id -Quiet
-$writeTime10k = $perfBench10k.ElapsedMilliseconds
+Write-Host "`n[17] Get-BucketObject -Recurse with filters" -ForegroundColor Blue
 
-$perfBench10k.Restart()
-$retrieved10k = Get-BucketObject -Bucket perf-10k
-$readTime10k = $perfBench10k.ElapsedMilliseconds
+# Recurse + Key
+$r1 = Get-BucketObject -Bucket "org" -Recurse -Key "info"
+$r1count = @($r1).Count
+$r1ok = $r1count -eq 3
+Write-Host "  -Recurse -Key info: $r1count objects" -NoNewline
+if ($r1ok) { Write-Host " — OK" -ForegroundColor Magenta } else { Write-Host " — FAIL" -ForegroundColor Red }
 
-Write-Host "  Write: ${writeTime10k}ms, Read: ${readTime10k}ms, Objects: $($retrieved10k.Count)" -ForegroundColor DarkGray
-if ($retrieved10k.Count -ne 10000) {
-    Write-Host "  FAIL: Expected 10000 objects, got $($retrieved10k.Count)" -ForegroundColor Red
-}
+# Recurse + Match
+$r2 = Get-BucketObject -Bucket "org" -Recurse -Match @{ Country = "Germany" }
+$r2count = @($r2).Count
+$r2ok = $r2count -eq 1 -and $r2[0].Country -eq "Germany"
+Write-Host "  -Recurse -Match @{Country='Germany'}: $r2count objects" -NoNewline
+if ($r2ok) { Write-Host " — OK" -ForegroundColor Magenta } else { Write-Host " — FAIL" -ForegroundColor Red }
 
-# ============================================================
-# 17. Performance benchmark (10,000 complex objects)
-# ============================================================
-Write-Host "`n[17] Performance benchmark (10,000 complex objects — nested depth test)" -ForegroundColor Blue
-Remove-Bucket "perf-10k-complex" -Force -Confirm:$false -WarningAction SilentlyContinue
-$perfBench10kC = [System.Diagnostics.Stopwatch]::StartNew()
-$perf10kCObjects = 1..10000 | ForEach-Object {
-    [PSCustomObject]@{
-        Id = $_
-        Profile = [PSCustomObject]@{
-            Name = "User-$_"
-            Email = "user-$_@example.com"
-            Preferences = [PSCustomObject]@{
-                Theme = @("dark", "light", "auto")[$_ % 3]
-                Language = @("en", "de", "fr")[$_ % 3]
-                Notifications = @{ Email = ($true, $false)[$_ % 2]; Push = ($true, $false)[($_ + 1) % 2] }
-            }
-        }
-        Orders = @(
-            [PSCustomObject]@{ OrderId = "ORD-$($_)-1"; Total = (Get-Random -Min 10 -Max 500); Status = @("pending", "shipped", "delivered")[$_ % 3] }
-            [PSCustomObject]@{ OrderId = "ORD-$($_)-2"; Total = (Get-Random -Min 5 -Max 200); Status = @("pending", "cancelled")[$_ % 2] }
-        )
-        Metadata = [PSCustomObject]@{
-            Created = [DateTimeOffset]::Now
-            Updated = [DateTimeOffset]::Now
-            Tags = @("tag-$_", "group-$($_ % 50)", "region-$($_ % 10)")
-        }
-    }
-}
-$perf10kCObjects | New-BucketObject -Bucket perf-10k-complex -KeyProperty Id -Quiet
-$writeTime10kC = $perfBench10kC.ElapsedMilliseconds
-
-$perfBench10kC.Restart()
-$retrieved10kC = Get-BucketObject -Bucket perf-10k-complex
-$readTime10kC = $perfBench10kC.ElapsedMilliseconds
-
-Write-Host "  Write: ${writeTime10kC}ms, Read: ${readTime10kC}ms, Objects: $($retrieved10kC.Count)" -ForegroundColor DarkGray
-if ($retrieved10kC.Count -ne 10000) {
-    Write-Host "  FAIL: Expected 10000 objects, got $($retrieved10kC.Count)" -ForegroundColor Red
-}
-else {
-    $sample = $retrieved10kC[0]
-    if ($sample.Profile.Preferences.Theme -and $sample.Orders.Count -eq 2 -and $sample.Metadata.Tags.Count -eq 3) {
-        Write-Host "  Integrity: OK (nested data preserved)" -ForegroundColor Magenta
-    }
-    else {
-        Write-Host "  FAIL: Nested data integrity issue" -ForegroundColor Red
-    }
-}
+# Recurse + Filter
+$r3 = Get-BucketObject -Bucket "org" -Recurse -Filter { $_.Employees -gt 100 }
+$r3count = @($r3).Count
+$r3ok = $r3count -eq 1 -and $r3[0].City -eq "Berlin"
+Write-Host "  -Recurse -Filter { `$_.Employees -gt 100 }: $r3count objects" -NoNewline
+if ($r3ok) { Write-Host " — OK" -ForegroundColor Magenta } else { Write-Host " — FAIL" -ForegroundColor Red }
 
 # ============================================================
-# 18. Performance benchmark JSON (1,000 objects)
+# 18. Get-Bucket -AsTree edge cases
 # ============================================================
-Write-Host "`n[18] Performance benchmark JSON (1,000 objects)" -ForegroundColor Blue
-Remove-Bucket "perf-json-1k" -Force -Confirm:$false -WarningAction SilentlyContinue
-$perfJsonBench = [System.Diagnostics.Stopwatch]::StartNew()
-$perfJsonObjects = 1..1000 | ForEach-Object {
-    [PSCustomObject]@{
-        Id = $_
-        Name = "item-$_"
-        Value = (Get-Random)
-        Timestamp = [DateTimeOffset]::Now
-    }
-}
-$perfJsonObjects | New-BucketObject -Bucket perf-json-1k -KeyProperty Id -AsJson -Quiet
-$jsonWriteTime = $perfJsonBench.ElapsedMilliseconds
+Write-Host "`n[18] Get-Bucket -AsTree edge cases" -ForegroundColor Blue
 
-$perfJsonBench.Restart()
-$jsonRetrieved = Get-BucketObject -Bucket perf-json-1k
-$jsonReadTime = $perfJsonBench.ElapsedMilliseconds
-
-Write-Host "  Write: ${jsonWriteTime}ms, Read: ${jsonReadTime}ms, Objects: $($jsonRetrieved.Count)" -ForegroundColor DarkGray
-if ($jsonRetrieved.Count -ne 1000) {
-    Write-Host "  FAIL: Expected 1000 objects, got $($jsonRetrieved.Count)" -ForegroundColor Red
+# Filtered tree with -Name
+$treeFiltered = Get-Bucket -AsTree -Raw -Name "org/eu"
+$hasOrgEu = $treeFiltered.Children | Where-Object { $_.Name -eq "org" -and $_.Children[0].Name -eq "eu" }
+$noOtherBuckets = ($treeFiltered.Children | Where-Object { $_.Name -ne ".buckets" }).Count -eq 1
+if ($hasOrgEu -and $noOtherBuckets) {
+    Write-Host "  -AsTree -Name org/eu: OK (filtered to org subtree)" -ForegroundColor Magenta
+} else {
+    Write-Host "  FAIL (hasOrgEu=$($null -ne $hasOrgEu), noOtherBuckets=$noOtherBuckets, children=$($treeFiltered.Children.Name -join ','))" -ForegroundColor Red
 }
 
-# ============================================================
-# 19. Performance benchmark JSON (10,000 objects)
-# ============================================================
-Write-Host "`n[19] Performance benchmark JSON (10,000 objects)" -ForegroundColor Blue
-Remove-Bucket "perf-json-10k" -Force -Confirm:$false -WarningAction SilentlyContinue
-$perfJson10kBench = [System.Diagnostics.Stopwatch]::StartNew()
-$perfJson10kObjects = 1..10000 | ForEach-Object {
-    [PSCustomObject]@{
-        Id = $_
-        Name = "obj-$_"
-        Value = (Get-Random)
-        Tags = @("tag-$_", "group-$($_ % 100)")
-    }
+# Missing directory resilience (remove a subdirectory then scan tree)
+$teamAPath = Join-Path $HOME ".buckets/org/eu/de/berlin/team-a"
+if (Test-Path $teamAPath) { Remove-Item $teamAPath -Recurse -Force }
+$treeAfterDelete = Get-Bucket -AsTree -Raw -Name "org" -ErrorAction SilentlyContinue
+$orgNode = $treeAfterDelete.Children | Where-Object { $_.Name -eq "org" }
+$noCrash = $null -ne $orgNode
+$objectCount = if ($noCrash) { $orgNode.ObjectCount } else { 0 }
+$expectedCount = 4  # meta + eu/info + de/info + berlin/info (team-a removed)
+if ($noCrash -and $objectCount -eq $expectedCount) {
+    Write-Host "  Missing dir resilience: OK (removed team-a, tree intact, count=$objectCount)" -ForegroundColor Magenta
+} else {
+    Write-Host "  FAIL (noCrash=$noCrash, count=$objectCount, expected=$expectedCount)" -ForegroundColor Red
 }
-$perfJson10kObjects | New-BucketObject -Bucket perf-json-10k -KeyProperty Id -AsJson -Quiet
-$jsonWriteTime10k = $perfJson10kBench.ElapsedMilliseconds
 
-$perfJson10kBench.Restart()
-$jsonRetrieved10k = Get-BucketObject -Bucket perf-json-10k
-$jsonReadTime10k = $perfJson10kBench.ElapsedMilliseconds
-
-Write-Host "  Write: ${jsonWriteTime10k}ms, Read: ${jsonReadTime10k}ms, Objects: $($jsonRetrieved10k.Count)" -ForegroundColor DarkGray
-if ($jsonRetrieved10k.Count -ne 10000) {
-    Write-Host "  FAIL: Expected 10000 objects, got $($jsonRetrieved10k.Count)" -ForegroundColor Red
-}
+# Restore
+New-BucketObject -Bucket "org/eu/de/berlin/team-a" -InputObject @{ Team = "Team A"; Lead = "Alice"; Members = 5 } -Key "profile" -Quiet
 
 # ============================================================
-# 20. Performance benchmark JSON (10,000 complex objects)
+# 19. Edge cases
 # ============================================================
-Write-Host "`n[20] Performance benchmark JSON (10,000 complex objects)" -ForegroundColor Blue
-Remove-Bucket "perf-json-complex" -Force -Confirm:$false -WarningAction SilentlyContinue
-$perfJsonCBench = [System.Diagnostics.Stopwatch]::StartNew()
-$perfJsonCObjects = 1..10000 | ForEach-Object {
-    [PSCustomObject]@{
-        Id = $_
-        Profile = [PSCustomObject]@{
-            Name = "User-$_"
-            Email = "user-$_@example.com"
-            Preferences = [PSCustomObject]@{
-                Theme = @("dark", "light", "auto")[$_ % 3]
-                Language = @("en", "de", "fr")[$_ % 3]
-                Notifications = @{ Email = ($true, $false)[$_ % 2]; Push = ($true, $false)[($_ + 1) % 2] }
-            }
-        }
-        Orders = @(
-            [PSCustomObject]@{ OrderId = "ORD-$($_)-1"; Total = (Get-Random -Min 10 -Max 500); Status = @("pending", "shipped", "delivered")[$_ % 3] }
-            [PSCustomObject]@{ OrderId = "ORD-$($_)-2"; Total = (Get-Random -Min 5 -Max 200); Status = @("pending", "cancelled")[$_ % 2] }
-        )
-        Metadata = [PSCustomObject]@{
-            Created = [DateTimeOffset]::Now
-            Updated = [DateTimeOffset]::Now
-            Tags = @("tag-$_", "group-$($_ % 50)", "region-$($_ % 10)")
-        }
-    }
-}
-$perfJsonCObjects | New-BucketObject -Bucket perf-json-complex -KeyProperty Id -AsJson -Quiet
-$jsonWriteTimeC = $perfJsonCBench.ElapsedMilliseconds
+Write-Host "`n[19] Edge cases" -ForegroundColor Blue
 
-$perfJsonCBench.Restart()
-$jsonRetrievedC = Get-BucketObject -Bucket perf-json-complex
-$jsonReadTimeC = $perfJsonCBench.ElapsedMilliseconds
+Remove-Bucket "edge" -Force -Confirm:$false -WarningAction SilentlyContinue
+$edgeOk = 0; $edgeFail = 0; $edgeMsg = @()
 
-Write-Host "  Write: ${jsonWriteTimeC}ms, Read: ${jsonReadTimeC}ms, Objects: $($jsonRetrievedC.Count)" -ForegroundColor DarkGray
-if ($jsonRetrievedC.Count -ne 10000) {
-    Write-Host "  FAIL: Expected 10000 objects, got $($jsonRetrievedC.Count)" -ForegroundColor Red
+# 1. -Overwrite behavior
+New-BucketObject -Bucket edge -InputObject @{ _Id = "x"; Val = 1 } -KeyProperty _Id -Quiet
+New-BucketObject -Bucket edge -InputObject @{ _Id = "x"; Val = 2 } -KeyProperty _Id -Quiet
+$v1 = (Get-BucketObject -Bucket edge -Key "x").Val
+New-BucketObject -Bucket edge -InputObject @{ _Id = "x"; Val = 3 } -KeyProperty _Id -Quiet -Overwrite
+$v2 = (Get-BucketObject -Bucket edge -Key "x").Val
+if ($v1 -eq 1 -and $v2 -eq 3) { $edgeOk++ } else { $edgeFail++; $edgeMsg += "Overwrite(v1=$v1 v2=$v2)" }
+
+# 2. -AsTimestamp dedup
+1..3 | ForEach-Object { New-BucketObject -Bucket edge -InputObject @{ Val = $_ } -AsTimestamp -Quiet }
+$tsCount = (Get-BucketObject -Bucket edge).Count
+if ($tsCount -ge 3) { $edgeOk++ } else { $edgeFail++; $edgeMsg += "AsTimestamp(count=$tsCount)" }
+
+# 3. -KeyProperty with $null value
+New-BucketObject -Bucket edge -InputObject @{ _Id = $null; Val = 1 } -KeyProperty _Id -Quiet
+$afterNull = (Get-BucketObject -Bucket edge).Count
+if ($afterNull -eq $tsCount) { $edgeOk++ } else { $edgeFail++; $edgeMsg += "KeyPropertyNull(after=$afterNull before=$tsCount)" }
+
+# 4. -Match with multiple properties
+New-BucketObject -Bucket edge -InputObject @{ _Id = "m1"; Color = "red"; Size = 10 } -KeyProperty _Id -Quiet
+New-BucketObject -Bucket edge -InputObject @{ _Id = "m2"; Color = "blue"; Size = 10 } -KeyProperty _Id -Quiet
+New-BucketObject -Bucket edge -InputObject @{ _Id = "m3"; Color = "red"; Size = 20 } -KeyProperty _Id -Quiet
+$matchMulti = Get-BucketObject -Bucket edge -Match @{ Color = "red"; Size = 10 }
+if (@($matchMulti).Count -eq 1 -and $matchMulti._Id -eq "m1") { $edgeOk++ } else { $edgeFail++; $edgeMsg += "MatchMulti(count=$(@($matchMulti).Count))" }
+
+# 5. Path traversal protection
+try {
+    New-BucketObject -Bucket "../../etc" -InputObject @{ x = 1 } -Key "test" -Quiet -ErrorAction Stop
+    $edgeFail++; $edgeMsg += "PathTraversal(no throw)"
+} catch { $edgeOk++ }
+
+# 6. Deep nested object serialization
+$deep = @{ _Id = "deep"; L1 = @{ L2 = @{ L3 = "bottom" } } }
+New-BucketObject -Bucket edge -InputObject $deep -KeyProperty _Id -Quiet
+$retrievedDeep = Get-BucketObject -Bucket edge -Key "deep"
+if ($retrievedDeep.L1.L2.L3 -eq "bottom") { $edgeOk++ } else { $edgeFail++; $edgeMsg += "DeepObject(val=$($retrievedDeep.L1.L2.L3))" }
+
+# 7. Circular reference (JSON fails → binary fallback)
+$circ = [PSCustomObject]@{ _Id = "circ"; Name = "loop" }
+$circ | Add-Member -NotePropertyName "Self" -NotePropertyValue $circ
+New-BucketObject -Bucket edge -InputObject $circ -KeyProperty _Id -Quiet
+$retrievedCirc = Get-BucketObject -Bucket edge -Key "circ" -WarningAction SilentlyContinue
+if ($null -ne $retrievedCirc -and $retrievedCirc.Name -eq "loop") { $edgeOk++ } else { $edgeFail++; $edgeMsg += "CircularRef" }
+
+# 8. Unicode/non-ASCII keys
+New-BucketObject -Bucket edge -InputObject @{ _Id = "üñîçødé-测试-тест"; Val = "unicode" } -KeyProperty _Id -Quiet
+$unicode = Get-BucketObject -Bucket edge -Key "üñîçødé-测试-тест"
+if ($unicode.Val -eq "unicode") { $edgeOk++ } else { $edgeFail++; $edgeMsg += "Unicode(key=$($unicode._BucketKey))" }
+
+# 9. Very deep nested path
+try {
+    New-BucketObject -Bucket "a/b/c/d/e/f/g/h/i/j" -InputObject @{ _Id = "deep-path"; Val = 1 } -KeyProperty _Id -Quiet
+    $deepPath = Get-BucketObject -Bucket "a/b/c/d/e/f/g/h/i/j" -Key "deep-path"
+    if ($deepPath.Val -eq 1) { $edgeOk++ } else { $edgeFail++; $edgeMsg += "DeepPath(val=$($deepPath.Val))" }
+} catch { $edgeFail++; $edgeMsg += "DeepPath(exception=$($_.Exception.Message))" }
+
+# 10. -First and -Skip
+$first2 = Get-BucketObject -Bucket users -First 2
+$skip2 = Get-BucketObject -Bucket users -Skip 2
+$firstSkip = Get-BucketObject -Bucket users -First 1 -Skip 2
+$total = (Get-BucketObject -Bucket users).Count
+if (@($first2).Count -eq 2 -and @($skip2).Count -eq ($total - 2) -and @($firstSkip).Count -eq 1) {
+    $edgeOk++ 
+} else { $edgeFail++; $edgeMsg += "FirstSkip(first2=$(@($first2).Count) skip2=$(@($skip2).Count) firstSkip=$(@($firstSkip).Count))" }
+
+# 11. Empty bucket
+New-BucketObject -Bucket empty -InputObject @() -Quiet
+$emptyCount = @(Get-BucketObject -Bucket empty -WarningAction SilentlyContinue).Count
+if ($emptyCount -eq 0) { $edgeOk++ } else { $edgeFail++; $edgeMsg += "EmptyBucket(count=$emptyCount)" }
+Remove-Bucket "empty" -Force -Confirm:$false -WarningAction SilentlyContinue
+
+# 12. Wildcard + -Recurse
+$noRecurse = @(Get-BucketObject -Bucket "org/eu" -WarningAction SilentlyContinue).Count
+$withRecurse = @(Get-BucketObject -Bucket "org/eu" -Recurse -WarningAction SilentlyContinue).Count
+if ($withRecurse -gt $noRecurse -and $noRecurse -gt 0) { $edgeOk++ } else { $edgeFail++; $edgeMsg += "WildcardRecurse(noRecurse=$noRecurse recursed=$withRecurse)" }
+
+# 13. Compressed round-trip via Set-BucketObject
+New-BucketObject -Bucket edge -InputObject @{ _Id = "comp-roundtrip"; Data = "original" } -KeyProperty _Id -Compress -Quiet
+$compObj = Get-BucketObject -Bucket edge -Key "comp-roundtrip"
+$compObj.Data = "modified"
+$compObj | Set-BucketObject -Compress -Quiet
+$compMod = Get-BucketObject -Bucket edge -Key "comp-roundtrip"
+if ($compMod.Data -eq "modified") { $edgeOk++ } else { $edgeFail++; $edgeMsg += "CompressedRoundtrip" }
+
+# 14. No-buckets root
+$noB = Get-Bucket -Path (Join-Path $HOME ".buckets/nonexistent-root")
+if ($null -eq $noB -or @($noB).Count -eq 0) { $edgeOk++ } else { $edgeFail++; $edgeMsg += "NoBucketsRoot" }
+
+# Cleanup edge bucket
+Remove-Bucket "edge" -Force -Confirm:$false -WarningAction SilentlyContinue
+Remove-Bucket "a" -Force -Confirm:$false -WarningAction SilentlyContinue
+
+if ($edgeFail -eq 0) {
+    Write-Host "  All $edgeOk/14 edge case checks passed" -ForegroundColor Magenta
+} else {
+    Write-Host "  FAIL ($edgeOk/14 passed): $($edgeMsg -join ', ')" -ForegroundColor Red
 }
-else {
-    $sample = $jsonRetrievedC[0]
-    if ($sample.Profile.Preferences.Theme -and $sample.Orders.Count -eq 2 -and $sample.Metadata.Tags.Count -eq 3) {
-        Write-Host "  Integrity: OK (nested data preserved)" -ForegroundColor Magenta
-    }
-    else {
-        Write-Host "  FAIL: Nested data integrity issue" -ForegroundColor Red
-    }
-}
+
+# ============================================================
+Write-Host "`n========================================" -ForegroundColor Blue
+Write-Host " Tests Complete" -ForegroundColor Blue
+Write-Host "========================================" -ForegroundColor Blue
+$elapsed = $sw.ElapsedMilliseconds
+Write-Host "Total time: ${elapsed}ms" -ForegroundColor Blue

@@ -2,7 +2,7 @@
 # A command-line to-do manager backed by Buckets
 
 $ErrorActionPreference = "Stop"
-$modulePath = Join-Path $PSScriptRoot "../Buckets"
+$modulePath = Join-Path $PSScriptRoot "../../Buckets"
 
 if (-not (Get-Module Buckets)) {
     Import-Module $modulePath -Force
