@@ -570,7 +570,7 @@ function Get-Bucket {
     .PARAMETER Tree
     Render a tree view of all buckets and directories.
     .PARAMETER Objects
-    Show individual object files in tree view. Only bucket directories are shown by default.
+    Show individual objects in tree view. Only bucket directories are shown by default.
     .PARAMETER Raw
     Return structured tree objects instead of formatted text (for -Tree mode).
     .PARAMETER MaxFiles
@@ -724,34 +724,16 @@ function Get-Bucket {
             }
 
             if ($Objects) {
-                foreach ($f in ($di.GetFiles("*.dat") | Sort-Object Name)) {
+                foreach ($f in ($di.GetFiles("*.dat") + $di.GetFiles("*.json") | Sort-Object Name)) {
+                    $keyName = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
                     $fNode = [PSCustomObject]@{
-                        Name         = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
-                        Type         = "File"
-                        Path         = "$relPath/$($f.Name)"
+                        Name         = $keyName
+                        Type         = "Object"
+                        Path         = "$relPath/$keyName"
                         ObjectCount  = 1
                         SizeBytes    = $f.Length
                         Depth        = $CurrentDepth + 1
                         Children     = [System.Collections.ArrayList]::new()
-                        _BucketName  = $relPath
-                        _BucketKey   = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
-                        _Extension   = $f.Extension
-                    }
-                    $fNode.PSObject.TypeNames.Insert(0, "Buckets.Tree")
-                    $null = $node.Children.Add($fNode)
-                }
-                foreach ($f in ($di.GetFiles("*.json") | Sort-Object Name)) {
-                    $fNode = [PSCustomObject]@{
-                        Name         = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
-                        Type         = "File"
-                        Path         = "$relPath/$($f.Name)"
-                        ObjectCount  = 1
-                        SizeBytes    = $f.Length
-                        Depth        = $CurrentDepth + 1
-                        Children     = [System.Collections.ArrayList]::new()
-                        _BucketName  = $relPath
-                        _BucketKey   = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
-                        _Extension   = $f.Extension
                     }
                     $fNode.PSObject.TypeNames.Insert(0, "Buckets.Tree")
                     $null = $node.Children.Add($fNode)
@@ -772,10 +754,9 @@ function Get-Bucket {
             else {
                 $linePrefix = if ($IsLast) { "$Prefix└── " } else { "$Prefix├── " }
 
-                if ($Node.Type -eq "File") {
-                    $color = if ($Node._Extension -eq ".json") { "Gray" } else { "White" }
+                if ($Node.Type -eq "Object") {
                     Write-Host "$linePrefix" -NoNewline -ForegroundColor DarkGray
-                    Write-Host $Node.Name -ForegroundColor $color
+                    Write-Host $Node.Name -ForegroundColor White
                 }
                 else {
                     $sizeStr = "$(TreeItemCount $Node.ObjectCount), $(TreeSize $Node.SizeBytes)"
@@ -786,8 +767,8 @@ function Get-Bucket {
             }
 
             $children = @($Node.Children)
-            $bucketChildren = @($children | Where-Object { $_.Type -ne "File" })
-            $fileChildren = @($children | Where-Object { $_.Type -eq "File" })
+            $bucketChildren = @($children | Where-Object { $_.Type -ne "Object" })
+            $fileChildren = @($children | Where-Object { $_.Type -eq "Object" })
 
             $allItems = @()
             $allItems += $bucketChildren
