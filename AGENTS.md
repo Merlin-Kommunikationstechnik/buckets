@@ -8,7 +8,8 @@ PowerShell module for file-based PSObject storage using directory-backed "bucket
 2. **Cross-platform compatibility** — works on Windows, macOS, and Linux with the same behavior (path separators, case-sensitivity awareness, PowerShell 7+)
 3. **Data integrity on store and retrieval** — round-trip fidelity is guaranteed; binary fallback on JSON depth overflow, compression preserves structure, corrupted files warn and return `$null` rather than crash
 4. **Speed** — optimized for throughput (caching, binary as default, lazy enumeration, `ArrayList` for pipeline buffering)
-5. **Sleek and pretty** — hide filesystem details, clean tree/list output, no file extensions in UI, standardized cleanup patterns
+5. **Filesystem abstraction** — user thinks in buckets and objects, not files and extensions; hide `.dat`/`.json` internals, no file extensions in UI, tree view shows bucket structure not filesystem hierarchy
+6. **Sleek and pretty** — clean tree/list output, standardized cleanup patterns, consistent formatting
 
 ## Structure
 - `Buckets/Buckets.psm1` — module code (all cmdlets)
