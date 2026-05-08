@@ -10,9 +10,8 @@
 Remove-Module Buckets -ErrorAction SilentlyContinue
 Import-Module "$PSScriptRoot/../Buckets" -Force
 
-$invDir = Join-Path $HOME ".buckets-cim"
-if (Test-Path $invDir) { Remove-Item $invDir -Recurse -Force }
-Set-BucketRoot $invDir
+# Remove previous run
+Remove-Bucket "inventory" -Force -Confirm:$false -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
 
 $rng = [System.Random]::new()
 

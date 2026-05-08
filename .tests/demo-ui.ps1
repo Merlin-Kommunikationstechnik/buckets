@@ -10,17 +10,11 @@
 Remove-Module Buckets -ErrorAction SilentlyContinue
 Import-Module "$PSScriptRoot/../Buckets" -Force
 
-$demoDir = Join-Path $HOME ".buckets-demo"
-if (Test-Path $demoDir) { Remove-Item $demoDir -Recurse -Force }
-
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
 
 Write-Host "╔══════════════════════════════════════════╗" -ForegroundColor Blue
 Write-Host "║      Buckets Module — UI/UX Demo         ║" -ForegroundColor Blue
 Write-Host "╚══════════════════════════════════════════╝" -ForegroundColor Blue
-
-# Set demo path
-Set-BucketRoot $demoDir
 
 # ============================================================
 # 1. New-BucketObject — bulk save with output summary
@@ -239,6 +233,3 @@ Write-Host "`nExplore the data yourself:" -ForegroundColor DarkGray
 Write-Host "  Get-Bucket -AsTree" -ForegroundColor Cyan
 Write-Host "  Get-BucketObject -Bucket users" -ForegroundColor Cyan
 Write-Host "  Get-BucketStats -Bucket users" -ForegroundColor Cyan
-
-# Cleanup
-Remove-Item $demoDir -Recurse -Force
