@@ -144,7 +144,7 @@ if ($Beg) {
 # ---------- chapter 1: Create ----------
 
 Write-Host ""
-Write-Host "  1. Create" -ForegroundColor DarkGray
+  Write-Host "  1. Create" -ForegroundColor Cyan
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  1.1 Saving your first object" -ForegroundColor DarkGray
@@ -307,7 +307,7 @@ if ($Beg) {
 
 cls
 Write-Host ""
-Write-Host "  1b. Create — quiet, verbose, and edge cases" -ForegroundColor DarkGray
+Write-Host "  1b. Create — quiet, verbose, and edge cases" -ForegroundColor Cyan
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  1b.1 Quiet and verbose output" -ForegroundColor DarkGray
@@ -421,7 +421,7 @@ if ($Beg) {
 
 cls
 Write-Host ""
-Write-Host "  2. Read — spill / Get-BucketObject" -ForegroundColor DarkGray
+Write-Host "  2. Read — spill / Get-BucketObject" -ForegroundColor Cyan
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  2.1 Spilling all objects" -ForegroundColor DarkGray
@@ -615,7 +615,7 @@ if ($Beg) {
 
 cls
 Write-Host ""
-Write-Host "  2a. Read — filtering with -Match" -ForegroundColor DarkGray
+Write-Host "  2a. Read — filtering with -Match" -ForegroundColor Cyan
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  2a.1 Exact match filtering" -ForegroundColor DarkGray
@@ -746,7 +746,7 @@ if ($Beg) {
 
 cls
 Write-Host ""
-Write-Host "  2b. Read — comparison with -Filter" -ForegroundColor DarkGray
+Write-Host "  2b. Read — comparison with -Filter" -ForegroundColor Cyan
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  2b.1 Scriptblock filtering" -ForegroundColor DarkGray
@@ -927,7 +927,7 @@ if ($Beg) {
 
 cls
 Write-Host ""
-Write-Host "  2c. Read — pagination with -First / -Skip" -ForegroundColor DarkGray
+Write-Host "  2c. Read — pagination with -First / -Skip" -ForegroundColor Cyan
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  2c.1 Limiting results with -First" -ForegroundColor DarkGray
@@ -983,7 +983,7 @@ if ($Beg) {
 
 cls
 Write-Host ""
-Write-Host "  3. Update — Set-BucketObject" -ForegroundColor DarkGray
+Write-Host "  3. Update — Set-BucketObject" -ForegroundColor Cyan
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  3.1 Pipeline update with Set-BucketObject" -ForegroundColor DarkGray
@@ -1129,7 +1129,7 @@ if ($Beg) {
 
 cls
 Write-Host ""
-Write-Host "  4. Delete — Remove-BucketObject" -ForegroundColor DarkGray
+Write-Host "  4. Delete — Remove-BucketObject" -ForegroundColor Cyan
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  4.1 Preview with -WhatIf" -ForegroundColor DarkGray
@@ -1273,7 +1273,7 @@ if ($Adv) {
 
 cls
 Write-Host ""
-Write-Host "  5. Object Operations — Copy, Rename, Move" -ForegroundColor DarkGray
+Write-Host "  5. Object Operations — Copy, Rename, Move" -ForegroundColor Cyan
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  5.1 Copy within a bucket" -ForegroundColor DarkGray
@@ -1456,7 +1456,7 @@ if ($Adv) {
 
 cls
 Write-Host ""
-Write-Host "  6. Bucket Management — dip / Get-Bucket" -ForegroundColor DarkGray
+Write-Host "  6. Bucket Management — dip / Get-Bucket" -ForegroundColor Cyan
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  6.1 Listing buckets with dip" -ForegroundColor DarkGray
@@ -1691,7 +1691,7 @@ if ($Adv) {
 
 cls
 Write-Host ""
-Write-Host "  6a. Remove-Bucket — safety and wildcards" -ForegroundColor DarkGray
+Write-Host "  6a. Remove-Bucket — safety and wildcards" -ForegroundColor Cyan
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  6a.1 Preview removal" -ForegroundColor DarkGray
@@ -1772,12 +1772,9 @@ if ($Adv) {
 
 cls
 Write-Host ""
-Write-Host "  7. Export / Import — Export-Bucket, Import-Bucket" -ForegroundColor DarkGray
+Write-Host "  7. Export / Import — Export-Bucket, Import-Bucket" -ForegroundColor Cyan
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
-
-$exportDir = Join-Path $env:TEMP "buckets-tutorial-export"
-$null = New-Item -ItemType Directory -Path $exportDir -Force -ErrorAction SilentlyContinue
 
 Write-Host ""
 Write-Host "  7.1 Export to CLIXML" -ForegroundColor DarkGray
@@ -1788,6 +1785,10 @@ Write-Host @"
   .NET type information for perfect round-trip fidelity.
 "@ -ForegroundColor White
 Write-Host ""
+
+$exportDir = Join-Path $env:TEMP "buckets-tutorial-export"
+$null = New-Item -ItemType Directory -Path $exportDir -Force -ErrorAction SilentlyContinue
+
 tut-write-code @'
 Export-Bucket -Bucket team -OutputFile (Join-Path $exportDir "team.clixml") -Quiet
 '@
@@ -1898,10 +1899,12 @@ if ($Adv) {
 # ---------- chapter 8: PSDrive ----------
 
 cls
-Write-Host "`n  $Sep" -ForegroundColor DarkGray
-Write-Host "  8. PSDrive — navigate buckets like a filesystem" -ForegroundColor Blue
+Write-Host ""
+Write-Host "  8. PSDrive — navigate buckets like a filesystem" -ForegroundColor Cyan
 Write-Host "  $Sep" -ForegroundColor DarkGray
-
+Write-Host ""
+Write-Host "  8.1 The buckets: drive" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Buckets registers a custom PSDrive called "buckets:". You can navigate it with
@@ -1914,6 +1917,9 @@ Get-PSDrive -Name buckets
 Get-PSDrive -Name buckets
 tut-pause
 
+Write-Host ""
+Write-Host "  8.2 Listing buckets" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   List all buckets with Get-ChildItem on the drive root. Each bucket appears as
@@ -1930,6 +1936,9 @@ Get-ChildItem "buckets:\"
 tut-pause
 
 Write-Host ""
+Write-Host "  8.3 Formatting bucket output" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Format the output with Select-Object for a cleaner table of bucket names,
   sizes, and timestamps.
@@ -1945,6 +1954,9 @@ Get-ChildItem "buckets:\" | Select-Object Name, Length, LastWriteTime | Format-T
 tut-pause
 
 Write-Host ""
+Write-Host "  8.4 Browsing objects in a bucket" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Enter a bucket and list its objects. Each stored object appears as a file in
   the PSDrive.
@@ -1957,6 +1969,9 @@ $script:Team | fill -Bucket team -KeyProperty Name -Quiet
 Get-ChildItem "buckets:\team" | Select-Object Name, Length, LastWriteTime
 tut-pause
 
+Write-Host ""
+Write-Host "  8.5 Filtering containers" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Filter by PSIsContainer to see only buckets (containers) or only leaf objects.
@@ -1972,6 +1987,9 @@ Get-ChildItem "buckets:\" | Where-Object { $_.PSIsContainer }
 tut-pause
 
 Write-Host ""
+Write-Host "  8.6 Reading objects" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Read an object with Get-Content (or cat). It deserializes the stored data back
   into a live PowerShell object — no manual parsing needed.
@@ -1984,6 +2002,9 @@ $script:Team | fill -Bucket team -KeyProperty Name -Quiet
 Get-Content "buckets:\team\Alice" | Select-Object Name, Role, Score
 tut-pause
 
+Write-Host ""
+Write-Host "  8.7 Round-trip: read, modify, write" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   The full round-trip in the PSDrive: read with Get-Content, modify the property,
@@ -2002,6 +2023,9 @@ $obj | Set-Content "buckets:\team\Carol"
 tut-pause
 
 Write-Host ""
+Write-Host "  8.8 Removing objects" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Remove-Item works in the PSDrive too. Delete an object by its path.
 "@ -ForegroundColor White
@@ -2015,6 +2039,9 @@ Copy-BucketObject -Bucket team -Key "Alice" -DestinationKey "psdrive-remove-test
 Remove-Item "buckets:\team\psdrive-remove-test" -Force
 tut-pause
 
+Write-Host ""
+Write-Host "  8.9 Testing existence" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Test-Path checks whether an object exists in the drive. Useful for conditional
@@ -2031,6 +2058,9 @@ Test-Path "buckets:\team\NonExistent"
 tut-pause
 
 Write-Host ""
+Write-Host "  8.10 Copying objects" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Copy-Item works across buckets in the PSDrive. Copy objects from one bucket
   to another using familiar filesystem commands.
@@ -2046,6 +2076,9 @@ Remove-BucketObject -Bucket team -Key "Alice-pscopy" -Quiet
 tut-pause
 
 Write-Host ""
+Write-Host "  8.11 Tab completion" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Tab completion works throughout the PSDrive. Try typing "buckets:\" and pressing
   Tab — it completes bucket names and object keys.
@@ -2057,10 +2090,12 @@ if ($Adv) {
 # ---------- chapter 9: Nested Buckets ----------
 
 cls
-Write-Host "`n  $Sep" -ForegroundColor DarkGray
-Write-Host "  9. Nested Buckets — directory hierarchy" -ForegroundColor Blue
+Write-Host ""
+Write-Host "  9. Nested Buckets — directory hierarchy" -ForegroundColor Cyan
 Write-Host "  $Sep" -ForegroundColor DarkGray
-
+Write-Host ""
+Write-Host "  9.1 Creating nested buckets" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Bucket names with forward slashes create nested directory structures on disk.
@@ -2117,6 +2152,9 @@ $deDepts | fill -Bucket "org/eu/de/depts" -KeyProperty Dept -Quiet
 tut-pause
 
 Write-Host ""
+Write-Host "  9.2 Wildcards in nested paths" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Wildcards work in nested paths. "org/eu/*/cities" matches city buckets under
   any EU country — Germany, UK, and so on.
@@ -2134,6 +2172,9 @@ spill -Bucket "org/eu/*/cities"
 spill -Bucket "org/eu/*/cities"
 tut-pause
 
+Write-Host ""
+Write-Host "  9.3 Querying nested buckets directly" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Query a nested path directly by its full bucket name. Same spill command,
@@ -2153,6 +2194,9 @@ spill -Bucket "org/eu/de/cities"
 tut-pause
 
 Write-Host ""
+Write-Host "  9.4 Multi-level wildcards" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Wildcards at multiple levels for deep queries. "org/*/de/*" matches anything
   under any country's "de" sub-bucket.
@@ -2170,6 +2214,9 @@ spill -Bucket "org/*/de/*"
 spill -Bucket "org/*/de/*"
 tut-pause
 
+Write-Host ""
+Write-Host "  9.5 Recursive bucket listing" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Get-Bucket with -Recurse shows the full nested structure. It traverses all
@@ -2189,6 +2236,9 @@ Get-Bucket -Name "org" -Recurse
 tut-pause
 
 Write-Host ""
+Write-Host "  9.6 Tree view of nested buckets" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Tree view visualizes the nesting hierarchy. Each level is indented, making
   it easy to see the organizational structure at a glance.
@@ -2206,6 +2256,9 @@ Get-Bucket -Name "org" -Tree -Objects -MaxFiles 10
 Get-Bucket -Name "org" -Tree -Objects -MaxFiles 10
 tut-pause
 
+Write-Host ""
+Write-Host "  9.7 PSDrive with nested paths" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   PSDrive supports nested paths too. Navigate into org/eu/de/cities with
@@ -2225,6 +2278,9 @@ Get-ChildItem "buckets:\org\eu\de\cities" | Select-Object Name
 tut-pause
 
 Write-Host ""
+Write-Host "  9.8 Recursive PSDrive listing" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Recursive listing in PSDrive with the -Recurse flag. Shows everything under
   the org tree.
@@ -2243,6 +2299,9 @@ Get-ChildItem "buckets:\org" -Recurse | Select-Object Name | Format-Table -AutoS
 tut-pause
 
 Write-Host ""
+Write-Host "  9.9 Stats on nested buckets" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Stats work on nested buckets too. Get-BucketStats handles the full path.
 "@ -ForegroundColor White
@@ -2259,6 +2318,9 @@ Get-BucketStats -Bucket "org/eu/de/cities"
 Get-BucketStats -Bucket "org/eu/de/cities"
 tut-pause
 
+Write-Host ""
+Write-Host "  9.10 Keys on nested buckets" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   List keys in a nested bucket with Get-BucketKeys. Same command, just a
@@ -2278,6 +2340,9 @@ Get-BucketKeys -Bucket "org/eu/de/cities"
 tut-pause
 
 Write-Host ""
+Write-Host "  9.11 Cross-bucket filtering with wildcards" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Combine wildcards with -Filter for cross-bucket queries in nested hierarchies.
   Find all cities with population over 2 million across any country.
@@ -2295,6 +2360,9 @@ spill -Bucket "org/*/cities" -Filter { $_.Population -gt 2000000 }
 spill -Bucket "org/*/cities" -Filter { $_.Population -gt 2000000 }
 tut-pause
 
+Write-Host ""
+Write-Host "  9.12 Removing nested trees" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Remove-Bucket with -Recurse deletes an entire nested tree. A single command
@@ -2318,10 +2386,12 @@ if ($Adv) {
 # ---------- chapter 10: Pipeline & Sleek Patterns ----------
 
 cls
-Write-Host "`n  $Sep" -ForegroundColor DarkGray
-Write-Host "  10. Sleek Pipeline Patterns" -ForegroundColor Blue
+Write-Host ""
+Write-Host "  10. Sleek Pipeline Patterns" -ForegroundColor Cyan
 Write-Host "  $Sep" -ForegroundColor DarkGray
-
+Write-Host ""
+Write-Host "  10.1 Generate and fill" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Buckets is designed for pipeline-first usage. Most cmdlets accept pipeline
@@ -2336,6 +2406,9 @@ tut-write-code @'
     fill -Bucket "dir-listing" -KeyProperty Name -Quiet
 tut-pause
 
+Write-Host ""
+Write-Host "  10.2 Chain filter, modify, save" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Chain multiple operations in one pipeline: filter objects with -Filter, modify
@@ -2354,6 +2427,9 @@ spill -Bucket team -Filter { $_.Role -eq "Developer" } |
 tut-pause
 
 Write-Host ""
+Write-Host "  10.3 Filter, sort, project" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Filter, sort, and project in one pipeline. Where-Object filters, Sort-Object
   orders, Select-Object picks the properties you want.
@@ -2370,6 +2446,9 @@ spill -Bucket team | Where-Object { $_.Score -gt 80 } |
     Select-Object Name, Role, Score
 tut-pause
 
+Write-Host ""
+Write-Host "  10.4 Cross-bucket iteration" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Cross-bucket query: iterate over multiple buckets and filter each one, then
@@ -2392,6 +2471,9 @@ $buckets | ForEach-Object { spill -Bucket $_ -Filter { $_.Score -gt 80 } } |
 tut-pause
 
 Write-Host ""
+Write-Host "  10.5 Group by bucket" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Group by bucket name to see how objects are distributed across your buckets.
 "@ -ForegroundColor White
@@ -2406,6 +2488,9 @@ spill | Group-Object _BucketName | Select-Object Name, Count
 tut-pause
 
 Write-Host ""
+Write-Host "  10.6 Group by property" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Group-Object aggregates data within a bucket. Here we count how many team
   members have each role.
@@ -2418,6 +2503,9 @@ $script:Team | fill -Bucket team -KeyProperty Name -Quiet
 spill -Bucket team | Group-Object Role | Select-Object Name, Count
 tut-pause
 
+Write-Host ""
+Write-Host "  10.7 Statistics with Measure-Object" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Measure-Object gives you statistics — average, minimum, maximum — for any
@@ -2433,6 +2521,9 @@ $scores = spill -Bucket team | Measure-Object Score -Average -Minimum -Maximum
 Write-Host "    Score stats: avg=$([math]::Round($scores.Average,1)) min=$($scores.Minimum) max=$($scores.Maximum)"
 tut-pause
 
+Write-Host ""
+Write-Host "  10.8 Export to CSV" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Export spilled data to CSV for use in Excel, Python, or any tool that reads
@@ -2451,6 +2542,9 @@ Remove-Item $csvPath -Force -ErrorAction SilentlyContinue
 tut-pause
 
 Write-Host ""
+Write-Host "  10.9 Filter comparison" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   -Filter runs inside Buckets (faster), Where-Object runs in the pipeline (more
   flexible). Both produce the same result — choose based on your needs.
@@ -2465,6 +2559,9 @@ spill -Bucket team -Filter { $_.Score -gt 80 }
 spill -Bucket team | Where-Object { $_.Score -gt 80 }
 tut-pause
 
+Write-Host ""
+Write-Host "  10.10 Custom formatting" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Custom formatting with ForEach-Object. Transform each object into a formatted
@@ -2483,6 +2580,9 @@ spill -Bucket team | ForEach-Object {
 tut-pause
 
 Write-Host ""
+Write-Host "  10.11 Conditional JSON output" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Conditional pipeline: filter first, then convert only matching objects to JSON.
 "@ -ForegroundColor White
@@ -2494,6 +2594,9 @@ $script:Team | fill -Bucket team -KeyProperty Name -Quiet
 spill -Bucket team -Filter { $_.Score -gt 80 } | ConvertTo-Json -Depth 5
 tut-pause
 
+Write-Host ""
+Write-Host "  10.12 Round-trip verification" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Save then immediately read to verify round-trip integrity. What you write is
@@ -2513,10 +2616,9 @@ if ($Adv) {
 # ---------- chapter 11: Aliases Quick Reference ----------
 
 cls
-Write-Host "`n  $Sep" -ForegroundColor DarkGray
-Write-Host "  11. Aliases & Shortcuts Reference" -ForegroundColor Blue
+Write-Host ""
+Write-Host "  11. Aliases & Shortcuts Reference" -ForegroundColor Cyan
 Write-Host "  $Sep" -ForegroundColor DarkGray
-
 Write-Host ""
 
 Write-Host "  Three aliases are exported by the module:" -ForegroundColor DarkGray
@@ -2550,9 +2652,10 @@ tut-pause
 if ($Sys) {
 
 cls
-Write-Host "`n  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host "  12. Sysadmin Scenarios" -ForegroundColor Cyan
 Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 
 $script:Servers = @(
     @{ Hostname="web-01";   IP="10.0.1.10"; OS="Ubuntu 22.04";  Role="web";        CPU=4;  RAM=8;  Disk=120; Status="online";   Location="DC1" }
@@ -2785,9 +2888,10 @@ tut-pause
 # ---------- congratulations ----------
 
 cls
-Write-Host "`n  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host "  Congratulations!" -ForegroundColor Cyan
 Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 
 Write-Host @"
   You've completed the Buckets tutorial. All tutorial data has been
@@ -2831,7 +2935,8 @@ Write-Host @"
   Learn more: Get-Help <cmdlet> -Full
   See also:   README.md, .tests/demo/*.ps1
 
-  $Sep
 "@ -ForegroundColor Cyan
-
+Write-Host ""
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host "  Happy Bucketing!`n" -ForegroundColor Green
