@@ -81,6 +81,7 @@ function tut-write-code($Code) {
 
 # ---------- setup ----------
 
+cls
 $mod = Join-Path $PSScriptRoot "../Buckets"
 if (-not (Test-Path $mod)) { throw "Module not found at '$mod'" }
 Remove-Module Buckets -ErrorAction SilentlyContinue
@@ -98,7 +99,6 @@ Write-Host ""
 
 # ---------- chapter 1: Create ----------
 
-cls
 Write-Host "`n$Sep" -ForegroundColor DarkGray
 Write-Host "  1. Create — fill / New-BucketObject" -ForegroundColor Blue
 Write-Host "$Sep" -ForegroundColor DarkGray
