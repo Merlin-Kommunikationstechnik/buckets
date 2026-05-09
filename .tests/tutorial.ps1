@@ -92,6 +92,7 @@ Import-Module $mod -Force
 tut-ok "Module loaded from $mod (v$(Get-Module Buckets | ForEach-Object Version))"
 
 tut-info "Storage root: $(Get-BucketRoot)"
+tut-note "Lines starting with → are the output of the command shown above"
 tut-note "Type 'q' at any pause to quit the tutorial"
 
 # clean any prior tutorial data for a fresh start
