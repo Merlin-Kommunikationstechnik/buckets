@@ -465,7 +465,6 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-$script:Team | fill -Bucket staff -KeyProperty Name
 spill -Bucket "t*"
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
@@ -480,7 +479,6 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-$script:Team | fill -Bucket staff -KeyProperty Name
 spill -Bucket "team", "staff"
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
@@ -522,12 +520,18 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-$p = spill -Bucket team -Key "Frank"
-"  $($p.Name) | Role: $($p.Role) | Level: $($p.Level) | Rating: $($p.Score)"
+$dev = spill -Bucket team -Key "Frank"
+$dev.Name
+$dev.Role
+$dev.Level
+$dev.Score
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
-$p = spill -Bucket team -Key "Frank"
-"  $($p.Name) | Role: $($p.Role) | Level: $($p.Level) | Rating: $($p.Score)"
+$dev = spill -Bucket team -Key "Frank"
+$dev.Name
+$dev.Role
+$dev.Level
+$dev.Score
 tut-pause
 }
 
@@ -1619,7 +1623,7 @@ Get-Content (Join-Path $exportDir "team.json") -Raw | ConvertFrom-Json | Convert
 tut-pause
 }
 
-Remove-Item $exportDir -Recurse -Force -ErrorAction SilentlyContinue
+if ($exportDir) { Remove-Item $exportDir -Recurse -Force -ErrorAction SilentlyContinue }
 
 if ($Adv) {
 # ---------- chapter 8: PSDrive ----------
