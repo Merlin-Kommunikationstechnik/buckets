@@ -69,12 +69,10 @@ function tut-write-code($Code) {
         $pos = $end
     }
     if ($pos -lt $clean.Length) {
-        $lines = $clean.Substring($pos) -split "`n", -1
-        for ($i = 0; $i -lt $lines.Count; $i++) {
-            if ($i -gt 0) { Write-Host "" }
-            Write-Host $lines[$i] -NoNewline
-        }
+        $trailing = $clean.Substring($pos).TrimEnd("`r", "`n", " ", "`t")
+        if ($trailing -ne "") { Write-Host $trailing }
     }
+    Write-Host ""
     Write-Host ""
     Write-Host "output:" -ForegroundColor DarkGray
 }
@@ -101,7 +99,7 @@ Write-Host ""
 
 Write-Host "`n$Sep" -ForegroundColor DarkGray
 Write-Host "  1. Create — fill / New-BucketObject" -ForegroundColor Blue
-Write-Host "$Sep" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 
 Write-Host ""
 Write-Host @"
@@ -239,7 +237,7 @@ tut-pause
 cls
 Write-Host "`n$Sep" -ForegroundColor DarkGray
 Write-Host "  1b. Create — quiet, verbose, and edge cases" -ForegroundColor Blue
-Write-Host "$Sep" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 
 Write-Host ""
 Write-Host @"
@@ -341,7 +339,7 @@ tut-pause
 cls
 Write-Host "`n$Sep" -ForegroundColor DarkGray
 Write-Host "  2. Read — spill / Get-BucketObject" -ForegroundColor Blue
-Write-Host "$Sep" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 
 Write-Host ""
 Write-Host @"
@@ -483,7 +481,7 @@ tut-pause
 cls
 Write-Host "`n$Sep" -ForegroundColor DarkGray
 Write-Host "  2a. Read — filtering with -Match" -ForegroundColor Blue
-Write-Host "$Sep" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 
 Write-Host ""
 Write-Host @"
@@ -592,7 +590,7 @@ tut-pause
 cls
 Write-Host "`n$Sep" -ForegroundColor DarkGray
 Write-Host "  2b. Read — comparison with -Filter" -ForegroundColor Blue
-Write-Host "$Sep" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 
 Write-Host ""
 Write-Host @"
@@ -750,7 +748,7 @@ tut-pause
 cls
 Write-Host "`n$Sep" -ForegroundColor DarkGray
 Write-Host "  2c. Read — pagination with -First / -Skip" -ForegroundColor Blue
-Write-Host "$Sep" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 
 Write-Host ""
 Write-Host @"
@@ -793,7 +791,7 @@ tut-pause
 cls
 Write-Host "`n$Sep" -ForegroundColor DarkGray
 Write-Host "  3. Update — Set-BucketObject" -ForegroundColor Blue
-Write-Host "$Sep" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 
 Write-Host ""
 Write-Host @"
@@ -908,7 +906,7 @@ tut-pause
 cls
 Write-Host "`n$Sep" -ForegroundColor DarkGray
 Write-Host "  4. Delete — Remove-BucketObject" -ForegroundColor Blue
-Write-Host "$Sep" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 
 Write-Host ""
 Write-Host @"
@@ -1049,7 +1047,7 @@ tut-pause
 cls
 Write-Host "`n$Sep" -ForegroundColor DarkGray
 Write-Host "  5. Object Operations — Copy, Rename, Move" -ForegroundColor Blue
-Write-Host "$Sep" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 
 Write-Host ""
 Write-Host @"
@@ -1201,7 +1199,7 @@ tut-pause
 cls
 Write-Host "`n$Sep" -ForegroundColor DarkGray
 Write-Host "  6. Bucket Management — dip / Get-Bucket" -ForegroundColor Blue
-Write-Host "$Sep" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 
 Write-Host ""
 Write-Host @"
@@ -1363,7 +1361,7 @@ tut-pause
 cls
 Write-Host "`n$Sep" -ForegroundColor DarkGray
 Write-Host "  6a. Remove-Bucket — safety and wildcards" -ForegroundColor Blue
-Write-Host "$Sep" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 
 Write-Host ""
 Write-Host @"
@@ -1429,7 +1427,7 @@ tut-pause
 cls
 Write-Host "`n$Sep" -ForegroundColor DarkGray
 Write-Host "  7. Export / Import — Export-Bucket, Import-Bucket" -ForegroundColor Blue
-Write-Host "$Sep" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 
 $exportDir = Join-Path $env:TEMP "buckets-tutorial-export"
 $null = New-Item -ItemType Directory -Path $exportDir -Force -ErrorAction SilentlyContinue
@@ -1527,7 +1525,7 @@ Remove-Item $exportDir -Recurse -Force -ErrorAction SilentlyContinue
 cls
 Write-Host "`n$Sep" -ForegroundColor DarkGray
 Write-Host "  8. PSDrive — navigate buckets like a filesystem" -ForegroundColor Blue
-Write-Host "$Sep" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 
 Write-Host ""
 Write-Host @"
@@ -1669,7 +1667,7 @@ tut-pause
 cls
 Write-Host "`n$Sep" -ForegroundColor DarkGray
 Write-Host "  9. Nested Buckets — directory hierarchy" -ForegroundColor Blue
-Write-Host "$Sep" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 
 Write-Host ""
 Write-Host @"
@@ -1862,7 +1860,7 @@ tut-pause
 cls
 Write-Host "`n$Sep" -ForegroundColor DarkGray
 Write-Host "  10. Sleek Pipeline Patterns" -ForegroundColor Blue
-Write-Host "$Sep" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 
 Write-Host ""
 Write-Host @"
@@ -2039,7 +2037,7 @@ tut-pause
 cls
 Write-Host "`n$Sep" -ForegroundColor DarkGray
 Write-Host "  11. Aliases & Shortcuts Reference" -ForegroundColor Blue
-Write-Host "$Sep" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 
 Write-Host ""
 
@@ -2073,7 +2071,7 @@ tut-pause
 cls
 Write-Host "`n$Sep" -ForegroundColor DarkGray
 Write-Host "  Cleanup — Remove tutorial data" -ForegroundColor Blue
-Write-Host "$Sep" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 
 $confirm = Read-Host "`n  Remove all tutorial buckets? (Y/n)"
 if ($confirm -ne "n") {
