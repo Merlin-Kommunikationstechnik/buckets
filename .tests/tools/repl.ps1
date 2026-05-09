@@ -90,9 +90,24 @@ function Show-BucketKeys {
     }
     Write-Host "`n  [$($keys.Count) keys]" -ForegroundColor Cyan
     $keys | ForEach-Object {
+        Write-Host "  $($_.Bucket)/$($_.Key)" -ForegroundColor Yellow
+    }
+}
+
+function Show-BucketObjectStats {
+    $bucket = Read-Host "  Bucket name"
+    if ([string]::IsNullOrWhiteSpace($bucket)) { return }
+    $stats = @(Get-BucketObjectStats -Bucket $bucket -WarningAction SilentlyContinue)
+    if ($stats.Count -eq 0) {
+        Write-Host "  No objects found." -ForegroundColor DarkGray
+        return
+    }
+    Write-Host "`n  [$($stats.Count) objects]" -ForegroundColor Cyan
+    $stats | ForEach-Object {
         $size = if ($_.Size -gt 1024) { "$([math]::Round($_.Size/1024,1)) KB" } else { "$($_.Size) B" }
+        $comp = if ($_.IsCompressed) { " [compressed]" } else { "" }
         Write-Host "  $($_.Key)" -ForegroundColor Yellow -NoNewline
-        Write-Host " ($size)" -ForegroundColor DarkGray
+        Write-Host " [$($_.Format), $($_.Type), $size]$comp" -ForegroundColor DarkGray
     }
 }
 
@@ -429,6 +444,7 @@ function Show-Menu {
     Write-Host "  [buckets -r] List all buckets recursively" -ForegroundColor White
     Write-Host "  [objects]  Show objects in a bucket" -ForegroundColor White
     Write-Host "  [keys]     List keys in a bucket" -ForegroundColor White
+    Write-Host "  [stats]    Per-object statistics (format, type, size, compression)" -ForegroundColor White
     Write-Host ""
     Write-Host "  [save]     Quick save object" -ForegroundColor White
     Write-Host "  [patch]    Quick patch (Set-BucketObject)" -ForegroundColor White
@@ -475,6 +491,7 @@ while ($running) {
             "buckets --recursive" { Show-Buckets -Recurse }
             "objects" { Show-BucketObjects }
             "keys"    { Show-BucketKeys }
+            "stats"   { Show-BucketObjectStats }
             "save"    { QuickSave }
             "patch"   { QuickPatch }
             "remove"  { QuickRemove }

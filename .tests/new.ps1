@@ -84,10 +84,22 @@ Test-Feature "dip -Tree -Objects (keys, no extensions)" {
     ($keys -join ",") -notmatch "\.(dat|json)"
 }
 
-# Feature: Get-BucketKeys shows JSON/Binary
-Test-Feature "Get-BucketKeys format labels" {
+# Feature: Get-BucketKeys returns only Bucket + Key
+Test-Feature "Get-BucketKeys (Bucket + Key only)" {
     $keys = Get-BucketKeys -Bucket "smoke/config"
-    $keys[0].Format -in @("JSON","Binary")
+    $keys[0].Bucket -and $keys[0].Key -and -not ($keys[0].PSObject.Properties.Match('Format').Count -gt 0)
+}
+
+# Feature: Get-BucketObjectStats returns format, type, size
+Test-Feature "Get-BucketObjectStats (Format, Type, Size)" {
+    $stats = Get-BucketObjectStats -Bucket "smoke/config"
+    $stats[0].Format -in @("JSON","Binary") -and $stats[0].Type -in @("Object","Array","Value") -and $stats[0].Size -gt 0
+}
+
+# Feature: Get-BucketObjectStats IsCompressed detection
+Test-Feature "Get-BucketObjectStats (IsCompressed on normal data)" {
+    $stats = Get-BucketObjectStats -Bucket "smoke/config"
+    -not $stats[0].IsCompressed
 }
 
 # Feature: Get-BucketStats has no visible Path

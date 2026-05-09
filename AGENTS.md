@@ -41,6 +41,8 @@ PowerShell module for file-based PSObject storage using directory-backed "bucket
 | `Import-Bucket` | `-Bucket`, `-InputFile`, `-AsJson`, `-Overwrite`, `-Quiet` |
 | `Get-Bucket` | `-Name` (positional 0, substring filter) |
 | `Get-BucketStats` | `-Bucket` (returns count, size, timestamps) |
+| `Get-BucketKeys` | `-Bucket` (positional 0, wildcards ok), `-Match` (returns Bucket + Key only) |
+| `Get-BucketObjectStats` | `-Bucket` (positional 0, wildcards ok), `-Key` (positional 1), `-Match` (returns Format, Type, Size, LastWriteTime, IsCompressed) |
 | `Remove-Bucket` | `-Bucket` (positional, wildcards ok), `-Force`, `-Confirm` (SupportsShouldProcess), `-Quiet`, `-Recurse` |
 
 ### Remove-Bucket Safety

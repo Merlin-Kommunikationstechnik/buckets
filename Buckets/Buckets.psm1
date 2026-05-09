@@ -50,6 +50,49 @@ function Add-HiddenProperty {
     $Target.PSObject.Properties.Add($prop)
 }
 
+function Resolve-ObjectType {
+    param([Parameter(Mandatory = $true)][System.IO.FileInfo]$FileInfo)
+    $isCompressed = $false
+    if ($FileInfo.Extension -eq ".json") {
+        try {
+            $bytes = [System.IO.File]::ReadAllBytes($FileInfo.FullName)
+            $text = [System.Text.Encoding]::UTF8.GetString($bytes).TrimStart()
+            if ($text.StartsWith("[")) { return @{ Type = "Array"; IsCompressed = $false } }
+            if ($text.StartsWith("{")) { return @{ Type = "Object"; IsCompressed = $false } }
+            return @{ Type = "Value"; IsCompressed = $false }
+        } catch {
+            return @{ Type = "Object"; IsCompressed = $false }
+        }
+    }
+    try {
+        $bytes = [System.IO.File]::ReadAllBytes($FileInfo.FullName)
+        if ($bytes.Length -ge 2 -and $bytes[0] -eq 0x1F -and $bytes[1] -eq 0x8B) {
+            $isCompressed = $true
+            try {
+                $ms = [System.IO.MemoryStream]::new($bytes)
+                $gz = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionMode]::Decompress)
+                $buf = [byte[]]::new(2048)
+                $null = $gz.Read($buf, 0, 2048)
+                $gz.Close(); $ms.Close()
+                $text = [System.Text.Encoding]::UTF8.GetString($buf).TrimStart()
+                if ($text -match '<T>\s*\[.*?\]') { return @{ Type = "Array"; IsCompressed = $true } }
+                if ($text -match '<T>\s*System\.Collections\.(ArrayList|Generic\.List)') { return @{ Type = "Array"; IsCompressed = $true } }
+                if ($text -match '<T>\s*System\.(String|Int\d+|Boolean|Double|Single|Decimal|Long|Float|Byte)') { return @{ Type = "Value"; IsCompressed = $true } }
+                return @{ Type = "Object"; IsCompressed = $true }
+            } catch {
+                return @{ Type = "Object"; IsCompressed = $true }
+            }
+        }
+        $text = [System.Text.Encoding]::UTF8.GetString($bytes)
+        if ($text -match '<T>\s*\[.*?\]') { return @{ Type = "Array"; IsCompressed = $false } }
+        if ($text -match '<T>\s*System\.Collections\.(ArrayList|Generic\.List)') { return @{ Type = "Array"; IsCompressed = $false } }
+        if ($text -match '<T>\s*System\.(String|Int\d+|Boolean|Double|Single|Decimal|Long|Float|Byte)') { return @{ Type = "Value"; IsCompressed = $false } }
+        return @{ Type = "Object"; IsCompressed = $false }
+    } catch {
+        return @{ Type = "Object"; IsCompressed = $false }
+    }
+}
+
 # --- Core infrastructure (internal helpers) ---
 
 function Get-DefaultPath {
@@ -878,7 +921,9 @@ function Get-BucketKeys {
     Lists object keys in a bucket without deserializing objects.
     .DESCRIPTION
     Fast key enumeration that reads filenames only, avoiding the overhead of
-    deserializing object data. Returns keys with their file format and size.
+    deserializing object data. Returns only Bucket and Key per object.
+    For detailed per-object statistics (format, size, type, timestamps, compression),
+    use Get-BucketObjectStats.
     .PARAMETER Bucket
     Bucket name to scan. If omitted, scans all buckets under -Path. Supports wildcards.
     .PARAMETER Path
@@ -886,13 +931,11 @@ function Get-BucketKeys {
     .PARAMETER Match
     Filter keys by pattern (wildcard). Case-insensitive.
     .OUTPUTS
-    PSCustomObject with Bucket, Key, Format, and Size properties.
+    PSCustomObject with Bucket and Key properties.
     .EXAMPLE
     Get-BucketKeys -Bucket users
     .EXAMPLE
     Get-BucketKeys -Match "*admin*"
-    .EXAMPLE
-    Get-BucketKeys | Where-Object { $_.Format -eq "json" }
     #>
     [CmdletBinding()]
     param(
@@ -927,17 +970,126 @@ function Get-BucketKeys {
         $di = [System.IO.DirectoryInfo]::new($bucketPath)
         $files = @($di.GetFiles("*.json")) + @($di.GetFiles("*.dat"))
         foreach ($f in $files) {
-            $relPath = $f.FullName.Substring($bucketPath.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar)
             $key = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
             if (-not [string]::IsNullOrWhiteSpace($Match) -and $key -notlike $Match) { continue }
             [PSCustomObject]@{
                 Bucket = $bucketName
-                Key    = $relPath
-                Format = if ($f.Extension -eq ".json") { "JSON" } else { "Binary" }
-                Size   = $f.Length
+                Key    = $key
             }
         }
     }
+}
+
+function Get-BucketObjectStats {
+    <#
+    .SYNOPSIS
+    Returns detailed per-object statistics for objects in a bucket.
+    .DESCRIPTION
+    Enumerates objects and reads lightweight metadata (format, size, type, timestamps,
+    compression status) without full deserialization. Peeks at file content to determine
+    object type (Object, Array, or Value) from the first bytes.
+    .PARAMETER Bucket
+    Bucket name to scan. If omitted, scans all buckets under -Path. Supports wildcards.
+    .PARAMETER Key
+    Exact object key to look up. When specified, returns stats for a single object only.
+    .PARAMETER Path
+    Root directory for bucket storage. Default: $HOME/.buckets.
+    .PARAMETER Match
+    Filter keys by pattern (wildcard). Case-insensitive.
+    .OUTPUTS
+    PSCustomObject with Bucket, Key, Format, Type, Size, LastWriteTime, and IsCompressed
+    properties. Path is included as a hidden property.
+    .EXAMPLE
+    Get-BucketObjectStats -Bucket users
+    .EXAMPLE
+    Get-BucketObjectStats -Bucket users -Match "*admin*"
+    .EXAMPLE
+    Get-BucketObjectStats -Bucket users -Key "alice"
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Position = 0)][string]$Bucket,
+        [Parameter(Position = 1)][string]$Key,
+        [string]$Path,
+        [string]$Match
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
+    $Path = Resolve-SafePath -Path $Path
+
+    $bucketPaths = @()
+    if (-not [string]::IsNullOrWhiteSpace($Bucket)) {
+        if ($Bucket -match '[\*\?]') {
+            $cachedBuckets = Get-Bucket -Path $Path -Recurse
+            $matched = $cachedBuckets | Where-Object { $_.Name -like $Bucket }
+            $bucketPaths += $matched | ForEach-Object { $_.Path }
+        }
+        else {
+            $bucketPaths += Get-BucketPath -Name $Bucket -Path $Path
+        }
+    }
+    else {
+        if ([System.IO.Directory]::Exists($Path)) {
+            $bucketPaths += [System.IO.DirectoryInfo]::new($Path).GetDirectories() | ForEach-Object { $_.FullName }
+        }
+    }
+
+    $results = [System.Collections.ArrayList]::new()
+
+    foreach ($bucketPath in $bucketPaths) {
+        if (-not [System.IO.Directory]::Exists($bucketPath)) { continue }
+        $bucketName = $bucketPath.Substring($Path.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar).Replace([System.IO.Path]::DirectorySeparatorChar, '/')
+        $di = [System.IO.DirectoryInfo]::new($bucketPath)
+
+        if (-not [string]::IsNullOrWhiteSpace($Key)) {
+            $jsonFile = [System.IO.Path]::Combine($bucketPath, "$Key.json")
+            $datFile = [System.IO.Path]::Combine($bucketPath, "$Key.dat")
+            $found = $false
+            foreach ($filePath in @($datFile, $jsonFile)) {
+                if ([System.IO.File]::Exists($filePath)) {
+                    $f = [System.IO.FileInfo]::new($filePath)
+                    $info = Resolve-ObjectType -FileInfo $f
+                    $entry = [PSCustomObject]@{
+                        Bucket        = $bucketName
+                        Key           = $Key
+                        Format        = if ($f.Extension -eq ".json") { "JSON" } else { "Binary" }
+                        Type          = $info.Type
+                        Size          = $f.Length
+                        LastWriteTime = $f.LastWriteTime
+                        IsCompressed  = $info.IsCompressed
+                    }
+                    Add-HiddenProperty -Target $entry -Name 'Path' -Value $f.FullName
+                    $null = $results.Add($entry)
+                    $found = $true
+                    break
+                }
+            }
+            if (-not $found) {
+                Write-Warning "Key '$Key' not found in bucket '$bucketName'"
+            }
+            continue
+        }
+
+        $files = @($di.GetFiles("*.json")) + @($di.GetFiles("*.dat"))
+        foreach ($f in $files) {
+            $fKey = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
+            if (-not [string]::IsNullOrWhiteSpace($Match) -and $fKey -notlike $Match) { continue }
+            $info = Resolve-ObjectType -FileInfo $f
+            $entry = [PSCustomObject]@{
+                Bucket        = $bucketName
+                Key           = $fKey
+                Format        = if ($f.Extension -eq ".json") { "JSON" } else { "Binary" }
+                Type          = $info.Type
+                Size          = $f.Length
+                LastWriteTime = $f.LastWriteTime
+                IsCompressed  = $info.IsCompressed
+            }
+            Add-HiddenProperty -Target $entry -Name 'Path' -Value $f.FullName
+            $null = $results.Add($entry)
+        }
+    }
+
+    $results
 }
 
 function Get-BucketObject {
@@ -2349,7 +2501,7 @@ foreach ($cmd in $nativeCommands) {
 Export-ModuleMember -Function @(
     'New-BucketObject', 'Get-BucketObject', 'Set-BucketObject',
     'Remove-BucketObject', 'Get-Bucket', 'Get-BucketStats',
-    'Get-BucketKeys', 'Remove-Bucket', 'Copy-BucketObject',
+    'Get-BucketKeys', 'Get-BucketObjectStats', 'Remove-Bucket', 'Copy-BucketObject',
     'Rename-BucketObject', 'Move-BucketObject', 'Export-Bucket',
     'Import-Bucket', 'Set-BucketRoot', 'Get-BucketRoot', 'Sync-BucketDrive'
 ) -Alias 'fill', 'spill', 'dip'

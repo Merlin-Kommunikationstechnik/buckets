@@ -1515,8 +1515,9 @@ Write-Host "  6.4 Listing keys" -ForegroundColor DarkGray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
-  Get-BucketKeys lists every key in a bucket along with its format (.dat or .json)
-  and file size. Useful for inventorying what's stored.
+  Get-BucketKeys lists every key in a bucket — just the key names,
+  no deserialization overhead. For format, size, type, and compression,
+  use Get-BucketObjectStats.
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
@@ -1527,7 +1528,23 @@ Get-BucketKeys -Bucket team | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  6.5 Filtering keys by pattern" -ForegroundColor DarkGray
+Write-Host "  6.5 Object statistics" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
+Write-Host @"
+  Get-BucketObjectStats returns detailed per-object metadata: format, type,
+  size, last modified, and compression status.
+"@ -ForegroundColor White
+Write-Host ""
+tut-write-code @'
+Get-BucketObjectStats -Bucket team
+'@
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
+Get-BucketObjectStats -Bucket team | Out-Host
+tut-pause
+
+Write-Host ""
+Write-Host "  6.6 Filtering keys by pattern" -ForegroundColor DarkGray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1542,7 +1559,7 @@ Get-BucketKeys -Bucket team -Match "A*" | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  6.6 Keys across all buckets" -ForegroundColor DarkGray
+Write-Host "  6.7 Keys across all buckets" -ForegroundColor DarkGray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1560,7 +1577,7 @@ Get-BucketKeys -Bucket "*" | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  6.7 Tree view" -ForegroundColor DarkGray
+Write-Host "  6.8 Tree view" -ForegroundColor DarkGray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1578,7 +1595,7 @@ Get-Bucket -Tree -MaxFiles 10 | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  6.8 Bucket-only tree" -ForegroundColor DarkGray
+Write-Host "  6.9 Bucket-only tree" -ForegroundColor DarkGray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1596,7 +1613,7 @@ Get-Bucket -Tree | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  6.9 Tree with objects" -ForegroundColor DarkGray
+Write-Host "  6.10 Tree with objects" -ForegroundColor DarkGray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1614,7 +1631,7 @@ Get-Bucket -Tree -Objects | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  6.10 Raw tree output" -ForegroundColor DarkGray
+Write-Host "  6.11 Raw tree output" -ForegroundColor DarkGray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1632,7 +1649,7 @@ Get-Bucket -Tree -Raw | Select-Object -First 2 | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  6.11 Depth-limited tree" -ForegroundColor DarkGray
+Write-Host "  6.12 Depth-limited tree" -ForegroundColor DarkGray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1650,7 +1667,7 @@ Get-Bucket -Tree -Depth 1 | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  6.12 Tree to JSON" -ForegroundColor DarkGray
+Write-Host "  6.13 Tree to JSON" -ForegroundColor DarkGray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1668,7 +1685,7 @@ Get-Bucket -Tree -Raw | ConvertTo-Json -Depth 5 | Select-Object -First 5 | Out-H
 tut-pause
 
 Write-Host ""
-Write-Host "  6.13 Clean summary table" -ForegroundColor DarkGray
+Write-Host "  6.14 Clean summary table" -ForegroundColor DarkGray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2927,6 +2944,7 @@ Write-Host @"
     Get-Bucket -Tree             — visual tree view with -Objects, -Raw, -Depth
     Get-BucketStats              — bucket statistics
     Get-BucketKeys               — object key listing
+    Get-BucketObjectStats        — detailed per-object statistics
     Nested buckets               — org/eu/de/cities hierarchy with wildcards
     Pipeline patterns            — chain, group, measure, export-csv, expand, custom format
     Cross-bucket queries         — -Filter across all buckets

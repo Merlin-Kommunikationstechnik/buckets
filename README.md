@@ -419,7 +419,9 @@ Get-Bucket -Tree -Raw | ConvertTo-Json -Depth 5
 
 ### Get-BucketKeys
 
-Lists object keys within a bucket.
+Lists object keys within a bucket. Returns only `Bucket` and `Key` per object —
+for detailed per-object statistics (format, type, size, timestamps, compression),
+use `Get-BucketObjectStats`.
 
 ```powershell
 Get-BucketKeys
@@ -435,7 +437,7 @@ Get-BucketKeys
 | `-Path` | Storage root directory | `$HOME/.buckets` |
 | `-Match` | Wildcard filter on key names (case-insensitive, `-like`) | All keys |
 
-Returns `PSCustomObject` with `Bucket`, `Key`, `Format`, `Size`.
+Returns `PSCustomObject` with `Bucket` and `Key`.
 
 #### Examples
 
@@ -448,6 +450,60 @@ Get-BucketKeys -Bucket orders -Match "ORD-*"
 
 # Keys across multiple buckets
 Get-BucketKeys -Bucket "temp*"
+```
+
+---
+
+### Get-BucketObjectStats
+
+Returns detailed per-object statistics (format, type, size, timestamps, compression).
+
+```powershell
+Get-BucketObjectStats
+    [[-Bucket] <string>]
+    [[-Key] <string>]
+    [-Path <string>]
+    [-Match <string>]
+    [<CommonParameters>]
+```
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `-Bucket` | Bucket name (supports wildcards `*`, `?`) | All top-level buckets |
+| `-Key` | Exact key to look up (single-object stats) | All objects |
+| `-Path` | Storage root directory | `$HOME/.buckets` |
+| `-Match` | Wildcard filter on key names (case-insensitive, `-like`) | All keys |
+
+Returns `PSCustomObject` with `Bucket`, `Key`, `Format`, `Type`, `Size`, `LastWriteTime`, and `IsCompressed`. `Path` is included as a hidden property.
+
+| Property | Description |
+|----------|-------------|
+| `Bucket` | Bucket name |
+| `Key` | Object key |
+| `Format` | `"JSON"` or `"Binary"` |
+| `Type` | `"Object"`, `"Array"`, or `"Value"` (peeked from file content) |
+| `Size` | File size in bytes |
+| `LastWriteTime` | Last modified timestamp |
+| `IsCompressed` | `$true` if gzip-compressed binary |
+| `Path` | (hidden) Full file path |
+
+#### Examples
+
+```powershell
+# Stats for all objects in a bucket
+Get-BucketObjectStats -Bucket users
+
+# Stats for a specific key
+Get-BucketObjectStats -Bucket users -Key "alice"
+
+# Filter by key pattern
+Get-BucketObjectStats -Bucket orders -Match "ORD-*"
+
+# Find compressed objects
+Get-BucketObjectStats -Bucket data | Where-Object { $_.IsCompressed }
+
+# Find arrays
+Get-BucketObjectStats -Bucket users | Where-Object { $_.Type -eq "Array" }
 ```
 
 ---
@@ -819,7 +875,8 @@ The provider is created automatically on module import via `Sync-BucketDrive`. R
 | `Rename-BucketObject` | Rename an object's key |
 | `Move-BucketObject` | Move objects between buckets |
 | `Get-Bucket` | List buckets (text or tree view) |
-| `Get-BucketKeys` | List object keys in a bucket |
+| `Get-BucketKeys` | List object keys in a bucket (Bucket + Key only) |
+| `Get-BucketObjectStats` | Detailed per-object stats (format, type, size, timestamps, compression) |
 | `Get-BucketStats` | Show bucket statistics |
 | `Remove-Bucket` | Remove buckets (supports wildcards, nested, WhatIf) |
 | `Export-Bucket` | Export bucket to archive |
