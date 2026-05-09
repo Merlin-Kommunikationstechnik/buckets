@@ -1506,6 +1506,8 @@ function Remove-Bucket {
     .PARAMETER Confirm
     Prompt for confirmation before removal. Default: prompts (ConfirmImpact = High).
     Use -Confirm:$false to skip.
+    .PARAMETER Quiet
+    Suppress progress output.
     .EXAMPLE
     Remove-Bucket -Bucket users
     .EXAMPLE
@@ -1520,7 +1522,8 @@ function Remove-Bucket {
         [Parameter(Mandatory = $true, Position = 0, ValueFromRemainingArguments = $true)][string[]]$Bucket,
         [string]$Path,
         [switch]$Recurse,
-        [switch]$Force
+        [switch]$Force,
+        [switch]$Quiet
     )
 
     if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
@@ -1717,11 +1720,11 @@ function Remove-Bucket {
         }
     }
 
-    if ($removedCount -gt 0) {
+    if ($removedCount -gt 0 -and -not $Quiet) {
         Write-Host $removedCount -NoNewline -ForegroundColor $script:CNum
         Write-Host " removed" -ForegroundColor $script:CMuted
     }
-    if ($skippedBuckets.Count -gt 0) {
+    if ($skippedBuckets.Count -gt 0 -and -not $Quiet) {
         foreach ($s in $skippedBuckets) {
             Write-Host "  " -NoNewline -ForegroundColor $script:CMuted
             Write-Host "$($s.Name)" -NoNewline -ForegroundColor $script:CPath

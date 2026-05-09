@@ -232,7 +232,7 @@ Write-Host "`nTotal time: ${elapsed}ms" -ForegroundColor Blue
 # 8. Copy-BucketObject
 # ============================================================
 Write-Host "`n[8] Copy-BucketObject (cross-bucket copy, key rename)" -ForegroundColor Blue
-Remove-Bucket "archive" -Force -Confirm:$false -WarningAction SilentlyContinue
+Remove-Bucket "archive" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
 Copy-BucketObject -Bucket users -Key "Alice" -DestinationBucket archive -PassThru | Format-Table
 Copy-BucketObject -Bucket config -Key "app-config" -DestinationKey "app-config-backup" -PassThru | Format-Table
 $archived = Get-BucketObject -Bucket archive -Key "Alice"
@@ -256,7 +256,7 @@ $exportPath = Join-Path $PSScriptRoot "test-export.clixml"
 $exportJson = Join-Path $PSScriptRoot "test-export.json"
 Export-Bucket -Bucket users -OutputFile $exportPath
 Export-Bucket -Bucket logs -OutputFile $exportJson -AsJson
-Remove-Bucket "import-test" -Force -Confirm:$false -WarningAction SilentlyContinue
+Remove-Bucket "import-test" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
 Import-Bucket -Bucket import-test -InputFile $exportPath
 Use-Bucket "import-test"
 $imported = Get-BucketObject -Bucket import-test
@@ -267,7 +267,7 @@ Remove-Item $exportPath, $exportJson -Force
 # 11. -Compress switch
 # ============================================================
 Write-Host "`n[11] Binary compression (-Compress — GZip reduces repetitive data)" -ForegroundColor Blue
-Remove-Bucket "compressed" -Force -Confirm:$false -WarningAction SilentlyContinue
+Remove-Bucket "compressed" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
 New-BucketObject -Bucket compressed -InputObject @{ _Id = "comp"; Data = "x" * 5000; Type = "compressed" } -KeyProperty "_Id" -Compress -Quiet
 Use-Bucket "compressed"
 New-BucketObject -Bucket compressed -InputObject @{ _Id = "uncomp"; Data = "x" * 5000; Type = "uncompressed" } -KeyProperty "_Id" -Quiet
@@ -293,7 +293,7 @@ Write-Host "  Objects in 'users' after -WhatIf: $($remaining.Count) (unchanged)"
 # 13. Round-trip integrity
 # ============================================================
 Write-Host "`n[13] Round-trip integrity (save/load complex types and null)" -ForegroundColor Blue
-Remove-Bucket "roundtrip" -Force -Confirm:$false -WarningAction SilentlyContinue
+Remove-Bucket "roundtrip" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
 Use-Bucket "roundtrip"
 $roundTrip = [PSCustomObject]@{
     _Id = "test"
@@ -398,9 +398,9 @@ try {
     } else {
         Write-Host " FAIL (wrong result or errors occurred)" -ForegroundColor Red
     }
-    Remove-Bucket -Bucket bucket-a -Force -Confirm:$false
-    Remove-Bucket -Bucket bucket-b -Force -Confirm:$false
-    Remove-Bucket -Bucket bucket-c -Force -Confirm:$false
+    Remove-Bucket -Bucket bucket-a -Force -Confirm:$false -Quiet
+    Remove-Bucket -Bucket bucket-b -Force -Confirm:$false -Quiet
+    Remove-Bucket -Bucket bucket-c -Force -Confirm:$false -Quiet
 } catch {
     Write-Host " FAIL: $_" -ForegroundColor Red
 }
@@ -416,7 +416,7 @@ try {
     } else {
         Write-Host " FAIL (result: $($result.Val), errors: $newErrors)" -ForegroundColor Red
     }
-    Remove-Bucket -Bucket casetest -Force -Confirm:$false
+    Remove-Bucket -Bucket casetest -Force -Confirm:$false -Quiet
 } catch {
     Write-Host " FAIL: $_" -ForegroundColor Red
 }
@@ -471,7 +471,7 @@ try {
 # 15. Nested buckets (5 levels deep)
 # ============================================================
 Write-Host "`n[15] Nested buckets (5 levels deep)" -ForegroundColor Blue
-Remove-Bucket "org" -Force -Confirm:$false -WarningAction SilentlyContinue
+Remove-Bucket "org" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
 
 $nestedBucket = "org/eu/de/berlin/team-a"
 
@@ -538,7 +538,7 @@ if ($passCount -eq 9) {
 }
 
 # Test Remove-Bucket at deep level (without -Recurse, should preserve parent)
-Remove-Bucket $nestedBucket -Force -Confirm:$false -WarningAction SilentlyContinue
+Remove-Bucket $nestedBucket -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
 $deepGone = $null -eq (Get-BucketObject -Bucket $nestedBucket -Key "profile" -WarningAction SilentlyContinue 2>$null)
 $parentIntact = (Get-BucketObject -Bucket "org/eu/de/berlin" -Key "info").City -eq "Berlin"
 if ($deepGone -and $parentIntact) {
@@ -548,7 +548,7 @@ if ($deepGone -and $parentIntact) {
 }
 
 # Test Remove-Bucket -Recurse
-Remove-Bucket "org" -Recurse -Force -Confirm:$false -WarningAction SilentlyContinue
+Remove-Bucket "org" -Recurse -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
 $orgGone = -not (Test-Path (Join-Path $HOME ".buckets/org"))
 if ($orgGone) {
     Write-Host "  Recursive remove: OK (entire tree removed)" -ForegroundColor Magenta
@@ -857,7 +857,7 @@ Test-Edge "Empty bucket (InputObject `@() creates no objects)" {
     New-BucketObject -Bucket empty -InputObject @() -Quiet
     Use-Bucket "empty"
     $emptyCount = @(Get-BucketObject -Bucket empty -WarningAction SilentlyContinue).Count
-    Remove-Bucket "empty" -Force -Confirm:$false -WarningAction SilentlyContinue
+    Remove-Bucket "empty" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     $emptyCount -eq 0
 }
 
@@ -900,11 +900,11 @@ Test-Edge "No-buckets root (nonexistent path returns empty)" {
 }
 
 # Cleanup edge bucket
-Remove-Bucket "edge" -Force -Confirm:$false -WarningAction SilentlyContinue
-Remove-Bucket "a" -Force -Confirm:$false -WarningAction SilentlyContinue
+Remove-Bucket "edge" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+Remove-Bucket "a" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
 
 foreach ($bucket in $createdBuckets) {
-    Remove-Bucket -Bucket $bucket -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse
+    Remove-Bucket -Bucket $bucket -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
 }
 
 $passCount = ($edgeResults | Where-Object { $_.Status -eq "PASS" }).Count

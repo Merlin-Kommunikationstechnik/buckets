@@ -491,6 +491,7 @@ Remove-Bucket
     [[-Path] <string>]
     [-Recurse]
     [-Force]
+    [-Quiet]
     [-WhatIf]
     [-Confirm]
     [<CommonParameters>]
@@ -502,6 +503,7 @@ Remove-Bucket
 | `-Path` | Storage root directory |
 | `-Recurse` | Remove target bucket AND all nested sub-buckets |
 | `-Force` | Skip confirmation prompt |
+| `-Quiet` | Suppress progress output |
 | `-WhatIf` | Preview what would be removed |
 
 #### Examples
