@@ -10,12 +10,17 @@ $ErrorActionPreference = "Stop"
 
 $Sep = '─' * 55
 
+function tut-wipe {
+    Remove-Bucket -Bucket * -Force -ErrorAction SilentlyContinue | Out-Null
+}
+
 function tut-pause {
     Write-Host ""
     Write-Host "  $Sep" -ForegroundColor DarkGray
     Write-Host "  [Enter] next · [q] quit > " -NoNewline -ForegroundColor DarkGray
     $r = Read-Host
     if ($r -eq "q") { Write-Host ""; exit }
+    tut-wipe
     cls
 }
 
@@ -86,6 +91,7 @@ if (-not (Test-Path $mod)) { throw "Module not found at '$mod'" }
 Remove-Module Buckets -ErrorAction SilentlyContinue
 Import-Module $mod -Force
 $ver = (Get-Module Buckets).Version
+tut-wipe
 
 Write-Host ""
 Write-Host "  $('─' * 55)" -ForegroundColor DarkGray
