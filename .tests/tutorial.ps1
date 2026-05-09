@@ -394,7 +394,7 @@ Write-Host ""
 tut-write-code @'
 spill
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 spill
 tut-pause
 
@@ -407,7 +407,7 @@ Write-Host ""
 tut-write-code @'
 spill -Bucket team
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 spill -Bucket team
 tut-pause
 
@@ -420,7 +420,7 @@ Write-Host ""
 tut-write-code @'
 spill "Alice" -Bucket team
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 spill "Alice" -Bucket team
 tut-pause
 
@@ -432,7 +432,7 @@ Write-Host ""
 tut-write-code @'
 spill "Frank" -Bucket team
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 spill "Frank" -Bucket team
 tut-pause
 
@@ -445,7 +445,7 @@ Write-Host ""
 tut-write-code @'
 spill "alice" -Bucket team
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 spill "alice" -Bucket team
 tut-pause
 
@@ -458,7 +458,7 @@ Write-Host ""
 tut-write-code @'
 spill -Bucket team -Key "Zoe"
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 spill -Bucket team -Key "Zoe"
 tut-pause
 
@@ -472,8 +472,8 @@ tut-write-code @'
 $script:Team | fill -Bucket staff -KeyProperty Name
 spill -Bucket "t*"
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
-$script:Team | fill -Bucket staff -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
+$script:Team | fill -Bucket staff -KeyProperty Name -Quiet
 spill -Bucket "t*"
 tut-pause
 
@@ -487,8 +487,8 @@ tut-write-code @'
 $script:Team | fill -Bucket staff -KeyProperty Name
 spill -Bucket "team", "staff"
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
-$script:Team | fill -Bucket staff -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
+$script:Team | fill -Bucket staff -KeyProperty Name -Quiet
 spill -Bucket "team", "staff"
 tut-pause
 
@@ -502,7 +502,7 @@ Write-Host ""
 tut-write-code @'
 spill -Bucket team -Key "Bob" | Select _BucketName, _BucketKey, _BucketFile
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 spill -Bucket team -Key "Bob" | Select _BucketName, _BucketKey, _BucketFile
 tut-pause
 
@@ -515,7 +515,7 @@ Write-Host ""
 tut-write-code @'
 spill -Bucket team | Sort Score -Descending | Select Name, Role, Score
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 spill -Bucket team | Sort Score -Descending | Select Name, Role, Score
 tut-pause
 
@@ -529,7 +529,7 @@ tut-write-code @'
 $heidi = spill -Bucket team -Key "Heidi"
 "  $($heidi.Name) | Role: $($heidi.Role) | Level: $($heidi.Level) | Rating: $($heidi.Score)"
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 $heidi = spill -Bucket team -Key "Heidi"
 "  $($heidi.Name) | Role: $($heidi.Role) | Level: $($heidi.Level) | Rating: $($heidi.Score)"
 tut-pause
@@ -553,7 +553,7 @@ Write-Host ""
 tut-write-code @'
 spill -Bucket team -Match @{ Role = "Developer" }
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 spill -Bucket team -Match @{ Role = "Developer" }
 tut-pause
 
@@ -567,7 +567,7 @@ Write-Host ""
 tut-write-code @'
 spill -Bucket team -Match @{ Deleted = $null }
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 spill -Bucket team -Match @{ Deleted = $null }
 tut-pause
 
@@ -580,7 +580,7 @@ Write-Host ""
 tut-write-code @'
 spill -Bucket team -Match @{ Level = 3; Active = $true }
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 spill -Bucket team -Match @{ Level = 3; Active = $true }
 tut-pause
 
@@ -604,7 +604,7 @@ $data = @(
     @{ Name = "B"; Count = 10; Active = $false }
     @{ Name = "C"; Count = 5; Active = $true }
 )
-New-BucketObject -InputObject $data -Bucket match-demo -KeyProperty Name
+New-BucketObject -InputObject $data -Bucket match-demo -KeyProperty Name -Quiet
 spill -Bucket match-demo -Match @{ Count = 5; Active = $true }
 tut-pause
 
@@ -628,7 +628,7 @@ $items = @(
     @{ Name = "beta"; Color = "blue" }
     @{ Name = "gamma"; Color = "red" }
 )
-$items | fill -Bucket match-demo -KeyProperty Name
+$items | fill -Bucket match-demo -KeyProperty Name -Quiet
 spill -Bucket match-demo -Match @{ Color = "red" }
 tut-pause
 
@@ -644,7 +644,7 @@ $data | fill -Bucket nested-match -KeyProperty Id
 spill -Bucket nested-match -Match @{ Meta = $null }
 '@
 $data = @{ Id = "a"; Meta = @{ Name = "inner" } }
-$data | fill -Bucket nested-match -KeyProperty Id
+$data | fill -Bucket nested-match -KeyProperty Id -Quiet
 spill -Bucket nested-match -Match @{ Meta = $null }
 tut-pause
 }
@@ -667,7 +667,7 @@ Write-Host ""
 tut-write-code @'
 spill -Bucket team -Filter { $_.Score -gt 80 }
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 spill -Bucket team -Filter { $_.Score -gt 80 }
 tut-pause
 
@@ -680,7 +680,7 @@ Write-Host ""
 tut-write-code @'
 spill -Bucket team -Filter { $_.Score -le 70 }
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 spill -Bucket team -Filter { $_.Score -le 70 }
 tut-pause
 
@@ -693,7 +693,7 @@ Write-Host ""
 tut-write-code @'
 spill -Bucket team -Filter { $_.Name -match "^[AE]" }
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 spill -Bucket team -Filter { $_.Name -match "^[AE]" }
 tut-pause
 
@@ -706,7 +706,7 @@ Write-Host ""
 tut-write-code @'
 spill -Bucket team -Filter { $_.Name -like "*e*" }
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 spill -Bucket team -Filter { $_.Name -like "*e*" }
 tut-pause
 
@@ -719,7 +719,7 @@ Write-Host ""
 tut-write-code @'
 spill -Bucket team -Filter { $_.Score -gt 80 -and $_.Role -eq "Developer" }
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 spill -Bucket team -Filter { $_.Score -gt 80 -and $_.Role -eq "Developer" }
 tut-pause
 
@@ -731,7 +731,7 @@ Write-Host ""
 tut-write-code @'
 spill -Bucket team -Filter { $_.Role -eq "Designer" -or $_.Level -gt 3 }
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 spill -Bucket team -Filter { $_.Role -eq "Designer" -or $_.Level -gt 3 }
 tut-pause
 
@@ -753,7 +753,7 @@ $items = @(
     @{ Name = "short"; Value = "abc" }
     @{ Name = "long";  Value = "abcdefghijk" }
 )
-$items | fill -Bucket str-test -KeyProperty Name
+$items | fill -Bucket str-test -KeyProperty Name -Quiet
 spill -Bucket str-test -Filter { $_.Value.Length -gt 5 }
 tut-pause
 
@@ -767,7 +767,7 @@ tut-write-code @'
 $cutoff = (Get-Date).AddDays(-100)
 spill -Bucket team -Filter { $_.Joined -gt $cutoff }
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 $cutoff = (Get-Date).AddDays(-100)
 spill -Bucket team -Filter { $_.Joined -gt $cutoff }
 tut-pause
@@ -781,7 +781,7 @@ Write-Host ""
 tut-write-code @'
 spill -Bucket team -Filter { $_.Skills -contains "Rust" }
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 spill -Bucket team -Filter { $_.Skills -contains "Rust" }
 tut-pause
 
@@ -795,8 +795,8 @@ tut-write-code @'
 @{ Name = "HighScore"; Score = 90 } | fill -Bucket config -Key "app-config"
 spill -Filter { $_.Score -gt 80 }
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
-@{ Name = "HighScore"; Score = 90 } | fill -Bucket config -Key "app-config"
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
+@{ Name = "HighScore"; Score = 90 } | fill -Bucket config -Key "app-config" -Quiet
 spill -Filter { $_.Score -gt 80 }
 tut-pause
 }
@@ -818,7 +818,7 @@ Write-Host ""
 tut-write-code @'
 spill -Bucket team -First 3
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 spill -Bucket team -First 3
 tut-pause
 
@@ -831,7 +831,7 @@ Write-Host ""
 tut-write-code @'
 spill -Bucket team -Skip 1 -First 3
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 spill -Bucket team -Skip 1 -First 3
 tut-pause
 
@@ -844,7 +844,7 @@ Write-Host ""
 tut-write-code @'
 spill -Bucket team -Filter { $_.Score -gt 70 } -First 3
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 spill -Bucket team -Filter { $_.Score -gt 70 } -First 3
 tut-pause
 }
@@ -871,7 +871,7 @@ spill -Bucket team -Key "Bob" | ForEach-Object {
     $_
 } | Set-BucketObject -Quiet
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 spill -Bucket team -Key "Bob" | ForEach-Object {
     $_.Score = 99
     $_.Role = "Lead"
@@ -890,7 +890,7 @@ $obj = spill -Bucket team -Key "Carol"
 $obj.Score = 100
 Set-BucketObject -Bucket team -Key "Carol" -InputObject $obj -Quiet
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 $obj = spill -Bucket team -Key "Carol"
 $obj.Score = 100
 Set-BucketObject -Bucket team -Key "Carol" -InputObject $obj -Quiet
@@ -907,7 +907,7 @@ tut-write-code @'
 $patch = @{ Email = "alice@contoso.com" }
 $patch | Set-BucketObject -Bucket team -Key "Alice" -Quiet
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 $patch = @{ Email = "alice@contoso.com" }
 $patch | Set-BucketObject -Bucket team -Key "Alice" -Quiet
 tut-pause
@@ -922,7 +922,7 @@ tut-write-code @'
 $patch = @{ Phone = "555-0100" }
 $patch | Set-BucketObject -Bucket team -Key "Alice" -Quiet
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 $patch = @{ Phone = "555-0100" }
 $patch | Set-BucketObject -Bucket team -Key "Alice" -Quiet
 tut-pause
@@ -937,7 +937,7 @@ tut-write-code @'
 $patch = @{ City = "Portland" }
 $patch | Set-BucketObject -Bucket team -Key "Alice" -Quiet
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 $patch = @{ City = "Portland" }
 $patch | Set-BucketObject -Bucket team -Key "Alice" -Quiet
 tut-pause
@@ -955,7 +955,7 @@ $patch = @{ UpdatedAt = Get-Date; Host = "prod-server" }
 $patch | Set-BucketObject -Bucket config -Key "db-settings" -Quiet
 '@
 $config = @{ Host = "localhost"; Port = 5432 }
-$config | fill -Bucket config -Key "db-settings" -AsJson
+$config | fill -Bucket config -Key "db-settings" -AsJson -Quiet
 $patch = @{ UpdatedAt = Get-Date; Host = "prod-server" }
 $patch | Set-BucketObject -Bucket config -Key "db-settings" -Quiet
 tut-pause
@@ -992,7 +992,7 @@ Write-Host ""
 tut-write-code @'
 Remove-BucketObject -Bucket team -Key "Grace" -WhatIf
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 Remove-BucketObject -Bucket team -Key "Grace" -WhatIf
 tut-pause
 
@@ -1005,7 +1005,7 @@ tut-write-code @'
 Remove-BucketObject -Bucket team -Key "Grace" -Quiet
 spill -Bucket team
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 Remove-BucketObject -Bucket team -Key "Grace" -Quiet
 spill -Bucket team
 tut-pause
@@ -1019,7 +1019,7 @@ Write-Host ""
 tut-write-code @'
 Remove-BucketObject -Bucket team -Key "Zoe"
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 Remove-BucketObject -Bucket team -Key "Zoe"
 tut-pause
 
@@ -1045,7 +1045,7 @@ tut-write-code @'
 Remove-BucketObject -Bucket team -Match @{ Role = "QA" } -Quiet
 spill -Bucket team
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 Remove-BucketObject -Bucket team -Match @{ Role = "QA" } -Quiet
 spill -Bucket team
 tut-pause
@@ -1060,7 +1060,7 @@ tut-write-code @'
 Remove-BucketObject -Bucket team -Filter { $_.Active -eq $false } -Quiet
 spill -Bucket team
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 Remove-BucketObject -Bucket team -Filter { $_.Active -eq $false } -Quiet
 spill -Bucket team
 tut-pause
@@ -1074,7 +1074,7 @@ tut-write-code @'
 Remove-BucketObject -Bucket team -All -Quiet
 spill -Bucket team
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 Remove-BucketObject -Bucket team -All -Quiet
 spill -Bucket team
 tut-pause
@@ -1114,7 +1114,7 @@ tut-write-code @'
 Copy-BucketObject -Bucket team -Key "Alice" -DestinationKey "Alice-Backup" -Quiet
 spill -Bucket team -Key "Alice-Backup"
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 Copy-BucketObject -Bucket team -Key "Alice" -DestinationKey "Alice-Backup" -Quiet
 spill -Bucket team -Key "Alice-Backup"
 tut-pause
@@ -1128,7 +1128,7 @@ tut-write-code @'
 Copy-BucketObject -Bucket team -Key "Alice" -DestinationBucket archive -Quiet
 spill -Bucket archive -Key "Alice"
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 Copy-BucketObject -Bucket team -Key "Alice" -DestinationBucket archive -Quiet
 spill -Bucket archive -Key "Alice"
 tut-pause
@@ -1143,7 +1143,7 @@ tut-write-code @'
 Copy-BucketObject -Bucket team -Key "Alice" -DestinationKey "Alice-pass" -PassThru -Quiet
 Remove-BucketObject -Bucket team -Key "Alice-pass" -Quiet
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 Copy-BucketObject -Bucket team -Key "Alice" -DestinationKey "Alice-pass" -PassThru -Quiet
 Remove-BucketObject -Bucket team -Key "Alice-pass" -Quiet
 tut-pause
@@ -1271,8 +1271,8 @@ tut-write-code @'
 @{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
 dip
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
-@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
+@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson -Quiet
 dip
 tut-pause
 
@@ -1286,8 +1286,8 @@ tut-write-code @'
 @{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
 dip "team"
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
-@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
+@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson -Quiet
 dip "team"
 tut-pause
 
@@ -1300,7 +1300,7 @@ Write-Host ""
 tut-write-code @'
 Get-BucketStats -Bucket team
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 Get-BucketStats -Bucket team
 tut-pause
 
@@ -1313,7 +1313,7 @@ Write-Host ""
 tut-write-code @'
 Get-BucketKeys -Bucket team
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 Get-BucketKeys -Bucket team
 tut-pause
 
@@ -1325,7 +1325,7 @@ Write-Host ""
 tut-write-code @'
 Get-BucketKeys -Bucket team -Match "A*"
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 Get-BucketKeys -Bucket team -Match "A*"
 tut-pause
 
@@ -1339,8 +1339,8 @@ tut-write-code @'
 @{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
 Get-BucketKeys -Bucket "*"
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
-@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
+@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson -Quiet
 Get-BucketKeys -Bucket "*"
 tut-pause
 
@@ -1354,8 +1354,8 @@ tut-write-code @'
 @{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
 Get-Bucket -Tree -MaxFiles 10
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
-@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
+@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson -Quiet
 Get-Bucket -Tree -MaxFiles 10
 tut-pause
 
@@ -1369,8 +1369,8 @@ tut-write-code @'
 @{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
 Get-Bucket -Tree
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
-@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
+@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson -Quiet
 Get-Bucket -Tree
 tut-pause
 
@@ -1384,8 +1384,8 @@ tut-write-code @'
 @{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
 Get-Bucket -Tree -Objects
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
-@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
+@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson -Quiet
 Get-Bucket -Tree -Objects
 tut-pause
 
@@ -1399,8 +1399,8 @@ tut-write-code @'
 @{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
 Get-Bucket -Tree -Raw | Select-Object -First 2
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
-@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
+@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson -Quiet
 Get-Bucket -Tree -Raw | Select-Object -First 2
 tut-pause
 
@@ -1414,8 +1414,8 @@ tut-write-code @'
 @{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
 Get-Bucket -Tree -Depth 1
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
-@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
+@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson -Quiet
 Get-Bucket -Tree -Depth 1
 tut-pause
 
@@ -1429,8 +1429,8 @@ tut-write-code @'
 @{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
 Get-Bucket -Tree -Raw | ConvertTo-Json -Depth 5 | Select-Object -First 5
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
-@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
+@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson -Quiet
 Get-Bucket -Tree -Raw | ConvertTo-Json -Depth 5 | Select-Object -First 5
 tut-pause
 
@@ -1444,8 +1444,8 @@ tut-write-code @'
 @{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
 dip | Select-Object Name, ObjectCount
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
-@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
+@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson -Quiet
 dip | Select-Object Name, ObjectCount
 tut-pause
 }
@@ -1466,7 +1466,7 @@ Write-Host ""
 tut-write-code @'
 Remove-Bucket "team" -WhatIf
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 Remove-Bucket "team" -WhatIf
 tut-pause
 
@@ -1478,7 +1478,7 @@ Write-Host ""
 tut-write-code @'
 Remove-Bucket "t*" -WhatIf
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 Remove-Bucket "t*" -WhatIf
 tut-pause
 
@@ -1540,7 +1540,7 @@ Write-Host ""
 tut-write-code @'
 Export-Bucket -Bucket team -OutputFile (Join-Path $exportDir "team.clixml") -Quiet
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 Export-Bucket -Bucket team -OutputFile (Join-Path $exportDir "team.clixml") -Quiet
 tut-pause
 
@@ -1553,7 +1553,7 @@ Write-Host ""
 tut-write-code @'
 Export-Bucket -Bucket team -OutputFile (Join-Path $exportDir "team.json") -AsJson -Quiet
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 Export-Bucket -Bucket team -OutputFile (Join-Path $exportDir "team.json") -AsJson -Quiet
 tut-pause
 
@@ -1567,8 +1567,8 @@ tut-write-code @'
 @{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
 Export-Bucket -Bucket "t*","config" -OutputFile (Join-Path $exportDir "multi-export.clixml") -Quiet
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
-@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
+@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson -Quiet
 Export-Bucket -Bucket "t*","config" -OutputFile (Join-Path $exportDir "multi-export.clixml") -Quiet
 tut-pause
 
@@ -1655,8 +1655,8 @@ tut-write-code @'
 @{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
 Get-ChildItem "buckets:\"
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
-@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
+@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson -Quiet
 Get-ChildItem "buckets:\"
 tut-pause
 
@@ -1670,8 +1670,8 @@ tut-write-code @'
 @{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
 Get-ChildItem "buckets:\" | Select-Object Name, Length, LastWriteTime | Format-Table -AutoSize
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
-@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
+@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson -Quiet
 Get-ChildItem "buckets:\" | Select-Object Name, Length, LastWriteTime | Format-Table -AutoSize
 tut-pause
 
@@ -1684,7 +1684,7 @@ Write-Host ""
 tut-write-code @'
 Get-ChildItem "buckets:\team" | Select-Object Name, Length, LastWriteTime
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 Get-ChildItem "buckets:\team" | Select-Object Name, Length, LastWriteTime
 tut-pause
 
@@ -1697,8 +1697,8 @@ tut-write-code @'
 @{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
 Get-ChildItem "buckets:\" | Where-Object { $_.PSIsContainer }
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
-@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
+@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson -Quiet
 Get-ChildItem "buckets:\" | Where-Object { $_.PSIsContainer }
 tut-pause
 
@@ -1711,7 +1711,7 @@ Write-Host ""
 tut-write-code @'
 Get-Content "buckets:\team\Alice" | Select-Object Name, Role, Score
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 Get-Content "buckets:\team\Alice" | Select-Object Name, Role, Score
 tut-pause
 
@@ -1726,7 +1726,7 @@ $obj = Get-Content "buckets:\team\Carol"
 $obj.Score = 95
 $obj | Set-Content "buckets:\team\Carol"
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 $obj = Get-Content "buckets:\team\Carol"
 $obj.Score = 95
 $obj | Set-Content "buckets:\team\Carol"
@@ -1741,7 +1741,7 @@ tut-write-code @'
 Copy-BucketObject -Bucket team -Key "Alice" -DestinationKey "psdrive-remove-test" -Quiet
 Remove-Item "buckets:\team\psdrive-remove-test" -Force
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 Copy-BucketObject -Bucket team -Key "Alice" -DestinationKey "psdrive-remove-test" -Quiet
 Remove-Item "buckets:\team\psdrive-remove-test" -Force
 tut-pause
@@ -1756,7 +1756,7 @@ tut-write-code @'
 Test-Path "buckets:\team\Alice"
 Test-Path "buckets:\team\NonExistent"
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 Test-Path "buckets:\team\Alice"
 Test-Path "buckets:\team\NonExistent"
 tut-pause
@@ -1771,7 +1771,7 @@ tut-write-code @'
 Copy-Item "buckets:\team\Alice" "buckets:\team\Alice-pscopy" -Force
 Remove-BucketObject -Bucket team -Key "Alice-pscopy" -Quiet
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 Copy-Item "buckets:\team\Alice" "buckets:\team\Alice-pscopy" -Force
 Remove-BucketObject -Bucket team -Key "Alice-pscopy" -Quiet
 tut-pause
@@ -2045,7 +2045,7 @@ spill -Bucket team -Filter { $_.Role -eq "Developer" } |
     ForEach-Object { $_.Score = $_.Score + 5; $_ } |
     Set-BucketObject -PassThru
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 spill -Bucket team -Filter { $_.Role -eq "Developer" } |
     ForEach-Object { $_.Score = $_.Score + 5; $_ } |
     Set-BucketObject -PassThru
@@ -2062,7 +2062,7 @@ spill -Bucket team | Where-Object { $_.Score -gt 80 } |
     Sort-Object Score -Descending |
     Select-Object Name, Role, Score
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 spill -Bucket team | Where-Object { $_.Score -gt 80 } |
     Sort-Object Score -Descending |
     Select-Object Name, Role, Score
@@ -2081,9 +2081,9 @@ $buckets = @("team", "config", "demo")
 $buckets | ForEach-Object { spill -Bucket $_ -Filter { $_.Score -gt 80 } } |
     Select-Object _BucketName, Name, Score
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
-@{ Name = "HighScore"; Score = 90 } | fill -Bucket config -Key "app-config"
-@{ Name = "DemoItem"; Score = 85 } | fill -Bucket demo -Key "demo-score"
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
+@{ Name = "HighScore"; Score = 90 } | fill -Bucket config -Key "app-config" -Quiet
+@{ Name = "DemoItem"; Score = 85 } | fill -Bucket demo -Key "demo-score" -Quiet
 $buckets = @("team", "config", "demo")
 $buckets | ForEach-Object { spill -Bucket $_ -Filter { $_.Score -gt 80 } } |
     Select-Object _BucketName, Name, Score
@@ -2098,8 +2098,8 @@ tut-write-code @'
 @{ Name = "HighScore"; Score = 90 } | fill -Bucket config -Key "app-config"
 spill | Group-Object _BucketName | Select-Object Name, Count
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
-@{ Name = "HighScore"; Score = 90 } | fill -Bucket config -Key "app-config"
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
+@{ Name = "HighScore"; Score = 90 } | fill -Bucket config -Key "app-config" -Quiet
 spill | Group-Object _BucketName | Select-Object Name, Count
 tut-pause
 
@@ -2112,7 +2112,7 @@ Write-Host ""
 tut-write-code @'
 spill -Bucket team | Group-Object Role | Select-Object Name, Count
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 spill -Bucket team | Group-Object Role | Select-Object Name, Count
 tut-pause
 
@@ -2126,7 +2126,7 @@ tut-write-code @'
 $scores = spill -Bucket team | Measure-Object Score -Average -Minimum -Maximum
 Write-Host "    Score stats: avg=$([math]::Round($scores.Average,1)) min=$($scores.Minimum) max=$($scores.Maximum)"
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 $scores = spill -Bucket team | Measure-Object Score -Average -Minimum -Maximum
 Write-Host "    Score stats: avg=$([math]::Round($scores.Average,1)) min=$($scores.Minimum) max=$($scores.Maximum)"
 tut-pause
@@ -2142,7 +2142,7 @@ $csvPath = Join-Path $env:TEMP "buckets-team.csv"
 spill -Bucket team | Select-Object Name, Role, Score | Export-Csv -Path $csvPath -NoTypeInformation
 Remove-Item $csvPath -Force -ErrorAction SilentlyContinue
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 $csvPath = Join-Path $env:TEMP "buckets-team.csv"
 spill -Bucket team | Select-Object Name, Role, Score | Export-Csv -Path $csvPath -NoTypeInformation
 Remove-Item $csvPath -Force -ErrorAction SilentlyContinue
@@ -2158,7 +2158,7 @@ tut-write-code @'
 spill -Bucket team -Filter { $_.Score -gt 80 }
 spill -Bucket team | Where-Object { $_.Score -gt 80 }
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 spill -Bucket team -Filter { $_.Score -gt 80 }
 spill -Bucket team | Where-Object { $_.Score -gt 80 }
 tut-pause
@@ -2174,7 +2174,7 @@ spill -Bucket team | ForEach-Object {
     "[$($_.Role)] $($_.Name) — Score: $($_.Score)"
 }
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 spill -Bucket team | ForEach-Object {
     "[$($_.Role)] $($_.Name) — Score: $($_.Score)"
 }
@@ -2188,7 +2188,7 @@ Write-Host ""
 tut-write-code @'
 spill -Bucket team -Filter { $_.Score -gt 80 } | ConvertTo-Json -Depth 5
 '@
-$script:Team | fill -Bucket team -KeyProperty Name
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
 spill -Bucket team -Filter { $_.Score -gt 80 } | ConvertTo-Json -Depth 5
 tut-pause
 
