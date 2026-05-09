@@ -54,20 +54,33 @@ function tut-run($ScriptBlock) {
         $code -split "`n" | ForEach-Object { Write-Host "    $_" -ForegroundColor Cyan }
         Write-Host ""
     }
-    $infoParts = [System.Collections.ArrayList]::new()
+    $records = [System.Collections.ArrayList]::new()
     $outputObjs = [System.Collections.ArrayList]::new()
     & $ScriptBlock 6>&1 | ForEach-Object {
         if ($_ -is [System.Management.Automation.InformationRecord]) {
-            [void]$infoParts.Add("$_")
+            [void]$records.Add($_)
         } else {
             [void]$outputObjs.Add($_)
         }
     }
-    if ($infoParts.Count) {
-        ($infoParts -join "") -split "`r`n|`n" | ForEach-Object {
-            $line = $_.TrimEnd()
-            if ($line) { Write-Host "  → $line" }
+    $firstOfLine = $true
+    foreach ($rec in $records) {
+        $msg = $rec.MessageData
+        if ($msg -is [System.Management.Automation.HostInformationMessage]) {
+            $fg = if ($msg.ForegroundColor) { $msg.ForegroundColor } else { $host.UI.RawUI.ForegroundColor }
+            $text = $msg.Message
+            $hasNewline = -not $msg.NoNewline
+        } else {
+            $fg = $host.UI.RawUI.ForegroundColor
+            $text = "$msg"
+            $hasNewline = $true
         }
+        if ($firstOfLine) {
+            Write-Host "  → " -NoNewline -ForegroundColor DarkGray
+            $firstOfLine = $false
+        }
+        Write-Host $text -NoNewline:$hasNewline -ForegroundColor $fg
+        if ($hasNewline) { $firstOfLine = $true }
     }
     if ($outputObjs.Count) {
         $outputObjs | Out-String -Stream | ForEach-Object {
