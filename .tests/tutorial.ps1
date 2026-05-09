@@ -127,15 +127,17 @@ Write-Host ""
 Write-Host "  Choose a track:" -ForegroundColor White
 Write-Host "    [1] Beginner  — CRUD basics (create, read, update, delete)" -ForegroundColor Yellow
 Write-Host "    [2] Advanced  — Copy, Rename, PSDrive, nested buckets, pipelines" -ForegroundColor Yellow
+Write-Host "    [4] Sysadmin  — Beginner + server inventory, logs, incidents" -ForegroundColor Yellow
 Write-Host "    [3] Full      — everything" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "  Type 'q' at any pause to quit" -ForegroundColor DarkGray
 Write-Host ""
 do {
-    $mode = (Read-Host "  Enter choice [1/2/3]").Trim()
-} while ($mode -notin @("1","2","3"))
-$Beg = $mode -in @("1","3")
+    $mode = (Read-Host "  Enter choice [1/2/3/4]").Trim()
+} while ($mode -notin @("1","2","3","4"))
+$Beg = $mode -in @("1","3","4")
 $Adv = $mode -in @("2","3")
+$Sys = $mode -in @("3","4")
 cls
 
 if ($Beg) {
@@ -2543,6 +2545,209 @@ Write-Host @"
 tut-pause
 }
 
+# ---------- chapter 12: Sysadmin Scenarios ----------
+
+if ($Sys) {
+
+cls
+Write-Host "`n  $Sep" -ForegroundColor DarkGray
+Write-Host "  12. Sysadmin Scenarios" -ForegroundColor Blue
+Write-Host "  $Sep" -ForegroundColor DarkGray
+
+$script:Servers = @(
+    @{ Hostname="web-01";   IP="10.0.1.10"; OS="Ubuntu 22.04";  Role="web";        CPU=4;  RAM=8;  Disk=120; Status="online";   Location="DC1" }
+    @{ Hostname="web-02";   IP="10.0.1.11"; OS="Ubuntu 22.04";  Role="web";        CPU=4;  RAM=8;  Disk=120; Status="online";   Location="DC1" }
+    @{ Hostname="db-01";    IP="10.0.1.20"; OS="Debian 12";     Role="database";   CPU=8;  RAM=32; Disk=500; Status="online";   Location="DC1" }
+    @{ Hostname="db-02";    IP="10.0.2.20"; OS="Debian 12";     Role="database";   CPU=8;  RAM=32; Disk=500; Status="degraded"; Location="DC2" }
+    @{ Hostname="cache-01"; IP="10.0.1.30"; OS="Alpine 3.18";   Role="cache";      CPU=2;  RAM=16; Disk=60;  Status="online";   Location="DC1" }
+    @{ Hostname="mon-01";   IP="10.0.1.40"; OS="Ubuntu 22.04";  Role="monitoring"; CPU=2;  RAM=4;  Disk=250; Status="online";   Location="DC2" }
+    @{ Hostname="app-01";   IP="10.0.2.50"; OS="Rocky 9";       Role="app";        CPU=8;  RAM=16; Disk=200; Status="offline";  Location="DC2" }
+    @{ Hostname="backup-01";IP="10.0.1.1";  OS="FreeBSD 14";    Role="backup";     CPU=4;  RAM=8;  Disk=2000;Status="online";   Location="DC1" }
+)
+
+$script:Incidents = @(
+    @{ Timestamp=(Get-Date).AddHours(-2);    Severity="ERROR"; Source="web-01";  Message="Connection pool exhausted" }
+    @{ Timestamp=(Get-Date).AddHours(-1);    Severity="WARN";  Source="db-01";   Message="Replication lag 2.3s" }
+    @{ Timestamp=(Get-Date).AddMinutes(-30); Severity="INFO";  Source="mon-01";  Message="Health check passed" }
+    @{ Timestamp=(Get-Date).AddMinutes(-15); Severity="ERROR"; Source="app-01";  Message="Service unreachable" }
+    @{ Timestamp=(Get-Date).AddMinutes(-5);  Severity="CRIT";  Source="app-01";  Message="Disk /dev/sda1 at 97%" }
+)
+
+Write-Host ""
+Write-Host @"
+  This section applies everything you learned to real-world sysadmin data:
+  server inventory, incident logs, reports, and cross-bucket queries.
+  Each lesson builds on the last, starting simple and growing in complexity.
+"@ -ForegroundColor White
+Write-Host ""
+
+# ---------- 12.1 ----------
+
+Write-Host ""
+Write-Host @"
+  Store your server inventory. Each server has a hostname, IP, OS, role,
+  CPU/RAM/Disk specs, status, and datacenter location. Using -KeyProperty
+  Hostname names each object after its server for easy lookup.
+"@ -ForegroundColor White
+Write-Host ""
+tut-write-code @'
+$script:Servers | fill -Bucket servers -KeyProperty Hostname -Quiet
+'@
+$script:Servers | fill -Bucket servers -KeyProperty Hostname -Quiet
+tut-pause
+
+# ---------- 12.2 ----------
+
+Write-Host ""
+Write-Host @"
+  Find servers that aren't fully online — offline or degraded. The -Filter
+  parameter uses a scriptblock, just like Where-Object. -ne means "not equal".
+"@ -ForegroundColor White
+Write-Host ""
+tut-write-code @'
+spill -Bucket servers -Filter { $_.Status -ne "online" }
+'@
+$script:Servers | fill -Bucket servers -KeyProperty Hostname -Quiet
+spill -Bucket servers -Filter { $_.Status -ne "online" }
+tut-pause
+
+# ---------- 12.3 ----------
+
+Write-Host ""
+Write-Host @"
+  Combine conditions: find database servers with at least 16 GB RAM. The -and
+  operator joins two comparisons inside the scriptblock — ideal for identifying
+  hosts that can handle a specific workload.
+"@ -ForegroundColor White
+Write-Host ""
+tut-write-code @'
+spill -Bucket servers -Filter { $_.RAM -ge 16 -and $_.Role -eq "database" }
+'@
+$script:Servers | fill -Bucket servers -KeyProperty Hostname -Quiet
+spill -Bucket servers -Filter { $_.RAM -ge 16 -and $_.Role -eq "database" }
+tut-pause
+
+# ---------- 12.4 ----------
+
+Write-Host ""
+Write-Host @"
+  Group-Object is your friend for datacenter inventory. Group servers by
+  their Location property to see how many hosts live in each DC.
+"@ -ForegroundColor White
+Write-Host ""
+tut-write-code @'
+spill -Bucket servers | Group-Object Location
+'@
+$script:Servers | fill -Bucket servers -KeyProperty Hostname -Quiet
+spill -Bucket servers | Group-Object Location
+tut-pause
+
+# ---------- 12.5 ----------
+
+Write-Host ""
+Write-Host @"
+  Measure-Object sums up total compute resources across all servers. Handy
+  for capacity planning — how much CPU, RAM, and disk do you have in total?
+"@ -ForegroundColor White
+Write-Host ""
+tut-write-code @'
+spill -Bucket servers | Measure-Object CPU, RAM, Disk -Sum
+'@
+$script:Servers | fill -Bucket servers -KeyProperty Hostname -Quiet
+spill -Bucket servers | Measure-Object CPU, RAM, Disk -Sum
+tut-pause
+
+# ---------- 12.6 ----------
+
+Write-Host ""
+Write-Host @"
+  Sysadmins deal with incidents daily. -AsTimestamp gives each incident a
+  unique key based on the current time — perfect for time-series event logs.
+"@ -ForegroundColor White
+Write-Host ""
+tut-write-code @'
+$script:Incidents | fill -Bucket incidents -AsTimestamp -Quiet
+'@
+$script:Incidents | fill -Bucket incidents -AsTimestamp -Quiet
+tut-pause
+
+# ---------- 12.7 ----------
+
+Write-Host ""
+Write-Host @"
+  Focus on what matters: ERROR and CRIT severity levels. The -in operator
+  inside the -Filter scriptblock matches against multiple values at once.
+"@ -ForegroundColor White
+Write-Host ""
+tut-write-code @'
+spill -Bucket incidents -Filter { $_.Severity -in @("ERROR","CRIT") }
+'@
+$script:Incidents | fill -Bucket incidents -AsTimestamp -Quiet
+spill -Bucket incidents -Filter { $_.Severity -in @("ERROR","CRIT") }
+tut-pause
+
+# ---------- 12.8 ----------
+
+Write-Host ""
+Write-Host @"
+  Put all web servers into maintenance mode. Spill them out, add a
+  Maintenance property, then pipe back through Set-BucketObject to save.
+  -PassThru returns the updated objects for confirmation.
+"@ -ForegroundColor White
+Write-Host ""
+tut-write-code @'
+spill -Bucket servers -Filter { $_.Role -eq "web" } |
+    ForEach-Object { $_.Maintenance = $true; $_ } |
+    Set-BucketObject -PassThru | Select Hostname, Status, Maintenance
+'@
+$script:Servers | fill -Bucket servers -KeyProperty Hostname -Quiet
+spill -Bucket servers -Filter { $_.Role -eq "web" } |
+    ForEach-Object { $_.Maintenance = $true; $_ } |
+    Set-BucketObject -PassThru | Select Hostname, Status, Maintenance
+tut-pause
+
+# ---------- 12.9 ----------
+
+Write-Host ""
+Write-Host @"
+  Generate a quick health report: sort servers by status so offline and
+  degraded machines float to the top. Select only the fields that matter.
+"@ -ForegroundColor White
+Write-Host ""
+tut-write-code @'
+spill -Bucket servers | Select Hostname, Status, Location | Sort Status
+'@
+$script:Servers | fill -Bucket servers -KeyProperty Hostname -Quiet
+spill -Bucket servers | Select Hostname, Status, Location | Sort Status
+tut-pause
+
+# ---------- 12.10 ----------
+
+Write-Host ""
+Write-Host @"
+  Cross-bucket correlation: find the server behind each critical incident.
+  Spill the critical events, then look up each affected server by hostname.
+  This ties your event log to your inventory in one pipeline.
+"@ -ForegroundColor White
+Write-Host ""
+tut-write-code @'
+$crit = spill -Bucket incidents -Filter { $_.Severity -eq "CRIT" }
+$crit | ForEach-Object {
+    $svr = spill -Bucket servers -Key $_.Source
+    [PSCustomObject]@{ Incident = $_.Message; Server = $svr.Hostname; Status = $svr.Status }
+}
+'@
+$script:Servers | fill -Bucket servers -KeyProperty Hostname -Quiet
+$script:Incidents | fill -Bucket incidents -AsTimestamp -Quiet
+$crit = spill -Bucket incidents -Filter { $_.Severity -eq "CRIT" }
+$crit | ForEach-Object {
+    $svr = spill -Bucket servers -Key $_.Source
+    [PSCustomObject]@{ Incident = $_.Message; Server = $svr.Hostname; Status = $svr.Status }
+}
+tut-pause
+
+}
+
 # ---------- cleanup ----------
 
 cls
@@ -2588,6 +2793,7 @@ Write-Host @"
     Cross-bucket queries         — -Filter across all buckets
     Edge cases                   — `$null values, special chars, empty keys, safety guards
     Format preservation          — JSON stays .json, binary stays .dat through Rename/Copy
+    Server/event management      — inventory, incidents, health reports, cross-bucket correlation
 
   Learn more: Get-Help <cmdlet> -Full
   See also:   README.md, .tests/demo/*.ps1
