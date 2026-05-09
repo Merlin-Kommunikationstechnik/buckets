@@ -139,10 +139,10 @@ Write-Host @"
 Write-Host ""
 tut-write-code @'
 $alice = @{ Name = "Alice"; Role = "admin"; Score = 95 }
-$alice | fill -Bucket users -Key "Alice"
+New-BucketObject -InputObject $alice -Bucket users -Key "Alice"
 '@
 $alice = @{ Name = "Alice"; Role = "admin"; Score = 95 }
-$alice | fill -Bucket users -Key "Alice"
+New-BucketObject -InputObject $alice -Bucket users -Key "Alice"
 tut-pause
 
 Write-Host ""
@@ -239,10 +239,10 @@ Write-Host @"
 Write-Host ""
 tut-write-code @'
 $alice = @{ Name = "Alice"; Role = "admin"; Score = 99 }
-$alice | fill -Bucket users -Key "Alice" -Overwrite
+New-BucketObject -InputObject $alice -Bucket users -Key "Alice" -Overwrite
 '@
 $alice = @{ Name = "Alice"; Role = "admin"; Score = 99 }
-$alice | fill -Bucket users -Key "Alice" -Overwrite
+New-BucketObject -InputObject $alice -Bucket users -Key "Alice" -Overwrite
 tut-pause
 
 Write-Host ""
@@ -561,7 +561,7 @@ $data = @(
     @{ Name = "B"; Count = 10; Active = $false }
     @{ Name = "C"; Count = 5; Active = $true }
 )
-$data | fill -Bucket match-demo -KeyProperty Name
+New-BucketObject -InputObject $data -Bucket match-demo -KeyProperty Name
 spill -Bucket match-demo -Match @{ Count = 5; Active = $true }
 '@
 $data = @(
@@ -569,7 +569,7 @@ $data = @(
     @{ Name = "B"; Count = 10; Active = $false }
     @{ Name = "C"; Count = 5; Active = $true }
 )
-$data | fill -Bucket match-demo -KeyProperty Name
+New-BucketObject -InputObject $data -Bucket match-demo -KeyProperty Name
 spill -Bucket match-demo -Match @{ Count = 5; Active = $true }
 tut-pause
 
@@ -995,7 +995,7 @@ $data = @(
     @{ Id = "t2"; Status = "stale" }
     @{ Id = "t3"; Status = "active" }
 )
-$data | fill -Bucket temp -KeyProperty Id -Quiet
+New-BucketObject -InputObject $data -Bucket temp -KeyProperty Id -Quiet
 Remove-BucketObject -Bucket temp -Match @{ Status = "stale" } -Quiet
 '@
 $data = @(
@@ -1003,7 +1003,7 @@ $data = @(
     @{ Id = "t2"; Status = "stale" }
     @{ Id = "t3"; Status = "active" }
 )
-$data | fill -Bucket temp -KeyProperty Id -Quiet
+New-BucketObject -InputObject $data -Bucket temp -KeyProperty Id -Quiet
 Remove-BucketObject -Bucket temp -Match @{ Status = "stale" } -Quiet
 tut-pause
 
@@ -1709,7 +1709,7 @@ $deCities = @(
     @{ Name = "Berlin"; Population = 3600000; Country = "DE" }
     @{ Name = "Munich"; Population = 1500000; Country = "DE" }
 )
-$deCities | fill -Bucket "org/eu/de/cities" -KeyProperty Name -Quiet
+New-BucketObject -InputObject $deCities -Bucket "org/eu/de/cities" -KeyProperty Name -Quiet
 
 $ukCities = @(
     @{ Name = "London"; Population = 8900000; Country = "UK" }
@@ -1732,7 +1732,7 @@ $deCities = @(
     @{ Name = "Berlin"; Population = 3600000; Country = "DE" }
     @{ Name = "Munich"; Population = 1500000; Country = "DE" }
 )
-$deCities | fill -Bucket "org/eu/de/cities" -KeyProperty Name -Quiet
+New-BucketObject -InputObject $deCities -Bucket "org/eu/de/cities" -KeyProperty Name -Quiet
 
 $ukCities = @(
     @{ Name = "London"; Population = 8900000; Country = "UK" }
