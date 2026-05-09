@@ -1141,6 +1141,7 @@ function Import-Bucket {
     param(
         [Parameter(Mandatory = $true)][string]$Bucket,
         [Parameter(Mandatory = $true)][string]$InputFile,
+        [string]$Path,
         [switch]$AsJson,
         [switch]$Overwrite,
         [switch]$Quiet
