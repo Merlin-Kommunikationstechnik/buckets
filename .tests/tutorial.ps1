@@ -112,22 +112,27 @@ $script:userBuckets = Get-ChildItem $root -Directory -ErrorAction SilentlyContin
 tut-wipe
 
 Write-Host ""
-Write-Host "  $('─' * 55)" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host "  Buckets Tutorial  v$ver" -ForegroundColor White
 Write-Host "  file-based PSObject storage for PowerShell" -ForegroundColor DarkGray
-Write-Host "  $('─' * 55)" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
+Write-Host "  Choose a track:" -ForegroundColor White
+Write-Host "    [1] Beginner  — CRUD basics (create, read, update, delete)" -ForegroundColor Yellow
+Write-Host "    [2] Advanced  — Copy, Rename, PSDrive, nested buckets, pipelines" -ForegroundColor Yellow
+Write-Host "    [3] Full      — everything" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "  Type 'q' at any pause to quit" -ForegroundColor DarkGray
 Write-Host ""
-Write-Host "  Press Enter to start" -ForegroundColor DarkGray
-$null = Read-Host
+do {
+    $mode = (Read-Host "  Enter choice [1/2/3]").Trim()
+} while ($mode -notin @("1","2","3"))
+$Beg = $mode -in @("1","3")
+$Adv = $mode -in @("2","3")
 cls
 
+if ($Beg) {
 # ---------- chapter 1: Create ----------
-
-Write-Host "`n  $Sep" -ForegroundColor DarkGray
-Write-Host "  1. Create — fill / New-BucketObject" -ForegroundColor Blue
-Write-Host "  $Sep" -ForegroundColor DarkGray
 
 Write-Host ""
 Write-Host @"
@@ -259,7 +264,9 @@ fill -Bucket logs -InputObject $logs -Compress
 $logs = 1..30 | ForEach-Object { @{ Seq = $_; Msg = "Heartbeat OK" } }
 fill -Bucket logs -InputObject $logs -Compress
 tut-pause
+}
 
+if ($Beg) {
 # section 1b
 
 cls
@@ -361,7 +368,9 @@ catch { Write-Host "    empty key rejected" -ForegroundColor Green }
 try { @{ X = 1 } | fill -Bucket demo -Key ". ." -Quiet -ErrorAction Stop }
 catch { Write-Host "    invalid key rejected" -ForegroundColor Green }
 tut-pause
+}
 
+if ($Beg) {
 # ---------- chapter 2: Read ----------
 
 cls
@@ -503,7 +512,9 @@ $bob = spill -Bucket users -Key "Bob"
 $bob = spill -Bucket users -Key "Bob"
 "  Name: $($bob.Name) | Role: $($bob.Role) | Score: $($bob.Score)"
 tut-pause
+}
 
+if ($Beg) {
 # section 2a
 
 cls
@@ -612,7 +623,9 @@ $data = @{ Id = "a"; Meta = @{ Name = "inner" } }
 $data | fill -Bucket nested-match -KeyProperty Id
 spill -Bucket nested-match -Match @{ Meta = $null }
 tut-pause
+}
 
+if ($Beg) {
 # section 2b
 
 cls
@@ -770,7 +783,9 @@ spill -Filter { $_.Score -gt 80 }
 '@
 spill -Filter { $_.Score -gt 80 }
 tut-pause
+}
 
+if ($Beg) {
 # section 2c
 
 cls
@@ -813,7 +828,9 @@ spill -Bucket users -Filter { $_.Score -gt 60 } -First 3
 '@
 spill -Bucket users -Filter { $_.Score -gt 60 } -First 3
 tut-pause
+}
 
+if ($Beg) {
 # ---------- chapter 3: Update ----------
 
 cls
@@ -928,7 +945,9 @@ catch { Write-Host "    Error: -Bucket and -Key required" -ForegroundColor Green
 try { @{ X = 1 } | Set-BucketObject -Quiet -ErrorAction Stop }
 catch { Write-Host "    Error: -Bucket and -Key required" -ForegroundColor Green }
 tut-pause
+}
 
+if ($Beg) {
 # ---------- chapter 4: Delete ----------
 
 cls
@@ -1069,7 +1088,9 @@ $tmp = @{ Data = "gone" }
 $tmp | fill -Bucket temp -Key "bye-bye" -Quiet
 Remove-BucketObject -Bucket temp -Key "bye-bye" -PassThru -Quiet
 tut-pause
+}
 
+if ($Adv) {
 # ---------- chapter 5: Copy, Rename, Move ----------
 
 cls
@@ -1221,7 +1242,9 @@ Copy-BucketObject -Bucket pass -Key "src-key" -DestinationKey "cp-key" -PassThru
 Rename-BucketObject -Bucket pass -Key "cp-key" -NewKey "rn-key" -PassThru -Quiet
 Move-BucketObject -Bucket pass -Key "src-key" -DestinationBucket pass -DestinationKey "mv-key" -PassThru -Quiet
 tut-pause
+}
 
+if ($Adv) {
 # ---------- chapter 6: Bucket Management ----------
 
 cls
@@ -1383,7 +1406,9 @@ dip | Select-Object Name, ObjectCount
 '@
 dip | Select-Object Name, ObjectCount
 tut-pause
+}
 
+if ($Adv) {
 # section 6a
 
 cls
@@ -1449,7 +1474,9 @@ Set-Content -Path (Join-Path $badDir "evil.exe") -Value "x" -NoNewline
 Remove-Bucket "not-a-bucket" -Force -Confirm:$false -WarningAction SilentlyContinue 2>$null
 Remove-Item $badDir -Recurse -Force -ErrorAction SilentlyContinue
 tut-pause
+}
 
+if ($Adv) {
 # ---------- chapter 7: Export / Import ----------
 
 cls
@@ -1545,9 +1572,11 @@ Get-Content (Join-Path $exportDir "users.json") -Raw | ConvertFrom-Json | Conver
 '@
 Get-Content (Join-Path $exportDir "users.json") -Raw | ConvertFrom-Json | ConvertTo-Json -Depth 5 | Select-Object -First 3
 tut-pause
+}
 
 Remove-Item $exportDir -Recurse -Force -ErrorAction SilentlyContinue
 
+if ($Adv) {
 # ---------- chapter 8: PSDrive ----------
 
 cls
@@ -1689,7 +1718,9 @@ Write-Host @"
   Tab — it completes bucket names and object keys.
 "@ -ForegroundColor White
 tut-pause
+}
 
+if ($Adv) {
 # ---------- chapter 9: Nested Buckets ----------
 
 cls
@@ -1882,7 +1913,9 @@ Remove-Bucket "org" -Recurse -Force -Confirm:$false
 '@
 Remove-Bucket "org" -Recurse -Force -Confirm:$false
 tut-pause
+}
 
+if ($Adv) {
 # ---------- chapter 10: Pipeline & Sleek Patterns ----------
 
 cls
@@ -2059,7 +2092,9 @@ $tmp | fill -Bucket smoke-test -KeyProperty Id -Quiet
 $tmp = @{ Id = "smoke"; Value = 42 }
 $tmp | fill -Bucket smoke-test -KeyProperty Id -Quiet
 tut-pause
+}
 
+if ($Adv) {
 # ---------- chapter 11: Aliases Quick Reference ----------
 
 cls
@@ -2093,6 +2128,7 @@ Write-Host @"
 
 "@ -ForegroundColor White
 tut-pause
+}
 
 # ---------- cleanup ----------
 
