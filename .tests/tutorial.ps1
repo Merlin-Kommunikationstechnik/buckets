@@ -69,18 +69,18 @@ function tut-run($ScriptBlock) {
         if ($msg -is [System.Management.Automation.HostInformationMessage]) {
             $fg = if ($msg.ForegroundColor) { $msg.ForegroundColor } else { $host.UI.RawUI.ForegroundColor }
             $text = $msg.Message
-            $hasNewline = -not $msg.NoNewline
+            $noNewline = $msg.NoNewline
         } else {
             $fg = $host.UI.RawUI.ForegroundColor
             $text = "$msg"
-            $hasNewline = $true
+            $noNewline = $false
         }
         if ($firstOfLine) {
             Write-Host "  → " -NoNewline -ForegroundColor DarkGray
             $firstOfLine = $false
         }
-        Write-Host $text -NoNewline:$hasNewline -ForegroundColor $fg
-        if ($hasNewline) { $firstOfLine = $true }
+        Write-Host $text -NoNewline:$noNewline -ForegroundColor $fg
+        if (-not $noNewline) { $firstOfLine = $true }
     }
     if ($outputObjs.Count) {
         $outputObjs | Out-String -Stream | ForEach-Object {
