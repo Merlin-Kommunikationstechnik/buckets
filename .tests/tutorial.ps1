@@ -127,16 +127,16 @@ Write-Host ""
 Write-Host "  Choose a track:" -ForegroundColor White
 Write-Host "    [1] Beginner  — CRUD basics (create, read, update, delete)" -ForegroundColor Yellow
 Write-Host "    [2] Advanced  — Copy, Rename, PSDrive, nested buckets, pipelines" -ForegroundColor Yellow
-Write-Host "    [4] Sysadmin  — Beginner + server inventory, logs, incidents" -ForegroundColor Yellow
-Write-Host "    [3] Full      — everything" -ForegroundColor Yellow
+Write-Host "    [3] Sysadmin  — server inventory, logs, incidents, reports" -ForegroundColor Yellow
+Write-Host "    [4] Full      — everything" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "  Type 'q' at any pause to quit" -ForegroundColor DarkGray
 Write-Host ""
 do {
     $mode = (Read-Host "  Enter choice [1/2/3/4]").Trim()
 } while ($mode -notin @("1","2","3","4"))
-$Beg = $mode -in @("1","3","4")
-$Adv = $mode -in @("2","3")
+$Beg = $mode -in @("1","4")
+$Adv = $mode -in @("2","4")
 $Sys = $mode -in @("3","4")
 cls
 
@@ -2551,7 +2551,7 @@ if ($Sys) {
 
 cls
 Write-Host "`n  $Sep" -ForegroundColor DarkGray
-Write-Host "  12. Sysadmin Scenarios" -ForegroundColor Blue
+Write-Host "  12. Sysadmin Scenarios" -ForegroundColor Cyan
 Write-Host "  $Sep" -ForegroundColor DarkGray
 
 $script:Servers = @(
@@ -2575,19 +2575,24 @@ $script:Incidents = @(
 
 Write-Host ""
 Write-Host @"
-  This section applies everything you learned to real-world sysadmin data:
-  server inventory, incident logs, reports, and cross-bucket queries.
-  Each lesson builds on the last, starting simple and growing in complexity.
+  This section teaches Buckets from the ground up using real-world data:
+  server inventory, incident logs, health reports, and cross-bucket
+  correlation. Each lesson builds on the last, starting simple and growing
+  in complexity.
 "@ -ForegroundColor White
 Write-Host ""
 
 # ---------- 12.1 ----------
 
 Write-Host ""
+Write-Host "  12.1 Storing your server inventory" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
-  Store your server inventory. Each server has a hostname, IP, OS, role,
-  CPU/RAM/Disk specs, status, and datacenter location. Using -KeyProperty
-  Hostname names each object after its server for easy lookup.
+  The fill alias (short for New-BucketObject) saves objects into named
+  storage areas called buckets. Here we store our server inventory — each
+  server record becomes an object keyed by its hostname via -KeyProperty.
+  The -Quiet switch suppresses the summary output.
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
@@ -2599,9 +2604,13 @@ tut-pause
 # ---------- 12.2 ----------
 
 Write-Host ""
+Write-Host "  12.2 Finding unhealthy servers" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
-  Find servers that aren't fully online — offline or degraded. The -Filter
-  parameter uses a scriptblock, just like Where-Object. -ne means "not equal".
+  The spill alias (short for Get-BucketObject) retrieves stored objects.
+  -Filter takes a scriptblock to match conditions — like Where-Object.
+  Find servers that aren't fully online: -ne means "not equal".
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
@@ -2614,9 +2623,12 @@ tut-pause
 # ---------- 12.3 ----------
 
 Write-Host ""
+Write-Host "  12.3 Targeting servers by role and specs" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
-  Combine conditions: find database servers with at least 16 GB RAM. The -and
-  operator joins two comparisons inside the scriptblock — ideal for identifying
+  Combine two conditions in a single -Filter scriptblock with -and. Find
+  database servers that have at least 16 GB RAM — ideal for identifying
   hosts that can handle a specific workload.
 "@ -ForegroundColor White
 Write-Host ""
@@ -2629,6 +2641,9 @@ tut-pause
 
 # ---------- 12.4 ----------
 
+Write-Host ""
+Write-Host "  12.4 Grouping servers by datacenter" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Group-Object is your friend for datacenter inventory. Group servers by
@@ -2645,6 +2660,9 @@ tut-pause
 # ---------- 12.5 ----------
 
 Write-Host ""
+Write-Host "  12.5 Capacity planning totals" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Measure-Object sums up total compute resources across all servers. Handy
   for capacity planning — how much CPU, RAM, and disk do you have in total?
@@ -2660,9 +2678,12 @@ tut-pause
 # ---------- 12.6 ----------
 
 Write-Host ""
+Write-Host "  12.6 Logging incidents with timestamps" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
-  Sysadmins deal with incidents daily. -AsTimestamp gives each incident a
-  unique key based on the current time — perfect for time-series event logs.
+  -AsTimestamp gives each incident a unique key based on the current time —
+  perfect for time-series event logs where you never want a key collision.
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
@@ -2673,6 +2694,9 @@ tut-pause
 
 # ---------- 12.7 ----------
 
+Write-Host ""
+Write-Host "  12.7 Triage critical incidents" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Focus on what matters: ERROR and CRIT severity levels. The -in operator
@@ -2689,10 +2713,13 @@ tut-pause
 # ---------- 12.8 ----------
 
 Write-Host ""
+Write-Host "  12.8 Batch maintenance mode" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
-  Put all web servers into maintenance mode. Spill them out, add a
-  Maintenance property, then pipe back through Set-BucketObject to save.
-  -PassThru returns the updated objects for confirmation.
+  Set-BucketObject updates existing objects in place. Spill the web servers,
+  add a Maintenance property to each, then pipe back through Set-BucketObject
+  to persist the changes. -PassThru returns the updated objects for review.
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
@@ -2709,6 +2736,9 @@ tut-pause
 # ---------- 12.9 ----------
 
 Write-Host ""
+Write-Host "  12.9 Health summary report" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Generate a quick health report: sort servers by status so offline and
   degraded machines float to the top. Select only the fields that matter.
@@ -2724,10 +2754,13 @@ tut-pause
 # ---------- 12.10 ----------
 
 Write-Host ""
+Write-Host "  12.10 Cross-bucket correlation" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
-  Cross-bucket correlation: find the server behind each critical incident.
-  Spill the critical events, then look up each affected server by hostname.
-  This ties your event log to your inventory in one pipeline.
+  Cross-bucket queries connect related data. Spill critical incidents from
+  the incidents bucket, then look up each affected server by hostname with
+  -Key. This ties your event log to your inventory in one pipeline.
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
