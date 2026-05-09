@@ -16,6 +16,7 @@ function tut-pause {
     Write-Host "  [Enter] next · [q] quit > " -NoNewline -ForegroundColor DarkGray
     $r = Read-Host
     if ($r -eq "q") { Write-Host ""; exit }
+    cls
 }
 
 function tut-write-code($Code) {
