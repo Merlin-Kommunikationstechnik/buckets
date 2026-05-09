@@ -2006,12 +2006,14 @@ function Set-BucketObject {
         [ValidateRange(1, 100)][int]$BinaryDepth = 5,
         [switch]$AsJson,
         [switch]$Compress,
+        [switch]$PassThru,
         [switch]$Quiet
     )
 
     begin {
         $bucketPath = $null; $savedCount = 0
         $useVerbose = $VerbosePreference -eq 'Continue'; $useQuiet = $Quiet.IsPresent
+        $usePassThru = $PassThru.IsPresent
     }
 
     process {
@@ -2136,7 +2138,7 @@ function Set-BucketObject {
         if ($writeSuccess) {
             $savedCount++
             if ($useVerbose) { Write-Verbose "Updated [$Bucket/$Key] -> $filePath" }
-            elseif (-not $useQuiet) {
+            elseif ($usePassThru -or -not $useQuiet) {
                 Write-Output [PSCustomObject]@{ Bucket = $Bucket; Key = $Key; FilePath = $filePath }
             }
         }

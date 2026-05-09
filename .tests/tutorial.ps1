@@ -925,9 +925,9 @@ tut-run "Save pipeline output directly" {
 tut-run "Chain: spill → Where-Object → Set-BucketObject" {
     $updated = spill -Bucket users -Filter { $_.Role -eq "user" } |
         ForEach-Object { $_.Score = $_.Score + 5; $_ } |
-        Set-BucketObject -Quiet -PassThru
+        Set-BucketObject -PassThru
     if ($updated) {
-        $check = spill -Bucket users -Key $updated[0]._BucketKey
+        $check = spill -Bucket users -Key $updated[0].Key
         tut-check ($check.Score -gt 0) "User scores bumped via pipeline chain"
     }
 }
