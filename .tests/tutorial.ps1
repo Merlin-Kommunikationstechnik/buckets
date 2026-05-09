@@ -142,6 +142,12 @@ if ($Beg) {
 # ---------- chapter 1: Create ----------
 
 Write-Host ""
+Write-Host "  1. Create" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
+Write-Host "  1.1 Saving your first object" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Let's save your first object — a simple hashtable describing a user. We give it
   an explicit key "Alice" with -Key, which becomes its key. By default,
@@ -158,6 +164,9 @@ New-BucketObject -InputObject $alice -Bucket users -Key "Alice"
 tut-pause
 
 Write-Host ""
+Write-Host "  1.2 Using -KeyProperty for automatic naming" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Typing -Key for every object gets tedious. Instead, -KeyProperty tells Buckets to
   look at a specific property on your object and use its value as the key. Here, the
@@ -172,6 +181,9 @@ $bob = @{ Name = "Bob"; Role = "user"; Score = 72 }
 $bob | fill -Bucket users -KeyProperty Name
 tut-pause
 
+Write-Host ""
+Write-Host "  1.3 Piping multiple objects" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   One of Buckets' superpowers: piping multiple objects at once. Send them one by one
@@ -194,6 +206,9 @@ $users | fill -Bucket users -KeyProperty Name
 tut-pause
 
 Write-Host ""
+Write-Host "  1.4 Explicit -Key for independent naming" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   What if you need a key that isn't a property of the object itself? That's what the
   bare -Key parameter is for — you decide the key, independent of the data inside.
@@ -207,6 +222,9 @@ $data = @{ Source = "import"; Items = 42 }
 $data | fill -Bucket users -Key "external-ref"
 tut-pause
 
+Write-Host ""
+Write-Host "  1.5 JSON output with -AsJson" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   JSON mode is for when you want human-readable files — configs, settings, anything you
@@ -222,6 +240,9 @@ $config = @{ Host = "localhost"; Port = 5432 }
 $config | fill -Bucket config -Key "app-config" -AsJson
 tut-pause
 
+Write-Host ""
+Write-Host "  1.6 Timestamp keys with -AsTimestamp" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   For logs, metrics, or any time-series data, -AsTimestamp auto-generates a unique key
@@ -244,6 +265,9 @@ $events | fill -Bucket events -AsTimestamp
 tut-pause
 
 Write-Host ""
+Write-Host "  1.7 Preventing overwrites with -Overwrite" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Already have an object with the same key? Without -Overwrite, Buckets skips it silently.
   Add -Overwrite to replace the existing object with the new one.
@@ -257,6 +281,9 @@ $alice = @{ Name = "Alice"; Role = "admin"; Score = 99 }
 New-BucketObject -InputObject $alice -Bucket users -Key "Alice" -Overwrite
 tut-pause
 
+Write-Host ""
+Write-Host "  1.8 Compression with -Compress" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Repetitive data — logs, heartbeats, sensor readings — compresses extremely well. The
@@ -277,10 +304,12 @@ if ($Beg) {
 # section 1b
 
 cls
-Write-Host "`n  $Sep" -ForegroundColor DarkGray
-Write-Host "  1b. Create — quiet, verbose, and edge cases" -ForegroundColor Blue
+Write-Host ""
+Write-Host "  1b. Create — quiet, verbose, and edge cases" -ForegroundColor DarkGray
 Write-Host "  $Sep" -ForegroundColor DarkGray
-
+Write-Host ""
+Write-Host "  1b.1 Quiet and verbose output" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   By default, fill shows a progress bar and a summary when saving. If you're scripting
@@ -296,6 +325,9 @@ $data = @{ Msg = "test" }
 $data | fill -Bucket demo -Key "verbosity-demo" -Quiet
 tut-pause
 
+Write-Host ""
+Write-Host "  1b.2 PSCustomObject vs hashtable" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Both hashtables and PSCustomObject work with Buckets. The difference: PSCustomObject
@@ -315,6 +347,9 @@ $hash = @{ Type = "Hashtable" }
 $hash | fill -Bucket types -Key "hash"
 tut-pause
 
+Write-Host ""
+Write-Host "  1b.3 Deeply nested objects" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Buckets handles deeply nested objects with ease. The binary serializer preserves the
@@ -345,6 +380,9 @@ $nested | fill -Bucket nested -Key "deep"
 tut-pause
 
 Write-Host ""
+Write-Host "  1b.4 Special characters in keys" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Some characters — like /, :, *, ? — aren't valid in filenames. When you use them in a
   key, Buckets automatically replaces them with underscores so the filesystem stays happy.
@@ -358,6 +396,9 @@ $data = @{ Data = "sanitized key" }
 $data | fill -Bucket special -Key "my/file:name*test"
 tut-pause
 
+Write-Host ""
+Write-Host "  1b.5 Empty keys after sanitization" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Keys that sanitize to only underscores (like dots or special characters) are
@@ -377,10 +418,12 @@ if ($Beg) {
 # ---------- chapter 2: Read ----------
 
 cls
-Write-Host "`n  $Sep" -ForegroundColor DarkGray
-Write-Host "  2. Read — spill / Get-BucketObject" -ForegroundColor Blue
+Write-Host ""
+Write-Host "  2. Read — spill / Get-BucketObject" -ForegroundColor DarkGray
 Write-Host "  $Sep" -ForegroundColor DarkGray
-
+Write-Host ""
+Write-Host "  2.1 Spilling all objects" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   The counterpart to fill is spill (short for Get-BucketObject). With no arguments,
@@ -395,6 +438,9 @@ spill
 tut-pause
 
 Write-Host ""
+Write-Host "  2.2 Filtering by bucket" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Most of the time you want objects from a specific bucket. Pass -Bucket to narrow
   the search to just one bucket.
@@ -407,6 +453,9 @@ $script:Team | fill -Bucket team -KeyProperty Name -Quiet
 spill -Bucket team
 tut-pause
 
+Write-Host ""
+Write-Host "  2.3 Positional key lookup" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   If you know the key, pass it positionally as the first argument. Keys are matched
@@ -421,6 +470,9 @@ spill "Alice" -Bucket team
 tut-pause
 
 Write-Host ""
+Write-Host "  2.4 Exact key retrieval" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Pass the exact full key name to retrieve just that one object.
 "@ -ForegroundColor White
@@ -432,6 +484,9 @@ $script:Team | fill -Bucket team -KeyProperty Name -Quiet
 spill "Frank" -Bucket team
 tut-pause
 
+Write-Host ""
+Write-Host "  2.5 Case-insensitive matching" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Case doesn't matter. "alice" finds "Alice" because all key matching is
@@ -446,6 +501,9 @@ spill "alice" -Bucket team
 tut-pause
 
 Write-Host ""
+Write-Host "  2.6 Handling missing keys" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   What happens when there's no match? Buckets returns nothing with a warning —
   no crash, just a helpful nudge that nothing was found.
@@ -458,6 +516,9 @@ $script:Team | fill -Bucket team -KeyProperty Name -Quiet
 spill -Bucket team -Key "Zoe"
 tut-pause
 
+Write-Host ""
+Write-Host "  2.7 Wildcards in bucket names" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   You can use wildcards in bucket names too. "t*" matches any bucket starting
@@ -473,6 +534,9 @@ spill -Bucket "t*"
 tut-pause
 
 Write-Host ""
+Write-Host "  2.8 Querying multiple buckets" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Pass multiple bucket names as an array. Buckets searches each one and combines
   the results into a single list.
@@ -486,6 +550,9 @@ $script:Team | fill -Bucket staff -KeyProperty Name -Quiet
 spill -Bucket "team", "staff"
 tut-pause
 
+Write-Host ""
+Write-Host "  2.9 Metadata properties" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Every object retrieved by Buckets carries metadata: _BucketName, _BucketKey, and
@@ -501,6 +568,9 @@ spill -Bucket team -Key "Bob" | Select _BucketName, _BucketKey, _BucketFile
 tut-pause
 
 Write-Host ""
+Write-Host "  2.10 Piping to Select-Object" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Since spill returns regular PowerShell objects, you can pipe them into Select-Object,
   Sort-Object, Group-Object — anything you'd do with any other object in PowerShell.
@@ -513,6 +583,9 @@ $script:Team | fill -Bucket team -KeyProperty Name -Quiet
 spill -Bucket team | Sort Score -Descending | Select Name, Role, Score
 tut-pause
 
+Write-Host ""
+Write-Host "  2.11 Dot notation access" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Access individual properties using standard dot notation. Store the result in a
@@ -539,10 +612,12 @@ if ($Beg) {
 # section 2a
 
 cls
-Write-Host "`n  $Sep" -ForegroundColor DarkGray
-Write-Host "  2a. Read — filtering with -Match" -ForegroundColor Blue
+Write-Host ""
+Write-Host "  2a. Read — filtering with -Match" -ForegroundColor DarkGray
 Write-Host "  $Sep" -ForegroundColor DarkGray
-
+Write-Host ""
+Write-Host "  2a.1 Exact match filtering" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   -Match is Buckets' built-in filter for exact equality. Pass a hashtable of property
@@ -558,6 +633,9 @@ spill -Bucket team -Match @{ Role = "Developer" }
 tut-pause
 
 Write-Host ""
+Write-Host "  2a.2 Matching null values" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Special case: matching against $null. If a property is $null on the object, or doesn't
   exist at all, it counts as a match for $null. Useful for finding objects with missing
@@ -572,6 +650,9 @@ spill -Bucket team -Match @{ Deleted = $null }
 tut-pause
 
 Write-Host ""
+Write-Host "  2a.3 Multi-property matching" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   You can match on multiple properties at once — think of it as AND logic. All conditions
   must be true for an object to be returned.
@@ -584,6 +665,9 @@ $script:Team | fill -Bucket team -KeyProperty Name -Quiet
 spill -Bucket team -Match @{ Level = 3; Active = $true }
 tut-pause
 
+Write-Host ""
+Write-Host "  2a.4 Mixed type matching" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Let's create some fresh data to demonstrate -Match with mixed types. Strings, numbers,
@@ -609,6 +693,9 @@ spill -Bucket match-demo -Match @{ Count = 5; Active = $true }
 tut-pause
 
 Write-Host ""
+Write-Host "  2a.5 Case-insensitive string matching" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   String matching with -Match is exact and case-insensitive. "red" matches "red" but
   also "Red", "RED", and so on.
@@ -633,6 +720,9 @@ spill -Bucket match-demo -Match @{ Color = "red" }
 tut-pause
 
 Write-Host ""
+Write-Host "  2a.6 Top-level properties only" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   -Match only looks at top-level properties. If you need to drill into nested data like
   $_.Settings.Enabled, you'll need -Filter instead.
@@ -653,10 +743,12 @@ if ($Beg) {
 # section 2b
 
 cls
-Write-Host "`n  $Sep" -ForegroundColor DarkGray
-Write-Host "  2b. Read — comparison with -Filter" -ForegroundColor Blue
+Write-Host ""
+Write-Host "  2b. Read — comparison with -Filter" -ForegroundColor DarkGray
 Write-Host "  $Sep" -ForegroundColor DarkGray
-
+Write-Host ""
+Write-Host "  2b.1 Scriptblock filtering" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   For anything beyond exact equality, reach for -Filter. It takes a scriptblock where
@@ -672,6 +764,9 @@ spill -Bucket team -Filter { $_.Score -gt 80 }
 tut-pause
 
 Write-Host ""
+Write-Host "  2b.2 Less-than-or-equal comparison" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Less than or equal works the same way. Think of -Filter as writing a Where-Object
   clause that runs inside Buckets rather than in the pipeline.
@@ -684,6 +779,9 @@ $script:Team | fill -Bucket team -KeyProperty Name -Quiet
 spill -Bucket team -Filter { $_.Score -le 70 }
 tut-pause
 
+Write-Host ""
+Write-Host "  2b.3 Regex pattern matching" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Pattern matching with -match uses regular expressions. Here we find names starting
@@ -698,6 +796,9 @@ spill -Bucket team -Filter { $_.Name -match "^[AE]" }
 tut-pause
 
 Write-Host ""
+Write-Host "  2b.4 Wildcard matching with -like" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   The -like operator uses wildcard patterns. "*e*" matches any name containing the
   letter "e" anywhere in the string.
@@ -710,6 +811,9 @@ $script:Team | fill -Bucket team -KeyProperty Name -Quiet
 spill -Bucket team -Filter { $_.Name -like "*e*" }
 tut-pause
 
+Write-Host ""
+Write-Host "  2b.5 Combining conditions with -and" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Combine conditions with -and. Both must be true: score above 80 AND role is
@@ -724,6 +828,9 @@ spill -Bucket team -Filter { $_.Score -gt 80 -and $_.Role -eq "Developer" }
 tut-pause
 
 Write-Host ""
+Write-Host "  2b.6 Combining conditions with -or" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Combine conditions with -or. Either can be true: role is "Designer" OR level above 3.
 "@ -ForegroundColor White
@@ -735,6 +842,9 @@ $script:Team | fill -Bucket team -KeyProperty Name -Quiet
 spill -Bucket team -Filter { $_.Role -eq "Designer" -or $_.Level -gt 3 }
 tut-pause
 
+Write-Host ""
+Write-Host "  2b.7 String length checks" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   String length checks work because you're writing real PowerShell expressions. Here
@@ -758,6 +868,9 @@ spill -Bucket str-test -Filter { $_.Value.Length -gt 5 }
 tut-pause
 
 Write-Host ""
+Write-Host "  2b.8 Date comparisons" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Date comparisons too — no special syntax needed. Compare DateTime properties with
   -gt, -lt, or any other operator, just like you would in regular PowerShell.
@@ -773,6 +886,9 @@ spill -Bucket team -Filter { $_.Joined -gt $cutoff }
 tut-pause
 
 Write-Host ""
+Write-Host "  2b.9 Nested property access" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Nested properties are accessible via standard dot notation inside the scriptblock.
   Here we check if an array property contains a value using -contains.
@@ -785,6 +901,9 @@ $script:Team | fill -Bucket team -KeyProperty Name -Quiet
 spill -Bucket team -Filter { $_.Skills -contains "Rust" }
 tut-pause
 
+Write-Host ""
+Write-Host "  2b.10 Cross-bucket filtering" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Omitting -Bucket makes -Filter run against all buckets at once. This is a cross-bucket
@@ -805,10 +924,12 @@ if ($Beg) {
 # section 2c
 
 cls
-Write-Host "`n  $Sep" -ForegroundColor DarkGray
-Write-Host "  2c. Read — pagination with -First / -Skip" -ForegroundColor Blue
+Write-Host ""
+Write-Host "  2c. Read — pagination with -First / -Skip" -ForegroundColor DarkGray
 Write-Host "  $Sep" -ForegroundColor DarkGray
-
+Write-Host ""
+Write-Host "  2c.1 Limiting results with -First" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Pagination is built right in. -First limits the number of results returned. Useful
@@ -823,6 +944,9 @@ spill -Bucket team -First 3
 tut-pause
 
 Write-Host ""
+Write-Host "  2c.2 Skipping results with -Skip" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Combine -Skip with -First to jump ahead. -Skip 1 -First 3 skips the first result and
   returns the next three — a classic paging pattern.
@@ -835,6 +959,9 @@ $script:Team | fill -Bucket team -KeyProperty Name -Quiet
 spill -Bucket team -Skip 1 -First 3
 tut-pause
 
+Write-Host ""
+Write-Host "  2c.3 Filtering with pagination" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   -First and -Skip work together with -Filter too. Here we filter for scores above 70,
@@ -853,10 +980,12 @@ if ($Beg) {
 # ---------- chapter 3: Update ----------
 
 cls
-Write-Host "`n  $Sep" -ForegroundColor DarkGray
-Write-Host "  3. Update — Set-BucketObject" -ForegroundColor Blue
+Write-Host ""
+Write-Host "  3. Update — Set-BucketObject" -ForegroundColor DarkGray
 Write-Host "  $Sep" -ForegroundColor DarkGray
-
+Write-Host ""
+Write-Host "  3.1 Pipeline update with Set-BucketObject" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Set-BucketObject updates an existing object in place. When piped from spill, it
@@ -880,6 +1009,9 @@ spill -Bucket team -Key "Bob" | ForEach-Object {
 tut-pause
 
 Write-Host ""
+Write-Host "  3.2 Explicit bucket and key" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Without pipeline metadata, specify -Bucket and -Key explicitly. Pass the modified
   object through -InputObject.
@@ -897,6 +1029,9 @@ Set-BucketObject -Bucket team -Key "Carol" -InputObject $obj -Quiet
 tut-pause
 
 Write-Host ""
+Write-Host "  3.3 Partial update with hashtable" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Need to update just one field? Pipe a hashtable with only the properties you want
   to change. Buckets merges it with the existing object — partial updates work
@@ -913,6 +1048,9 @@ $patch | Set-BucketObject -Bucket team -Key "Alice" -Quiet
 tut-pause
 
 Write-Host ""
+Write-Host "  3.4 Adding new properties" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   New properties are automatically added. If the property doesn't exist on the
   original object, it gets appended without affecting existing fields.
@@ -928,6 +1066,9 @@ $patch | Set-BucketObject -Bucket team -Key "Alice" -Quiet
 tut-pause
 
 Write-Host ""
+Write-Host "  3.5 Preserving unchanged properties" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Properties you don't mention in the update stay untouched. Only the keys in your
   patch hashtable are modified.
@@ -942,6 +1083,9 @@ $patch = @{ City = "Portland" }
 $patch | Set-BucketObject -Bucket team -Key "Alice" -Quiet
 tut-pause
 
+Write-Host ""
+Write-Host "  3.6 Format preservation" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Format preservation: JSON objects stay as .json, binary objects stay as .dat.
@@ -961,6 +1105,9 @@ $patch | Set-BucketObject -Bucket config -Key "db-settings" -Quiet
 tut-pause
 
 Write-Host ""
+Write-Host "  3.7 Missing metadata warning" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   What happens if you pipe to Set-BucketObject without metadata AND without explicit
   -Bucket/-Key? It throws — it has no idea where to save.
@@ -979,10 +1126,12 @@ if ($Beg) {
 # ---------- chapter 4: Delete ----------
 
 cls
-Write-Host "`n  $Sep" -ForegroundColor DarkGray
-Write-Host "  4. Delete — Remove-BucketObject" -ForegroundColor Blue
+Write-Host ""
+Write-Host "  4. Delete — Remove-BucketObject" -ForegroundColor DarkGray
 Write-Host "  $Sep" -ForegroundColor DarkGray
-
+Write-Host ""
+Write-Host "  4.1 Preview with -WhatIf" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   -WhatIf previews what would be deleted without actually removing anything. Always
@@ -996,6 +1145,9 @@ $script:Team | fill -Bucket team -KeyProperty Name -Quiet
 Remove-BucketObject -Bucket team -Key "Bob" -WhatIf
 tut-pause
 
+Write-Host ""
+Write-Host "  4.2 Deleting by key" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Delete by key is straightforward. Pass the key of the object you want to remove.
@@ -1011,6 +1163,9 @@ spill -Bucket team
 tut-pause
 
 Write-Host ""
+Write-Host "  4.3 Deleting non-existent key" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Trying to delete a non-existent key issues a warning but doesn't throw an error.
   Buckets is forgiving about missing objects.
@@ -1024,6 +1179,9 @@ Remove-BucketObject -Bucket team -Key "Zoe"
 tut-pause
 
 Write-Host ""
+Write-Host "  4.4 Key or all requirement" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   You must specify either -Key, -All, or a filter. Without one of these, the parameter
   set validation rejects the command.
@@ -1035,6 +1193,9 @@ Remove-BucketObject -Bucket team -ErrorAction SilentlyContinue
 Remove-BucketObject -Bucket team -ErrorAction SilentlyContinue
 tut-pause
 
+Write-Host ""
+Write-Host "  4.5 Delete with -Match" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   -Match works with deletion too. Delete all objects matching certain criteria in
@@ -1051,6 +1212,9 @@ spill -Bucket team
 tut-pause
 
 Write-Host ""
+Write-Host "  4.6 Delete with -Filter" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   -Filter works the same way — delete objects that pass the scriptblock condition.
   Here, any inactive member gets removed.
@@ -1066,6 +1230,9 @@ spill -Bucket team
 tut-pause
 
 Write-Host ""
+Write-Host "  4.7 Delete all with -All" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   -All deletes every object in the bucket. A clean slate.
 "@ -ForegroundColor White
@@ -1079,6 +1246,9 @@ Remove-BucketObject -Bucket team -All -Quiet
 spill -Bucket team
 tut-pause
 
+Write-Host ""
+Write-Host "  4.8 Passthru metadata" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   -PassThru returns metadata about what was deleted. Useful for logging, auditing,
@@ -1100,10 +1270,12 @@ if ($Adv) {
 # ---------- chapter 5: Copy, Rename, Move ----------
 
 cls
-Write-Host "`n  $Sep" -ForegroundColor DarkGray
-Write-Host "  5. Object Operations — Copy, Rename, Move" -ForegroundColor Blue
+Write-Host ""
+Write-Host "  5. Object Operations — Copy, Rename, Move" -ForegroundColor DarkGray
 Write-Host "  $Sep" -ForegroundColor DarkGray
-
+Write-Host ""
+Write-Host "  5.1 Copy within a bucket" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Copy an object within the same bucket but with a different key. The original stays
@@ -1120,6 +1292,9 @@ spill -Bucket team -Key "Alice-Backup"
 tut-pause
 
 Write-Host ""
+Write-Host "  5.2 Copy across buckets" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Copy across buckets too. Specify -DestinationBucket to copy to a different bucket.
 "@ -ForegroundColor White
@@ -1133,6 +1308,9 @@ Copy-BucketObject -Bucket team -Key "Alice" -DestinationBucket archive -Quiet
 spill -Bucket archive -Key "Alice"
 tut-pause
 
+Write-Host ""
+Write-Host "  5.3 Copy with passthru" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   -PassThru on Copy-BucketObject returns metadata about the destination: source,
@@ -1148,6 +1326,9 @@ Copy-BucketObject -Bucket team -Key "Alice" -DestinationKey "Alice-pass" -PassTh
 Remove-BucketObject -Bucket team -Key "Alice-pass" -Quiet
 tut-pause
 
+Write-Host ""
+Write-Host "  5.4 Rename an object" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Rename changes the key of an existing object in place. The format (.dat or .json)
@@ -1165,6 +1346,9 @@ Rename-BucketObject -Bucket tmp -Key "old-name" -NewKey "new-name" -Quiet
 tut-pause
 
 Write-Host ""
+Write-Host "  5.5 Rename preserves format" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Renaming a JSON object preserves the .json extension too. Format is always
   maintained — you never have to worry about it.
@@ -1180,6 +1364,9 @@ $tmp | fill -Bucket tmp-json -Key "json-old" -AsJson -Quiet
 Rename-BucketObject -Bucket tmp-json -Key "json-old" -NewKey "json-new" -PassThru -Quiet
 tut-pause
 
+Write-Host ""
+Write-Host "  5.6 Move between buckets" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Move combines copy + delete in one operation. The object is copied to the
@@ -1201,6 +1388,9 @@ Move-BucketObject -Bucket source -Key "obj1" -DestinationBucket dest -Quiet
 tut-pause
 
 Write-Host ""
+Write-Host "  5.7 Move with rename" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Move with rename: specify a different key in the target bucket to rename
   as part of the move.
@@ -1217,6 +1407,9 @@ Move-BucketObject -Bucket origin -Key "orig-key" -DestinationBucket final -Desti
 tut-pause
 
 Write-Host ""
+Write-Host "  5.8 Move with passthru" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   -PassThru on Move returns metadata about both the source and destination
   objects.
@@ -1232,6 +1425,9 @@ $tmp | fill -Bucket move-src -Key "m-pass" -Quiet
 Move-BucketObject -Bucket move-src -Key "m-pass" -DestinationBucket move-dst -PassThru -Quiet
 tut-pause
 
+Write-Host ""
+Write-Host "  5.9 Passthru on all operations" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   All three operations — Copy, Rename, Move — support -PassThru. Chain them
@@ -1257,10 +1453,12 @@ if ($Adv) {
 # ---------- chapter 6: Bucket Management ----------
 
 cls
-Write-Host "`n  $Sep" -ForegroundColor DarkGray
-Write-Host "  6. Bucket Management — dip / Get-Bucket" -ForegroundColor Blue
+Write-Host ""
+Write-Host "  6. Bucket Management — dip / Get-Bucket" -ForegroundColor DarkGray
 Write-Host "  $Sep" -ForegroundColor DarkGray
-
+Write-Host ""
+Write-Host "  6.1 Listing buckets with dip" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   dip (short for Get-Bucket) lists all your buckets with their object counts and
@@ -1277,6 +1475,9 @@ dip
 tut-pause
 
 Write-Host ""
+Write-Host "  6.2 Filtering by name" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Filter buckets by name with a substring match. "team" matches "team" and any
   other bucket with "team" in the name.
@@ -1292,6 +1493,9 @@ dip "team"
 tut-pause
 
 Write-Host ""
+Write-Host "  6.3 Bucket statistics" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Get-BucketStats shows detailed statistics: object count, total size on disk, and
   creation/modification timestamps for a specific bucket.
@@ -1304,6 +1508,9 @@ $script:Team | fill -Bucket team -KeyProperty Name -Quiet
 Get-BucketStats -Bucket team
 tut-pause
 
+Write-Host ""
+Write-Host "  6.4 Listing keys" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Get-BucketKeys lists every key in a bucket along with its format (.dat or .json)
@@ -1318,6 +1525,9 @@ Get-BucketKeys -Bucket team
 tut-pause
 
 Write-Host ""
+Write-Host "  6.5 Filtering keys by pattern" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Filter keys by pattern with -Match. "A*" matches all keys starting with "A".
 "@ -ForegroundColor White
@@ -1329,6 +1539,9 @@ $script:Team | fill -Bucket team -KeyProperty Name -Quiet
 Get-BucketKeys -Bucket team -Match "A*"
 tut-pause
 
+Write-Host ""
+Write-Host "  6.6 Keys across all buckets" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Get-BucketKeys across all buckets with the wildcard "*" — a complete inventory
@@ -1345,6 +1558,9 @@ Get-BucketKeys -Bucket "*"
 tut-pause
 
 Write-Host ""
+Write-Host "  6.7 Tree view" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   The -Tree parameter renders your buckets as a visual directory tree. -MaxFiles
   limits how many objects are shown per bucket.
@@ -1359,6 +1575,9 @@ $script:Team | fill -Bucket team -KeyProperty Name -Quiet
 Get-Bucket -Tree -MaxFiles 10
 tut-pause
 
+Write-Host ""
+Write-Host "  6.8 Bucket-only tree" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Without -Objects, the tree shows buckets only — a clean structural view without
@@ -1375,6 +1594,9 @@ Get-Bucket -Tree
 tut-pause
 
 Write-Host ""
+Write-Host "  6.9 Tree with objects" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Add -Objects to include individual objects in the tree. Every leaf object is
   visible.
@@ -1389,6 +1611,9 @@ $script:Team | fill -Bucket team -KeyProperty Name -Quiet
 Get-Bucket -Tree -Objects
 tut-pause
 
+Write-Host ""
+Write-Host "  6.10 Raw tree output" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   The -Raw switch returns tree objects as pipeable data instead of formatted text.
@@ -1405,6 +1630,9 @@ Get-Bucket -Tree -Raw | Select-Object -First 2
 tut-pause
 
 Write-Host ""
+Write-Host "  6.11 Depth-limited tree" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   -Depth limits how many levels of nesting the tree traverses. Depth 1 shows
   only top-level buckets.
@@ -1420,6 +1648,9 @@ Get-Bucket -Tree -Depth 1
 tut-pause
 
 Write-Host ""
+Write-Host "  6.12 Tree to JSON" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Pipe Raw tree output to ConvertTo-Json for a structured JSON representation of
   your bucket hierarchy.
@@ -1434,6 +1665,9 @@ $script:Team | fill -Bucket team -KeyProperty Name -Quiet
 Get-Bucket -Tree -Raw | ConvertTo-Json -Depth 5 | Select-Object -First 5
 tut-pause
 
+Write-Host ""
+Write-Host "  6.13 Clean summary table" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Select Name and ObjectCount from dip for a clean table of buckets with their
@@ -1454,10 +1688,12 @@ if ($Adv) {
 # section 6a
 
 cls
-Write-Host "`n  $Sep" -ForegroundColor DarkGray
-Write-Host "  6a. Remove-Bucket — safety and wildcards" -ForegroundColor Blue
+Write-Host ""
+Write-Host "  6a. Remove-Bucket — safety and wildcards" -ForegroundColor DarkGray
 Write-Host "  $Sep" -ForegroundColor DarkGray
-
+Write-Host ""
+Write-Host "  6a.1 Preview removal" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   -WhatIf previews what would be removed without actually deleting anything.
@@ -1471,6 +1707,9 @@ Remove-Bucket "team" -WhatIf
 tut-pause
 
 Write-Host ""
+Write-Host "  6a.2 Wildcard preview" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Wildcard patterns work too. Preview removing all buckets matching a pattern.
 "@ -ForegroundColor White
@@ -1482,6 +1721,9 @@ $script:Team | fill -Bucket team -KeyProperty Name -Quiet
 Remove-Bucket "t*" -WhatIf
 tut-pause
 
+Write-Host ""
+Write-Host "  6a.3 Remove a single bucket" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Remove a single bucket. Make sure it contains only .dat/.json files — Buckets
@@ -1498,6 +1740,9 @@ $tmp | fill -Bucket temp-remove -Key "x" -Quiet
 Remove-Bucket temp-remove -Force -Confirm:$false
 tut-pause
 
+Write-Host ""
+Write-Host "  6a.4 Safety check on removal" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Safety first: Remove-Bucket checks that a directory contains only bucket files.
@@ -1524,13 +1769,17 @@ if ($Adv) {
 # ---------- chapter 7: Export / Import ----------
 
 cls
-Write-Host "`n  $Sep" -ForegroundColor DarkGray
-Write-Host "  7. Export / Import — Export-Bucket, Import-Bucket" -ForegroundColor Blue
+Write-Host ""
+Write-Host "  7. Export / Import — Export-Bucket, Import-Bucket" -ForegroundColor DarkGray
 Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 
 $exportDir = Join-Path $env:TEMP "buckets-tutorial-export"
 $null = New-Item -ItemType Directory -Path $exportDir -Force -ErrorAction SilentlyContinue
 
+Write-Host ""
+Write-Host "  7.1 Export to CLIXML" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Export saves an entire bucket to an archive file. CLIXML (the default) preserves
@@ -1545,6 +1794,9 @@ Export-Bucket -Bucket team -OutputFile (Join-Path $exportDir "team.clixml") -Qui
 tut-pause
 
 Write-Host ""
+Write-Host "  7.2 Export to JSON" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Export to JSON for human-readable archives. Same data, different format —
   useful when you need to inspect or share the data outside of PowerShell.
@@ -1557,6 +1809,9 @@ $script:Team | fill -Bucket team -KeyProperty Name -Quiet
 Export-Bucket -Bucket team -OutputFile (Join-Path $exportDir "team.json") -AsJson -Quiet
 tut-pause
 
+Write-Host ""
+Write-Host "  7.3 Wildcard export" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Wildcards work for batch exports. Export multiple buckets that match a pattern
@@ -1573,6 +1828,9 @@ Export-Bucket -Bucket "t*","config" -OutputFile (Join-Path $exportDir "multi-exp
 tut-pause
 
 Write-Host ""
+Write-Host "  7.4 Import from CLIXML" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Import restores from a CLIXML archive into a new bucket. Objects are recreated
   with their original keys and data.
@@ -1585,6 +1843,9 @@ Import-Bucket -Bucket restored -InputFile (Join-Path $exportDir "team.clixml") -
 tut-pause
 
 Write-Host ""
+Write-Host "  7.5 Import from JSON" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
 Write-Host @"
   Import from JSON works the same way. The JSON file is parsed and each object
   is stored in the specified bucket.
@@ -1596,6 +1857,9 @@ Import-Bucket -Bucket restored-json -InputFile (Join-Path $exportDir "team.json"
 Import-Bucket -Bucket restored-json -InputFile (Join-Path $exportDir "team.json") -AsJson -Quiet
 tut-pause
 
+Write-Host ""
+Write-Host "  7.6 Overwrite on import" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   -Overwrite on import replaces existing keys instead of skipping them. With
@@ -1610,6 +1874,9 @@ Import-Bucket -Bucket import-over -InputFile (Join-Path $exportDir "team.clixml"
 Import-Bucket -Bucket import-over -InputFile (Join-Path $exportDir "team.clixml") -Overwrite -Quiet
 tut-pause
 
+Write-Host ""
+Write-Host "  7.7 Inspecting JSON archives" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   JSON archives are plain text. Open them in any editor to inspect or modify

@@ -900,11 +900,11 @@ Test-Edge "No-buckets root (nonexistent path returns empty)" {
 }
 
 # Cleanup edge bucket
-Remove-Bucket "edge" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
-Remove-Bucket "a" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+Remove-Bucket "edge" -Force -Confirm:$false -WarningAction SilentlyContinue
+Remove-Bucket "a" -Force -Confirm:$false -WarningAction SilentlyContinue
 
 foreach ($bucket in $createdBuckets) {
-    Remove-Bucket -Bucket $bucket -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
+    Remove-Bucket -Bucket $bucket -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse
 }
 
 $passCount = ($edgeResults | Where-Object { $_.Status -eq "PASS" }).Count
