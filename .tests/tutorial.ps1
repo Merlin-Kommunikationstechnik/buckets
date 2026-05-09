@@ -15,16 +15,16 @@ $Sep = "-" * 60
 
 function tut-header($Title) {
     Write-Host "`n$Sep" -ForegroundColor DarkGray
-    Write-Host "  $Title" -ForegroundColor Cyan
+    Write-Host "  $Title" -ForegroundColor Blue
     Write-Host "$Sep" -ForegroundColor DarkGray
 }
 
 function tut-cmd($Text) {
-    Write-Host "  $ $Text" -ForegroundColor Yellow
+    Write-Host "  $Text" -ForegroundColor Magenta
 }
 
 function tut-info($Text) {
-    Write-Host "  $Text" -ForegroundColor White
+    Write-Host "  $Text" -ForegroundColor DarkGray
 }
 
 function tut-ok($Text) {
@@ -51,6 +51,11 @@ function tut-check($Cond, $Msg) {
 
 function tut-run($Desc, $ScriptBlock) {
     tut-cmd $Desc
+    $code = $ScriptBlock.ToString().Trim()
+    if ($code) {
+        Write-Host ""
+        $code -split "`n" | ForEach-Object { Write-Host "    $_" -ForegroundColor Cyan }
+    }
     & $ScriptBlock
 }
 
