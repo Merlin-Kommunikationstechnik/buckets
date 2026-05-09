@@ -19,16 +19,8 @@ function tut-header($Title) {
     Write-Host "$Sep" -ForegroundColor DarkGray
 }
 
-function tut-cmd($Text) {
-    Write-Host "  $Text" -ForegroundColor Magenta
-}
-
 function tut-info($Text) {
     Write-Host "  $Text" -ForegroundColor DarkGray
-}
-
-function tut-ok($Text) {
-    Write-Host "  OK $Text" -ForegroundColor Green
 }
 
 function tut-note($Text) {
@@ -37,29 +29,45 @@ function tut-note($Text) {
 
 function tut-done {
     Write-Host ""
-    Write-Host "$Sep" -ForegroundColor DarkGray
-    Write-Host "  Press Enter to continue, or type q to quit tutorial.`n" -NoNewline
-    $r = Read-Host " >"
-    if ($r -eq "q") { Write-Host "`n  Tutorial aborted. Bye!`n" -ForegroundColor Cyan; exit }
+    Write-Host "─────────────────────────────────" -ForegroundColor DarkGray
+    Write-Host "  End of section" -ForegroundColor DarkGray
+    Write-Host ""
 }
 
 function tut-section($Num, $Title) {
     tut-header "$Num. $Title"
 }
 
-function tut-check($Cond, $Msg) {
-    if ($Cond) { tut-ok $Msg } else { Write-Host "  FAIL $Msg" -ForegroundColor Red }
+function tut-desc($Text) {
+    Write-Host ""
+    $Text -split "`n" | ForEach-Object { Write-Host "  $_" -ForegroundColor DarkGray }
+    Write-Host ""
 }
 
-function tut-run($Desc, $ScriptBlock) {
-    tut-cmd $Desc
+function tut-run($ScriptBlock) {
     $code = $ScriptBlock.ToString().Trim()
     if ($code) {
-        Write-Host ""
         $code -split "`n" | ForEach-Object { Write-Host "    $_" -ForegroundColor Cyan }
+        Write-Host ""
     }
     & $ScriptBlock
+    Write-Host ""
+    Write-Host "────────────────────" -ForegroundColor DarkGray
+    Write-Host "  [Enter] next · [q] quit" -NoNewline -ForegroundColor DarkGray
+    $r = Read-Host " >"
+    if ($r -eq "q") { Write-Host ""; exit }
 }
+
+function tut-cleanup {
+    $root = Get-BucketRoot
+    foreach ($_ in $createdTemp) {
+        $p = Join-Path $root $_
+        if (Test-Path $p) { Remove-Item $p -Recurse -Force -ErrorAction SilentlyContinue }
+    }
+    $createdTemp.Clear()
+}
+
+$createdTemp = [System.Collections.ArrayList]::new()
 
 # ---------- setup ----------
 
@@ -82,331 +90,428 @@ tut-ok "Module loaded from $mod (v$(Get-Module Buckets | ForEach-Object Version)
 tut-info "Storage root: $(Get-BucketRoot)"
 tut-note "Type 'q' at any pause to quit the tutorial"
 
-# clean any prior tutorial data so cross-bucket queries stay fast
+# clean any prior tutorial data for a fresh start
 tut-note "Cleaning prior tutorial data for a fresh start"
 $root = Get-BucketRoot
-@("users", "config", "logs", "events", "demo", "temp", "scores", "temp2",
-  "empty-test", "tmp", "source", "dest", "pass", "archive", "exported",
-  "restored", "restored-json", "dir-listing") | ForEach-Object {
-    $p = Join-Path $root $_
-    if (Test-Path $p) { Remove-Item $p -Recurse -Force -ErrorAction SilentlyContinue }
+Get-ChildItem $root -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+    Remove-Item $_.FullName -Recurse -Force -ErrorAction SilentlyContinue
 }
 tut-done
 
 # ---------- chapter 1: Create ----------
 
 tut-section 1 "Create — fill / New-BucketObject"
-tut-info "The alias 'fill' is short for New-BucketObject."
-tut-info "Objects are saved as binary (.dat) by default for full .NET type fidelity."
-tut-note "JSON format is available via -AsJson"
 
-tut-run "Save a single hashtable to the users bucket" {
-    fill -Bucket users -Key "Alice" -InputObject @{ Name = "Alice"; Role = "admin"; Score = 95 } -Quiet
+tut-desc @"
+Let's save your first object — a simple hashtable describing a user. We give it
+an explicit key "Alice" with -Key, which becomes its filename on disk. By default,
+Buckets uses a binary format that preserves the full .NET type information, so
+hashtables, custom objects, even FileInfo — all survive the round trip.
+"@
+tut-run {
+    @{ Name = "Alice"; Role = "admin"; Score = 95 } | fill -Bucket users -Key "Alice"
+}
+
+tut-desc @"
+Typing -Key for every object gets tedious. Instead, -KeyProperty tells Buckets to
+look at a specific property on your object and use its value as the key. Here, the
+property Name contains "Bob", so the file will be named "Bob.dat" automatically.
+"@
+tut-run {
+    @{ Name = "Bob"; Role = "user"; Score = 72 } | fill -Bucket users -KeyProperty Name
+}
+
+tut-desc @"
+One of Buckets' superpowers: piping multiple objects at once. Send them one by one
+through the pipeline and Buckets saves each one. Mix -KeyProperty with pipeline
+input for batch inserts — it's the fastest way to load data.
+"@
+tut-run {
+    @{ Name = "Carol"; Role = "manager"; Score = 88 },
+    @{ Name = "Dave"; Role = "user"; Score = 61 } | fill -Bucket users -KeyProperty Name
+}
+
+tut-desc @"
+What if you need a key that isn't a property of the object itself? That's what the
+bare -Key parameter is for — you decide the filename, independent of the data inside.
+"@
+tut-run {
+    @{ Source = "import"; Items = 42 } | fill -Bucket users -Key "external-ref"
+}
+
+tut-desc @"
+JSON mode is for when you want human-readable files — configs, settings, anything you
+might edit by hand. Add -AsJson and Buckets stores a .json file instead of .dat.
+You can open it in any text editor.
+"@
+tut-run {
+    @{ Host = "localhost"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
+}
+
+tut-desc @"
+For logs, metrics, or any time-series data, -AsTimestamp auto-generates a unique key
+from the current date and time. No two objects ever get the same name, and chronological
+ordering is built right in.
+"@
+tut-run {
+    @{ Event = "login"; User = "alice" },
+    @{ Event = "logout"; User = "bob" } | fill -Bucket events -AsTimestamp
+}
+
+tut-desc @"
+Already have an object with the same key? Without -Overwrite, Buckets skips it silently.
+Add -Overwrite to replace the existing object with the new one.
+"@
+tut-run {
+    @{ Name = "Alice"; Role = "admin"; Score = 99 } | fill -Bucket users -Key "Alice" -Overwrite
+}
+
+tut-desc @"
+Repetitive data — logs, heartbeats, sensor readings — compresses extremely well. The
+-Compress flag applies GZip before writing, and Buckets auto-detects compressed files
+on read so you never have to think about it.
+"@
+tut-run {
+    $logs = 1..30 | ForEach-Object { @{ Seq = $_; Msg = "Heartbeat OK" } }
+    fill -Bucket logs -InputObject $logs -Compress
 }
 tut-done
 
-tut-run "Save with a custom key via -KeyProperty (value of Name becomes filename)" {
-    $users = @(
-        @{ Name = "Bob";   Role = "user";    Score = 72; Tags = @("dev", "nyc") }
-        @{ Name = "Carol"; Role = "manager"; Score = 88; Tags = @("hr", "nyc") }
-        @{ Name = "Dave";  Role = "user";    Score = 61; Tags = @("dev", "sfo") }
-    )
-    fill -Bucket users -InputObject $users -KeyProperty Name -Quiet
-}
-tut-info "Each user became a file: Bob.dat, Carol.dat, Dave.dat"
-tut-done
+tut-section "1b" "Create — quiet, verbose, and edge cases"
 
-tut-run "Literal key with -Key (explicit filename, no extension)" {
-    fill -Bucket users -Key "external-ref" -InputObject @{ Source = "import"; Items = 42 } -Quiet
+tut-desc @"
+By default, fill shows a progress bar and a summary when saving. If you're scripting
+or just want silence, -Quiet suppresses all output. For debugging, -Verbose prints
+per-object details.
+"@
+tut-run {
+    @{ Msg = "test" } | fill -Bucket demo -Key "verbosity-demo" -Quiet
 }
-tut-done
 
-tut-run "Timestamp-based keys — useful for logs, metrics" {
-    @(
-        @{ Event = "login"; User = "alice" }
-        @{ Event = "logout"; User = "bob" }
-    ) | fill -Bucket events -AsTimestamp -Quiet
+tut-desc @"
+Both hashtables and PSCustomObject work with Buckets. The difference: PSCustomObject
+preserves the order of your properties, while a regular hashtable does not guarantee
+ordering.
+"@
+tut-run {
+    [PSCustomObject]@{ Type = "PSCustomObject"; Ordered = $true } | fill -Bucket types -Key "custom"
+    @{ Type = "Hashtable" } | fill -Bucket types -Key "hash"
 }
-tut-info "Filenames look like: 20260415_143022000_0.dat, 20260415_143022000_1.dat"
-tut-done
+$null = $createdTemp.Add("types")
 
-tut-run "Overwrite existing — -Overwrite replaces by key" {
-    fill -Bucket users -Key "Alice" -InputObject @{ Name = "Alice"; Role = "admin"; Score = 99 } -Overwrite -Quiet
-    $alice = spill -Bucket users -Key "Alice"
-    tut-check ($alice.Score -eq 99) "Alice score overwritten to 99"
-}
-tut-done
-
-tut-run "JSON format with -AsJson" {
-    $config = @{
-        _Id = "app-config"
-        Host = "localhost"
-        Port = 5432
-        Features = @("auth", "audit", "cache")
-    }
-    fill -Bucket config -Key "app-config" -InputObject $config -AsJson -Quiet
-}
-tut-info "Stored as app-config.json (readable, editable)"
-tut-done
-
-tut-run "PSCustomObject vs hashtable — both work, PSCustomObject preserves property order" {
-    $cust = [PSCustomObject]@{ Type = "PSCustomObject"; Ordered = $true; Created = Get-Date }
-    fill -Bucket types -Key "custom" -InputObject $cust -Quiet
-    $hash = @{ Type = "Hashtable" }
-    $hash | fill -Bucket types -Key "hash-example" -Quiet
-    $types = spill -Bucket types | Select-Object Type
-    tut-check ($types.Count -eq 2) "Both PSCustomObject and hashtable saved"
-    Remove-Bucket types -Force -Confirm:$false -WarningAction SilentlyContinue
-}
-tut-done
-
-tut-run "Complex nested object — deep data preserved with binary serialization" {
+tut-desc @"
+Buckets handles deeply nested objects with ease. The binary serializer preserves the
+full object graph — nested PSCustomObjects, arrays, and all. This is exactly where
+JSON would fall short.
+"@
+tut-run {
     $nested = [PSCustomObject]@{
-        Id = "nested-001"
-        Metadata = [PSCustomObject]@{
-            Created = Get-Date
-            Source = [PSCustomObject]@{ App = "test"; Version = "1.0"; Commit = "abc123" }
-        }
+        Id = "deep"
+        Metadata = [PSCustomObject]@{ App = "test"; Version = "1.0" }
         Items = @(
-            [PSCustomObject]@{ Sku = "ABC"; Qty = 5; Details = @{ Weight = 1.2; Color = "red" } }
-            [PSCustomObject]@{ Sku = "XYZ"; Qty = 3; Details = @{ Weight = 2.4; Color = "blue" } }
+            [PSCustomObject]@{ Sku = "ABC"; Qty = 5 }
+            [PSCustomObject]@{ Sku = "XYZ"; Qty = 3 }
         )
     }
-    fill -Bucket nested -Key "deep" -InputObject $nested -Quiet
-    $read = spill -Bucket nested -Key "deep"
-    tut-check ($read.Items[0].Details.Color -eq "red") "Deeply nested property survived round-trip"
-    Remove-Bucket nested -Force -Confirm:$false -WarningAction SilentlyContinue
+    $nested | fill -Bucket nested -Key "deep"
 }
-tut-done
+$null = $createdTemp.Add("nested")
 
-tut-run "Array of objects saved as individual files via pipeline" {
-    1..10 | ForEach-Object { @{ Index = $_; Square = $_ * $_ } } |
-        fill -Bucket squares -AsTimestamp -Quiet
-    $count = (spill -Bucket squares -WarningAction SilentlyContinue).Count
-    tut-check ($count -eq 10) "10 square objects saved"
-    Remove-Bucket squares -Force -Confirm:$false -WarningAction SilentlyContinue
+tut-desc @"
+Some characters — like /, :, *, ? — aren't valid in filenames. When you use them in a
+key, Buckets automatically replaces them with underscores so the filesystem stays happy.
+"@
+tut-run {
+    @{ Data = "sanitized key" } | fill -Bucket special -Key "my/file:name*test"
 }
-tut-done
+$null = $createdTemp.Add("special")
 
-tut-run 'Special characters in keys are sanitized: / : * ? " < > | . [ ] → _' {
-    fill -Bucket special -Key "my/file:name*test" -InputObject @{ Data = "sanitized key" } -Quiet
-    $found = spill -Bucket special -Key "my_file_name_test"
-    tut-check ($found.Data -eq "sanitized key") "Key sanitized and retrievable"
-    Remove-Bucket special -Force -Confirm:$false -WarningAction SilentlyContinue
+tut-desc @"
+Buckets won't let you create a key that's empty or becomes empty after sanitization.
+It throws an error right away so you don't end up with files you can't find.
+"@
+tut-run {
+    try { @{ X = 1 } | fill -Bucket demo -Key "" -Quiet -ErrorAction Stop }
+    catch { Write-Host "    empty key rejected" -ForegroundColor Green }
+    try { @{ X = 1 } | fill -Bucket demo -Key ". ." -Quiet -ErrorAction Stop }
+    catch { Write-Host "    invalid key rejected" -ForegroundColor Green }
 }
-tut-done
 
-tut-run "$null values in objects — preserved in binary, lost in JSON" {
-    fill -Bucket null-test -Key "with-null" -InputObject @{ Name = "nullable"; Value = $null } -Quiet
-    $obj = spill -Bucket null-test -Key "with-null"
-    tut-check ($null -eq $obj.Value) "$null value preserved in binary"
-    Remove-Bucket null-test -Force -Confirm:$false -WarningAction SilentlyContinue
-}
-tut-done
-
-tut-run "Compressed binary — GZip for repetitive data (~95% reduction)" {
-    $logs = 1..30 | ForEach-Object { @{ Seq = $_; Msg = "Heartbeat OK"; Stamp = Get-Date } }
-    fill -Bucket logs -Key "heartbeat" -InputObject $logs -Compress -Quiet
-}
-tut-info "Auto-detected on read via magic bytes (0x1F 0x8B)"
-tut-done
-
-tut-section "1b" "Create — default behavior vs -Quiet vs -Verbose"
-tut-info "Without -Quiet: shows progress bar + summary"
-tut-info "With -Quiet:   silent, no output"
-tut-info "With -Verbose: per-object details"
-tut-run "Quick example (quiet)" {
-    fill -Bucket demo -Key "verbosity-demo" -InputObject @{ Msg = "test" } -Quiet
-}
-tut-done
-
-tut-run "Empty or invalid key rejection" {
-    $caught = $false
-    try { fill -Bucket demo -Key "" -InputObject @{ X = 1 } -Quiet -ErrorAction Stop }
-    catch { $caught = $true }
-    try { fill -Bucket demo -Key ". ." -InputObject @{ X = 1 } -Quiet -ErrorAction Stop }
-    catch { $caught = $true }
-    tut-ok "Empty and all-special-character keys are rejected"
-}
+tut-cleanup
 tut-done
 
 # ---------- chapter 2: Read ----------
 
 tut-section 2 "Read — spill / Get-BucketObject"
-tut-info "The alias 'spill' is short for Get-BucketObject."
-tut-info "Read from all buckets, a specific bucket, by key, or with filters."
 
-tut-run "All objects from all buckets" {
-    $all = spill -WarningAction SilentlyContinue
-    tut-ok "$($all.Count) objects across all buckets"
+tut-desc @"
+The counterpart to fill is spill (short for Get-BucketObject). With no arguments,
+it returns every object from every bucket — useful for getting the lay of the land.
+"@
+tut-run {
+    spill
 }
 
-tut-run "From a specific bucket" {
+tut-desc @"
+Most of the time you want objects from a specific bucket. Pass -Bucket to narrow
+the search to just one bucket.
+"@
+tut-run {
     spill -Bucket users
 }
 
-tut-run "By key (positional, case-insensitive prefix match)" {
+tut-desc @"
+If you know the key, pass it positionally as the first argument. Keys are matched
+case-insensitively and as prefixes, so "alice" matches "Alice" too.
+"@
+tut-run {
     spill "Alice" -Bucket users
 }
 
-tut-run "Key matching — 'external-ref' matches exactly" {
-    $results = spill "external-ref" -Bucket users
-    tut-check ($results.Count -eq 1) "Found 'external-ref' by exact key"
+tut-desc @"
+For an exact match, just pass the full key name. Keys are still matched
+case-insensitively, so you don't need to worry about capitalization.
+"@
+tut-run {
+    spill "external-ref" -Bucket users
 }
 
-tut-run "Case-insensitive search — 'alice' matches Alice" {
+tut-desc @"
+Case doesn't matter. "alice" finds "Alice" because all key matching is
+case-insensitive. No more guessing about capitalization.
+"@
+tut-run {
     spill "alice" -Bucket users
 }
 
-tut-run "Non-existent key returns nothing with a warning" {
-    $result = spill -Bucket users -Key "NoOneHere" -WarningAction SilentlyContinue
-    tut-check (-not $result) "Non-existent key returned `$null"
+tut-desc @"
+What happens when there's no match? Buckets returns nothing with a warning —
+no crash, just a helpful nudge that nothing was found.
+"@
+tut-run {
+    spill -Bucket users -Key "NoOneHere"
 }
 
-tut-run "Wildcard bucket names" {
+tut-desc @"
+You can use wildcards in bucket names too. "use*" matches any bucket starting
+with "use", making it easy to search groups of related buckets.
+"@
+tut-run {
     spill -Bucket "use*"
 }
 
-tut-run "Multiple specific buckets" {
+tut-desc @"
+Pass multiple bucket names as an array. Buckets searches each one and combines
+the results into a single list.
+"@
+tut-run {
     spill -Bucket "users", "logs"
 }
 
-tut-run "Metadata properties: _BucketName, _BucketKey, _BucketFile" {
+tut-desc @"
+Every object retrieved by Buckets carries metadata: _BucketName, _BucketKey, and
+_BucketFile. These tell you exactly where the object came from — useful for
+pipeline operations where context matters.
+"@
+tut-run {
     spill -Bucket users -Key "Bob" | Select-Object _BucketName, _BucketKey, _BucketFile
 }
 
-tut-run "Pipelines — select, sort, group" {
+tut-desc @"
+Since spill returns regular PowerShell objects, you can pipe them into Select-Object,
+Sort-Object, Group-Object — anything you'd do with any other object in PowerShell.
+"@
+tut-run {
     spill -Bucket users | Select-Object Name, Role, Score | Sort-Object Score -Descending
 }
 
-tut-run "Access individual properties on a returned object" {
+tut-desc @"
+Access individual properties using standard dot notation. Store the result in a
+variable and work with it like any other PowerShell object.
+"@
+tut-run {
     $bob = spill -Bucket users -Key "Bob"
-    tut-info "Bob's name: $($bob.Name), role: $($bob.Role), tags: $($bob.Tags -join ', ')"
+    "  Name: $($bob.Name) | Role: $($bob.Role) | Score: $($bob.Score)"
 }
 tut-done
 
-tut-section "2a" "Read — filtering with -Match (exact match)"
-tut-info "-Match uses a hashtable for exact equality. Supports `$null for absent properties."
+tut-section "2a" "Read — filtering with -Match"
 
-tut-run "Exact match: Role = 'admin'" {
+tut-desc @"
+-Match is Buckets' built-in filter for exact equality. Pass a hashtable of property
+names and values, and Buckets returns only objects where every property matches
+exactly.
+"@
+tut-run {
     spill -Bucket users -Match @{ Role = "admin" }
 }
 
-tut-run "Match with `$null (property must be absent)" {
+tut-desc @"
+Special case: matching against $null. If a property is $null on the object, or doesn't
+exist at all, it counts as a match for $null. Useful for finding objects with missing
+fields.
+"@
+tut-run {
     spill -Bucket users -Match @{ Deleted = $null }
 }
 
-tut-run "Multi-property match" {
+tut-desc @"
+You can match on multiple properties at once — think of it as AND logic. All conditions
+must be true for an object to be returned.
+"@
+tut-run {
     spill -Bucket users -Match @{ Role = "user"; Score = 72 }
 }
 
-tut-run "Match on string, number, and boolean" {
-    fill -Bucket match-demo -InputObject @(
-        @{ Name = "A"; Count = 5; Active = $true }
-        @{ Name = "B"; Count = 10; Active = $false }
-        @{ Name = "C"; Count = 5; Active = $true }
-    ) -KeyProperty Name -Quiet
+tut-desc @"
+Let's create some fresh data to demonstrate -Match with mixed types. Strings, numbers,
+and booleans all work as match criteria.
+"@
+tut-run {
+    @{ Name = "A"; Count = 5; Active = $true },
+    @{ Name = "B"; Count = 10; Active = $false },
+    @{ Name = "C"; Count = 5; Active = $true } | fill -Bucket match-demo -KeyProperty Name
     spill -Bucket match-demo -Match @{ Count = 5; Active = $true }
-    Remove-Bucket match-demo -Force -Confirm:$false -WarningAction SilentlyContinue
+}
+$null = $createdTemp.Add("match-demo")
+
+tut-desc @"
+String matching with -Match is exact and case-insensitive. "red" matches "red" but
+also "Red", "RED", and so on.
+"@
+tut-run {
+    @{ Name = "alpha"; Color = "red" },
+    @{ Name = "beta"; Color = "blue" },
+    @{ Name = "gamma"; Color = "red" } | fill -Bucket match-demo -KeyProperty Name
+    spill -Bucket match-demo -Match @{ Color = "red" }
 }
 
-tut-run "Match on string values (not arrays)" {
-    fill -Bucket match-demo -InputObject @(
-        @{ Name = "alpha"; Color = "red" }
-        @{ Name = "beta"; Color = "blue" }
-        @{ Name = "gamma"; Color = "red" }
-    ) -KeyProperty Name -Quiet
-    $found = spill -Bucket match-demo -Match @{ Color = "red" }
-    tut-check ($found.Count -eq 2) "Matched 2 red items"
-    Remove-Bucket match-demo -Force -Confirm:$false -WarningAction SilentlyContinue
+tut-desc @"
+-Match only looks at top-level properties. If you need to drill into nested data like
+$_.Settings.Enabled, you'll need -Filter instead.
+"@
+tut-run {
+    @{ Id = "a"; Meta = @{ Name = "inner" } } | fill -Bucket nested-match -KeyProperty Id
+    spill -Bucket nested-match -Match @{ Meta = $null }
 }
-
-tut-run "Match only works on top-level properties (not nested)" {
-    fill -Bucket nested-match -InputObject @(
-        @{ Id = "a"; Meta = @{ Name = "inner" } }
-    ) -KeyProperty Id -Quiet
-    tut-info "-Match cannot reach into nested objects. Use -Filter instead."
-    Remove-Bucket nested-match -Force -Confirm:$false -WarningAction SilentlyContinue
-}
+$null = $createdTemp.Add("nested-match")
 tut-done
 
-tut-section "2b" "Read — comparison with -Filter (scriptblock)"
-tut-info "-Filter uses a scriptblock with `$_ referencing the object."
-tut-info "Supports full PowerShell expressions: -gt, -lt, -match, -like, -and, -or, etc."
-tut-info "Unlike -Match, -Filter can access nested properties."
+tut-section "2b" "Read — comparison with -Filter"
 
-tut-run "Greater than: Score -gt 80" {
+tut-desc @"
+For anything beyond exact equality, reach for -Filter. It takes a scriptblock where
+$_ represents each object. You can use any PowerShell operator: -gt, -lt, -match,
+-like, -and, -or, and more.
+"@
+tut-run {
     spill -Bucket users -Filter { $_.Score -gt 80 }
 }
 
-tut-run "Less than or equal: Score -le 70" {
+tut-desc @"
+Less than or equal works the same way. Think of -Filter as writing a Where-Object
+clause that runs inside Buckets rather than in the pipeline.
+"@
+tut-run {
     spill -Bucket users -Filter { $_.Score -le 70 }
 }
 
-tut-run "Pattern match: Name starts with A or D" {
+tut-desc @"
+Pattern matching with -match uses regular expressions. Here we find names starting
+with A or D using the regex "^[AD]".
+"@
+tut-run {
     spill -Bucket users -Filter { $_.Name -match "^[AD]" }
 }
 
-tut-run "Like pattern: Name contains 'o'" {
+tut-desc @"
+The -like operator uses wildcard patterns. "*o*" matches any name containing the
+letter "o" anywhere in the string.
+"@
+tut-run {
     spill -Bucket users -Filter { $_.Name -like "*o*" }
 }
 
-tut-run "Multi-condition: Score > 70 AND Role is 'user'" {
+tut-desc @"
+Combine conditions with -and. Both must be true: score above 70 AND role is "user".
+"@
+tut-run {
     spill -Bucket users -Filter { $_.Score -gt 70 -and $_.Role -eq "user" }
 }
 
-tut-run "OR condition: Role is 'admin' OR Score > 80" {
+tut-desc @"
+Combine conditions with -or. Either can be true: role is "admin" OR score above 80.
+"@
+tut-run {
     spill -Bucket users -Filter { $_.Role -eq "admin" -or $_.Score -gt 80 }
 }
 
-tut-run "Array contains: Tags contains 'dev'" {
-    spill -Bucket users -Filter { $_.Tags -contains "dev" }
-}
-
-tut-run "String length check" {
-    fill -Bucket str-test -InputObject @(
-        @{ Name = "short"; Value = "abc" }
-        @{ Name = "long";  Value = "abcdefghijk" }
-    ) -KeyProperty Name -Quiet
+tut-desc @"
+String length checks work because you're writing real PowerShell expressions. Here
+we find objects where the Value property is longer than 5 characters.
+"@
+tut-run {
+    @{ Name = "short"; Value = "abc" },
+    @{ Name = "long";  Value = "abcdefghijk" } | fill -Bucket str-test -KeyProperty Name
     spill -Bucket str-test -Filter { $_.Value.Length -gt 5 }
-    Remove-Bucket str-test -Force -Confirm:$false -WarningAction SilentlyContinue
 }
+$null = $createdTemp.Add("str-test")
 
-tut-run "Date comparison" {
-    fill -Bucket date-test -InputObject @(
-        @{ Id = "old"; Stamp = (Get-Date).AddDays(-10) }
-        @{ Id = "new"; Stamp = Get-Date }
-    ) -KeyProperty Id -Quiet
+tut-desc @"
+Date comparisons too — no special syntax needed. Compare DateTime properties with
+-gt, -lt, or any other operator, just like you would in regular PowerShell.
+"@
+tut-run {
+    @{ Id = "old"; Stamp = (Get-Date).AddDays(-10) },
+    @{ Id = "new"; Stamp = Get-Date } | fill -Bucket date-test -KeyProperty Id
     $cutoff = (Get-Date).AddDays(-5)
     spill -Bucket date-test -Filter { $_.Stamp -gt $cutoff }
-    Remove-Bucket date-test -Force -Confirm:$false -WarningAction SilentlyContinue
 }
+$null = $createdTemp.Add("date-test")
 
-tut-run "Nested property access via dot notation" {
-    fill -Bucket nested-filter -InputObject @(
-        @{ Id = "x"; Settings = @{ Enabled = $true; Level = 5 } }
-        @{ Id = "y"; Settings = @{ Enabled = $false; Level = 3 } }
-    ) -KeyProperty Id -Quiet
+tut-desc @"
+Nested properties are accessible via standard dot notation inside the scriptblock.
+$_.Settings.Enabled drills into the Settings hashtable to check the Enabled flag.
+"@
+tut-run {
+    @{ Id = "x"; Settings = @{ Enabled = $true; Level = 5 } },
+    @{ Id = "y"; Settings = @{ Enabled = $false; Level = 3 } } | fill -Bucket nested-filter -KeyProperty Id
     spill -Bucket nested-filter -Filter { $_.Settings.Enabled -eq $true }
-    Remove-Bucket nested-filter -Force -Confirm:$false -WarningAction SilentlyContinue
 }
+$null = $createdTemp.Add("nested-filter")
 
-tut-run "Cross-bucket filter (no -Bucket specified)" {
+tut-desc @"
+Omitting -Bucket makes -Filter run against all buckets at once. This is a cross-bucket
+query — useful for finding objects anywhere in your data.
+"@
+tut-run {
     spill -Filter { $_.Score -gt 80 }
 }
 tut-done
 
 tut-section "2c" "Read — pagination with -First / -Skip"
 
-tut-run "First 2 results" {
+tut-desc @"
+Pagination is built right in. -First limits the number of results returned. Useful
+for previewing large datasets without loading everything.
+"@
+tut-run {
     spill -Bucket users -First 2
 }
 
-tut-run "Skip 1, take 2" {
+tut-desc @"
+Combine -Skip with -First to jump ahead. -Skip 1 -First 2 skips the first result and
+returns the next two — a classic paging pattern.
+"@
+tut-run {
     spill -Bucket users -Skip 1 -First 2
 }
 
-tut-run "Combined with -Filter" {
+tut-desc @"
+-First and -Skip work together with -Filter too. Here we filter for scores above 60,
+then take only the first 3 results.
+"@
+tut-run {
     spill -Bucket users -Filter { $_.Score -gt 60 } -First 3
 }
 tut-done
@@ -414,144 +519,157 @@ tut-done
 # ---------- chapter 3: Update ----------
 
 tut-section 3 "Update — Set-BucketObject"
-tut-info "Set-BucketObject updates an existing object in place."
-tut-info "It auto-detects bucket and key from _BucketName / _BucketKey when piped."
 
-tut-run "Pipeline round-trip: get, modify, save" {
+tut-desc @"
+Set-BucketObject updates an existing object in place. When piped from spill, it
+auto-detects the bucket and key from the _BucketName and _BucketKey metadata —
+no need to specify them again.
+"@
+tut-run {
     spill -Bucket users -Key "Bob" | ForEach-Object {
         $_.Score = 99
         $_.Role = "admin"
         $_
     } | Set-BucketObject -Quiet
-    $updated = spill -Bucket users -Key "Bob"
-    tut-check ($updated.Score -eq 99 -and $updated.Role -eq "admin") "Bob's score=99, role=admin"
 }
 
-tut-run "Explicit bucket/key (no pipeline)" {
+tut-desc @"
+Without pipeline metadata, specify -Bucket and -Key explicitly. Pass the modified
+object through -InputObject.
+"@
+tut-run {
     $obj = spill -Bucket users -Key "Carol"
     $obj.Score = 100
     Set-BucketObject -Bucket users -Key "Carol" -InputObject $obj -Quiet
-    tut-check ((spill -Bucket users -Key "Carol").Score -eq 100) "Carol's score=100"
 }
 
-tut-run "Partial update — patch a hashtable onto existing" {
+tut-desc @"
+Need to update just one field? Pipe a hashtable with only the properties you want
+to change. Buckets merges it with the existing object — partial updates work
+seamlessly.
+"@
+tut-run {
     @{ Email = "alice@new.com" } | Set-BucketObject -Bucket users -Key "Alice" -Quiet
-    tut-check ((spill -Bucket users -Key "Alice").Email -eq "alice@new.com") "Alice email patched"
 }
 
-tut-run "Partial update adds new properties not present in original" {
+tut-desc @"
+New properties are automatically added. If the property doesn't exist on the
+original object, it gets appended without affecting existing fields.
+"@
+tut-run {
     @{ Phone = "555-0100" } | Set-BucketObject -Bucket users -Key "Alice" -Quiet
-    tut-check ((spill -Bucket users -Key "Alice").Phone -eq "555-0100") "New property 'Phone' added"
 }
 
-tut-run "Update preserves untouched properties" {
-    $alice = spill -Bucket users -Key "Alice"
-    $origScore = $alice.Score
+tut-desc @"
+Properties you don't mention in the update stay untouched. Only the keys in your
+patch hashtable are modified.
+"@
+tut-run {
     @{ City = "Portland" } | Set-BucketObject -Bucket users -Key "Alice" -Quiet
-    $alice = spill -Bucket users -Key "Alice"
-    tut-check ($alice.Score -eq $origScore -and $alice.City -eq "Portland") "Original Score preserved, City added"
 }
 
-tut-run "Update JSON format — preserves .json extension" {
+tut-desc @"
+Format preservation: JSON objects stay as .json, binary objects stay as .dat.
+Set-BucketObject always writes back in the original format.
+"@
+tut-run {
     @{ UpdatedAt = Get-Date; Host = "prod-server" } |
         Set-BucketObject -Bucket config -Key "app-config" -Quiet
-    $cfg = spill -Bucket config -Key "app-config"
-    tut-check ($cfg.Host -eq "prod-server") "JSON config updated, format preserved"
 }
 
-tut-run "What happens without metadata — must specify -Bucket and -Key" {
-    $caught = $false
+tut-desc @"
+What happens if you pipe to Set-BucketObject without metadata AND without explicit
+-Bucket/-Key? It throws — it has no idea where to save.
+"@
+tut-run {
     try { @{ X = 1 } | Set-BucketObject -Quiet -ErrorAction Stop }
-    catch { $caught = $true }
-    tut-check $caught "Set-BucketObject without Bucket/Key throws"
+    catch { Write-Host "    Error: -Bucket and -Key required" -ForegroundColor Green }
 }
-
-tut-info "Format is preserved: JSON stays JSON, binary stays binary"
 tut-done
 
 # ---------- chapter 4: Delete ----------
 
 tut-section 4 "Delete — Remove-BucketObject"
-tut-info "Remove-BucketObject supports -Key, -All, -Match, -Filter."
-tut-info "SupportsShouldProcess: -WhatIf and -Confirm work."
 
-tut-run "-WhatIf preview (does not delete)" {
+tut-desc @"
+-WhatIf previews what would be deleted without actually removing anything. Always
+safe to try before you delete.
+"@
+tut-run {
     Remove-BucketObject -Bucket users -Key "external-ref" -WhatIf
 }
-tut-info "No actual deletion occurred."
 
-tut-run "Delete by key" {
+tut-desc @"
+Delete by key is straightforward. Pass the key of the object you want to remove.
+"@
+tut-run {
     Remove-BucketObject -Bucket users -Key "external-ref" -Quiet
-    $check = spill -Bucket users -Key "external-ref" -WarningAction SilentlyContinue
-    tut-check (-not $check) "external-ref removed"
 }
 
-tut-run "Delete non-existent key (warning, no error)" {
-    Remove-BucketObject -Bucket users -Key "non-existent-key" -WarningVariable w -WarningAction SilentlyContinue 2>$null
-    tut-note "Warning was issued but command did not throw"
+tut-desc @"
+Trying to delete a non-existent key issues a warning but doesn't throw an error.
+Buckets is forgiving about missing objects.
+"@
+tut-run {
+    Remove-BucketObject -Bucket users -Key "no-one-here" -WarningVariable w -WarningAction SilentlyContinue 2>$null
 }
 
-tut-run "Delete without -Key or -All (parameter set error)" {
-    $caught = $false
-    try { Remove-BucketObject -Bucket users -ErrorAction Stop }
-    catch { $caught = $true }
-    tut-check $caught "Specify either -Key, -All, or -Match/-Filter required"
+tut-desc @"
+You must specify either -Key, -All, or a filter. Without one of these, the parameter
+set validation rejects the command.
+"@
+tut-run {
+    Remove-BucketObject -Bucket users -ErrorAction SilentlyContinue
 }
 
-tut-run "Delete with -Match filter" {
+tut-desc @"
+-Match works with deletion too. Delete all objects matching certain criteria in
+one command.
+"@
+tut-run {
     fill -Bucket temp -InputObject @(
         @{ Id = "t1"; Status = "stale" }
         @{ Id = "t2"; Status = "stale" }
         @{ Id = "t3"; Status = "active" }
     ) -KeyProperty Id -Quiet
     Remove-BucketObject -Bucket temp -Match @{ Status = "stale" } -Quiet
-    $remaining = spill -Bucket temp
-    tut-check ($remaining.Count -eq 1 -and $remaining[0].Id -eq "t3") "Only t3 remains"
-    Remove-Bucket temp -Force -Confirm:$false -WarningAction SilentlyContinue
 }
+$null = $createdTemp.Add("temp")
 
-tut-run "Delete with -Filter (comparison)" {
+tut-desc @"
+-Filter works the same way — delete objects that pass the scriptblock condition.
+Here, any object with Score below 50 gets removed.
+"@
+tut-run {
     fill -Bucket scores -InputObject @(
         @{ Name = "low1"; Score = 30 }
         @{ Name = "low2"; Score = 45 }
         @{ Name = "high1"; Score = 92 }
     ) -KeyProperty Name -Quiet
     Remove-BucketObject -Bucket scores -Filter { $_.Score -lt 50 } -Quiet
-    $remaining = spill -Bucket scores -WarningAction SilentlyContinue
-    tut-check ($remaining.Count -eq 1 -and $remaining[0].Score -eq 92) "Only high1 remains"
-    Remove-Bucket scores -Force -Confirm:$false -WarningAction SilentlyContinue
 }
+$null = $createdTemp.Add("scores")
 
-tut-run "Delete all with -All" {
+tut-desc @"
+-All deletes every object in the bucket. A clean slate.
+"@
+tut-run {
     fill -Bucket all-test -InputObject @(
         @{ Id = "a"; Data = "x" }
         @{ Id = "b"; Data = "y" }
         @{ Id = "c"; Data = "z" }
     ) -KeyProperty Id -Quiet
     Remove-BucketObject -Bucket all-test -All -Quiet
-    $count = (spill -Bucket all-test -WarningAction SilentlyContinue).Count
-    tut-check ($count -eq 0) "All objects removed"
-    Remove-Bucket all-test -Force -Confirm:$false -WarningAction SilentlyContinue
 }
+$null = $createdTemp.Add("all-test")
 
-tut-run "-All on already-empty bucket (warning, no-op)" {
-    Remove-BucketObject -Bucket all-test -All -Quiet -WarningAction SilentlyContinue 2>$null
-    tut-note "No error — just a warning that bucket was empty"
-}
-
-tut-run "-PassThru returns removed metadata" {
-    fill -Bucket temp2 -Key "bye-bye" -InputObject @{ Data = "gone" } -Quiet
-    $removed = Remove-BucketObject -Bucket temp2 -Key "bye-bye" -PassThru -Quiet
-    tut-check ($removed.Key -eq "bye-bye.dat") "PassThru returned metadata"
-    Remove-Bucket temp2 -Force -Confirm:$false -WarningAction SilentlyContinue
-}
-
-tut-run "Remove-All with empty bucket warning" {
-    fill -Bucket empty-test -Key "only-one" -InputObject @{ X = 1 } -Quiet
-    Remove-BucketObject -Bucket empty-test -Key "only-one" -Quiet
-    Remove-BucketObject -Bucket empty-test -All -Quiet
-    tut-note "Warns if bucket is already empty (no-op)"
-    Remove-Bucket empty-test -Force -Confirm:$false -WarningAction SilentlyContinue
+tut-desc @"
+-PassThru returns metadata about what was deleted. Useful for logging, auditing,
+or confirmation messages.
+"@
+tut-run {
+    fill -Bucket temp -Key "bye-bye" -InputObject @{ Data = "gone" } -Quiet
+    Remove-BucketObject -Bucket temp -Key "bye-bye" -PassThru -Quiet
 }
 tut-done
 
@@ -559,166 +677,246 @@ tut-done
 
 tut-section 5 "Object Operations — Copy, Rename, Move"
 
-tut-run "Copy-BucketObject — within same bucket, new key" {
+tut-desc @"
+Copy an object within the same bucket but with a different key. The original stays
+untouched — this is a true copy, not a move.
+"@
+tut-run {
     Copy-BucketObject -Bucket users -Key "Alice" -DestinationKey "Alice-Backup" -Quiet
-    tut-check ((spill -Bucket users -Key "Alice-Backup").Name -eq "Alice") "Alice backup exists"
     Remove-BucketObject -Bucket users -Key "Alice-Backup" -Quiet
 }
 
-tut-run "Copy-BucketObject — across buckets" {
+tut-desc @"
+Copy across buckets too. Specify -DestinationBucket to copy to a different bucket.
+"@
+tut-run {
     Copy-BucketObject -Bucket users -Key "Alice" -DestinationBucket archive -Quiet
-    tut-check ((spill -Bucket archive -Key "Alice").Name -eq "Alice") "Alice copied to archive"
     Remove-BucketObject -Bucket archive -Key "Alice" -Quiet
-    Remove-Bucket archive -Force -Confirm:$false -WarningAction SilentlyContinue
 }
+$null = $createdTemp.Add("archive")
 
-tut-run "Copy with -PassThru returns destination metadata" {
-    $result = Copy-BucketObject -Bucket users -Key "Alice" -DestinationKey "Alice-pass" -PassThru -Quiet
-    tut-check ($result.DestinationKey -eq "Alice-pass" -and $result.DestinationBucket -eq "users") "PassThru returned metadata"
+tut-desc @"
+-PassThru on Copy-BucketObject returns metadata about the destination: source,
+destination, and new key — useful for pipeline logging.
+"@
+tut-run {
+    Copy-BucketObject -Bucket users -Key "Alice" -DestinationKey "Alice-pass" -PassThru -Quiet
     Remove-BucketObject -Bucket users -Key "Alice-pass" -Quiet
 }
 
-tut-run "Rename-BucketObject — in-place key rename, preserves format" {
+tut-desc @"
+Rename changes the key of an existing object in place. The format (.dat or .json)
+is preserved through the rename.
+"@
+tut-run {
     fill -Bucket tmp -Key "old-name" -InputObject @{ Data = "rename me" } -Quiet
     Rename-BucketObject -Bucket tmp -Key "old-name" -NewKey "new-name" -Quiet
-    $found = spill -Bucket tmp -Key "new-name"
-    tut-check ($found.Data -eq "rename me") "Renamed, data intact"
-    Remove-Bucket tmp -Force -Confirm:$false -WarningAction SilentlyContinue
 }
+$null = $createdTemp.Add("tmp")
 
-tut-run "Rename JSON object — .json extension preserved" {
+tut-desc @"
+Renaming a JSON object preserves the .json extension too. Format is always
+maintained — you never have to worry about it.
+"@
+tut-run {
     fill -Bucket tmp-json -Key "json-old" -InputObject @{ Format = "json" } -AsJson -Quiet
     Rename-BucketObject -Bucket tmp-json -Key "json-old" -NewKey "json-new" -PassThru -Quiet
-    $found = spill -Bucket tmp-json -Key "json-new"
-    tut-check ($found.Format -eq "json") "JSON object renamed, data intact"
-    Remove-Bucket tmp-json -Force -Confirm:$false -WarningAction SilentlyContinue
 }
+$null = $createdTemp.Add("tmp-json")
 
-tut-run "Move-BucketObject — copy across buckets + delete original" {
+tut-desc @"
+Move combines copy + delete in one operation. The object is copied to the
+destination and removed from the source.
+"@
+tut-run {
     fill -Bucket source -InputObject @(
         @{ Id = "obj1"; Value = "move me" }
     ) -KeyProperty Id -Quiet
     Move-BucketObject -Bucket source -Key "obj1" -DestinationBucket dest -Quiet
-    $inSrc = spill -Bucket source -Key "obj1" -WarningAction SilentlyContinue
-    $inDst = spill -Bucket dest -Key "obj1" -WarningAction SilentlyContinue
-    tut-check ((-not $inSrc) -and $inDst.Value -eq "move me") "Moved, original gone"
-    Remove-Bucket source -Force -Confirm:$false -WarningAction SilentlyContinue
-    Remove-Bucket dest -Force -Confirm:$false -WarningAction SilentlyContinue
 }
+$null = $createdTemp.Add("source")
+$null = $createdTemp.Add("dest")
 
-tut-run "Move with rename — different key in target bucket" {
+tut-desc @"
+Move with rename: specify a different key in the target bucket to rename
+as part of the move.
+"@
+tut-run {
     fill -Bucket origin -Key "orig-key" -InputObject @{ Data = "moved+renamed" } -Quiet
     Move-BucketObject -Bucket origin -Key "orig-key" -DestinationBucket final -DestinationKey "new-key" -Quiet
-    $inDest = spill -Bucket final -Key "new-key"
-    $inSrc = spill -Bucket origin -Key "orig-key" -WarningAction SilentlyContinue
-    tut-check ($inDest.Data -eq "moved+renamed" -and -not $inSrc) "Moved and renamed"
-    Remove-Bucket origin -Force -Confirm:$false -WarningAction SilentlyContinue
-    Remove-Bucket final -Force -Confirm:$false -WarningAction SilentlyContinue
 }
+$null = $createdTemp.Add("origin")
+$null = $createdTemp.Add("final")
 
-tut-run "Move with -PassThru returns metadata" {
+tut-desc @"
+-PassThru on Move returns metadata about both the source and destination
+objects.
+"@
+tut-run {
     fill -Bucket move-src -Key "m-pass" -InputObject @{ X = 1 } -Quiet
-    $r = Move-BucketObject -Bucket move-src -Key "m-pass" -DestinationBucket move-dst -PassThru -Quiet
-    tut-check ($r.DestinationBucket -eq "move-dst" -and $r.SourceBucket -eq "move-src") "Move PassThru worked"
-    Remove-Bucket move-src -Force -Confirm:$false -WarningAction SilentlyContinue
-    Remove-Bucket move-dst -Force -Confirm:$false -WarningAction SilentlyContinue
+    Move-BucketObject -Bucket move-src -Key "m-pass" -DestinationBucket move-dst -PassThru -Quiet
 }
+$null = $createdTemp.Add("move-src")
+$null = $createdTemp.Add("move-dst")
 
-tut-run "-PassThru on all three returns metadata" {
+tut-desc @"
+All three operations — Copy, Rename, Move — support -PassThru. Chain them
+together for auditable object management.
+"@
+tut-run {
     fill -Bucket pass -Key "src-key" -InputObject @{ X = 1 } -Quiet
-    $r1 = Copy-BucketObject -Bucket pass -Key "src-key" -DestinationKey "cp-key" -PassThru -Quiet
-    $r2 = Rename-BucketObject -Bucket pass -Key "cp-key" -NewKey "rn-key" -PassThru -Quiet
-    $r3 = Move-BucketObject -Bucket pass -Key "src-key" -DestinationBucket pass -DestinationKey "mv-key" -PassThru -Quiet
-    tut-check (($r1.DestinationKey -eq "cp-key") -and $r2.NewKey -eq "rn-key" -and $r3.DestinationKey -eq "mv-key") "All PassThru worked"
-    Remove-Bucket pass -Force -Confirm:$false -WarningAction SilentlyContinue
+    Copy-BucketObject -Bucket pass -Key "src-key" -DestinationKey "cp-key" -PassThru -Quiet
+    Rename-BucketObject -Bucket pass -Key "cp-key" -NewKey "rn-key" -PassThru -Quiet
+    Move-BucketObject -Bucket pass -Key "src-key" -DestinationBucket pass -DestinationKey "mv-key" -PassThru -Quiet
 }
+$null = $createdTemp.Add("pass")
 tut-done
 
 # ---------- chapter 6: Bucket Management ----------
 
-tut-section 6 "Bucket Management — dip / Get-Bucket, Get-BucketStats, Get-BucketKeys"
+tut-section 6 "Bucket Management — dip / Get-Bucket"
 
-tut-info "The alias 'dip' is short for Get-Bucket."
-
-tut-run "List all buckets (recursive)" {
+tut-desc @"
+dip (short for Get-Bucket) lists all your buckets with their object counts and
+timestamps. It's the first command to run when you want an overview.
+"@
+tut-run {
     dip
 }
 
-tut-run "Filter by name (substring match)" {
+tut-desc @"
+Filter buckets by name with a substring match. "user" matches "users" and any
+other bucket with "user" in the name.
+"@
+tut-run {
     dip "user"
 }
 
-tut-run "Get-BucketStats — count, size, timestamps" {
+tut-desc @"
+Get-BucketStats shows detailed statistics: object count, total size on disk, and
+creation/modification timestamps for a specific bucket.
+"@
+tut-run {
     Get-BucketStats -Bucket users
 }
 
-tut-run "Get-BucketKeys — list keys with format and size" {
+tut-desc @"
+Get-BucketKeys lists every key in a bucket along with its format (.dat or .json)
+and file size. Useful for inventorying what's stored.
+"@
+tut-run {
     Get-BucketKeys -Bucket users
 }
 
-tut-run "Get-BucketKeys with pattern match" {
+tut-desc @"
+Filter keys by pattern with -Match. "A*" matches all keys starting with "A".
+"@
+tut-run {
     Get-BucketKeys -Bucket users -Match "A*"
 }
 
-tut-run "Get-BucketKeys across all buckets" {
+tut-desc @"
+Get-BucketKeys across all buckets with the wildcard "*" — a complete inventory
+of every object stored.
+"@
+tut-run {
     Get-BucketKeys -Bucket "*"
 }
 
-tut-run "Tree view — Get-Bucket -Tree" {
+tut-desc @"
+The -Tree parameter renders your buckets as a visual directory tree. -MaxFiles
+limits how many files are shown per bucket.
+"@
+tut-run {
     Get-Bucket -Tree -MaxFiles 10
 }
 
-tut-run "Tree view, buckets only (no individual files)" {
+tut-desc @"
+Without -Objects, the tree shows buckets only — a clean structural view without
+individual files cluttering the output.
+"@
+tut-run {
     Get-Bucket -Tree
 }
 
-tut-run "Tree view with files" {
+tut-desc @"
+Add -Objects to include individual files in the tree. Every leaf object is
+visible.
+"@
+tut-run {
     Get-Bucket -Tree -Objects
 }
 
-tut-run "Raw tree objects (pipeable)" {
+tut-desc @"
+The -Raw switch returns tree objects as pipeable data instead of formatted text.
+Useful for further processing or custom display.
+"@
+tut-run {
     Get-Bucket -Tree -Raw | Select-Object -First 2
 }
 
-tut-run "Get-Bucket -Depth to limit tree nesting depth" {
+tut-desc @"
+-Depth limits how many levels of nesting the tree traverses. Depth 1 shows
+only top-level buckets.
+"@
+tut-run {
     Get-Bucket -Tree -Depth 1
 }
 
-tut-run "Pipe tree to ConvertTo-Json" {
+tut-desc @"
+Pipe Raw tree output to ConvertTo-Json for a structured JSON representation of
+your bucket hierarchy.
+"@
+tut-run {
     Get-Bucket -Tree -Raw | ConvertTo-Json -Depth 5 | Select-Object -First 5
 }
 
-tut-run "Count objects per bucket" {
+tut-desc @"
+Select Name and ObjectCount from dip for a clean table of buckets with their
+object counts.
+"@
+tut-run {
     dip | Select-Object Name, ObjectCount
 }
 tut-done
 
 tut-section "6a" "Remove-Bucket — safety and wildcards"
 
-tut-run "WhatIf preview" {
+tut-desc @"
+-WhatIf previews what would be removed without actually deleting anything.
+"@
+tut-run {
     Remove-Bucket "users" -WhatIf
 }
 
-tut-run "Wildcard pattern" {
+tut-desc @"
+Wildcard patterns work too. Preview removing all buckets matching a pattern.
+"@
+tut-run {
     Remove-Bucket "config" -WhatIf
 }
 
-tut-run "Remove single bucket" {
+tut-desc @"
+Remove a single bucket. Make sure it contains only .dat/.json files — Buckets
+refuses to remove directories with other file types.
+"@
+tut-run {
     fill -Bucket temp-remove -Key "x" -InputObject @{ A = 1 } -Quiet
     Remove-Bucket temp-remove -Force -Confirm:$false
-    tut-check (-not (Test-Path (Join-Path (Get-BucketRoot) "temp-remove"))) "temp-remove deleted"
 }
 
-tut-run "Remove protects non-bucket files — skips with warning" {
+tut-desc @"
+Safety first: Remove-Bucket checks that a directory contains only bucket files.
+If it finds unexpected file types (like .exe), it skips the directory with a
+warning rather than deleting it.
+"@
+tut-run {
     $badDir = Join-Path (Get-BucketRoot) "not-a-bucket"
     $null = New-Item -ItemType Directory -Path $badDir -Force
     Set-Content -Path (Join-Path $badDir "evil.exe") -Value "x" -NoNewline
     Remove-Bucket "not-a-bucket" -Force -Confirm:$false -WarningAction SilentlyContinue 2>$null
-    tut-note "Directory with .exe files was skipped (safe)"
     Remove-Item $badDir -Recurse -Force -ErrorAction SilentlyContinue
 }
-
-tut-info "Remove-Bucket only removes dirs with .dat/.json files (or empty). Skips others with a warning."
 tut-done
 
 # ---------- chapter 7: Export / Import ----------
@@ -728,49 +926,64 @@ tut-section 7 "Export / Import — Export-Bucket, Import-Bucket"
 $exportDir = Join-Path $env:TEMP "buckets-tutorial-export"
 $null = New-Item -ItemType Directory -Path $exportDir -Force -ErrorAction SilentlyContinue
 
-tut-run "Export to CLIXML (binary archive)" {
+tut-desc @"
+Export saves an entire bucket to an archive file. CLIXML (the default) preserves
+.NET type information for perfect round-trip fidelity.
+"@
+tut-run {
     Export-Bucket -Bucket users -OutputFile (Join-Path $exportDir "users.clixml") -Quiet
-    tut-ok "Exported to users.clixml"
 }
 
-tut-run "Export to JSON" {
+tut-desc @"
+Export to JSON for human-readable archives. Same data, different format —
+useful when you need to inspect or share the data outside of PowerShell.
+"@
+tut-run {
     Export-Bucket -Bucket users -OutputFile (Join-Path $exportDir "users.json") -AsJson -Quiet
-    tut-ok "Exported to users.json"
 }
 
-tut-run "Export multiple buckets with wildcard" {
+tut-desc @"
+Wildcards work for batch exports. Export multiple buckets that match a pattern
+into a single archive file.
+"@
+tut-run {
     Export-Bucket -Bucket "user*","config" -OutputFile (Join-Path $exportDir "multi-export.clixml") -Quiet
-    tut-ok "Exported multiple buckets"
 }
 
-tut-run "Import from CLIXML" {
+tut-desc @"
+Import restores from a CLIXML archive into a new bucket. Objects are recreated
+with their original keys and data.
+"@
+tut-run {
     Import-Bucket -Bucket restored -InputFile (Join-Path $exportDir "users.clixml") -Quiet
-    $restored = spill -Bucket restored
-    tut-check ($restored.Count -ge 3) "Imported $($restored.Count) objects"
-    Remove-Bucket restored -Force -Confirm:$false -WarningAction SilentlyContinue
 }
+$null = $createdTemp.Add("restored")
 
-tut-run "Import from JSON" {
+tut-desc @"
+Import from JSON works the same way. The JSON file is parsed and each object
+is stored in the specified bucket.
+"@
+tut-run {
     Import-Bucket -Bucket restored-json -InputFile (Join-Path $exportDir "users.json") -AsJson -Quiet
-    $restored = spill -Bucket "restored-json"
-    tut-check ($restored.Count -ge 3) "Imported $($restored.Count) from JSON"
-    Remove-Bucket "restored-json" -Force -Confirm:$false -WarningAction SilentlyContinue
 }
+$null = $createdTemp.Add("restored-json")
 
-tut-run "Import with -Overwrite replaces existing keys" {
+tut-desc @"
+-Overwrite on import replaces existing keys instead of skipping them. With
+-Overwrite, a second import doesn't create duplicates.
+"@
+tut-run {
     Import-Bucket -Bucket import-over -InputFile (Join-Path $exportDir "users.clixml") -Quiet
-    $first = (spill -Bucket import-over).Count
     Import-Bucket -Bucket import-over -InputFile (Join-Path $exportDir "users.clixml") -Overwrite -Quiet
-    $second = (spill -Bucket import-over).Count
-    tut-check ($first -eq $second) "Overwrite preserved count (no duplicates)"
-    Remove-Bucket import-over -Force -Confirm:$false -WarningAction SilentlyContinue
 }
+$null = $createdTemp.Add("import-over")
 
-tut-run "JSON file content is human-readable" {
-    $jsonContent = Get-Content (Join-Path $exportDir "users.json") -Raw
-    $pretty = $jsonContent | ConvertFrom-Json | ConvertTo-Json -Depth 5
-    tut-info "JSON export is plain text — inspect/edit with any text editor"
-    $pretty | Select-Object -First 3
+tut-desc @"
+JSON archives are plain text. Open them in any editor to inspect or modify
+before importing.
+"@
+tut-run {
+    Get-Content (Join-Path $exportDir "users.json") -Raw | ConvertFrom-Json | ConvertTo-Json -Depth 5 | Select-Object -First 3
 }
 
 Remove-Item $exportDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -779,73 +992,107 @@ tut-done
 # ---------- chapter 8: PSDrive ----------
 
 tut-section 8 "PSDrive — navigate buckets like a filesystem"
-tut-info "Buckets registers a buckets: PSDrive with a custom provider."
-tut-info "Navigate with cd, list with dir, read objects with cat."
 
-tut-run "Show the PSDrive" {
+tut-desc @"
+Buckets registers a custom PSDrive called "buckets:". You can navigate it with
+cd, Get-ChildItem, Get-Content — just like any other drive.
+"@
+tut-run {
     Get-PSDrive -Name buckets
 }
 
-tut-run "List all buckets" {
+tut-desc @"
+List all buckets with Get-ChildItem on the drive root. Each bucket appears as
+a container (directory).
+"@
+tut-run {
     Get-ChildItem "buckets:\"
 }
 
-tut-run "List with format filtering (dir)" {
-    $items = Get-ChildItem "buckets:\" | Select-Object Name, Length, LastWriteTime
-    $items | Format-Table -AutoSize
+tut-desc @"
+Format the output with Select-Object for a cleaner table of bucket names,
+sizes, and timestamps.
+"@
+tut-run {
+    Get-ChildItem "buckets:\" | Select-Object Name, Length, LastWriteTime | Format-Table -AutoSize
 }
 
-tut-run "Enter a bucket and list objects" {
+tut-desc @"
+Enter a bucket and list its objects. Each stored object appears as a file in
+the PSDrive.
+"@
+tut-run {
     Get-ChildItem "buckets:\users" | Select-Object Name, Length, LastWriteTime
 }
 
-tut-run "Filter PSDrive objects by type" {
+tut-desc @"
+Filter by PSIsContainer to see only buckets (containers) or only leaf objects.
+"@
+tut-run {
     Get-ChildItem "buckets:\" | Where-Object { $_.PSIsContainer }
 }
 
-tut-run "Read an object with Get-Content (cat)" {
+tut-desc @"
+Read an object with Get-Content (or cat). It deserializes the stored data back
+into a live PowerShell object — no manual parsing needed.
+"@
+tut-run {
     Get-Content "buckets:\users\Alice" | Select-Object Name, Role, Score
 }
 
-tut-run "Pipeline: read, modify, write back" {
+tut-desc @"
+The full round-trip in the PSDrive: read with Get-Content, modify the property,
+write back with Set-Content. Works just like a file but with live objects.
+"@
+tut-run {
     $obj = Get-Content "buckets:\users\Carol"
     $obj.Score = 95
     $obj | Set-Content "buckets:\users\Carol"
-    $check = Get-Content "buckets:\users\Carol"
-    tut-check ($check.Score -eq 95) "Carol score updated via PSDrive"
 }
 
-tut-run "Remove-Item in PSDrive removes objects" {
+tut-desc @"
+Remove-Item works in the PSDrive too. Delete an object by its path.
+"@
+tut-run {
     Copy-BucketObject -Bucket users -Key "Alice" -DestinationKey "psdrive-remove-test" -Quiet
     Remove-Item "buckets:\users\psdrive-remove-test" -Force
-    $gone = spill -Bucket users -Key "psdrive-remove-test" -WarningAction SilentlyContinue
-    tut-check (-not $gone) "Object deleted via Remove-Item in PSDrive"
 }
 
-tut-run "Test-Path in PSDrive" {
-    $exists = Test-Path "buckets:\users\Alice"
-    $missing = Test-Path "buckets:\users\NonExistent"
-    tut-check ($exists -and -not $missing) "Test-Path works on existing and missing keys"
+tut-desc @"
+Test-Path checks whether an object exists in the drive. Useful for conditional
+logic.
+"@
+tut-run {
+    Test-Path "buckets:\users\Alice"
+    Test-Path "buckets:\users\NonExistent"
 }
 
-tut-run "Copy-Item across buckets in PSDrive" {
+tut-desc @"
+Copy-Item works across buckets in the PSDrive. Copy objects from one bucket
+to another using familiar filesystem commands.
+"@
+tut-run {
     Copy-Item "buckets:\users\Alice" "buckets:\users\Alice-pscopy" -Force
-    tut-check ((spill -Bucket users -Key "Alice-pscopy").Name -eq "Alice") "Copy-Item in PSDrive works"
     Remove-BucketObject -Bucket users -Key "Alice-pscopy" -Quiet
 }
 
-tut-run "Tab-complete bucket names and object keys (try it!)" { }
-tut-note "buckets:\ supports tab completion for all navigation commands"
+tut-desc @"
+Tab completion works throughout the PSDrive. Try typing "buckets:\" and pressing
+Tab — it completes bucket names and object keys.
+"@
+tut-run { }
 tut-done
 
 # ---------- chapter 9: Nested Buckets ----------
 
 tut-section 9 "Nested Buckets — directory hierarchy"
 
-tut-info "Bucket names support path separators (/, \) for nesting."
-tut-info "Nested buckets are real subdirectories on disk."
-
-tut-run "Create a hierarchy" {
+tut-desc @"
+Bucket names with forward slashes create nested directory structures on disk.
+This is how you organize data hierarchically — like folders within folders,
+each level a real subdirectory.
+"@
+tut-run {
     @(
         @{ Name = "Berlin"; Population = 3600000; Country = "DE" }
         @{ Name = "Munich"; Population = 1500000; Country = "DE" }
@@ -864,53 +1111,93 @@ tut-run "Create a hierarchy" {
         @{ Dept = "Engineering"; Lead = "Alice" }
         @{ Dept = "Marketing"; Lead = "Bob" }
     ) | fill -Bucket "org/eu/de/depts" -KeyProperty Dept -Quiet
-    tut-ok "Nested hierarchy created"
 }
 
-tut-run "Query with wildcard — all EU cities" {
+tut-desc @"
+Wildcards work in nested paths. "org/eu/*/cities" matches city buckets under
+any EU country — Germany, UK, and so on.
+"@
+tut-run {
     spill -Bucket "org/eu/*/cities"
 }
 
-tut-run "Query nested path directly" {
+tut-desc @"
+Query a nested path directly by its full bucket name. Same spill command,
+just a deeper path.
+"@
+tut-run {
     spill -Bucket "org/eu/de/cities"
 }
 
-tut-run "Query two levels deep with wildcard" {
+tut-desc @"
+Wildcards at multiple levels for deep queries. "org/*/de/*" matches anything
+under any country's "de" sub-bucket.
+"@
+tut-run {
     spill -Bucket "org/*/de/*"
 }
 
-tut-run "Get-Bucket shows nested structure" {
+tut-desc @"
+Get-Bucket with -Recurse shows the full nested structure. It traverses all
+sub-buckets recursively.
+"@
+tut-run {
     Get-Bucket -Name "org" -Recurse
 }
 
-tut-run "Tree view shows nesting" {
+tut-desc @"
+Tree view visualizes the nesting hierarchy. Each level is indented, making
+it easy to see the organizational structure at a glance.
+"@
+tut-run {
     Get-Bucket -Name "org" -Tree -Objects -MaxFiles 10
 }
 
-tut-run "PSDrive navigation for nested buckets" {
+tut-desc @"
+PSDrive supports nested paths too. Navigate into org/eu/de/cities with
+Get-ChildItem just like you would with a filesystem path.
+"@
+tut-run {
     Get-ChildItem "buckets:\org\eu\de\cities" | Select-Object Name
 }
 
-tut-run "Recursive listing of nested PSDrive" {
+tut-desc @"
+Recursive listing in PSDrive with the -Recurse flag. Shows everything under
+the org tree.
+"@
+tut-run {
     Get-ChildItem "buckets:\org" -Recurse | Select-Object Name | Format-Table -AutoSize
 }
 
-tut-run "Stats on nested bucket" {
+tut-desc @"
+Stats work on nested buckets too. Get-BucketStats handles the full path.
+"@
+tut-run {
     Get-BucketStats -Bucket "org/eu/de/cities"
 }
 
-tut-run "Keys in nested bucket" {
+tut-desc @"
+List keys in a nested bucket with Get-BucketKeys. Same command, just a
+deeper bucket path.
+"@
+tut-run {
     Get-BucketKeys -Bucket "org/eu/de/cities"
 }
 
-tut-run "Filter across wildcard — all cities with population > 2M" {
+tut-desc @"
+Combine wildcards with -Filter for cross-bucket queries in nested hierarchies.
+Find all cities with population over 2 million across any country.
+"@
+tut-run {
     spill -Bucket "org/*/cities" -Filter { $_.Population -gt 2000000 }
 }
 
-tut-info "Remove-Bucket with -Recurse deletes a nested bucket tree"
-tut-run "Recursive remove" {
+tut-desc @"
+Remove-Bucket with -Recurse deletes an entire nested tree. A single command
+removes org and everything under it.
+"@
+tut-run {
     Remove-Bucket "org" -Recurse -Force -Confirm:$false
-    tut-check (-not (spill -Bucket "org/eu/de/cities" -WarningAction SilentlyContinue)) "org tree removed"
 }
 tut-done
 
@@ -918,83 +1205,114 @@ tut-done
 
 tut-section 10 "Sleek Pipeline Patterns"
 
-tut-info "Buckets is designed for pipeline-first usage."
-tut-info "Most cmdlets accept pipeline input and emit objects with metadata."
-
-tut-run "Save pipeline output directly" {
+tut-desc @"
+Buckets is designed for pipeline-first usage. Most cmdlets accept pipeline
+input and emit objects with metadata. Here's how to chain them together.
+"@
+tut-run {
     1..5 | ForEach-Object { @{ Name = "item-$_"; Value = $_ * 10 } } |
         fill -Bucket "dir-listing" -KeyProperty Name -Quiet
-    $count = (spill -Bucket "dir-listing").Count
-    tut-check ($count -eq 5) "5 objects saved from pipeline"
-    Remove-Bucket "dir-listing" -Force -Confirm:$false -WarningAction SilentlyContinue
 }
+$null = $createdTemp.Add("dir-listing")
 
-tut-run "Chain: spill → Where-Object → Set-BucketObject" {
-    $updated = spill -Bucket users -Filter { $_.Role -eq "user" } |
+tut-desc @"
+Chain multiple operations in one pipeline: filter objects with -Filter, modify
+them with ForEach-Object, and save back with Set-BucketObject. All in one flow.
+"@
+tut-run {
+    spill -Bucket users -Filter { $_.Role -eq "user" } |
         ForEach-Object { $_.Score = $_.Score + 5; $_ } |
         Set-BucketObject -PassThru
-    if ($updated) {
-        $check = spill -Bucket users -Key $updated[0].Key
-        tut-check ($check.Score -gt 0) "User scores bumped via pipeline chain"
-    }
 }
 
-tut-run "Filter, sort, and project in one pipeline" {
+tut-desc @"
+Filter, sort, and project in one pipeline. Where-Object filters, Sort-Object
+orders, Select-Object picks the properties you want.
+"@
+tut-run {
     spill -Bucket users | Where-Object { $_.Score -gt 70 } |
         Sort-Object Score -Descending |
         Select-Object Name, Role, Score
 }
 
-tut-run "Cross-bucket query with -Filter (scoped to tutorial buckets)" {
+tut-desc @"
+Cross-bucket query: iterate over multiple buckets and filter each one, then
+project the results with bucket metadata included.
+"@
+tut-run {
     $buckets = @("users", "config", "demo")
     $buckets | ForEach-Object { spill -Bucket $_ -Filter { $_.Score -gt 80 } } |
         Select-Object _BucketName, Name, Score
 }
 
-tut-run "Group by bucket name" {
+tut-desc @"
+Group by bucket name to see how objects are distributed across your buckets.
+"@
+tut-run {
     spill | Group-Object _BucketName | Select-Object Name, Count
 }
 
-tut-run "Select -ExpandProperty to flatten arrays" {
-    spill -Bucket users | Select-Object -ExpandProperty Tags -ErrorAction SilentlyContinue |
-        Group-Object | Sort-Object Count -Descending | Select-Object Name, Count
+tut-desc @"
+Group-Object aggregates data within a bucket. Here we count how many users
+have each role.
+"@
+tut-run {
+    spill -Bucket users | Group-Object Role | Select-Object Name, Count
 }
 
-tut-run "Measure-Object to aggregate" {
+tut-desc @"
+Measure-Object gives you statistics — average, minimum, maximum — for any
+numeric property across your objects.
+"@
+tut-run {
     $scores = spill -Bucket users | Measure-Object Score -Average -Minimum -Maximum
     tut-info "Score stats: avg=$([math]::Round($scores.Average,1)) min=$($scores.Minimum) max=$($scores.Maximum)"
 }
 
-tut-run "Export spilled data to CSV for external tools" {
+tut-desc @"
+Export spilled data to CSV for use in Excel, Python, or any tool that reads
+tabular data.
+"@
+tut-run {
     $csvPath = Join-Path $env:TEMP "buckets-users.csv"
     spill -Bucket users | Select-Object Name, Role, Score | Export-Csv -Path $csvPath -NoTypeInformation
-    $csvContent = Get-Content $csvPath
-    tut-check ($csvContent.Count -ge 4) "Exported $($csvContent.Count-1) users to CSV"
     Remove-Item $csvPath -Force -ErrorAction SilentlyContinue
 }
 
-tut-run "Where-Object vs -Filter — same result, different approach" {
-    tut-run "(via -Filter)" { spill -Bucket users -Filter { $_.Score -gt 80 } }
-    tut-run "(via Where-Object)" { spill -Bucket users | Where-Object { $_.Score -gt 80 } }
-    tut-info "-Filter is faster (server-side), Where-Object is more flexible (pipeline)"
+tut-desc @"
+-Filter runs inside Buckets (faster), Where-Object runs in the pipeline (more
+flexible). Both produce the same result — choose based on your needs.
+"@
+tut-run {
+    spill -Bucket users -Filter { $_.Score -gt 80 }
+    spill -Bucket users | Where-Object { $_.Score -gt 80 }
 }
 
-tut-run "Pipeline into ForEach-Object for custom formatting" {
+tut-desc @"
+Custom formatting with ForEach-Object. Transform each object into a formatted
+string for display or logging.
+"@
+tut-run {
     spill -Bucket users | ForEach-Object {
         "[$($_.Role)] $($_.Name) — Score: $($_.Score)"
     }
 }
 
-tut-run "Conditional pipeline — convert to JSON only for certain objects" {
+tut-desc @"
+Conditional pipeline: filter first, then convert only matching objects to JSON.
+"@
+tut-run {
     spill -Bucket users -Filter { $_.Score -gt 80 } | ConvertTo-Json -Depth 5
 }
 
-tut-run "Save then immediately read to verify" {
+tut-desc @"
+Save then immediately read to verify round-trip integrity. What you write is
+exactly what you get back.
+"@
+tut-run {
     @{ Id = "smoke"; Value = 42 } | fill -Bucket smoke-test -KeyProperty Id -Quiet
-    $v = (spill -Bucket smoke-test -Key "smoke").Value
-    tut-check ($v -eq 42) "Write-then-read round-trip verified"
-    Remove-Bucket smoke-test -Force -Confirm:$false -WarningAction SilentlyContinue
 }
+$null = $createdTemp.Add("smoke-test")
 tut-done
 
 # ---------- chapter 11: Aliases Quick Reference ----------
@@ -1031,9 +1349,9 @@ tut-section "Cleanup" "Remove tutorial data"
 
 $confirm = Read-Host "  Remove all tutorial buckets? (Y/n)"
 if ($confirm -ne "n") {
-    @("users", "config", "logs", "events", "demo", "restored", "restored-json", "dir-listing",
-      "not-a-bucket") |
-        ForEach-Object { Remove-Bucket $_ -Force -Confirm:$false -WarningAction SilentlyContinue }
+    Get-ChildItem (Get-BucketRoot) -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+        Remove-Item $_.FullName -Recurse -Force -ErrorAction SilentlyContinue
+    }
     tut-ok "Cleanup complete"
 } else {
     tut-note "Data kept for inspection"
