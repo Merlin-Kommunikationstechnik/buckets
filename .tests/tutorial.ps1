@@ -94,6 +94,9 @@ Write-Host "  $('─' * 55)" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  Type 'q' at any pause to quit" -ForegroundColor DarkGray
 Write-Host ""
+Write-Host "  Press Enter to start" -ForegroundColor DarkGray
+$null = Read-Host
+cls
 
 # ---------- chapter 1: Create ----------
 
