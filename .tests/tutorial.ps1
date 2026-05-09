@@ -13,10 +13,11 @@ $Sep = '─' * 55
 function tut-pause {
     Write-Host ""
     Write-Host "  $Sep" -ForegroundColor DarkGray
-    Write-Host "  [Enter] next · [q] quit > " -NoNewline -ForegroundColor DarkGray
+    Write-Host "  [Enter] next · [b] back · [q] quit > " -NoNewline -ForegroundColor DarkGray
     $r = Read-Host
     if ($r -eq "q") { Write-Host ""; exit }
     cls
+    return $r
 }
 
 function tut-write-code($Code) {
