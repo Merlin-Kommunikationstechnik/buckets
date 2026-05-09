@@ -2782,28 +2782,29 @@ tut-pause
 
 }
 
-# ---------- cleanup ----------
+# ---------- congratulations ----------
 
 cls
 Write-Host "`n  $Sep" -ForegroundColor DarkGray
-Write-Host "  Cleanup — Remove tutorial data" -ForegroundColor Blue
+Write-Host "  Congratulations!" -ForegroundColor Cyan
 Write-Host "  $Sep" -ForegroundColor DarkGray
 
-$confirm = Read-Host "`n  Remove all tutorial buckets? (Y/n)"
-if ($confirm -ne "n") {
-    Get-ChildItem (Get-BucketRoot) -Directory -ErrorAction SilentlyContinue | ForEach-Object {
-        Remove-Item $_.FullName -Recurse -Force -ErrorAction SilentlyContinue
-    }
-    Write-Host "  OK Cleanup complete" -ForegroundColor Green
-} else {
-    Write-Host "  [Data kept for inspection]" -ForegroundColor DarkGray
-}
+Write-Host @"
+  You've completed the Buckets tutorial. All tutorial data has been
+  cleaned up — your system is exactly as it was before we started.
 
+"@ -ForegroundColor White
+
+Get-ChildItem (Get-BucketRoot) -Directory -ErrorAction SilentlyContinue |
+    ForEach-Object { Remove-Item $_.FullName -Recurse -Force -ErrorAction SilentlyContinue }
+
+Write-Host ""
 Write-Host @"
 
   $('##')  Tutorial Complete!  $('##')
 
   What you learned:
+
     fill / spill / dip          — save, read, list
     -Key / -KeyProperty         — naming objects
     -Overwrite / -AsTimestamp    — replacement and timestamp keys
@@ -2832,6 +2833,7 @@ Write-Host @"
   Learn more: Get-Help <cmdlet> -Full
   See also:   README.md, .tests/demo/*.ps1
 
+  $Sep
 "@ -ForegroundColor Cyan
 
 Write-Host "  Happy Bucketing!`n" -ForegroundColor Green
