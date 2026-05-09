@@ -54,7 +54,9 @@ function tut-run($ScriptBlock) {
         $code -split "`n" | ForEach-Object { Write-Host "    $_" -ForegroundColor Cyan }
         Write-Host ""
     }
-    & $ScriptBlock
+    & $ScriptBlock 6>&1 | Out-String -Stream | ForEach-Object {
+        if ($_.Trim()) { Write-Host "  → $_" }
+    }
     Write-Host ""
     Write-Host "────────────────────" -ForegroundColor DarkGray
     Write-Host "  [Enter] next · [q] quit" -NoNewline -ForegroundColor DarkGray
