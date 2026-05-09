@@ -162,7 +162,7 @@ $alice = @{ Name = "Alice"; Role = "admin"; Score = 95 }
 New-BucketObject -InputObject $alice -Bucket users -Key "Alice"
 '@
 $alice = @{ Name = "Alice"; Role = "admin"; Score = 95 }
-New-BucketObject -InputObject $alice -Bucket users -Key "Alice" -Quiet
+New-BucketObject -InputObject $alice -Bucket users -Key "Alice" | Out-Host
 tut-pause
 
 Write-Host ""
@@ -180,7 +180,7 @@ $bob = @{ Name = "Bob"; Role = "user"; Score = 72 }
 $bob | fill -Bucket users -KeyProperty Name
 '@
 $bob = @{ Name = "Bob"; Role = "user"; Score = 72 }
-$bob | fill -Bucket users -KeyProperty Name -Quiet
+$bob | fill -Bucket users -KeyProperty Name | Out-Host
 tut-pause
 
 Write-Host ""
@@ -204,7 +204,7 @@ $users = @(
     @{ Name = "Carol"; Role = "manager"; Score = 88 }
     @{ Name = "Dave"; Role = "user"; Score = 61 }
 )
-$users | fill -Bucket users -KeyProperty Name -Quiet
+$users | fill -Bucket users -KeyProperty Name | Out-Host
 tut-pause
 
 Write-Host ""
@@ -221,7 +221,7 @@ $data = @{ Source = "import"; Items = 42 }
 $data | fill -Bucket users -Key "external-ref"
 '@
 $data = @{ Source = "import"; Items = 42 }
-$data | fill -Bucket users -Key "external-ref" -Quiet
+$data | fill -Bucket users -Key "external-ref" | Out-Host
 tut-pause
 
 Write-Host ""
@@ -239,7 +239,7 @@ $config = @{ Host = "localhost"; Port = 5432 }
 $config | fill -Bucket config -Key "app-config" -AsJson
 '@
 $config = @{ Host = "localhost"; Port = 5432 }
-$config | fill -Bucket config -Key "app-config" -AsJson -Quiet
+$config | fill -Bucket config -Key "app-config" -AsJson | Out-Host
 tut-pause
 
 Write-Host ""
@@ -263,7 +263,7 @@ $events = @(
     @{ Event = "login"; User = "alice" }
     @{ Event = "logout"; User = "bob" }
 )
-$events | fill -Bucket events -AsTimestamp -Quiet
+$events | fill -Bucket events -AsTimestamp | Out-Host
 tut-pause
 
 Write-Host ""
@@ -280,7 +280,7 @@ $alice = @{ Name = "Alice"; Role = "admin"; Score = 99 }
 New-BucketObject -InputObject $alice -Bucket users -Key "Alice" -Overwrite
 '@
 $alice = @{ Name = "Alice"; Role = "admin"; Score = 99 }
-New-BucketObject -InputObject $alice -Bucket users -Key "Alice" -Overwrite -Quiet
+New-BucketObject -InputObject $alice -Bucket users -Key "Alice" -Overwrite | Out-Host
 tut-pause
 
 Write-Host ""
@@ -298,7 +298,7 @@ $logs = 1..30 | ForEach-Object { @{ Seq = $_; Msg = "Heartbeat OK" } }
 fill -Bucket logs -InputObject $logs -Compress
 '@
 $logs = 1..30 | ForEach-Object { @{ Seq = $_; Msg = "Heartbeat OK" } }
-fill -Bucket logs -InputObject $logs -Compress -Quiet
+fill -Bucket logs -InputObject $logs -Compress | Out-Host
 tut-pause
 }
 
@@ -344,9 +344,9 @@ $hash = @{ Type = "Hashtable" }
 $hash | fill -Bucket types -Key "hash"
 '@
 $custom = [PSCustomObject]@{ Type = "PSCustomObject"; Ordered = $true }
-$custom | fill -Bucket types -Key "custom" -Quiet
+$custom | fill -Bucket types -Key "custom" | Out-Host
 $hash = @{ Type = "Hashtable" }
-$hash | fill -Bucket types -Key "hash" -Quiet
+$hash | fill -Bucket types -Key "hash" | Out-Host
 tut-pause
 
 Write-Host ""
@@ -378,7 +378,7 @@ $nested = [PSCustomObject]@{
         [PSCustomObject]@{ Sku = "XYZ"; Qty = 3 }
     )
 }
-$nested | fill -Bucket nested -Key "deep" -Quiet
+$nested | fill -Bucket nested -Key "deep" | Out-Host
 tut-pause
 
 Write-Host ""
@@ -395,7 +395,7 @@ $data = @{ Data = "sanitized key" }
 $data | fill -Bucket special -Key "my/file:name*test"
 '@
 $data = @{ Data = "sanitized key" }
-$data | fill -Bucket special -Key "my/file:name*test" -Quiet
+$data | fill -Bucket special -Key "my/file:name*test" | Out-Host
 tut-pause
 
 Write-Host ""
