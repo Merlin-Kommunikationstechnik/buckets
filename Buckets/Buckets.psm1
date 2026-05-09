@@ -1156,7 +1156,7 @@ function Import-Bucket {
     $useJson = $AsJson -or $InputFile -like "*.json"
 
     if ($useJson) {
-        $content = [System.Text.Encoding]::UTF8.GetString($rawBytes)
+        $content = [System.IO.File]::ReadAllText($InputFile, [System.Text.Encoding]::UTF8)
         $objects = $content | ConvertFrom-Json
     }
     else {
