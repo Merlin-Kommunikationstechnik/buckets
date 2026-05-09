@@ -8,7 +8,7 @@
 
 $ErrorActionPreference = "Stop"
 
-$Sep = "-" * 60
+$Sep = '─' * 55
 
 function tut-pause {
     Write-Host ""
