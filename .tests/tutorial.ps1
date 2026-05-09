@@ -15,7 +15,7 @@ function tut-wipe {
     $current = Get-ChildItem $root -Directory -ErrorAction SilentlyContinue | ForEach-Object Name
     $toRemove = $current | Where-Object { $_ -notin $script:userBuckets }
     if ($toRemove) {
-        Remove-Bucket -Bucket $toRemove -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue -WarningAction SilentlyContinue | Out-Null
+        Remove-Bucket -Bucket $toRemove -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue -WarningAction SilentlyContinue -Quiet
         $script:tutorialBuckets = ($script:tutorialBuckets + $toRemove) | Select-Object -Unique
         $script:tutorialBuckets | Set-Content (Join-Path $root ".tutorial-buckets") -Force
     }
@@ -104,7 +104,7 @@ $script:tutorialBuckets = @()
 if (Test-Path $marker) {
     $stale = Get-Content $marker
     if ($stale) {
-        Remove-Bucket -Bucket $stale -Force -Confirm:$false -ErrorAction SilentlyContinue -WarningAction SilentlyContinue | Out-Null
+        Remove-Bucket -Bucket $stale -Force -Confirm:$false -ErrorAction SilentlyContinue -WarningAction SilentlyContinue -Quiet
     }
     Remove-Item $marker -Force -ErrorAction SilentlyContinue
 }
@@ -144,7 +144,7 @@ if ($Beg) {
 # ---------- chapter 1: Create ----------
 
 Write-Host ""
-  Write-Host "  1. Create" -ForegroundColor Cyan
+Write-Host "  1. Create" -ForegroundColor Cyan
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  1.1 Saving your first object" -ForegroundColor DarkGray
@@ -162,7 +162,7 @@ $alice = @{ Name = "Alice"; Role = "admin"; Score = 95 }
 New-BucketObject -InputObject $alice -Bucket users -Key "Alice"
 '@
 $alice = @{ Name = "Alice"; Role = "admin"; Score = 95 }
-New-BucketObject -InputObject $alice -Bucket users -Key "Alice" | Out-Host
+New-BucketObject -InputObject $alice -Bucket users -Key "Alice" -Quiet
 tut-pause
 
 Write-Host ""
@@ -180,7 +180,7 @@ $bob = @{ Name = "Bob"; Role = "user"; Score = 72 }
 $bob | fill -Bucket users -KeyProperty Name
 '@
 $bob = @{ Name = "Bob"; Role = "user"; Score = 72 }
-$bob | fill -Bucket users -KeyProperty Name | Out-Host
+$bob | fill -Bucket users -KeyProperty Name -Quiet
 tut-pause
 
 Write-Host ""
@@ -204,7 +204,7 @@ $users = @(
     @{ Name = "Carol"; Role = "manager"; Score = 88 }
     @{ Name = "Dave"; Role = "user"; Score = 61 }
 )
-$users | fill -Bucket users -KeyProperty Name | Out-Host
+$users | fill -Bucket users -KeyProperty Name -Quiet
 tut-pause
 
 Write-Host ""
@@ -221,7 +221,7 @@ $data = @{ Source = "import"; Items = 42 }
 $data | fill -Bucket users -Key "external-ref"
 '@
 $data = @{ Source = "import"; Items = 42 }
-$data | fill -Bucket users -Key "external-ref" | Out-Host
+$data | fill -Bucket users -Key "external-ref" -Quiet
 tut-pause
 
 Write-Host ""
@@ -239,7 +239,7 @@ $config = @{ Host = "localhost"; Port = 5432 }
 $config | fill -Bucket config -Key "app-config" -AsJson
 '@
 $config = @{ Host = "localhost"; Port = 5432 }
-$config | fill -Bucket config -Key "app-config" -AsJson | Out-Host
+$config | fill -Bucket config -Key "app-config" -AsJson -Quiet
 tut-pause
 
 Write-Host ""
@@ -263,7 +263,7 @@ $events = @(
     @{ Event = "login"; User = "alice" }
     @{ Event = "logout"; User = "bob" }
 )
-$events | fill -Bucket events -AsTimestamp | Out-Host
+$events | fill -Bucket events -AsTimestamp -Quiet
 tut-pause
 
 Write-Host ""
@@ -280,7 +280,7 @@ $alice = @{ Name = "Alice"; Role = "admin"; Score = 99 }
 New-BucketObject -InputObject $alice -Bucket users -Key "Alice" -Overwrite
 '@
 $alice = @{ Name = "Alice"; Role = "admin"; Score = 99 }
-New-BucketObject -InputObject $alice -Bucket users -Key "Alice" -Overwrite | Out-Host
+New-BucketObject -InputObject $alice -Bucket users -Key "Alice" -Overwrite -Quiet
 tut-pause
 
 Write-Host ""
@@ -298,7 +298,7 @@ $logs = 1..30 | ForEach-Object { @{ Seq = $_; Msg = "Heartbeat OK" } }
 fill -Bucket logs -InputObject $logs -Compress
 '@
 $logs = 1..30 | ForEach-Object { @{ Seq = $_; Msg = "Heartbeat OK" } }
-fill -Bucket logs -InputObject $logs -Compress | Out-Host
+fill -Bucket logs -InputObject $logs -Compress -Quiet
 tut-pause
 }
 
@@ -344,9 +344,9 @@ $hash = @{ Type = "Hashtable" }
 $hash | fill -Bucket types -Key "hash"
 '@
 $custom = [PSCustomObject]@{ Type = "PSCustomObject"; Ordered = $true }
-$custom | fill -Bucket types -Key "custom" | Out-Host
+$custom | fill -Bucket types -Key "custom" -Quiet
 $hash = @{ Type = "Hashtable" }
-$hash | fill -Bucket types -Key "hash" | Out-Host
+$hash | fill -Bucket types -Key "hash" -Quiet
 tut-pause
 
 Write-Host ""
@@ -378,7 +378,7 @@ $nested = [PSCustomObject]@{
         [PSCustomObject]@{ Sku = "XYZ"; Qty = 3 }
     )
 }
-$nested | fill -Bucket nested -Key "deep" | Out-Host
+$nested | fill -Bucket nested -Key "deep" -Quiet
 tut-pause
 
 Write-Host ""
@@ -395,7 +395,7 @@ $data = @{ Data = "sanitized key" }
 $data | fill -Bucket special -Key "my/file:name*test"
 '@
 $data = @{ Data = "sanitized key" }
-$data | fill -Bucket special -Key "my/file:name*test" | Out-Host
+$data | fill -Bucket special -Key "my/file:name*test" -Quiet
 tut-pause
 
 Write-Host ""
@@ -1333,7 +1333,7 @@ Write-Host "  5.4 Rename an object" -ForegroundColor DarkGray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
-  Rename changes the key of an existing object in place. The format (.dat or .json)
+  Rename changes the key of an existing object in place. The format (binary or JSON)
   is preserved through the rename.
 "@ -ForegroundColor White
 Write-Host ""
@@ -1728,7 +1728,7 @@ Write-Host "  6a.3 Remove a single bucket" -ForegroundColor DarkGray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
-  Remove a single bucket. Make sure it contains only .dat/.json files — Buckets
+  Remove a single bucket. Make sure it contains only bucket object files — Buckets
   refuses to remove directories with other file types.
 "@ -ForegroundColor White
 Write-Host ""
