@@ -76,8 +76,8 @@ function tut-write-code($Code) {
             Write-Host $lines[$i] -NoNewline
         }
     }
-    Write-Host "output:" -ForegroundColor DarkGray
     Write-Host ""
+    Write-Host "output:" -ForegroundColor DarkGray
 }
 
 # ---------- setup ----------
