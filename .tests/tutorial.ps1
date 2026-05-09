@@ -456,23 +456,39 @@ spill -Bucket team | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  2.3 Positional key lookup" -ForegroundColor DarkGray
+Write-Host "  2.3 Positional bucket lookup" -ForegroundColor DarkGray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
-  If you know the key, pass it positionally as the first argument. Keys are matched
+  The first positional argument is the bucket name. Omit -Key to retrieve
+  all objects from that bucket.
+"@ -ForegroundColor White
+Write-Host ""
+tut-write-code @'
+spill team
+'@
+$script:Team | fill -Bucket team -KeyProperty Name -Quiet
+spill team | Out-Host
+tut-pause
+
+Write-Host ""
+Write-Host "  2.4 Key lookup by name" -ForegroundColor DarkGray
+Write-Host "  $Sep" -ForegroundColor DarkGray
+Write-Host ""
+Write-Host @"
+  Pass a key as the second positional argument (or with -Key). Keys are matched
   case-insensitively and as prefixes by default.
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-spill "Alice" -Bucket team
+spill team "Alice"
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
-spill "Alice" -Bucket team | Out-Host
+spill team "Alice" | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  2.4 Exact key retrieval" -ForegroundColor DarkGray
+Write-Host "  2.5 Exact key retrieval" -ForegroundColor DarkGray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -480,14 +496,14 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-spill "Frank" -Bucket team
+spill team -Key "Frank"
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
-spill "Frank" -Bucket team | Out-Host
+spill team -Key "Frank" | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  2.5 Case-insensitive matching" -ForegroundColor DarkGray
+Write-Host "  2.6 Case-insensitive matching" -ForegroundColor DarkGray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -496,14 +512,14 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-spill "alice" -Bucket team
+spill team -Key "alice"
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
-spill "alice" -Bucket team | Out-Host
+spill team -Key "alice" | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  2.6 Handling missing keys" -ForegroundColor DarkGray
+Write-Host "  2.7 Handling missing keys" -ForegroundColor DarkGray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -519,7 +535,7 @@ spill -Bucket team -Key "Zoe" | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  2.7 Wildcards in bucket names" -ForegroundColor DarkGray
+Write-Host "  2.8 Wildcards in bucket names" -ForegroundColor DarkGray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -536,7 +552,7 @@ spill -Bucket "t*" | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  2.8 Querying multiple buckets" -ForegroundColor DarkGray
+Write-Host "  2.9 Querying multiple buckets" -ForegroundColor DarkGray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -553,7 +569,7 @@ spill -Bucket "team", "staff" | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  2.9 Metadata properties" -ForegroundColor DarkGray
+Write-Host "  2.10 Metadata properties" -ForegroundColor DarkGray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -570,7 +586,7 @@ spill -Bucket team -Key "Bob" | Select _BucketName, _BucketKey, _BucketFile | Ou
 tut-pause
 
 Write-Host ""
-Write-Host "  2.10 Piping to Select-Object" -ForegroundColor DarkGray
+Write-Host "  2.11 Piping to Select-Object" -ForegroundColor DarkGray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -586,7 +602,7 @@ spill -Bucket team | Sort Score -Descending | Select Name, Role, Score | Out-Hos
 tut-pause
 
 Write-Host ""
-Write-Host "  2.11 Dot notation access" -ForegroundColor DarkGray
+Write-Host "  2.12 Dot notation access" -ForegroundColor DarkGray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"

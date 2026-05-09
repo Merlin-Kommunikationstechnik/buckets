@@ -111,11 +111,12 @@ Retrieves objects from one or more buckets.
 
 ```powershell
 Get-BucketObject
-    [[-Key] <string>]
     [[-Bucket] <string[]>]
+    [[-Key] <string>]
     [-Path <string>]
     [-Match <hashtable>]
     [-Filter <scriptblock>]
+    [-Recurse]
     [-First <int>]
     [-Skip <int>]
     [<CommonParameters>]
@@ -123,11 +124,12 @@ Get-BucketObject
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
-| `-Key` | Object key to retrieve (prefix match, case-insensitive) | All objects |
-| `-Bucket` | Bucket name(s) to search (supports wildcards `*`, `?`) | All buckets |
+| `-Bucket` | Bucket name(s) to search (supports wildcards `*`, `?`). Position 0. | All buckets |
+| `-Key` | Object key to retrieve (prefix match, case-insensitive). Position 1. | All objects |
 | `-Path` | Storage root directory | `$HOME/.buckets` |
 | `-Match` | Hashtable of exact-match filters (supports `$null` for absent properties) | — |
 | `-Filter` | ScriptBlock for custom filtering (`$_` references the object) | — |
+| `-Recurse` | Recursively include objects from nested sub-buckets | — |
 | `-First` | Return only the first N objects | — |
 | `-Skip` | Skip the first N objects | — |
 
@@ -136,11 +138,14 @@ Retrieved objects include metadata properties: `_BucketName`, `_BucketKey`, `_Bu
 #### Examples
 
 ```powershell
+# All objects from a bucket (positional)
+Get-BucketObject users
+
+# Specific object by bucket and key (positional)
+Get-BucketObject users "Alice"
+
 # All objects from all buckets
 Get-BucketObject
-
-# From a specific bucket
-Get-BucketObject -Bucket users
 
 # From multiple buckets
 Get-BucketObject -Bucket users, orders
@@ -148,8 +153,7 @@ Get-BucketObject -Bucket users, orders
 # Wildcard patterns
 Get-BucketObject -Bucket "user*"
 
-# By key
-Get-BucketObject -Key "Alice"
+# By key within a bucket
 Get-BucketObject -Key "Alice" -Bucket users
 
 # Hashtable filter (exact match)

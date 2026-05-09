@@ -1102,11 +1102,11 @@ function Get-BucketObject {
     filtering (-Match) and arbitrary scriptblock filtering (-Filter).
     Retrieved objects include metadata properties: _BucketName, _BucketKey, _BucketFile.
     .PARAMETER Bucket
-    Bucket name(s) to search. If omitted, searches all buckets under -Path. Supports wildcards.
+    Bucket name(s) to search (Position 0). If omitted, searches all buckets under -Path. Supports wildcards.
     .PARAMETER Path
     Root directory for bucket storage. Default: $HOME/.buckets.
     .PARAMETER Key
-    Object key to retrieve. Case-insensitive prefix match. Looks for both JSON and binary files.
+    Object key to retrieve (Position 1). Case-insensitive prefix match. Looks for both JSON and binary files.
     .PARAMETER Match
     Hashtable of property-value pairs for exact-match filtering. All pairs must match. Supports $null values.
     .PARAMETER Filter
@@ -1119,6 +1119,10 @@ function Get-BucketObject {
     Skip the first N objects before returning results.
     .OUTPUTS
     Deserialized PSObjects with _BucketName, _BucketKey, and _BucketFile metadata.
+    .EXAMPLE
+    Get-BucketObject users
+    .EXAMPLE
+    Get-BucketObject users "Alice"
     .EXAMPLE
     Get-BucketObject -Bucket users -Match @{ Role = "admin" }
     .EXAMPLE
@@ -1134,9 +1138,9 @@ function Get-BucketObject {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Position = 1)][string[]]$Bucket,
+        [Parameter(Position = 0)][string[]]$Bucket,
         [string]$Path,
-        [Parameter(Position = 0)][string]$Key,
+        [Parameter(Position = 1)][string]$Key,
         [hashtable]$Match,
         [scriptblock]$Filter,
         [switch]$Recurse,
