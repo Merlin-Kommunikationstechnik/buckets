@@ -14,7 +14,8 @@ function tut-pause {
     Write-Host ""
     Write-Host "  $Sep" -ForegroundColor DarkGray
     Write-Host "  [Enter] next · [q] quit > " -NoNewline -ForegroundColor DarkGray
-    $null = Read-Host
+    $r = Read-Host
+    if ($r -eq "q") { Write-Host ""; exit }
     cls
 }
 
@@ -107,7 +108,7 @@ Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Let's save your first object — a simple hashtable describing a user. We give it
-  an explicit key "Alice" with -Key, which becomes its filename on disk. By default,
+  an explicit key "Alice" with -Key, which becomes its key. By default,
   Buckets uses a binary format that preserves the full .NET type information, so
   hashtables, custom objects, even FileInfo — all survive the round trip.
 "@ -ForegroundColor White
@@ -124,7 +125,7 @@ Write-Host ""
 Write-Host @"
   Typing -Key for every object gets tedious. Instead, -KeyProperty tells Buckets to
   look at a specific property on your object and use its value as the key. Here, the
-  property Name contains "Bob", so the file will be named "Bob.dat" automatically.
+  property Name contains "Bob", so the key will be "Bob" automatically.
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
@@ -159,7 +160,7 @@ tut-pause
 Write-Host ""
 Write-Host @"
   What if you need a key that isn't a property of the object itself? That's what the
-  bare -Key parameter is for — you decide the filename, independent of the data inside.
+  bare -Key parameter is for — you decide the key, independent of the data inside.
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
@@ -322,7 +323,7 @@ tut-pause
 Write-Host ""
 Write-Host @"
   Buckets won't let you create a key that's empty or becomes empty after sanitization.
-  It throws an error right away so you don't end up with files you can't find.
+  It throws an error right away so you don't end up with objects you can't find.
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
@@ -1278,7 +1279,7 @@ tut-pause
 Write-Host ""
 Write-Host @"
   The -Tree parameter renders your buckets as a visual directory tree. -MaxFiles
-  limits how many files are shown per bucket.
+  limits how many objects are shown per bucket.
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
@@ -1290,7 +1291,7 @@ tut-pause
 Write-Host ""
 Write-Host @"
   Without -Objects, the tree shows buckets only — a clean structural view without
-  individual files cluttering the output.
+  individual objects cluttering the output.
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
@@ -1301,7 +1302,7 @@ tut-pause
 
 Write-Host ""
 Write-Host @"
-  Add -Objects to include individual files in the tree. Every leaf object is
+  Add -Objects to include individual objects in the tree. Every leaf object is
   visible.
 "@ -ForegroundColor White
 Write-Host ""
