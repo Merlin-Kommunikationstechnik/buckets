@@ -36,6 +36,8 @@ function tut-note($Text) {
 }
 
 function tut-done {
+    Write-Host ""
+    Write-Host "$Sep" -ForegroundColor DarkGray
     Write-Host "  Press Enter to continue, or type q to quit tutorial.`n" -NoNewline
     $r = Read-Host " >"
     if ($r -eq "q") { Write-Host "`n  Tutorial aborted. Bye!`n" -ForegroundColor Cyan; exit }
