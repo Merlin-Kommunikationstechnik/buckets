@@ -923,7 +923,7 @@ function Get-BucketKeys {
 
     foreach ($bucketPath in $bucketPaths) {
         if (-not [System.IO.Directory]::Exists($bucketPath)) { continue }
-        $bucketName = Split-Path $bucketPath -Leaf
+        $bucketName = $bucketPath.Substring($Path.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar).Replace([System.IO.Path]::DirectorySeparatorChar, '/')
         $di = [System.IO.DirectoryInfo]::new($bucketPath)
         $files = @($di.GetFiles("*.json")) + @($di.GetFiles("*.dat"))
         foreach ($f in $files) {
