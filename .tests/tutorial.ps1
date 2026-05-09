@@ -11,10 +11,13 @@ $ErrorActionPreference = "Stop"
 $Sep = '─' * 55
 
 function tut-wipe {
-    $current = Get-ChildItem (Get-BucketRoot) -Directory -ErrorAction SilentlyContinue | ForEach-Object Name
-    $newBuckets = $current | Where-Object { $_ -notin $script:initialBuckets }
-    if ($newBuckets) {
-        Remove-Bucket -Bucket $newBuckets -Force -ErrorAction SilentlyContinue | Out-Null
+    $root = Get-BucketRoot
+    $current = Get-ChildItem $root -Directory -ErrorAction SilentlyContinue | ForEach-Object Name
+    $toRemove = $current | Where-Object { $_ -notin $script:userBuckets }
+    if ($toRemove) {
+        Remove-Bucket -Bucket $toRemove -Force -ErrorAction SilentlyContinue | Out-Null
+        $script:tutorialBuckets = ($script:tutorialBuckets + $toRemove) | Select-Object -Unique
+        $script:tutorialBuckets | Set-Content (Join-Path $root ".tutorial-buckets") -Force
     }
 }
 
@@ -95,7 +98,17 @@ if (-not (Test-Path $mod)) { throw "Module not found at '$mod'" }
 Remove-Module Buckets -ErrorAction SilentlyContinue
 Import-Module $mod -Force
 $ver = (Get-Module Buckets).Version
-$script:initialBuckets = Get-ChildItem (Get-BucketRoot) -Directory -ErrorAction SilentlyContinue | ForEach-Object Name
+$root = Get-BucketRoot
+$marker = Join-Path $root ".tutorial-buckets"
+$script:tutorialBuckets = @()
+if (Test-Path $marker) {
+    $stale = Get-Content $marker
+    if ($stale) {
+        Remove-Bucket -Bucket $stale -Force -ErrorAction SilentlyContinue | Out-Null
+    }
+    Remove-Item $marker -Force -ErrorAction SilentlyContinue
+}
+$script:userBuckets = Get-ChildItem $root -Directory -ErrorAction SilentlyContinue | ForEach-Object Name
 tut-wipe
 
 Write-Host ""
