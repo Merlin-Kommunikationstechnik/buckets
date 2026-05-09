@@ -101,7 +101,7 @@ cls
 
 # ---------- chapter 1: Create ----------
 
-Write-Host "`n$Sep" -ForegroundColor DarkGray
+Write-Host "`n  $Sep" -ForegroundColor DarkGray
 Write-Host "  1. Create — fill / New-BucketObject" -ForegroundColor Blue
 Write-Host "  $Sep" -ForegroundColor DarkGray
 
@@ -239,7 +239,7 @@ tut-pause
 # section 1b
 
 cls
-Write-Host "`n$Sep" -ForegroundColor DarkGray
+Write-Host "`n  $Sep" -ForegroundColor DarkGray
 Write-Host "  1b. Create — quiet, verbose, and edge cases" -ForegroundColor Blue
 Write-Host "  $Sep" -ForegroundColor DarkGray
 
@@ -341,7 +341,7 @@ tut-pause
 # ---------- chapter 2: Read ----------
 
 cls
-Write-Host "`n$Sep" -ForegroundColor DarkGray
+Write-Host "`n  $Sep" -ForegroundColor DarkGray
 Write-Host "  2. Read — spill / Get-BucketObject" -ForegroundColor Blue
 Write-Host "  $Sep" -ForegroundColor DarkGray
 
@@ -483,7 +483,7 @@ tut-pause
 # section 2a
 
 cls
-Write-Host "`n$Sep" -ForegroundColor DarkGray
+Write-Host "`n  $Sep" -ForegroundColor DarkGray
 Write-Host "  2a. Read — filtering with -Match" -ForegroundColor Blue
 Write-Host "  $Sep" -ForegroundColor DarkGray
 
@@ -592,7 +592,7 @@ tut-pause
 # section 2b
 
 cls
-Write-Host "`n$Sep" -ForegroundColor DarkGray
+Write-Host "`n  $Sep" -ForegroundColor DarkGray
 Write-Host "  2b. Read — comparison with -Filter" -ForegroundColor Blue
 Write-Host "  $Sep" -ForegroundColor DarkGray
 
@@ -750,7 +750,7 @@ tut-pause
 # section 2c
 
 cls
-Write-Host "`n$Sep" -ForegroundColor DarkGray
+Write-Host "`n  $Sep" -ForegroundColor DarkGray
 Write-Host "  2c. Read — pagination with -First / -Skip" -ForegroundColor Blue
 Write-Host "  $Sep" -ForegroundColor DarkGray
 
@@ -793,7 +793,7 @@ tut-pause
 # ---------- chapter 3: Update ----------
 
 cls
-Write-Host "`n$Sep" -ForegroundColor DarkGray
+Write-Host "`n  $Sep" -ForegroundColor DarkGray
 Write-Host "  3. Update — Set-BucketObject" -ForegroundColor Blue
 Write-Host "  $Sep" -ForegroundColor DarkGray
 
@@ -908,7 +908,7 @@ tut-pause
 # ---------- chapter 4: Delete ----------
 
 cls
-Write-Host "`n$Sep" -ForegroundColor DarkGray
+Write-Host "`n  $Sep" -ForegroundColor DarkGray
 Write-Host "  4. Delete — Remove-BucketObject" -ForegroundColor Blue
 Write-Host "  $Sep" -ForegroundColor DarkGray
 
@@ -1049,7 +1049,7 @@ tut-pause
 # ---------- chapter 5: Copy, Rename, Move ----------
 
 cls
-Write-Host "`n$Sep" -ForegroundColor DarkGray
+Write-Host "`n  $Sep" -ForegroundColor DarkGray
 Write-Host "  5. Object Operations — Copy, Rename, Move" -ForegroundColor Blue
 Write-Host "  $Sep" -ForegroundColor DarkGray
 
@@ -1201,7 +1201,7 @@ tut-pause
 # ---------- chapter 6: Bucket Management ----------
 
 cls
-Write-Host "`n$Sep" -ForegroundColor DarkGray
+Write-Host "`n  $Sep" -ForegroundColor DarkGray
 Write-Host "  6. Bucket Management — dip / Get-Bucket" -ForegroundColor Blue
 Write-Host "  $Sep" -ForegroundColor DarkGray
 
@@ -1363,7 +1363,7 @@ tut-pause
 # section 6a
 
 cls
-Write-Host "`n$Sep" -ForegroundColor DarkGray
+Write-Host "`n  $Sep" -ForegroundColor DarkGray
 Write-Host "  6a. Remove-Bucket — safety and wildcards" -ForegroundColor Blue
 Write-Host "  $Sep" -ForegroundColor DarkGray
 
@@ -1429,7 +1429,7 @@ tut-pause
 # ---------- chapter 7: Export / Import ----------
 
 cls
-Write-Host "`n$Sep" -ForegroundColor DarkGray
+Write-Host "`n  $Sep" -ForegroundColor DarkGray
 Write-Host "  7. Export / Import — Export-Bucket, Import-Bucket" -ForegroundColor Blue
 Write-Host "  $Sep" -ForegroundColor DarkGray
 
@@ -1527,7 +1527,7 @@ Remove-Item $exportDir -Recurse -Force -ErrorAction SilentlyContinue
 # ---------- chapter 8: PSDrive ----------
 
 cls
-Write-Host "`n$Sep" -ForegroundColor DarkGray
+Write-Host "`n  $Sep" -ForegroundColor DarkGray
 Write-Host "  8. PSDrive — navigate buckets like a filesystem" -ForegroundColor Blue
 Write-Host "  $Sep" -ForegroundColor DarkGray
 
@@ -1669,7 +1669,7 @@ tut-pause
 # ---------- chapter 9: Nested Buckets ----------
 
 cls
-Write-Host "`n$Sep" -ForegroundColor DarkGray
+Write-Host "`n  $Sep" -ForegroundColor DarkGray
 Write-Host "  9. Nested Buckets — directory hierarchy" -ForegroundColor Blue
 Write-Host "  $Sep" -ForegroundColor DarkGray
 
@@ -1862,7 +1862,7 @@ tut-pause
 # ---------- chapter 10: Pipeline & Sleek Patterns ----------
 
 cls
-Write-Host "`n$Sep" -ForegroundColor DarkGray
+Write-Host "`n  $Sep" -ForegroundColor DarkGray
 Write-Host "  10. Sleek Pipeline Patterns" -ForegroundColor Blue
 Write-Host "  $Sep" -ForegroundColor DarkGray
 
@@ -2039,7 +2039,7 @@ tut-pause
 # ---------- chapter 11: Aliases Quick Reference ----------
 
 cls
-Write-Host "`n$Sep" -ForegroundColor DarkGray
+Write-Host "`n  $Sep" -ForegroundColor DarkGray
 Write-Host "  11. Aliases & Shortcuts Reference" -ForegroundColor Blue
 Write-Host "  $Sep" -ForegroundColor DarkGray
 
@@ -2073,7 +2073,7 @@ tut-pause
 # ---------- cleanup ----------
 
 cls
-Write-Host "`n$Sep" -ForegroundColor DarkGray
+Write-Host "`n  $Sep" -ForegroundColor DarkGray
 Write-Host "  Cleanup — Remove tutorial data" -ForegroundColor Blue
 Write-Host "  $Sep" -ForegroundColor DarkGray
 
