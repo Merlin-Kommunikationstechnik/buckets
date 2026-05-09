@@ -54,8 +54,26 @@ function tut-run($ScriptBlock) {
         $code -split "`n" | ForEach-Object { Write-Host "    $_" -ForegroundColor Cyan }
         Write-Host ""
     }
-    & $ScriptBlock 6>&1 | Out-String -Stream | ForEach-Object {
-        if ($_.Trim()) { Write-Host "  → $_" }
+    $infoParts = [System.Collections.ArrayList]::new()
+    $outputObjs = [System.Collections.ArrayList]::new()
+    & $ScriptBlock 6>&1 | ForEach-Object {
+        if ($_ -is [System.Management.Automation.InformationRecord]) {
+            [void]$infoParts.Add("$_")
+        } else {
+            [void]$outputObjs.Add($_)
+        }
+    }
+    if ($infoParts.Count) {
+        ($infoParts -join "") -split "`r`n|`n" | ForEach-Object {
+            $line = $_.TrimEnd()
+            if ($line) { Write-Host "  → $line" }
+        }
+    }
+    if ($outputObjs.Count) {
+        $outputObjs | Out-String -Stream | ForEach-Object {
+            $line = $_.TrimEnd()
+            if ($line) { Write-Host "  → $line" }
+        }
     }
     Write-Host ""
     Write-Host "────────────────────" -ForegroundColor DarkGray
