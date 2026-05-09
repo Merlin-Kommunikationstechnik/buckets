@@ -1224,7 +1224,8 @@ function Get-BucketStats {
     .PARAMETER Path
     Root directory for bucket storage. Default: $HOME/.buckets.
     .OUTPUTS
-    PSCustomObject with Name, Path, ObjectCount, TotalSize, OldestObject, and NewestObject properties.
+    PSCustomObject with Name, Path, ObjectCount, TotalSize, OldestObject, and NewestObject
+    properties. TotalSizeBytes is included as a hidden property.
     .EXAMPLE
     Get-BucketStats -Bucket users
     #>
@@ -1256,12 +1257,13 @@ function Get-BucketStats {
 
     $obj = [PSCustomObject]@{
         Name         = $Bucket
+        Path         = $bucketPath
         ObjectCount  = $fileObjects.Count
         TotalSize    = if ($totalSize) { "$([math]::Round($totalSize / 1KB, 2)) KB" } else { "0 KB" }
         OldestObject = $oldest
         NewestObject = $newest
     }
-    Add-HiddenProperty -Target $obj -Name 'Path' -Value $bucketPath
+    Add-HiddenProperty -Target $obj -Name 'TotalSizeBytes' -Value $(if ($totalSize) { $totalSize } else { 0 })
     $obj
 }
 
@@ -1630,6 +1632,38 @@ function New-BucketObject {
     }
 }
 
+function Write-RemovalSummary {
+    param(
+        [string]$Title,
+        [string[]]$Names,
+        [int[]]$Counts,
+        [string[]]$Sizes,
+        [string[][]]$Nested,
+        [int]$MaxShow = 10
+    )
+    Write-Host ""
+    Write-Host "  $Title" -ForegroundColor $script:CPath
+    for ($i = 0; $i -lt $Names.Count; $i++) {
+        $count = if ($Counts[$i] -eq 1) { "1 object" } else { "$($Counts[$i]) objects" }
+        Write-Host "    " -NoNewline
+        Write-Host "$($Names[$i])" -NoNewline -ForegroundColor $script:CPath
+        Write-Host " (" -NoNewline -ForegroundColor $script:CMuted
+        Write-Host "$count" -NoNewline -ForegroundColor $script:CNum
+        Write-Host ", " -NoNewline -ForegroundColor $script:CMuted
+        Write-Host "$($Sizes[$i])" -NoNewline -ForegroundColor $script:CNum
+        Write-Host ")" -NoNewline -ForegroundColor $script:CMuted
+        if ($Nested -and $Nested[$i] -and $Nested[$i].Count -gt 0) {
+            Write-Host " [includes nested: $($Nested[$i] -join ', ')]" -ForegroundColor $script:CMuted
+        } else {
+            Write-Host ""
+        }
+    }
+    if ($Names.Count -gt $MaxShow) {
+        Write-Host "    ... and $($Names.Count - $MaxShow) more" -ForegroundColor $script:CMuted
+    }
+    Write-Host ""
+}
+
 function Remove-Bucket {
     <#
     .SYNOPSIS
@@ -1644,7 +1678,7 @@ function Remove-Bucket {
     directories intact. Use -Recurse to remove the target and all nested buckets.
 
     Uses standard -Confirm/-WhatIf support (SupportsShouldProcess).
-    -Confirm:$false skips the confirmation prompt.
+    -Force skips the confirmation prompt entirely.
     .PARAMETER Bucket
     Bucket name(s) or wildcard patterns to remove. Supports glob-style wildcards (*, ?).
     For nested buckets, use path notation like "projects/myapp".
@@ -1653,11 +1687,10 @@ function Remove-Bucket {
     .PARAMETER Recurse
     Remove the target bucket and all nested buckets beneath it. Without this flag,
     nested bucket directories are preserved.
+    .PARAMETER Force
+    Skip confirmation prompt and remove immediately.
     .PARAMETER WhatIf
     Preview which buckets would be removed without actually deleting them.
-    .PARAMETER Confirm
-    Prompt for confirmation before removal. Default: prompts (ConfirmImpact = High).
-    Use -Confirm:$false to skip.
     .PARAMETER Quiet
     Suppress progress output.
     .EXAMPLE
@@ -1665,7 +1698,7 @@ function Remove-Bucket {
     .EXAMPLE
     Remove-Bucket -Bucket "projects/myapp"
     .EXAMPLE
-    Remove-Bucket -Bucket "temp*" -Confirm:$false
+    Remove-Bucket -Bucket "temp*" -Force
     .EXAMPLE
     Remove-Bucket -Bucket projects -Recurse
     #>
@@ -1744,7 +1777,6 @@ function Remove-Bucket {
             continue
         }
 
-        # Check for nested bucket subdirectories
         $nestedBuckets = @()
         foreach ($subDir in $di.GetDirectories()) {
             if ($subDir.Name -eq ".buckets") { continue }
@@ -1787,26 +1819,46 @@ function Remove-Bucket {
 
     if ($WhatIfPreference) {
         if ($removable.Count -gt 0) {
-            Write-Host "  What if: Remove the following bucket(s):" -ForegroundColor Yellow
-            foreach ($r in $removable) {
-                $msg = "    $($r.Name) ($($r.Objects) objects, $($r.Size))"
-                if ($r.HasNestedBuckets -and -not $Recurse) {
-                    $msg += " [nested buckets preserved: $($r.NestedBucketNames -join ', ')]"
-                }
-                elseif ($r.HasNestedBuckets) {
-                    $msg += " [includes nested buckets: $($r.NestedBucketNames -join ', ')]"
-                }
-                Write-Host $msg -ForegroundColor DarkGray
-            }
+            Write-RemovalSummary -Title "What if: Remove the following bucket(s)" `
+                -Names $removable.Name -Counts $removable.Objects -Sizes $removable.Size -Nested $removable.NestedBucketNames
         }
         if ($skippedBuckets.Count -gt 0) {
-            Write-Host "`n  Skipped:" -ForegroundColor Yellow
-            foreach ($s in $skippedBuckets) { Write-Host "    $($s.Name) — $($s.Reason)" -ForegroundColor Red }
+            Write-Host "  Skipped:" -ForegroundColor $script:CSkip
+            foreach ($s in $skippedBuckets) {
+                Write-Host "    " -NoNewline
+                Write-Host "$($s.Name)" -NoNewline -ForegroundColor $script:CPath
+                Write-Host " — " -NoNewline -ForegroundColor $script:CMuted
+                Write-Host "$($s.Reason)" -ForegroundColor $script:CError
+            }
         }
         return
     }
 
     if ($removable.Count -eq 0 -and $skippedBuckets.Count -eq 0) { return }
+
+    # Pre-confirmation summary (unless -Force or -Quiet)
+    if (-not $Force -and -not $Quiet -and $removable.Count -gt 0) {
+        $preserved = @()
+        foreach ($r in $removable) {
+            if ($r.HasNestedBuckets -and -not $Recurse) {
+                $preserved += @($r.NestedBucketNames)
+            } else {
+                $preserved += @()
+            }
+        }
+        Write-RemovalSummary -Title "Remove $($removable.Count) bucket(s)?" `
+            -Names $removable.Name -Counts $removable.Objects -Sizes $removable.Size -Nested $preserved
+    }
+
+    # Skipped buckets (always shown if any)
+    if ($skippedBuckets.Count -gt 0 -and -not $Quiet) {
+        foreach ($s in $skippedBuckets) {
+            Write-Host "  " -NoNewline -ForegroundColor $script:CMuted
+            Write-Host "$($s.Name)" -NoNewline -ForegroundColor $script:CPath
+            Write-Host " · " -NoNewline -ForegroundColor $script:CMuted
+            Write-Host "$($s.Reason)" -ForegroundColor $script:CError
+        }
+    }
 
     $removedCount = 0
     foreach ($r in $removable) {
@@ -1820,69 +1872,58 @@ function Remove-Bucket {
         }
 
         $target = "bucket '$($r.Name)' ($($r.Objects) object(s), $($r.Size))"
+        $shouldRemove = $Force
+        if (-not $Force) {
+            $shouldRemove = $PSCmdlet.ShouldProcess($target, "Remove-Bucket")
+        }
 
-        if ($r.HasNestedBuckets -and -not $Recurse) {
-            # Remove only bucket files, preserve nested bucket dirs
-            $finalDirs = @($finalDi.GetDirectories())
-            $nestedDirs = @($finalDirs | Where-Object { $_.GetFiles("*.dat").Length -gt 0 -or $_.GetFiles("*.json").Length -gt 0 })
-
-            $nestedMsg = " (preserving nested buckets: $($nestedDirs.Name -join ', '))"
-
-            if ($PSCmdlet.ShouldProcess($target + $nestedMsg, "Remove-Bucket")) {
-                # Delete bucket files
+        if ($shouldRemove) {
+            if ($r.HasNestedBuckets -and -not $Recurse) {
+                $finalDirs = @($finalDi.GetDirectories())
                 foreach ($f in $finalFiles) { $f.Delete() }
-                # Delete empty non-bucket subdirectories
                 foreach ($d in $finalDirs) {
                     $hasBucketFiles = $d.GetFiles("*.dat").Length -gt 0 -or $d.GetFiles("*.json").Length -gt 0
                     if (-not $hasBucketFiles -and $d.GetDirectories().Length -eq 0) {
                         $d.Delete()
                     }
                 }
-                # Remove empty bucket dir if nothing left
                 $remainingDirs = @($finalDi.GetDirectories())
                 if ($remainingDirs.Count -eq 0 -and $finalDi.GetFiles().Length -eq 0) {
                     $finalDi.Delete()
                 }
                 $cacheKeys = @($script:BucketPathCache.Keys) | Where-Object { $_ -like "*|$($r.Name)" }
                 foreach ($ck in $cacheKeys) { $script:BucketPathCache.Remove($ck) }
-                $removedCount++
             }
-        }
-        elseif ($Recurse) {
-            if ($PSCmdlet.ShouldProcess($target, "Remove-Bucket -Recurse")) {
+            elseif ($Recurse) {
                 [System.IO.Directory]::Delete($r.Path, $true)
                 $cacheKeys = @($script:BucketPathCache.Keys) | Where-Object { $_ -like "*|$($r.Name)*" }
                 foreach ($ck in $cacheKeys) { $script:BucketPathCache.Remove($ck) }
-                $removedCount++
             }
-        }
-        else {
-            # No nested buckets — standard deletion
-            $finalDirs = @($finalDi.GetDirectories())
-            if ($finalDirs.Count -gt 0) {
-                Write-Warning "Bucket '$($r.Name)' contains non-bucket subdirectories, aborting"
-                continue
-            }
-            if ($PSCmdlet.ShouldProcess($target, "Remove-Bucket")) {
+            else {
+                $finalDirs = @($finalDi.GetDirectories())
+                if ($finalDirs.Count -gt 0) {
+                    Write-Warning "Bucket '$($r.Name)' contains non-bucket subdirectories, aborting"
+                    continue
+                }
                 [System.IO.Directory]::Delete($r.Path, $true)
                 $cacheKeys = @($script:BucketPathCache.Keys) | Where-Object { $_ -like "*|$($r.Name)" }
                 foreach ($ck in $cacheKeys) { $script:BucketPathCache.Remove($ck) }
-                $removedCount++
+            }
+
+            $removedCount++
+            if (-not $Quiet) {
+                Write-Host "$($r.Name)" -NoNewline -ForegroundColor $script:CPath
+                Write-Host " · " -NoNewline -ForegroundColor $script:CMuted
+                $objLabel = if ($r.Objects -eq 1) { "1 object" } else { "$($r.Objects) objects" }
+                Write-Host $objLabel -NoNewline -ForegroundColor $script:CNum
+                Write-Host " removed" -ForegroundColor $script:CMuted
             }
         }
     }
 
-    if ($removedCount -gt 0 -and -not $Quiet) {
+    if ($removedCount -gt 1 -and -not $Quiet) {
         Write-Host $removedCount -NoNewline -ForegroundColor $script:CNum
-        Write-Host " removed" -ForegroundColor $script:CMuted
-    }
-    if ($skippedBuckets.Count -gt 0 -and -not $Quiet) {
-        foreach ($s in $skippedBuckets) {
-            Write-Host "  " -NoNewline -ForegroundColor $script:CMuted
-            Write-Host "$($s.Name)" -NoNewline -ForegroundColor $script:CPath
-            Write-Host " · " -NoNewline -ForegroundColor $script:CMuted
-            Write-Host "$($s.Reason)" -ForegroundColor $script:CSkip
-        }
+        Write-Host " buckets removed" -ForegroundColor $script:CMuted
     }
 }
 
@@ -1907,6 +1948,8 @@ function Remove-BucketObject {
     ScriptBlock for custom bulk deletion. Use $_ to reference object properties.
     .PARAMETER PassThru
     Return metadata for removed objects.
+    .PARAMETER Quiet
+    Suppress progress output.
     .EXAMPLE
     Remove-BucketObject -Bucket logs -Key "log-003"
     .EXAMPLE
@@ -1946,10 +1989,23 @@ function Remove-BucketObject {
 
         if ($allFiles.Count -eq 0) { Write-Verbose "Bucket '$Bucket' is already empty"; return }
 
+        $bucketSize = ($allFiles | Measure-Object -Property Length -Sum).Sum
+        $sizeStr = if ($bucketSize) { "$([math]::Round($bucketSize / 1KB, 2)) KB" } else { "0 KB" }
+
+        if ($WhatIfPreference) {
+            Write-Host ""
+            Write-Host "  What if: Remove all " -NoNewline -ForegroundColor $script:CMuted
+            Write-Host $allFiles.Count -NoNewline -ForegroundColor $script:CNum
+            Write-Host " object(s) from " -NoNewline -ForegroundColor $script:CMuted
+            Write-Host $Bucket -NoNewline -ForegroundColor $script:CPath
+            Write-Host " ($sizeStr)" -ForegroundColor $script:CMuted
+            Write-Host ""
+            return
+        }
+
         $target = "$($allFiles.Count) object(s) from bucket '$Bucket'"
         if ($PSCmdlet.ShouldProcess($target, "Remove-BucketObject")) {
             $allFiles | ForEach-Object { [System.IO.File]::Delete($_.FullName) }
-            # Clean up empty subdirectories
             foreach ($d in $di.GetDirectories()) {
                 if ($d.Name -eq ".buckets") { continue }
                 $remaining = @($d.GetFiles()) + @($d.GetDirectories())
@@ -1966,7 +2022,8 @@ function Remove-BucketObject {
         elseif (-not $WhatIfPreference -and -not $Quiet) {
             Write-Host "$Bucket" -NoNewline -ForegroundColor $script:CPath
             Write-Host " · " -NoNewline -ForegroundColor $script:CMuted
-            Write-Host $allFiles.Count -NoNewline -ForegroundColor $script:CNum
+            $objLabel = if ($allFiles.Count -eq 1) { "1 object" } else { "$($allFiles.Count) objects" }
+            Write-Host $objLabel -NoNewline -ForegroundColor $script:CNum
             Write-Host " removed" -ForegroundColor $script:CMuted
         }
     }
@@ -1981,7 +2038,6 @@ function Remove-BucketObject {
                 [PSCustomObject]@{ Bucket = $Bucket; Key = $relPath; FilePath = $file.FullName }
             }
             [System.IO.File]::Delete($file.FullName)
-            # Clean up empty parent subdirectories
             $parentDir = [System.IO.Path]::GetDirectoryName($file.FullName)
             if ($parentDir -ne $bucketPath -and $parentDir.StartsWith($bucketPath)) {
                 $parentDi = [System.IO.DirectoryInfo]::new($parentDir)
@@ -2005,6 +2061,7 @@ function Remove-BucketObject {
         if ($allFiles.Count -eq 0) { Write-Verbose "Bucket '$Bucket' is already empty"; return }
 
         $matchedFiles = @()
+        $matchedKeys = @()
         foreach ($file in $allFiles) {
             $obj = Read-BucketFile -File $file
             if ($null -eq $obj) { continue }
@@ -2013,9 +2070,50 @@ function Remove-BucketObject {
                 if ($null -eq ($obj | Where-Object $Filter)) { continue }
             }
             $matchedFiles += $file
+            $matchedKeys += [System.IO.Path]::GetFileNameWithoutExtension($file.Name)
         }
 
         if ($matchedFiles.Count -eq 0) { Write-Verbose "No objects matched the filter criteria in bucket '$Bucket'"; return }
+
+        $matchSize = ($matchedFiles | Measure-Object -Property Length -Sum).Sum
+        $sizeStr = if ($matchSize) { "$([math]::Round($matchSize / 1KB, 2)) KB" } else { "0 KB" }
+
+        if ($WhatIfPreference) {
+            Write-Host ""
+            Write-Host "  What if: Remove " -NoNewline -ForegroundColor $script:CMuted
+            Write-Host $matchedFiles.Count -NoNewline -ForegroundColor $script:CNum
+            Write-Host " matching object(s) from " -NoNewline -ForegroundColor $script:CMuted
+            Write-Host $Bucket -NoNewline -ForegroundColor $script:CPath
+            Write-Host " ($sizeStr)" -ForegroundColor $script:CMuted
+            $showKeys = $matchedKeys | Select-Object -First 5
+            foreach ($k in $showKeys) {
+                Write-Host "    $k" -ForegroundColor $script:CMuted
+            }
+            if ($matchedKeys.Count -gt 5) {
+                Write-Host "    ... and $($matchedKeys.Count - 5) more" -ForegroundColor $script:CMuted
+            }
+            Write-Host ""
+            return
+        }
+
+        # Pre-confirmation summary
+        if (-not $Quiet) {
+            Write-Host ""
+            Write-Host "  Remove " -NoNewline -ForegroundColor $script:CMuted
+            Write-Host $matchedFiles.Count -NoNewline -ForegroundColor $script:CNum
+            Write-Host " matching object(s) from " -NoNewline -ForegroundColor $script:CMuted
+            Write-Host $Bucket -NoNewline -ForegroundColor $script:CPath
+            Write-Host " ($sizeStr)" -ForegroundColor $script:CMuted
+            $showKeys = $matchedKeys | Select-Object -First 5
+            foreach ($k in $showKeys) {
+                Write-Host "    " -NoNewline
+                Write-Host $k -ForegroundColor $script:CNum
+            }
+            if ($matchedKeys.Count -gt 5) {
+                Write-Host "    ... and $($matchedKeys.Count - 5) more" -ForegroundColor $script:CMuted
+            }
+            Write-Host ""
+        }
 
         $target = "$($matchedFiles.Count) matching object(s) from bucket '$Bucket'"
         if ($PSCmdlet.ShouldProcess($target, "Remove-BucketObject")) {
@@ -2029,8 +2127,9 @@ function Remove-BucketObject {
             if (-not $PassThru -and -not $Quiet) {
                 Write-Host "$Bucket" -NoNewline -ForegroundColor $script:CPath
                 Write-Host " · " -NoNewline -ForegroundColor $script:CMuted
-                Write-Host $matchedFiles.Count -NoNewline -ForegroundColor $script:CNum
-                Write-Host " removed" -ForegroundColor $script:CMuted
+                $objLabel = if ($matchedFiles.Count -eq 1) { "1 object" } else { "$($matchedFiles.Count) objects" }
+                Write-Host $objLabel -NoNewline -ForegroundColor $script:CNum
+                Write-Host " removed (matched)" -ForegroundColor $script:CMuted
             }
         }
         elseif (-not $WhatIfPreference) { Write-Verbose "Would remove $($matchedFiles.Count) object(s) from bucket '$Bucket'" }

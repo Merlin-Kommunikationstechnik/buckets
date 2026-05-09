@@ -102,10 +102,12 @@ Test-Feature "Get-BucketObjectStats (IsCompressed on normal data)" {
     -not $stats[0].IsCompressed
 }
 
-# Feature: Get-BucketStats has no visible Path
-Test-Feature "Get-BucketStats (Path hidden)" {
+# Feature: Get-BucketStats has visible Path and hidden TotalSizeBytes
+Test-Feature "Get-BucketStats (Path visible, TotalSizeBytes hidden)" {
     $s = Get-BucketStats -Bucket "smoke/users"
-    -not ($s | Format-List | Out-String).Contains("/.buckets/")
+    $pathVisible = ($s | Format-List | Out-String).Contains("/.buckets/")
+    $bytesHidden = -not ($s | Format-List | Out-String).Contains("TotalSizeBytes")
+    $pathVisible -and $bytesHidden -and $s.TotalSizeBytes -gt 0
 }
 
 # Feature: Empty bucket removal

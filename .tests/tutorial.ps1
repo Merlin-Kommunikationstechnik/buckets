@@ -1803,7 +1803,7 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 
-$exportDir = Join-Path $env:TEMP "buckets-tutorial-export"
+$exportDir = Join-Path ([System.IO.Path]::GetTempPath()) "buckets-tutorial-export"
 $null = New-Item -ItemType Directory -Path $exportDir -Force -ErrorAction SilentlyContinue
 
 tut-write-code @'
@@ -2548,12 +2548,12 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-$csvPath = Join-Path $env:TEMP "buckets-team.csv"
+$csvPath = Join-Path ([System.IO.Path]::GetTempPath()) "buckets-team.csv"
 spill -Bucket team | Select-Object Name, Role, Score | Export-Csv -Path $csvPath -NoTypeInformation
 Remove-Item $csvPath -Force -ErrorAction SilentlyContinue
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
-$csvPath = Join-Path $env:TEMP "buckets-team.csv"
+$csvPath = Join-Path ([System.IO.Path]::GetTempPath()) "buckets-team.csv"
 spill -Bucket team | Select-Object Name, Role, Score | Export-Csv -Path $csvPath -NoTypeInformation
 Remove-Item $csvPath -Force -ErrorAction SilentlyContinue
 tut-pause

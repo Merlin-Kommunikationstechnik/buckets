@@ -519,6 +519,16 @@ Get-BucketStats
     [<CommonParameters>]
 ```
 
+| Property | Description |
+|----------|-------------|
+| `Name` | Bucket name |
+| `Path` | Full filesystem path to the bucket directory |
+| `ObjectCount` | Number of objects in the bucket |
+| `TotalSize` | Human-readable total size (e.g. "12.5 KB") |
+| `TotalSizeBytes` | (hidden) Raw size in bytes |
+| `OldestObject` | Creation time of the oldest object |
+| `NewestObject` | Creation time of the newest object |
+
 #### Examples
 
 ```powershell
@@ -528,7 +538,7 @@ Get-BucketStats -Bucket users
 Output:
 ```
 Name         : users
-Path         : /path/to/users
+Path         : /home/user/.buckets/users
 ObjectCount  : 5
 TotalSize    : 12.5 KB
 OldestObject : 2024-01-15 10:30:00
@@ -540,6 +550,8 @@ NewestObject : 2024-01-20 14:22:00
 ### Remove-Bucket
 
 Removes one or more buckets and all their contents. Supports wildcards and nested buckets.
+
+Shows a colored summary of buckets to be removed before confirmation, listing object counts and sizes. Skipped buckets (containing non-bucket files) are shown with reasons.
 
 ```powershell
 Remove-Bucket
@@ -558,7 +570,7 @@ Remove-Bucket
 | `-Bucket` | Bucket name(s) or wildcard patterns (`*`, `?`). Nested paths like `"projects/myapp"` |
 | `-Path` | Storage root directory |
 | `-Recurse` | Remove target bucket AND all nested sub-buckets |
-| `-Force` | Skip confirmation prompt |
+| `-Force` | Skip confirmation prompt and remove immediately |
 | `-Quiet` | Suppress progress output |
 | `-WhatIf` | Preview what would be removed |
 
@@ -877,7 +889,7 @@ The provider is created automatically on module import via `Sync-BucketDrive`. R
 | `Get-Bucket` | List buckets (text or tree view) |
 | `Get-BucketKeys` | List object keys in a bucket (Bucket + Key only) |
 | `Get-BucketObjectStats` | Detailed per-object stats (format, type, size, timestamps, compression) |
-| `Get-BucketStats` | Show bucket statistics |
+| `Get-BucketStats` | Show bucket statistics (visible Path, hidden TotalSizeBytes) |
 | `Remove-Bucket` | Remove buckets (supports wildcards, nested, WhatIf) |
 | `Export-Bucket` | Export bucket to archive |
 | `Import-Bucket` | Import objects from archive |
