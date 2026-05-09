@@ -115,11 +115,7 @@ $script:Team = @(
     @{ Name="Alice";   Role="Developer";  Level=3; Skills=@("PowerShell","C#","Azure");        Active=$true;  Score=95; Joined=(Get-Date).AddDays(-365) }
     @{ Name="Bob";     Role="Designer";   Level=2; Skills=@("Figma","CSS","HTML");              Active=$true;  Score=72; Joined=(Get-Date).AddDays(-180) }
     @{ Name="Carol";   Role="PM";         Level=3; Skills=@("Agile","Jira","Confluence");       Active=$true;  Score=88; Joined=(Get-Date).AddDays(-90)  }
-    @{ Name="Dave";    Role="Developer";  Level=1; Skills=@("Python","SQL");                    Active=$false; Score=61; Joined=(Get-Date).AddDays(-30)  }
-    @{ Name="Eve";     Role="Designer";   Level=2; Skills=@("Photoshop","Illustrator");         Active=$true;  Score=79; Joined=(Get-Date).AddDays(-60)  }
     @{ Name="Frank";   Role="Developer";  Level=4; Skills=@("Rust","Go","Kubernetes");          Active=$true;  Score=91; Joined=(Get-Date).AddDays(-500) }
-    @{ Name="Grace";   Role="QA";         Level=2; Skills=@("Selenium","JMeter");               Active=$false; Score=67; Joined=(Get-Date).AddDays(-45)  }
-    @{ Name="Heidi";   Role="Developer";  Level=3; Skills=@("JavaScript","React","Node");       Active=$true;  Score=93; Joined=(Get-Date).AddDays(-200) }
 )
 
 Write-Host ""
@@ -526,12 +522,12 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-$heidi = spill -Bucket team -Key "Heidi"
-"  $($heidi.Name) | Role: $($heidi.Role) | Level: $($heidi.Level) | Rating: $($heidi.Score)"
+$p = spill -Bucket team -Key "Frank"
+"  $($p.Name) | Role: $($p.Role) | Level: $($p.Level) | Rating: $($p.Score)"
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
-$heidi = spill -Bucket team -Key "Heidi"
-"  $($heidi.Name) | Role: $($heidi.Role) | Level: $($heidi.Level) | Rating: $($heidi.Score)"
+$p = spill -Bucket team -Key "Frank"
+"  $($p.Name) | Role: $($p.Role) | Level: $($p.Level) | Rating: $($p.Score)"
 tut-pause
 }
 
@@ -990,10 +986,10 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-Remove-BucketObject -Bucket team -Key "Grace" -WhatIf
+Remove-BucketObject -Bucket team -Key "Bob" -WhatIf
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
-Remove-BucketObject -Bucket team -Key "Grace" -WhatIf
+Remove-BucketObject -Bucket team -Key "Bob" -WhatIf
 tut-pause
 
 Write-Host ""
@@ -1002,11 +998,11 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-Remove-BucketObject -Bucket team -Key "Grace" -Quiet
+Remove-BucketObject -Bucket team -Key "Bob" -Quiet
 spill -Bucket team
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
-Remove-BucketObject -Bucket team -Key "Grace" -Quiet
+Remove-BucketObject -Bucket team -Key "Bob" -Quiet
 spill -Bucket team
 tut-pause
 
