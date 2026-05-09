@@ -2718,18 +2718,19 @@ Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   Set-BucketObject updates existing objects in place. Spill the web servers,
-  add a Maintenance property to each, then pipe back through Set-BucketObject
-  to persist the changes. -PassThru returns the updated objects for review.
+  use Add-Member to attach a Maintenance property (deserialized objects don't
+  accept dot-property assignment), then pipe through Set-BucketObject to
+  persist. -PassThru returns the updated objects for review.
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 spill -Bucket servers -Filter { $_.Role -eq "web" } |
-    ForEach-Object { $_.Maintenance = $true; $_ } |
+    ForEach-Object { $_ | Add-Member Maintenance $true -Force; $_ } |
     Set-BucketObject -PassThru | Select Hostname, Status, Maintenance
 '@
 $script:Servers | fill -Bucket servers -KeyProperty Hostname -Quiet
 spill -Bucket servers -Filter { $_.Role -eq "web" } |
-    ForEach-Object { $_.Maintenance = $true; $_ } |
+    ForEach-Object { $_ | Add-Member Maintenance $true -Force; $_ } |
     Set-BucketObject -PassThru | Select Hostname, Status, Maintenance
 tut-pause
 
