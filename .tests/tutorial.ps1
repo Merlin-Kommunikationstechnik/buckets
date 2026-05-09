@@ -27,6 +27,10 @@ function tut-note($Text) {
     Write-Host "  [$Text]" -ForegroundColor DarkGray
 }
 
+function tut-ok($Text) {
+    Write-Host "  OK $Text" -ForegroundColor Green
+}
+
 function tut-done {
     Write-Host ""
     Write-Host "─────────────────────────────────" -ForegroundColor DarkGray
