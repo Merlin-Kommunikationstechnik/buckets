@@ -2801,8 +2801,6 @@ Get-ChildItem (Get-BucketRoot) -Directory -ErrorAction SilentlyContinue |
 Write-Host ""
 Write-Host @"
 
-  $('##')  Tutorial Complete!  $('##')
-
   What you learned:
 
     fill / spill / dip          — save, read, list
