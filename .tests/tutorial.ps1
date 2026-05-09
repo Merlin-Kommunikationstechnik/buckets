@@ -1859,6 +1859,9 @@ tut-write-code @'
 @{ Name="New York"; Population=8300000; Country="US" } | fill -Bucket "org/us/cities" -Key "New York"
 spill -Bucket "org/eu/*/cities"
 '@
+@{ Name="Berlin"; Population=3600000; Country="DE" } | fill -Bucket "org/eu/de/cities" -Key "Berlin" -Quiet
+@{ Name="London"; Population=8900000; Country="UK" } | fill -Bucket "org/eu/uk/cities" -Key "London" -Quiet
+@{ Name="New York"; Population=8300000; Country="US" } | fill -Bucket "org/us/cities" -Key "New York" -Quiet
 spill -Bucket "org/eu/*/cities"
 tut-pause
 
@@ -1874,6 +1877,9 @@ tut-write-code @'
 @{ Name="New York"; Population=8300000; Country="US" } | fill -Bucket "org/us/cities" -Key "New York"
 spill -Bucket "org/eu/de/cities"
 '@
+@{ Name="Berlin"; Population=3600000; Country="DE" } | fill -Bucket "org/eu/de/cities" -Key "Berlin" -Quiet
+@{ Name="London"; Population=8900000; Country="UK" } | fill -Bucket "org/eu/uk/cities" -Key "London" -Quiet
+@{ Name="New York"; Population=8300000; Country="US" } | fill -Bucket "org/us/cities" -Key "New York" -Quiet
 spill -Bucket "org/eu/de/cities"
 tut-pause
 
@@ -1889,6 +1895,9 @@ tut-write-code @'
 @{ Name="New York"; Population=8300000; Country="US" } | fill -Bucket "org/us/cities" -Key "New York"
 spill -Bucket "org/*/de/*"
 '@
+@{ Name="Berlin"; Population=3600000; Country="DE" } | fill -Bucket "org/eu/de/cities" -Key "Berlin" -Quiet
+@{ Name="London"; Population=8900000; Country="UK" } | fill -Bucket "org/eu/uk/cities" -Key "London" -Quiet
+@{ Name="New York"; Population=8300000; Country="US" } | fill -Bucket "org/us/cities" -Key "New York" -Quiet
 spill -Bucket "org/*/de/*"
 tut-pause
 
@@ -1904,6 +1913,9 @@ tut-write-code @'
 @{ Name="New York"; Population=8300000; Country="US" } | fill -Bucket "org/us/cities" -Key "New York"
 Get-Bucket -Name "org" -Recurse
 '@
+@{ Name="Berlin"; Population=3600000; Country="DE" } | fill -Bucket "org/eu/de/cities" -Key "Berlin" -Quiet
+@{ Name="London"; Population=8900000; Country="UK" } | fill -Bucket "org/eu/uk/cities" -Key "London" -Quiet
+@{ Name="New York"; Population=8300000; Country="US" } | fill -Bucket "org/us/cities" -Key "New York" -Quiet
 Get-Bucket -Name "org" -Recurse
 tut-pause
 
@@ -1919,6 +1931,9 @@ tut-write-code @'
 @{ Name="New York"; Population=8300000; Country="US" } | fill -Bucket "org/us/cities" -Key "New York"
 Get-Bucket -Name "org" -Tree -Objects -MaxFiles 10
 '@
+@{ Name="Berlin"; Population=3600000; Country="DE" } | fill -Bucket "org/eu/de/cities" -Key "Berlin" -Quiet
+@{ Name="London"; Population=8900000; Country="UK" } | fill -Bucket "org/eu/uk/cities" -Key "London" -Quiet
+@{ Name="New York"; Population=8300000; Country="US" } | fill -Bucket "org/us/cities" -Key "New York" -Quiet
 Get-Bucket -Name "org" -Tree -Objects -MaxFiles 10
 tut-pause
 
@@ -1934,6 +1949,9 @@ tut-write-code @'
 @{ Name="New York"; Population=8300000; Country="US" } | fill -Bucket "org/us/cities" -Key "New York"
 Get-ChildItem "buckets:\org\eu\de\cities" | Select-Object Name
 '@
+@{ Name="Berlin"; Population=3600000; Country="DE" } | fill -Bucket "org/eu/de/cities" -Key "Berlin" -Quiet
+@{ Name="London"; Population=8900000; Country="UK" } | fill -Bucket "org/eu/uk/cities" -Key "London" -Quiet
+@{ Name="New York"; Population=8300000; Country="US" } | fill -Bucket "org/us/cities" -Key "New York" -Quiet
 Get-ChildItem "buckets:\org\eu\de\cities" | Select-Object Name
 tut-pause
 
@@ -1949,6 +1967,9 @@ tut-write-code @'
 @{ Name="New York"; Population=8300000; Country="US" } | fill -Bucket "org/us/cities" -Key "New York"
 Get-ChildItem "buckets:\org" -Recurse | Select-Object Name | Format-Table -AutoSize
 '@
+@{ Name="Berlin"; Population=3600000; Country="DE" } | fill -Bucket "org/eu/de/cities" -Key "Berlin" -Quiet
+@{ Name="London"; Population=8900000; Country="UK" } | fill -Bucket "org/eu/uk/cities" -Key "London" -Quiet
+@{ Name="New York"; Population=8300000; Country="US" } | fill -Bucket "org/us/cities" -Key "New York" -Quiet
 Get-ChildItem "buckets:\org" -Recurse | Select-Object Name | Format-Table -AutoSize
 tut-pause
 
@@ -1963,6 +1984,9 @@ tut-write-code @'
 @{ Name="New York"; Population=8300000; Country="US" } | fill -Bucket "org/us/cities" -Key "New York"
 Get-BucketStats -Bucket "org/eu/de/cities"
 '@
+@{ Name="Berlin"; Population=3600000; Country="DE" } | fill -Bucket "org/eu/de/cities" -Key "Berlin" -Quiet
+@{ Name="London"; Population=8900000; Country="UK" } | fill -Bucket "org/eu/uk/cities" -Key "London" -Quiet
+@{ Name="New York"; Population=8300000; Country="US" } | fill -Bucket "org/us/cities" -Key "New York" -Quiet
 Get-BucketStats -Bucket "org/eu/de/cities"
 tut-pause
 
@@ -1978,6 +2002,9 @@ tut-write-code @'
 @{ Name="New York"; Population=8300000; Country="US" } | fill -Bucket "org/us/cities" -Key "New York"
 Get-BucketKeys -Bucket "org/eu/de/cities"
 '@
+@{ Name="Berlin"; Population=3600000; Country="DE" } | fill -Bucket "org/eu/de/cities" -Key "Berlin" -Quiet
+@{ Name="London"; Population=8900000; Country="UK" } | fill -Bucket "org/eu/uk/cities" -Key "London" -Quiet
+@{ Name="New York"; Population=8300000; Country="US" } | fill -Bucket "org/us/cities" -Key "New York" -Quiet
 Get-BucketKeys -Bucket "org/eu/de/cities"
 tut-pause
 
@@ -1993,6 +2020,9 @@ tut-write-code @'
 @{ Name="New York"; Population=8300000; Country="US" } | fill -Bucket "org/us/cities" -Key "New York"
 spill -Bucket "org/*/cities" -Filter { $_.Population -gt 2000000 }
 '@
+@{ Name="Berlin"; Population=3600000; Country="DE" } | fill -Bucket "org/eu/de/cities" -Key "Berlin" -Quiet
+@{ Name="London"; Population=8900000; Country="UK" } | fill -Bucket "org/eu/uk/cities" -Key "London" -Quiet
+@{ Name="New York"; Population=8300000; Country="US" } | fill -Bucket "org/us/cities" -Key "New York" -Quiet
 spill -Bucket "org/*/cities" -Filter { $_.Population -gt 2000000 }
 tut-pause
 
@@ -2008,6 +2038,9 @@ tut-write-code @'
 @{ Name="New York"; Population=8300000; Country="US" } | fill -Bucket "org/us/cities" -Key "New York"
 Remove-Bucket "org" -Recurse -Force -Confirm:$false
 '@
+@{ Name="Berlin"; Population=3600000; Country="DE" } | fill -Bucket "org/eu/de/cities" -Key "Berlin" -Quiet
+@{ Name="London"; Population=8900000; Country="UK" } | fill -Bucket "org/eu/uk/cities" -Key "London" -Quiet
+@{ Name="New York"; Population=8300000; Country="US" } | fill -Bucket "org/us/cities" -Key "New York" -Quiet
 Remove-Bucket "org" -Recurse -Force -Confirm:$false
 tut-pause
 }
