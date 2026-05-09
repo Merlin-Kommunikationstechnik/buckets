@@ -11,7 +11,11 @@ $ErrorActionPreference = "Stop"
 $Sep = '─' * 55
 
 function tut-wipe {
-    Remove-Bucket -Bucket * -Force -ErrorAction SilentlyContinue | Out-Null
+    $current = Get-ChildItem (Get-BucketRoot) -Directory -ErrorAction SilentlyContinue | ForEach-Object Name
+    $newBuckets = $current | Where-Object { $_ -notin $script:initialBuckets }
+    if ($newBuckets) {
+        Remove-Bucket -Bucket $newBuckets -Force -ErrorAction SilentlyContinue | Out-Null
+    }
 }
 
 function tut-pause {
@@ -91,6 +95,7 @@ if (-not (Test-Path $mod)) { throw "Module not found at '$mod'" }
 Remove-Module Buckets -ErrorAction SilentlyContinue
 Import-Module $mod -Force
 $ver = (Get-Module Buckets).Version
+$script:initialBuckets = Get-ChildItem (Get-BucketRoot) -Directory -ErrorAction SilentlyContinue | ForEach-Object Name
 tut-wipe
 
 Write-Host ""
