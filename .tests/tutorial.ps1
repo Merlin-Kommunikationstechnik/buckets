@@ -15,7 +15,7 @@ function tut-wipe {
     $current = Get-ChildItem $root -Directory -ErrorAction SilentlyContinue | ForEach-Object Name
     $toRemove = $current | Where-Object { $_ -notin $script:userBuckets }
     if ($toRemove) {
-        Remove-Bucket -Bucket $toRemove -Force -ErrorAction SilentlyContinue | Out-Null
+        Remove-Bucket -Bucket $toRemove -Force -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
         $script:tutorialBuckets = ($script:tutorialBuckets + $toRemove) | Select-Object -Unique
         $script:tutorialBuckets | Set-Content (Join-Path $root ".tutorial-buckets") -Force
     }
@@ -104,7 +104,7 @@ $script:tutorialBuckets = @()
 if (Test-Path $marker) {
     $stale = Get-Content $marker
     if ($stale) {
-        Remove-Bucket -Bucket $stale -Force -ErrorAction SilentlyContinue | Out-Null
+        Remove-Bucket -Bucket $stale -Force -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
     }
     Remove-Item $marker -Force -ErrorAction SilentlyContinue
 }
