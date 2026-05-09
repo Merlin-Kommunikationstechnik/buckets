@@ -8,7 +8,6 @@
 
 $ErrorActionPreference = "Stop"
 
-$ScriptName = "Buckets Tutorial"
 $Sep = "-" * 60
 
 function tut-pause {
@@ -82,27 +81,24 @@ function tut-write-code($Code) {
 
 # ---------- setup ----------
 
-Write-Host @"
-
-  $('#' * 55)
-  #    $ScriptName
-  #    Buckets — file-based PSObject storage for PowerShell
-  $('#' * 55)
-
-"@ -ForegroundColor Cyan
-
 $mod = Join-Path $PSScriptRoot "../Buckets"
 if (-not (Test-Path $mod)) { throw "Module not found at '$mod'" }
 Remove-Module Buckets -ErrorAction SilentlyContinue
 Import-Module $mod -Force
-Write-Host "  OK Module loaded from $mod (v$(Get-Module Buckets | ForEach-Object Version))" -ForegroundColor Green
+$ver = (Get-Module Buckets).Version
 
-Write-Host "  Storage root: $(Get-BucketRoot)"
-Write-Host "  Type 'q' at any pause to quit the tutorial"
+Write-Host ""
+Write-Host "  $('─' * 55)" -ForegroundColor DarkGray
+Write-Host "  Buckets Tutorial  v$ver" -ForegroundColor White
+Write-Host "  file-based PSObject storage for PowerShell" -ForegroundColor DarkGray
+Write-Host "  $('─' * 55)" -ForegroundColor DarkGray
+Write-Host ""
+Write-Host "  Type 'q' at any pause to quit" -ForegroundColor DarkGray
 Write-Host ""
 
 # ---------- chapter 1: Create ----------
 
+cls
 Write-Host "`n$Sep" -ForegroundColor DarkGray
 Write-Host "  1. Create — fill / New-BucketObject" -ForegroundColor Blue
 Write-Host "$Sep" -ForegroundColor DarkGray
@@ -113,7 +109,7 @@ Write-Host @"
   an explicit key "Alice" with -Key, which becomes its filename on disk. By default,
   Buckets uses a binary format that preserves the full .NET type information, so
   hashtables, custom objects, even FileInfo — all survive the round trip.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $alice = @{ Name = "Alice"; Role = "admin"; Score = 95 }
@@ -128,7 +124,7 @@ Write-Host @"
   Typing -Key for every object gets tedious. Instead, -KeyProperty tells Buckets to
   look at a specific property on your object and use its value as the key. Here, the
   property Name contains "Bob", so the file will be named "Bob.dat" automatically.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $bob = @{ Name = "Bob"; Role = "user"; Score = 72 }
@@ -143,7 +139,7 @@ Write-Host @"
   One of Buckets' superpowers: piping multiple objects at once. Send them one by one
   through the pipeline and Buckets saves each one. Mix -KeyProperty with pipeline
   input for batch inserts — it's the fastest way to load data.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $users = @(
@@ -163,7 +159,7 @@ Write-Host ""
 Write-Host @"
   What if you need a key that isn't a property of the object itself? That's what the
   bare -Key parameter is for — you decide the filename, independent of the data inside.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $data = @{ Source = "import"; Items = 42 }
@@ -178,7 +174,7 @@ Write-Host @"
   JSON mode is for when you want human-readable files — configs, settings, anything you
   might edit by hand. Add -AsJson and Buckets stores a .json file instead of .dat.
   You can open it in any text editor.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $config = @{ Host = "localhost"; Port = 5432 }
@@ -193,7 +189,7 @@ Write-Host @"
   For logs, metrics, or any time-series data, -AsTimestamp auto-generates a unique key
   from the current date and time. No two objects ever get the same name, and chronological
   ordering is built right in.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $events = @(
@@ -213,7 +209,7 @@ Write-Host ""
 Write-Host @"
   Already have an object with the same key? Without -Overwrite, Buckets skips it silently.
   Add -Overwrite to replace the existing object with the new one.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $alice = @{ Name = "Alice"; Role = "admin"; Score = 99 }
@@ -228,7 +224,7 @@ Write-Host @"
   Repetitive data — logs, heartbeats, sensor readings — compresses extremely well. The
   -Compress flag applies GZip before writing, and Buckets auto-detects compressed files
   on read so you never have to think about it.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $logs = 1..30 | ForEach-Object { @{ Seq = $_; Msg = "Heartbeat OK" } }
@@ -240,6 +236,7 @@ tut-pause
 
 # section 1b
 
+cls
 Write-Host "`n$Sep" -ForegroundColor DarkGray
 Write-Host "  1b. Create — quiet, verbose, and edge cases" -ForegroundColor Blue
 Write-Host "$Sep" -ForegroundColor DarkGray
@@ -249,7 +246,7 @@ Write-Host @"
   By default, fill shows a progress bar and a summary when saving. If you're scripting
   or just want silence, -Quiet suppresses all output. For debugging, -Verbose prints
   per-object details.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $data = @{ Msg = "test" }
@@ -264,7 +261,7 @@ Write-Host @"
   Both hashtables and PSCustomObject work with Buckets. The difference: PSCustomObject
   preserves the order of your properties, while a regular hashtable does not guarantee
   ordering.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $custom = [PSCustomObject]@{ Type = "PSCustomObject"; Ordered = $true }
@@ -283,7 +280,7 @@ Write-Host @"
   Buckets handles deeply nested objects with ease. The binary serializer preserves the
   full object graph — nested PSCustomObjects, arrays, and all. This is exactly where
   JSON would fall short.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $nested = [PSCustomObject]@{
@@ -311,7 +308,7 @@ Write-Host ""
 Write-Host @"
   Some characters — like /, :, *, ? — aren't valid in filenames. When you use them in a
   key, Buckets automatically replaces them with underscores so the filesystem stays happy.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $data = @{ Data = "sanitized key" }
@@ -325,7 +322,7 @@ Write-Host ""
 Write-Host @"
   Buckets won't let you create a key that's empty or becomes empty after sanitization.
   It throws an error right away so you don't end up with files you can't find.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 try { @{ X = 1 } | fill -Bucket demo -Key "" -Quiet -ErrorAction Stop }
@@ -341,6 +338,7 @@ tut-pause
 
 # ---------- chapter 2: Read ----------
 
+cls
 Write-Host "`n$Sep" -ForegroundColor DarkGray
 Write-Host "  2. Read — spill / Get-BucketObject" -ForegroundColor Blue
 Write-Host "$Sep" -ForegroundColor DarkGray
@@ -349,7 +347,7 @@ Write-Host ""
 Write-Host @"
   The counterpart to fill is spill (short for Get-BucketObject). With no arguments,
   it returns every object from every bucket — useful for getting the lay of the land.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 spill
@@ -361,7 +359,7 @@ Write-Host ""
 Write-Host @"
   Most of the time you want objects from a specific bucket. Pass -Bucket to narrow
   the search to just one bucket.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 spill -Bucket users
@@ -373,7 +371,7 @@ Write-Host ""
 Write-Host @"
   If you know the key, pass it positionally as the first argument. Keys are matched
   case-insensitively and as prefixes, so "alice" matches "Alice" too.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 spill "Alice" -Bucket users
@@ -385,7 +383,7 @@ Write-Host ""
 Write-Host @"
   For an exact match, just pass the full key name. Keys are still matched
   case-insensitively, so you don't need to worry about capitalization.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 spill "external-ref" -Bucket users
@@ -397,7 +395,7 @@ Write-Host ""
 Write-Host @"
   Case doesn't matter. "alice" finds "Alice" because all key matching is
   case-insensitive. No more guessing about capitalization.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 spill "alice" -Bucket users
@@ -409,7 +407,7 @@ Write-Host ""
 Write-Host @"
   What happens when there's no match? Buckets returns nothing with a warning —
   no crash, just a helpful nudge that nothing was found.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 spill -Bucket users -Key "NoOneHere"
@@ -421,7 +419,7 @@ Write-Host ""
 Write-Host @"
   You can use wildcards in bucket names too. "use*" matches any bucket starting
   with "use", making it easy to search groups of related buckets.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 spill -Bucket "use*"
@@ -433,7 +431,7 @@ Write-Host ""
 Write-Host @"
   Pass multiple bucket names as an array. Buckets searches each one and combines
   the results into a single list.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 spill -Bucket "users", "logs"
@@ -446,7 +444,7 @@ Write-Host @"
   Every object retrieved by Buckets carries metadata: _BucketName, _BucketKey, and
   _BucketFile. These tell you exactly where the object came from — useful for
   pipeline operations where context matters.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 spill -Bucket users -Key "Bob" | Select-Object _BucketName, _BucketKey, _BucketFile
@@ -458,7 +456,7 @@ Write-Host ""
 Write-Host @"
   Since spill returns regular PowerShell objects, you can pipe them into Select-Object,
   Sort-Object, Group-Object — anything you'd do with any other object in PowerShell.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 spill -Bucket users | Select-Object Name, Role, Score | Sort-Object Score -Descending
@@ -470,7 +468,7 @@ Write-Host ""
 Write-Host @"
   Access individual properties using standard dot notation. Store the result in a
   variable and work with it like any other PowerShell object.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $bob = spill -Bucket users -Key "Bob"
@@ -482,6 +480,7 @@ tut-pause
 
 # section 2a
 
+cls
 Write-Host "`n$Sep" -ForegroundColor DarkGray
 Write-Host "  2a. Read — filtering with -Match" -ForegroundColor Blue
 Write-Host "$Sep" -ForegroundColor DarkGray
@@ -491,7 +490,7 @@ Write-Host @"
   -Match is Buckets' built-in filter for exact equality. Pass a hashtable of property
   names and values, and Buckets returns only objects where every property matches
   exactly.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 spill -Bucket users -Match @{ Role = "admin" }
@@ -504,7 +503,7 @@ Write-Host @"
   Special case: matching against $null. If a property is $null on the object, or doesn't
   exist at all, it counts as a match for $null. Useful for finding objects with missing
   fields.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 spill -Bucket users -Match @{ Deleted = $null }
@@ -516,7 +515,7 @@ Write-Host ""
 Write-Host @"
   You can match on multiple properties at once — think of it as AND logic. All conditions
   must be true for an object to be returned.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 spill -Bucket users -Match @{ Role = "user"; Score = 72 }
@@ -528,7 +527,7 @@ Write-Host ""
 Write-Host @"
   Let's create some fresh data to demonstrate -Match with mixed types. Strings, numbers,
   and booleans all work as match criteria.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $data = @(
@@ -552,7 +551,7 @@ Write-Host ""
 Write-Host @"
   String matching with -Match is exact and case-insensitive. "red" matches "red" but
   also "Red", "RED", and so on.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $items = @(
@@ -576,7 +575,7 @@ Write-Host ""
 Write-Host @"
   -Match only looks at top-level properties. If you need to drill into nested data like
   $_.Settings.Enabled, you'll need -Filter instead.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $data = @{ Id = "a"; Meta = @{ Name = "inner" } }
@@ -590,6 +589,7 @@ tut-pause
 
 # section 2b
 
+cls
 Write-Host "`n$Sep" -ForegroundColor DarkGray
 Write-Host "  2b. Read — comparison with -Filter" -ForegroundColor Blue
 Write-Host "$Sep" -ForegroundColor DarkGray
@@ -599,7 +599,7 @@ Write-Host @"
   For anything beyond exact equality, reach for -Filter. It takes a scriptblock where
   $_ represents each object. You can use any PowerShell operator: -gt, -lt, -match,
   -like, -and, -or, and more.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 spill -Bucket users -Filter { $_.Score -gt 80 }
@@ -611,7 +611,7 @@ Write-Host ""
 Write-Host @"
   Less than or equal works the same way. Think of -Filter as writing a Where-Object
   clause that runs inside Buckets rather than in the pipeline.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 spill -Bucket users -Filter { $_.Score -le 70 }
@@ -623,7 +623,7 @@ Write-Host ""
 Write-Host @"
   Pattern matching with -match uses regular expressions. Here we find names starting
   with A or D using the regex "^[AD]".
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 spill -Bucket users -Filter { $_.Name -match "^[AD]" }
@@ -635,7 +635,7 @@ Write-Host ""
 Write-Host @"
   The -like operator uses wildcard patterns. "*o*" matches any name containing the
   letter "o" anywhere in the string.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 spill -Bucket users -Filter { $_.Name -like "*o*" }
@@ -646,7 +646,7 @@ tut-pause
 Write-Host ""
 Write-Host @"
   Combine conditions with -and. Both must be true: score above 70 AND role is "user".
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 spill -Bucket users -Filter { $_.Score -gt 70 -and $_.Role -eq "user" }
@@ -657,7 +657,7 @@ tut-pause
 Write-Host ""
 Write-Host @"
   Combine conditions with -or. Either can be true: role is "admin" OR score above 80.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 spill -Bucket users -Filter { $_.Role -eq "admin" -or $_.Score -gt 80 }
@@ -669,7 +669,7 @@ Write-Host ""
 Write-Host @"
   String length checks work because you're writing real PowerShell expressions. Here
   we find objects where the Value property is longer than 5 characters.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $items = @(
@@ -691,7 +691,7 @@ Write-Host ""
 Write-Host @"
   Date comparisons too — no special syntax needed. Compare DateTime properties with
   -gt, -lt, or any other operator, just like you would in regular PowerShell.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $events = @(
@@ -715,7 +715,7 @@ Write-Host ""
 Write-Host @"
   Nested properties are accessible via standard dot notation inside the scriptblock.
   $_.Settings.Enabled drills into the Settings hashtable to check the Enabled flag.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $items = @(
@@ -737,7 +737,7 @@ Write-Host ""
 Write-Host @"
   Omitting -Bucket makes -Filter run against all buckets at once. This is a cross-bucket
   query — useful for finding objects anywhere in your data.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 spill -Filter { $_.Score -gt 80 }
@@ -747,6 +747,7 @@ tut-pause
 
 # section 2c
 
+cls
 Write-Host "`n$Sep" -ForegroundColor DarkGray
 Write-Host "  2c. Read — pagination with -First / -Skip" -ForegroundColor Blue
 Write-Host "$Sep" -ForegroundColor DarkGray
@@ -755,7 +756,7 @@ Write-Host ""
 Write-Host @"
   Pagination is built right in. -First limits the number of results returned. Useful
   for previewing large datasets without loading everything.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 spill -Bucket users -First 2
@@ -767,7 +768,7 @@ Write-Host ""
 Write-Host @"
   Combine -Skip with -First to jump ahead. -Skip 1 -First 2 skips the first result and
   returns the next two — a classic paging pattern.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 spill -Bucket users -Skip 1 -First 2
@@ -779,7 +780,7 @@ Write-Host ""
 Write-Host @"
   -First and -Skip work together with -Filter too. Here we filter for scores above 60,
   then take only the first 3 results.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 spill -Bucket users -Filter { $_.Score -gt 60 } -First 3
@@ -789,6 +790,7 @@ tut-pause
 
 # ---------- chapter 3: Update ----------
 
+cls
 Write-Host "`n$Sep" -ForegroundColor DarkGray
 Write-Host "  3. Update — Set-BucketObject" -ForegroundColor Blue
 Write-Host "$Sep" -ForegroundColor DarkGray
@@ -798,7 +800,7 @@ Write-Host @"
   Set-BucketObject updates an existing object in place. When piped from spill, it
   auto-detects the bucket and key from the _BucketName and _BucketKey metadata —
   no need to specify them again.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 spill -Bucket users -Key "Bob" | ForEach-Object {
@@ -818,7 +820,7 @@ Write-Host ""
 Write-Host @"
   Without pipeline metadata, specify -Bucket and -Key explicitly. Pass the modified
   object through -InputObject.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $obj = spill -Bucket users -Key "Carol"
@@ -835,7 +837,7 @@ Write-Host @"
   Need to update just one field? Pipe a hashtable with only the properties you want
   to change. Buckets merges it with the existing object — partial updates work
   seamlessly.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $patch = @{ Email = "alice@new.com" }
@@ -849,7 +851,7 @@ Write-Host ""
 Write-Host @"
   New properties are automatically added. If the property doesn't exist on the
   original object, it gets appended without affecting existing fields.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $patch = @{ Phone = "555-0100" }
@@ -863,7 +865,7 @@ Write-Host ""
 Write-Host @"
   Properties you don't mention in the update stay untouched. Only the keys in your
   patch hashtable are modified.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $patch = @{ City = "Portland" }
@@ -877,7 +879,7 @@ Write-Host ""
 Write-Host @"
   Format preservation: JSON objects stay as .json, binary objects stay as .dat.
   Set-BucketObject always writes back in the original format.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $patch = @{ UpdatedAt = Get-Date; Host = "prod-server" }
@@ -891,7 +893,7 @@ Write-Host ""
 Write-Host @"
   What happens if you pipe to Set-BucketObject without metadata AND without explicit
   -Bucket/-Key? It throws — it has no idea where to save.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 try { @{ X = 1 } | Set-BucketObject -Quiet -ErrorAction Stop }
@@ -903,6 +905,7 @@ tut-pause
 
 # ---------- chapter 4: Delete ----------
 
+cls
 Write-Host "`n$Sep" -ForegroundColor DarkGray
 Write-Host "  4. Delete — Remove-BucketObject" -ForegroundColor Blue
 Write-Host "$Sep" -ForegroundColor DarkGray
@@ -911,7 +914,7 @@ Write-Host ""
 Write-Host @"
   -WhatIf previews what would be deleted without actually removing anything. Always
   safe to try before you delete.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 Remove-BucketObject -Bucket users -Key "external-ref" -WhatIf
@@ -922,7 +925,7 @@ tut-pause
 Write-Host ""
 Write-Host @"
   Delete by key is straightforward. Pass the key of the object you want to remove.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 Remove-BucketObject -Bucket users -Key "external-ref" -Quiet
@@ -934,7 +937,7 @@ Write-Host ""
 Write-Host @"
   Trying to delete a non-existent key issues a warning but doesn't throw an error.
   Buckets is forgiving about missing objects.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 Remove-BucketObject -Bucket users -Key "no-one-here" -WarningVariable w -WarningAction SilentlyContinue 2>$null
@@ -946,7 +949,7 @@ Write-Host ""
 Write-Host @"
   You must specify either -Key, -All, or a filter. Without one of these, the parameter
   set validation rejects the command.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 Remove-BucketObject -Bucket users -ErrorAction SilentlyContinue
@@ -958,7 +961,7 @@ Write-Host ""
 Write-Host @"
   -Match works with deletion too. Delete all objects matching certain criteria in
   one command.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $data = @(
@@ -982,7 +985,7 @@ Write-Host ""
 Write-Host @"
   -Filter works the same way — delete objects that pass the scriptblock condition.
   Here, any object with Score below 50 gets removed.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $scores = @(
@@ -1005,7 +1008,7 @@ tut-pause
 Write-Host ""
 Write-Host @"
   -All deletes every object in the bucket. A clean slate.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $data = @(
@@ -1029,7 +1032,7 @@ Write-Host ""
 Write-Host @"
   -PassThru returns metadata about what was deleted. Useful for logging, auditing,
   or confirmation messages.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $tmp = @{ Data = "gone" }
@@ -1043,6 +1046,7 @@ tut-pause
 
 # ---------- chapter 5: Copy, Rename, Move ----------
 
+cls
 Write-Host "`n$Sep" -ForegroundColor DarkGray
 Write-Host "  5. Object Operations — Copy, Rename, Move" -ForegroundColor Blue
 Write-Host "$Sep" -ForegroundColor DarkGray
@@ -1051,7 +1055,7 @@ Write-Host ""
 Write-Host @"
   Copy an object within the same bucket but with a different key. The original stays
   untouched — this is a true copy, not a move.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 Copy-BucketObject -Bucket users -Key "Alice" -DestinationKey "Alice-Backup" -Quiet
@@ -1064,7 +1068,7 @@ tut-pause
 Write-Host ""
 Write-Host @"
   Copy across buckets too. Specify -DestinationBucket to copy to a different bucket.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 Copy-BucketObject -Bucket users -Key "Alice" -DestinationBucket archive -Quiet
@@ -1078,7 +1082,7 @@ Write-Host ""
 Write-Host @"
   -PassThru on Copy-BucketObject returns metadata about the destination: source,
   destination, and new key — useful for pipeline logging.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 Copy-BucketObject -Bucket users -Key "Alice" -DestinationKey "Alice-pass" -PassThru -Quiet
@@ -1092,7 +1096,7 @@ Write-Host ""
 Write-Host @"
   Rename changes the key of an existing object in place. The format (.dat or .json)
   is preserved through the rename.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $tmp = @{ Data = "rename me" }
@@ -1108,7 +1112,7 @@ Write-Host ""
 Write-Host @"
   Renaming a JSON object preserves the .json extension too. Format is always
   maintained — you never have to worry about it.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $tmp = @{ Format = "json" }
@@ -1124,7 +1128,7 @@ Write-Host ""
 Write-Host @"
   Move combines copy + delete in one operation. The object is copied to the
   destination and removed from the source.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $data = @(
@@ -1144,7 +1148,7 @@ Write-Host ""
 Write-Host @"
   Move with rename: specify a different key in the target bucket to rename
   as part of the move.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $tmp = @{ Data = "moved+renamed" }
@@ -1160,7 +1164,7 @@ Write-Host ""
 Write-Host @"
   -PassThru on Move returns metadata about both the source and destination
   objects.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $tmp = @{ X = 1 }
@@ -1176,7 +1180,7 @@ Write-Host ""
 Write-Host @"
   All three operations — Copy, Rename, Move — support -PassThru. Chain them
   together for auditable object management.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $tmp = @{ X = 1 }
@@ -1194,6 +1198,7 @@ tut-pause
 
 # ---------- chapter 6: Bucket Management ----------
 
+cls
 Write-Host "`n$Sep" -ForegroundColor DarkGray
 Write-Host "  6. Bucket Management — dip / Get-Bucket" -ForegroundColor Blue
 Write-Host "$Sep" -ForegroundColor DarkGray
@@ -1202,7 +1207,7 @@ Write-Host ""
 Write-Host @"
   dip (short for Get-Bucket) lists all your buckets with their object counts and
   timestamps. It's the first command to run when you want an overview.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 dip
@@ -1214,7 +1219,7 @@ Write-Host ""
 Write-Host @"
   Filter buckets by name with a substring match. "user" matches "users" and any
   other bucket with "user" in the name.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 dip "user"
@@ -1226,7 +1231,7 @@ Write-Host ""
 Write-Host @"
   Get-BucketStats shows detailed statistics: object count, total size on disk, and
   creation/modification timestamps for a specific bucket.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 Get-BucketStats -Bucket users
@@ -1238,7 +1243,7 @@ Write-Host ""
 Write-Host @"
   Get-BucketKeys lists every key in a bucket along with its format (.dat or .json)
   and file size. Useful for inventorying what's stored.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 Get-BucketKeys -Bucket users
@@ -1249,7 +1254,7 @@ tut-pause
 Write-Host ""
 Write-Host @"
   Filter keys by pattern with -Match. "A*" matches all keys starting with "A".
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 Get-BucketKeys -Bucket users -Match "A*"
@@ -1261,7 +1266,7 @@ Write-Host ""
 Write-Host @"
   Get-BucketKeys across all buckets with the wildcard "*" — a complete inventory
   of every object stored.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 Get-BucketKeys -Bucket "*"
@@ -1273,7 +1278,7 @@ Write-Host ""
 Write-Host @"
   The -Tree parameter renders your buckets as a visual directory tree. -MaxFiles
   limits how many files are shown per bucket.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 Get-Bucket -Tree -MaxFiles 10
@@ -1285,7 +1290,7 @@ Write-Host ""
 Write-Host @"
   Without -Objects, the tree shows buckets only — a clean structural view without
   individual files cluttering the output.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 Get-Bucket -Tree
@@ -1297,7 +1302,7 @@ Write-Host ""
 Write-Host @"
   Add -Objects to include individual files in the tree. Every leaf object is
   visible.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 Get-Bucket -Tree -Objects
@@ -1309,7 +1314,7 @@ Write-Host ""
 Write-Host @"
   The -Raw switch returns tree objects as pipeable data instead of formatted text.
   Useful for further processing or custom display.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 Get-Bucket -Tree -Raw | Select-Object -First 2
@@ -1321,7 +1326,7 @@ Write-Host ""
 Write-Host @"
   -Depth limits how many levels of nesting the tree traverses. Depth 1 shows
   only top-level buckets.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 Get-Bucket -Tree -Depth 1
@@ -1333,7 +1338,7 @@ Write-Host ""
 Write-Host @"
   Pipe Raw tree output to ConvertTo-Json for a structured JSON representation of
   your bucket hierarchy.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 Get-Bucket -Tree -Raw | ConvertTo-Json -Depth 5 | Select-Object -First 5
@@ -1345,7 +1350,7 @@ Write-Host ""
 Write-Host @"
   Select Name and ObjectCount from dip for a clean table of buckets with their
   object counts.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 dip | Select-Object Name, ObjectCount
@@ -1355,6 +1360,7 @@ tut-pause
 
 # section 6a
 
+cls
 Write-Host "`n$Sep" -ForegroundColor DarkGray
 Write-Host "  6a. Remove-Bucket — safety and wildcards" -ForegroundColor Blue
 Write-Host "$Sep" -ForegroundColor DarkGray
@@ -1362,7 +1368,7 @@ Write-Host "$Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
   -WhatIf previews what would be removed without actually deleting anything.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 Remove-Bucket "users" -WhatIf
@@ -1373,7 +1379,7 @@ tut-pause
 Write-Host ""
 Write-Host @"
   Wildcard patterns work too. Preview removing all buckets matching a pattern.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 Remove-Bucket "config" -WhatIf
@@ -1385,7 +1391,7 @@ Write-Host ""
 Write-Host @"
   Remove a single bucket. Make sure it contains only .dat/.json files — Buckets
   refuses to remove directories with other file types.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $tmp = @{ A = 1 }
@@ -1402,7 +1408,7 @@ Write-Host @"
   Safety first: Remove-Bucket checks that a directory contains only bucket files.
   If it finds unexpected file types (like .exe), it skips the directory with a
   warning rather than deleting it.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $badDir = Join-Path (Get-BucketRoot) "not-a-bucket"
@@ -1420,6 +1426,7 @@ tut-pause
 
 # ---------- chapter 7: Export / Import ----------
 
+cls
 Write-Host "`n$Sep" -ForegroundColor DarkGray
 Write-Host "  7. Export / Import — Export-Bucket, Import-Bucket" -ForegroundColor Blue
 Write-Host "$Sep" -ForegroundColor DarkGray
@@ -1431,7 +1438,7 @@ Write-Host ""
 Write-Host @"
   Export saves an entire bucket to an archive file. CLIXML (the default) preserves
   .NET type information for perfect round-trip fidelity.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 Export-Bucket -Bucket users -OutputFile (Join-Path $exportDir "users.clixml") -Quiet
@@ -1443,7 +1450,7 @@ Write-Host ""
 Write-Host @"
   Export to JSON for human-readable archives. Same data, different format —
   useful when you need to inspect or share the data outside of PowerShell.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 Export-Bucket -Bucket users -OutputFile (Join-Path $exportDir "users.json") -AsJson -Quiet
@@ -1455,7 +1462,7 @@ Write-Host ""
 Write-Host @"
   Wildcards work for batch exports. Export multiple buckets that match a pattern
   into a single archive file.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 Export-Bucket -Bucket "user*","config" -OutputFile (Join-Path $exportDir "multi-export.clixml") -Quiet
@@ -1467,7 +1474,7 @@ Write-Host ""
 Write-Host @"
   Import restores from a CLIXML archive into a new bucket. Objects are recreated
   with their original keys and data.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 Import-Bucket -Bucket restored -InputFile (Join-Path $exportDir "users.clixml") -Quiet
@@ -1479,7 +1486,7 @@ Write-Host ""
 Write-Host @"
   Import from JSON works the same way. The JSON file is parsed and each object
   is stored in the specified bucket.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 Import-Bucket -Bucket restored-json -InputFile (Join-Path $exportDir "users.json") -AsJson -Quiet
@@ -1491,7 +1498,7 @@ Write-Host ""
 Write-Host @"
   -Overwrite on import replaces existing keys instead of skipping them. With
   -Overwrite, a second import doesn't create duplicates.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 Import-Bucket -Bucket import-over -InputFile (Join-Path $exportDir "users.clixml") -Quiet
@@ -1505,7 +1512,7 @@ Write-Host ""
 Write-Host @"
   JSON archives are plain text. Open them in any editor to inspect or modify
   before importing.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 Get-Content (Join-Path $exportDir "users.json") -Raw | ConvertFrom-Json | ConvertTo-Json -Depth 5 | Select-Object -First 3
@@ -1517,6 +1524,7 @@ Remove-Item $exportDir -Recurse -Force -ErrorAction SilentlyContinue
 
 # ---------- chapter 8: PSDrive ----------
 
+cls
 Write-Host "`n$Sep" -ForegroundColor DarkGray
 Write-Host "  8. PSDrive — navigate buckets like a filesystem" -ForegroundColor Blue
 Write-Host "$Sep" -ForegroundColor DarkGray
@@ -1525,7 +1533,7 @@ Write-Host ""
 Write-Host @"
   Buckets registers a custom PSDrive called "buckets:". You can navigate it with
   cd, Get-ChildItem, Get-Content — just like any other drive.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 Get-PSDrive -Name buckets
@@ -1537,7 +1545,7 @@ Write-Host ""
 Write-Host @"
   List all buckets with Get-ChildItem on the drive root. Each bucket appears as
   a container (directory).
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 Get-ChildItem "buckets:\"
@@ -1549,7 +1557,7 @@ Write-Host ""
 Write-Host @"
   Format the output with Select-Object for a cleaner table of bucket names,
   sizes, and timestamps.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 Get-ChildItem "buckets:\" | Select-Object Name, Length, LastWriteTime | Format-Table -AutoSize
@@ -1561,7 +1569,7 @@ Write-Host ""
 Write-Host @"
   Enter a bucket and list its objects. Each stored object appears as a file in
   the PSDrive.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 Get-ChildItem "buckets:\users" | Select-Object Name, Length, LastWriteTime
@@ -1572,7 +1580,7 @@ tut-pause
 Write-Host ""
 Write-Host @"
   Filter by PSIsContainer to see only buckets (containers) or only leaf objects.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 Get-ChildItem "buckets:\" | Where-Object { $_.PSIsContainer }
@@ -1584,7 +1592,7 @@ Write-Host ""
 Write-Host @"
   Read an object with Get-Content (or cat). It deserializes the stored data back
   into a live PowerShell object — no manual parsing needed.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 Get-Content "buckets:\users\Alice" | Select-Object Name, Role, Score
@@ -1596,7 +1604,7 @@ Write-Host ""
 Write-Host @"
   The full round-trip in the PSDrive: read with Get-Content, modify the property,
   write back with Set-Content. Works just like a file but with live objects.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $obj = Get-Content "buckets:\users\Carol"
@@ -1611,7 +1619,7 @@ tut-pause
 Write-Host ""
 Write-Host @"
   Remove-Item works in the PSDrive too. Delete an object by its path.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 Copy-BucketObject -Bucket users -Key "Alice" -DestinationKey "psdrive-remove-test" -Quiet
@@ -1625,7 +1633,7 @@ Write-Host ""
 Write-Host @"
   Test-Path checks whether an object exists in the drive. Useful for conditional
   logic.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 Test-Path "buckets:\users\Alice"
@@ -1639,7 +1647,7 @@ Write-Host ""
 Write-Host @"
   Copy-Item works across buckets in the PSDrive. Copy objects from one bucket
   to another using familiar filesystem commands.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 Copy-Item "buckets:\users\Alice" "buckets:\users\Alice-pscopy" -Force
@@ -1653,11 +1661,12 @@ Write-Host ""
 Write-Host @"
   Tab completion works throughout the PSDrive. Try typing "buckets:\" and pressing
   Tab — it completes bucket names and object keys.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 tut-pause
 
 # ---------- chapter 9: Nested Buckets ----------
 
+cls
 Write-Host "`n$Sep" -ForegroundColor DarkGray
 Write-Host "  9. Nested Buckets — directory hierarchy" -ForegroundColor Blue
 Write-Host "$Sep" -ForegroundColor DarkGray
@@ -1667,7 +1676,7 @@ Write-Host @"
   Bucket names with forward slashes create nested directory structures on disk.
   This is how you organize data hierarchically — like folders within folders,
   each level a real subdirectory.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $deCities = @(
@@ -1721,7 +1730,7 @@ Write-Host ""
 Write-Host @"
   Wildcards work in nested paths. "org/eu/*/cities" matches city buckets under
   any EU country — Germany, UK, and so on.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 spill -Bucket "org/eu/*/cities"
@@ -1733,7 +1742,7 @@ Write-Host ""
 Write-Host @"
   Query a nested path directly by its full bucket name. Same spill command,
   just a deeper path.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 spill -Bucket "org/eu/de/cities"
@@ -1745,7 +1754,7 @@ Write-Host ""
 Write-Host @"
   Wildcards at multiple levels for deep queries. "org/*/de/*" matches anything
   under any country's "de" sub-bucket.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 spill -Bucket "org/*/de/*"
@@ -1757,7 +1766,7 @@ Write-Host ""
 Write-Host @"
   Get-Bucket with -Recurse shows the full nested structure. It traverses all
   sub-buckets recursively.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 Get-Bucket -Name "org" -Recurse
@@ -1769,7 +1778,7 @@ Write-Host ""
 Write-Host @"
   Tree view visualizes the nesting hierarchy. Each level is indented, making
   it easy to see the organizational structure at a glance.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 Get-Bucket -Name "org" -Tree -Objects -MaxFiles 10
@@ -1781,7 +1790,7 @@ Write-Host ""
 Write-Host @"
   PSDrive supports nested paths too. Navigate into org/eu/de/cities with
   Get-ChildItem just like you would with a filesystem path.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 Get-ChildItem "buckets:\org\eu\de\cities" | Select-Object Name
@@ -1793,7 +1802,7 @@ Write-Host ""
 Write-Host @"
   Recursive listing in PSDrive with the -Recurse flag. Shows everything under
   the org tree.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 Get-ChildItem "buckets:\org" -Recurse | Select-Object Name | Format-Table -AutoSize
@@ -1804,7 +1813,7 @@ tut-pause
 Write-Host ""
 Write-Host @"
   Stats work on nested buckets too. Get-BucketStats handles the full path.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 Get-BucketStats -Bucket "org/eu/de/cities"
@@ -1816,7 +1825,7 @@ Write-Host ""
 Write-Host @"
   List keys in a nested bucket with Get-BucketKeys. Same command, just a
   deeper bucket path.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 Get-BucketKeys -Bucket "org/eu/de/cities"
@@ -1828,7 +1837,7 @@ Write-Host ""
 Write-Host @"
   Combine wildcards with -Filter for cross-bucket queries in nested hierarchies.
   Find all cities with population over 2 million across any country.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 spill -Bucket "org/*/cities" -Filter { $_.Population -gt 2000000 }
@@ -1840,7 +1849,7 @@ Write-Host ""
 Write-Host @"
   Remove-Bucket with -Recurse deletes an entire nested tree. A single command
   removes org and everything under it.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 Remove-Bucket "org" -Recurse -Force -Confirm:$false
@@ -1850,6 +1859,7 @@ tut-pause
 
 # ---------- chapter 10: Pipeline & Sleek Patterns ----------
 
+cls
 Write-Host "`n$Sep" -ForegroundColor DarkGray
 Write-Host "  10. Sleek Pipeline Patterns" -ForegroundColor Blue
 Write-Host "$Sep" -ForegroundColor DarkGray
@@ -1858,7 +1868,7 @@ Write-Host ""
 Write-Host @"
   Buckets is designed for pipeline-first usage. Most cmdlets accept pipeline
   input and emit objects with metadata. Here's how to chain them together.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 1..5 | ForEach-Object { @{ Name = "item-$_"; Value = $_ * 10 } } |
@@ -1872,7 +1882,7 @@ Write-Host ""
 Write-Host @"
   Chain multiple operations in one pipeline: filter objects with -Filter, modify
   them with ForEach-Object, and save back with Set-BucketObject. All in one flow.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 spill -Bucket users -Filter { $_.Role -eq "user" } |
@@ -1888,7 +1898,7 @@ Write-Host ""
 Write-Host @"
   Filter, sort, and project in one pipeline. Where-Object filters, Sort-Object
   orders, Select-Object picks the properties you want.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 spill -Bucket users | Where-Object { $_.Score -gt 70 } |
@@ -1904,7 +1914,7 @@ Write-Host ""
 Write-Host @"
   Cross-bucket query: iterate over multiple buckets and filter each one, then
   project the results with bucket metadata included.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $buckets = @("users", "config", "demo")
@@ -1919,7 +1929,7 @@ tut-pause
 Write-Host ""
 Write-Host @"
   Group by bucket name to see how objects are distributed across your buckets.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 spill | Group-Object _BucketName | Select-Object Name, Count
@@ -1931,7 +1941,7 @@ Write-Host ""
 Write-Host @"
   Group-Object aggregates data within a bucket. Here we count how many users
   have each role.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 spill -Bucket users | Group-Object Role | Select-Object Name, Count
@@ -1943,7 +1953,7 @@ Write-Host ""
 Write-Host @"
   Measure-Object gives you statistics — average, minimum, maximum — for any
   numeric property across your objects.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $scores = spill -Bucket users | Measure-Object Score -Average -Minimum -Maximum
@@ -1957,7 +1967,7 @@ Write-Host ""
 Write-Host @"
   Export spilled data to CSV for use in Excel, Python, or any tool that reads
   tabular data.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $csvPath = Join-Path $env:TEMP "buckets-users.csv"
@@ -1973,7 +1983,7 @@ Write-Host ""
 Write-Host @"
   -Filter runs inside Buckets (faster), Where-Object runs in the pipeline (more
   flexible). Both produce the same result — choose based on your needs.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 spill -Bucket users -Filter { $_.Score -gt 80 }
@@ -1987,7 +1997,7 @@ Write-Host ""
 Write-Host @"
   Custom formatting with ForEach-Object. Transform each object into a formatted
   string for display or logging.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 spill -Bucket users | ForEach-Object {
@@ -2002,7 +2012,7 @@ tut-pause
 Write-Host ""
 Write-Host @"
   Conditional pipeline: filter first, then convert only matching objects to JSON.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 spill -Bucket users -Filter { $_.Score -gt 80 } | ConvertTo-Json -Depth 5
@@ -2014,7 +2024,7 @@ Write-Host ""
 Write-Host @"
   Save then immediately read to verify round-trip integrity. What you write is
   exactly what you get back.
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $tmp = @{ Id = "smoke"; Value = 42 }
@@ -2026,6 +2036,7 @@ tut-pause
 
 # ---------- chapter 11: Aliases Quick Reference ----------
 
+cls
 Write-Host "`n$Sep" -ForegroundColor DarkGray
 Write-Host "  11. Aliases & Shortcuts Reference" -ForegroundColor Blue
 Write-Host "$Sep" -ForegroundColor DarkGray
@@ -2054,11 +2065,12 @@ Write-Host @"
     _BucketKey    → -Key      (on Set-BucketObject)
     _BucketFile   → full path to the stored file
 
-"@ -ForegroundColor DarkGray
+"@ -ForegroundColor White
 tut-pause
 
 # ---------- cleanup ----------
 
+cls
 Write-Host "`n$Sep" -ForegroundColor DarkGray
 Write-Host "  Cleanup — Remove tutorial data" -ForegroundColor Blue
 Write-Host "$Sep" -ForegroundColor DarkGray
