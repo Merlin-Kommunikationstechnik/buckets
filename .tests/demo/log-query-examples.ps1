@@ -165,9 +165,37 @@ Get-BucketObject -Bucket "logs/eventlog/Application/$todayStr" |
     Group-Object ProviderName | Select-Object @{N="Source";E="Name"}, Count |
     Sort-Object Count -Descending | Format-Table -AutoSize | Out-Host
 
-# ---------- 10. Cross-bucket — all criticals across syslog+eventlog ----------
+# ---------- 10. Security — failed logons ----------
 
-Write-Host "═══ 10. All critical/Error events (syslog+eventlog)  ═══" -ForegroundColor Cyan
+Write-Host "═══ 10. Security — failed logon attempts (ID 4625)  ════" -ForegroundColor Cyan
+Get-BucketObject -Bucket "logs/eventlog/Security/*" -Recurse -Filter { $_.Id -eq 4625 } |
+    Select-Object @{N="Date";E={$_.TimeCreated.Substring(0,10)}}, ProviderName, Id |
+    Format-Table -AutoSize | Out-Host
+
+# ---------- 11. System — shutdown events ----------
+
+Write-Host "═══ 11. System — unexpected shutdowns  ══════════════════" -ForegroundColor Cyan
+Get-BucketObject -Bucket "logs/eventlog/System/*" -Recurse -Filter { $_.Id -in @(41, 6008, 1074) } |
+    Select-Object @{N="Date";E={$_.TimeCreated}}, @{N="Id";E="Id"}, @{N="Msg";E={$_.Message.Substring(0,[Math]::Min(50,$_.Message.Length))}} |
+    Format-Table -AutoSize | Out-Host
+
+# ---------- 12. EventLog — service state changes ----------
+
+Write-Host "═══ 12. EventLog — service state changes (ID 7036)  ════" -ForegroundColor Cyan
+Get-BucketObject -Bucket "logs/eventlog/System/*" -Recurse -Filter { $_.Id -eq 7036 } |
+    Select-Object @{N="Date";E={$_.TimeCreated.Substring(0,10)}}, @{N="Svc";E={$_.Message}}, ProviderName |
+    Format-Table -AutoSize | Out-Host
+
+# ---------- 13. Event ID histogram across all logs ----------
+
+Write-Host "═══ 13. Event ID histogram (all eventlogs)  ═════════════" -ForegroundColor Cyan
+Get-BucketObject -Bucket "logs/eventlog/*/*" -Recurse |
+    Group-Object Id | Select-Object @{N="EventId";E="Name"}, Count |
+    Sort-Object Count -Descending | Format-Table -AutoSize | Out-Host
+
+# ---------- 14. Cross-bucket — all criticals across syslog+eventlog ----------
+
+Write-Host "═══ 14. All critical/Error events (syslog+eventlog)  ═══" -ForegroundColor Cyan
 Write-Host "  syslog critical:" -ForegroundColor DarkGray
 Get-BucketObject -Bucket "logs/syslog/*/*" -Recurse -Filter { $_.Severity -eq "crit" } -First 5 |
     Select-Object @{N="Source";E={"syslog"}}, Hostname, Message |
@@ -177,18 +205,18 @@ Get-BucketObject -Bucket "logs/eventlog/*/$todayStr" -Filter { $_.LevelDisplayNa
     Select-Object @{N="Source";E={$_.ProviderName}}, @{N="Host";E={"localhost"}}, @{N="Message";E={$_.Message}} |
     Format-Table -AutoSize | Out-Host
 
-# ---------- 11. Export both to CSV ----------
+# ---------- 15. Export both to CSV ----------
 
-Write-Host "═══ 11. Export errors to CSV  ══════════════════════════" -ForegroundColor Cyan
+Write-Host "═══ 15. Export errors to CSV  ══════════════════════════" -ForegroundColor Cyan
 $tmpExport = Join-Path ([System.IO.Path]::GetTempPath()) "all-errors.csv"
 Get-BucketObject -Bucket "logs/*/*/*" -Recurse -Filter { $_.Severity -in @("err","crit") -or $_.LevelDisplayName -eq "Error" } |
     Select-Object * | Export-Csv -Path $tmpExport -NoTypeInformation
 Write-Host "  Exported $((Import-Csv $tmpExport).Count) rows → $tmpExport" -ForegroundColor DarkGray
 Write-Host ""
 
-# ---------- 12. Rotation (dry run) ----------
+# ---------- 16. Rotation (dry run) ----------
 
-Write-Host "═══ 12. Rotation preview (syslog+eventlog)  ════════════" -ForegroundColor Cyan
+Write-Host "═══ 16. Rotation preview (syslog+eventlog)  ════════════" -ForegroundColor Cyan
 Write-Host "  syslog:" -ForegroundColor DarkGray
 Remove-Bucket -Bucket "logs/syslog/*/$twoDaysAgo" -Recurse -WhatIf 2>&1 | Out-Host
 Write-Host "  eventlog:" -ForegroundColor DarkGray
