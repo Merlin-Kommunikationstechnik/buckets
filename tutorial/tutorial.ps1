@@ -278,12 +278,29 @@ while ($true) {
         }
 
         if ($hasCode) {
-            if ($hasSetup) { Write-Host "  · Lesson" -ForegroundColor DarkGray }
+            Write-Host "  · Lesson" -ForegroundColor DarkGray
             $script:lastCode = $lesson.Code
             tut-write-code $lesson.Code
             try {
-                $output = Invoke-Expression $lesson.Code 2>&1
-                if ($output) { $output | Out-Host }
+                $codeTokens = $null; $codeErrors = $null
+                $codeAst = [System.Management.Automation.Language.Parser]::ParseInput($lesson.Code, [ref]$codeTokens, [ref]$codeErrors)
+                $statements = @($codeAst.EndBlock.Statements)
+                if ($statements.Count -gt 1) {
+                    $first = $true
+                    foreach ($stmt in $statements) {
+                        $output = Invoke-Expression $stmt.Extent.Text 2>&1
+                        if ($output) {
+                            if (-not $first) { Write-Host "" }
+                            $first = $false
+                            Write-Host ($output | Out-String).Trim()
+                        }
+                    }
+                } else {
+                    $output = Invoke-Expression $lesson.Code 2>&1
+                    if ($output) {
+                        Write-Host ($output | Out-String).Trim()
+                    }
+                }
             } catch {
                 Write-Host "  Error: $_" -ForegroundColor Red
             }
