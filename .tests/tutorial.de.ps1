@@ -225,11 +225,11 @@ if ($mode -eq "0" -or $mode -eq "4") {
     cls
     # ========== Einfuehrung ==========
     Write-Host ""
-    Write-Host "  0. Einfuehrung" -ForegroundColor Gray
+    Write-Host "  0. Einfuehrung" -ForegroundColor Magenta
     Write-Host "  $Sep" -ForegroundColor DarkGray
     Write-Host ""
 
-    Write-Host "  0.1 Was ist Buckets?" -ForegroundColor DarkGray
+    Write-Host "  0.1 Was ist Buckets?" -ForegroundColor Gray
     Write-Host "  $Sep" -ForegroundColor DarkGray
     Write-Host ""
     Write-Host @"
@@ -249,7 +249,7 @@ if ($mode -eq "0" -or $mode -eq "4") {
     tut-pause
 
     Write-Host ""
-    Write-Host "  0.2 Warum Buckets?" -ForegroundColor DarkGray
+    Write-Host "  0.2 Warum Buckets?" -ForegroundColor Gray
     Write-Host "  $Sep" -ForegroundColor DarkGray
     Write-Host ""
     Write-Host @"
@@ -264,7 +264,7 @@ if ($mode -eq "0" -or $mode -eq "4") {
     tut-pause
 
     Write-Host ""
-    Write-Host "  0.3 Wie funktioniert es?" -ForegroundColor DarkGray
+    Write-Host "  0.3 Wie funktioniert es?" -ForegroundColor Gray
     Write-Host "  $Sep" -ForegroundColor DarkGray
     Write-Host ""
     Write-Host @"
@@ -310,10 +310,10 @@ if ($Beg) {
 # ---------- chapter 1: Create ----------
 
 Write-Host ""
-Write-Host "  1. Erstellen" -ForegroundColor Gray
+Write-Host "  1. Erstellen" -ForegroundColor Magenta
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
-Write-Host "  1.1 Ihr erstes Objekt speichern" -ForegroundColor DarkGray
+Write-Host "  1.1 Ihr erstes Objekt speichern" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -332,7 +332,7 @@ New-BucketObject -InputObject $alice -Bucket users -Key "Alice" | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  1.2 -KeyProperty für automatische Benennung" -ForegroundColor DarkGray
+Write-Host "  1.2 -KeyProperty für automatische Benennung" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -350,7 +350,7 @@ $bob | fill -Bucket users -KeyProperty Name | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  1.3 Mehrere Objekte über die Pipeline" -ForegroundColor DarkGray
+Write-Host "  1.3 Mehrere Objekte über die Pipeline" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -374,7 +374,7 @@ $users | fill -Bucket users -KeyProperty Name | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  1.4 Expliziter -Key für unabhängige Benennung" -ForegroundColor DarkGray
+Write-Host "  1.4 Expliziter -Key für unabhängige Benennung" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -391,7 +391,7 @@ $data | fill -Bucket users -Key "external-ref" | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  1.5 JSON-Ausgabe mit -AsJson" -ForegroundColor DarkGray
+Write-Host "  1.5 JSON-Ausgabe mit -AsJson" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -409,7 +409,7 @@ $config | fill -Bucket config -Key "app-config" -AsJson | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  1.6 Zeitstempel-Schlüssel mit -AsTimestamp" -ForegroundColor DarkGray
+Write-Host "  1.6 Zeitstempel-Schlüssel mit -AsTimestamp" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -433,7 +433,7 @@ $events | fill -Bucket events -AsTimestamp | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  1.7 überschreiben verhindern mit -Overwrite" -ForegroundColor DarkGray
+Write-Host "  1.7 überschreiben verhindern mit -Overwrite" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -450,7 +450,7 @@ New-BucketObject -InputObject $alice -Bucket users -Key "Alice" -Overwrite | Out
 tut-pause
 
 Write-Host ""
-Write-Host "  1.8 Kompression mit -Compress" -ForegroundColor DarkGray
+Write-Host "  1.8 Kompression mit -Compress" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -473,10 +473,10 @@ if ($Beg) {
 
 cls
 Write-Host ""
-Write-Host "  1b. Erstellen — leise, ausführlich und Randfälle" -ForegroundColor Gray
+Write-Host "  1b. Erstellen — leise, ausführlich und Randfälle" -ForegroundColor Magenta
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
-Write-Host "  1b.1 Leise und ausführliche Ausgabe" -ForegroundColor DarkGray
+Write-Host "  1b.1 Leise und ausführliche Ausgabe" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -494,7 +494,7 @@ $data | fill -Bucket demo -Key "verbosity-demo" -Quiet
 tut-pause
 
 Write-Host ""
-Write-Host "  1b.2 PSCustomObject vs. Hashtable" -ForegroundColor DarkGray
+Write-Host "  1b.2 PSCustomObject vs. Hashtable" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -515,7 +515,7 @@ $hash | fill -Bucket types -Key "hash" | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  1b.3 Tief verschachtelte Objekte" -ForegroundColor DarkGray
+Write-Host "  1b.3 Tief verschachtelte Objekte" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -547,7 +547,7 @@ $nested | fill -Bucket nested -Key "deep" | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  1b.4 Sonderzeichen in Schlüsseln" -ForegroundColor DarkGray
+Write-Host "  1b.4 Sonderzeichen in Schlüsseln" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -564,7 +564,7 @@ $data | fill -Bucket special -Key "my/file:name*test" | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  1b.5 Leere Schlüssel nach Bereinigung" -ForegroundColor DarkGray
+Write-Host "  1b.5 Leere Schlüssel nach Bereinigung" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -586,10 +586,10 @@ if ($Beg) {
 
 cls
 Write-Host ""
-Write-Host "  2. Lesen — scoop / Get-BucketObject" -ForegroundColor Gray
+Write-Host "  2. Lesen — scoop / Get-BucketObject" -ForegroundColor Magenta
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
-Write-Host "  2.1 Alle Objekte anzeigen (scoop)" -ForegroundColor DarkGray
+Write-Host "  2.1 Alle Objekte anzeigen (scoop)" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -605,7 +605,7 @@ scoop | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  2.2 Nach Bucket filtern" -ForegroundColor DarkGray
+Write-Host "  2.2 Nach Bucket filtern" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -621,7 +621,7 @@ scoop -Bucket team | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  2.3 Bucket-Suche mit Positionsparameter" -ForegroundColor DarkGray
+Write-Host "  2.3 Bucket-Suche mit Positionsparameter" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -637,7 +637,7 @@ scoop team | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  2.4 Schlüsselsuche nach Name" -ForegroundColor DarkGray
+Write-Host "  2.4 Schlüsselsuche nach Name" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -653,7 +653,7 @@ scoop team "Alice" | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  2.5 Exakte Schlüsselsuche" -ForegroundColor DarkGray
+Write-Host "  2.5 Exakte Schlüsselsuche" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -668,7 +668,7 @@ scoop team -Key "Frank" | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  2.6 Groß-/Kleinschreibung ignorieren" -ForegroundColor DarkGray
+Write-Host "  2.6 Groß-/Kleinschreibung ignorieren" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -684,7 +684,7 @@ scoop team -Key "alice" | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  2.7 Fehlende Schlüssel behandeln" -ForegroundColor DarkGray
+Write-Host "  2.7 Fehlende Schlüssel behandeln" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -700,7 +700,7 @@ scoop -Bucket team -Key "Zoe" | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  2.8 Platzhalter in Bucket-Namen" -ForegroundColor DarkGray
+Write-Host "  2.8 Platzhalter in Bucket-Namen" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -717,7 +717,7 @@ scoop -Bucket "t*" | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  2.9 Mehrere Buckets abfragen" -ForegroundColor DarkGray
+Write-Host "  2.9 Mehrere Buckets abfragen" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -734,7 +734,7 @@ scoop -Bucket "team", "staff" | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  2.10 Metadaten-Eigenschaften" -ForegroundColor DarkGray
+Write-Host "  2.10 Metadaten-Eigenschaften" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -751,7 +751,7 @@ scoop -Bucket team -Key "Bob" | Select _BucketName, _BucketKey, _BucketFile | Ou
 tut-pause
 
 Write-Host ""
-Write-Host "  2.11 An Select-Object übergeben" -ForegroundColor DarkGray
+Write-Host "  2.11 An Select-Object übergeben" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -767,7 +767,7 @@ scoop -Bucket team | Sort Score -Descending | Select Name, Role, Score | Out-Hos
 tut-pause
 
 Write-Host ""
-Write-Host "  2.12 Zugriff mit Punktnotation" -ForegroundColor DarkGray
+Write-Host "  2.12 Zugriff mit Punktnotation" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -796,10 +796,10 @@ if ($Beg) {
 
 cls
 Write-Host ""
-Write-Host "  2a. Lesen — filtern mit -Match" -ForegroundColor Gray
+Write-Host "  2a. Lesen — filtern mit -Match" -ForegroundColor Magenta
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
-Write-Host "  2a.1 Exakte übereinstimmung" -ForegroundColor DarkGray
+Write-Host "  2a.1 Exakte übereinstimmung" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -815,7 +815,7 @@ scoop -Bucket team -Match @{ Role = "Developer" } | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  2a.2 Null-Werte abgleichen" -ForegroundColor DarkGray
+Write-Host "  2a.2 Null-Werte abgleichen" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -831,7 +831,7 @@ scoop -Bucket team -Match @{ Deleted = $null } | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  2a.3 Mehrere Eigenschaften abgleichen" -ForegroundColor DarkGray
+Write-Host "  2a.3 Mehrere Eigenschaften abgleichen" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -847,7 +847,7 @@ scoop -Bucket team -Match @{ Level = 3; Active = $true } | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  2a.4 Gemischte Typen abgleichen" -ForegroundColor DarkGray
+Write-Host "  2a.4 Gemischte Typen abgleichen" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -874,7 +874,7 @@ scoop -Bucket match-demo -Match @{ Count = 5; Active = $true } | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  2a.5 Groß-/Kleinschreibung bei Zeichenketten" -ForegroundColor DarkGray
+Write-Host "  2a.5 Groß-/Kleinschreibung bei Zeichenketten" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -901,7 +901,7 @@ scoop -Bucket match-demo -Match @{ Color = "red" } | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  2a.6 Nur oberste Eigenschaften" -ForegroundColor DarkGray
+Write-Host "  2a.6 Nur oberste Eigenschaften" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -925,10 +925,10 @@ if ($Beg) {
 
 cls
 Write-Host ""
-Write-Host "  2b. Lesen — vergleichen mit -Filter" -ForegroundColor Gray
+Write-Host "  2b. Lesen — vergleichen mit -Filter" -ForegroundColor Magenta
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
-Write-Host "  2b.1 Filtern mit Scriptblock" -ForegroundColor DarkGray
+Write-Host "  2b.1 Filtern mit Scriptblock" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -945,7 +945,7 @@ scoop -Bucket team -Filter { $_.Score -gt 80 } | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  2b.2 Kleiner-oder-gleich-Vergleich" -ForegroundColor DarkGray
+Write-Host "  2b.2 Kleiner-oder-gleich-Vergleich" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -961,7 +961,7 @@ scoop -Bucket team -Filter { $_.Score -le 90 } | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  2b.3 Regex-Mustervergleich" -ForegroundColor DarkGray
+Write-Host "  2b.3 Regex-Mustervergleich" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -977,7 +977,7 @@ scoop -Bucket team -Filter { $_.Name -match "^[AE]" } | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  2b.4 Platzhaltersuche mit -like" -ForegroundColor DarkGray
+Write-Host "  2b.4 Platzhaltersuche mit -like" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -993,7 +993,7 @@ scoop -Bucket team -Filter { $_.Name -like "*e*" } | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  2b.5 Bedingungen mit -and kombinieren" -ForegroundColor DarkGray
+Write-Host "  2b.5 Bedingungen mit -and kombinieren" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1009,7 +1009,7 @@ scoop -Bucket team -Filter { $_.Score -gt 80 -and $_.Role -eq "Developer" } | Ou
 tut-pause
 
 Write-Host ""
-Write-Host "  2b.6 Bedingungen mit -or kombinieren" -ForegroundColor DarkGray
+Write-Host "  2b.6 Bedingungen mit -or kombinieren" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1024,7 +1024,7 @@ scoop -Bucket team -Filter { $_.Role -eq "Designer" -or $_.Level -gt 3 } | Out-H
 tut-pause
 
 Write-Host ""
-Write-Host "  2b.7 Zeichenkettenlängen prüfen" -ForegroundColor DarkGray
+Write-Host "  2b.7 Zeichenkettenlängen prüfen" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1049,7 +1049,7 @@ scoop -Bucket str-test -Filter { $_.Value.Length -gt 5 } | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  2b.8 Datumsvergleiche" -ForegroundColor DarkGray
+Write-Host "  2b.8 Datumsvergleiche" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1067,7 +1067,7 @@ scoop -Bucket team -Filter { $_.Joined -gt $cutoff } | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  2b.9 Zugriff auf verschachtelte Eigenschaften" -ForegroundColor DarkGray
+Write-Host "  2b.9 Zugriff auf verschachtelte Eigenschaften" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1083,7 +1083,7 @@ scoop -Bucket team -Filter { $_.Skills -contains "Rust" } | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  2b.10 Bucket-übergreifendes Filtern" -ForegroundColor DarkGray
+Write-Host "  2b.10 Bucket-übergreifendes Filtern" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1106,10 +1106,10 @@ if ($Beg) {
 
 cls
 Write-Host ""
-Write-Host "  2c. Lesen — Seitenwechsel mit -First / -Skip" -ForegroundColor Gray
+Write-Host "  2c. Lesen — Seitenwechsel mit -First / -Skip" -ForegroundColor Magenta
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
-Write-Host "  2c.1 Ergebnisse begrenzen mit -First" -ForegroundColor DarkGray
+Write-Host "  2c.1 Ergebnisse begrenzen mit -First" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1125,7 +1125,7 @@ scoop -Bucket team -First 3 | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  2c.2 Ergebnisse überspringen mit -Skip" -ForegroundColor DarkGray
+Write-Host "  2c.2 Ergebnisse überspringen mit -Skip" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1141,7 +1141,7 @@ scoop -Bucket team -Skip 1 -First 3 | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  2c.3 Filtern mit Seitenwechsel" -ForegroundColor DarkGray
+Write-Host "  2c.3 Filtern mit Seitenwechsel" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1162,10 +1162,10 @@ if ($Beg) {
 
 cls
 Write-Host ""
-Write-Host "  3. Aktualisieren — Set-BucketObject" -ForegroundColor Gray
+Write-Host "  3. Aktualisieren — Set-BucketObject" -ForegroundColor Magenta
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
-Write-Host "  3.1 Aktualisierung über die Pipeline" -ForegroundColor DarkGray
+Write-Host "  3.1 Aktualisierung über die Pipeline" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1190,7 +1190,7 @@ scoop -Bucket team -Key "Bob" | ForEach-Object {
 tut-pause
 
 Write-Host ""
-Write-Host "  3.2 Expliziter Bucket und Schlüssel" -ForegroundColor DarkGray
+Write-Host "  3.2 Expliziter Bucket und Schlüssel" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1210,7 +1210,7 @@ Set-BucketObject -Bucket team -Key "Carol" -InputObject $obj -Quiet
 tut-pause
 
 Write-Host ""
-Write-Host "  3.3 Teilaktualisierung mit Hashtable" -ForegroundColor DarkGray
+Write-Host "  3.3 Teilaktualisierung mit Hashtable" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1229,7 +1229,7 @@ $patch | Set-BucketObject -Bucket team -Key "Alice" -Quiet
 tut-pause
 
 Write-Host ""
-Write-Host "  3.4 Neue Eigenschaften hinzufügen" -ForegroundColor DarkGray
+Write-Host "  3.4 Neue Eigenschaften hinzufügen" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1247,7 +1247,7 @@ $patch | Set-BucketObject -Bucket team -Key "Alice" -Quiet
 tut-pause
 
 Write-Host ""
-Write-Host "  3.5 Unveränderte Eigenschaften bewahren" -ForegroundColor DarkGray
+Write-Host "  3.5 Unveränderte Eigenschaften bewahren" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1265,7 +1265,7 @@ $patch | Set-BucketObject -Bucket team -Key "Alice" -Quiet
 tut-pause
 
 Write-Host ""
-Write-Host "  3.6 Formaterhaltung" -ForegroundColor DarkGray
+Write-Host "  3.6 Formaterhaltung" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1286,7 +1286,7 @@ $patch | Set-BucketObject -Bucket config -Key "db-settings" -Quiet
 tut-pause
 
 Write-Host ""
-Write-Host "  3.7 Warnung bei fehlenden Metadaten" -ForegroundColor DarkGray
+Write-Host "  3.7 Warnung bei fehlenden Metadaten" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1308,10 +1308,10 @@ if ($Beg) {
 
 cls
 Write-Host ""
-Write-Host "  4. Löschen — Remove-BucketObject" -ForegroundColor Gray
+Write-Host "  4. Löschen — Remove-BucketObject" -ForegroundColor Magenta
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
-Write-Host "  4.1 Vorschau mit -WhatIf" -ForegroundColor DarkGray
+Write-Host "  4.1 Vorschau mit -WhatIf" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1327,7 +1327,7 @@ Remove-BucketObject -Bucket team -Key "Bob" -WhatIf
 tut-pause
 
 Write-Host ""
-Write-Host "  4.2 Nach Schlüssel löschen" -ForegroundColor DarkGray
+Write-Host "  4.2 Nach Schlüssel löschen" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1344,7 +1344,7 @@ scoop -Bucket team | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  4.3 Nicht existenten Schlüssel löschen" -ForegroundColor DarkGray
+Write-Host "  4.3 Nicht existenten Schlüssel löschen" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1360,7 +1360,7 @@ Remove-BucketObject -Bucket team -Key "Zoe"
 tut-pause
 
 Write-Host ""
-Write-Host "  4.4 Schlüssel-oder-alle-Erfordernis" -ForegroundColor DarkGray
+Write-Host "  4.4 Schlüssel-oder-alle-Erfordernis" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1375,7 +1375,7 @@ Remove-BucketObject -Bucket team -ErrorAction SilentlyContinue
 tut-pause
 
 Write-Host ""
-Write-Host "  4.5 Löschen mit -Match" -ForegroundColor DarkGray
+Write-Host "  4.5 Löschen mit -Match" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1393,7 +1393,7 @@ scoop -Bucket team | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  4.6 Löschen mit -Filter" -ForegroundColor DarkGray
+Write-Host "  4.6 Löschen mit -Filter" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1411,7 +1411,7 @@ scoop -Bucket team | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  4.7 Alles löschen mit -All" -ForegroundColor DarkGray
+Write-Host "  4.7 Alles löschen mit -All" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1428,7 +1428,7 @@ scoop -Bucket team | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  4.8 Passthru-Metadaten" -ForegroundColor DarkGray
+Write-Host "  4.8 Passthru-Metadaten" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1452,10 +1452,10 @@ if ($Adv) {
 
 cls
 Write-Host ""
-Write-Host "  5. Objektoperationen — Kopieren, Umbenennen, Verschieben" -ForegroundColor Gray
+Write-Host "  5. Objektoperationen — Kopieren, Umbenennen, Verschieben" -ForegroundColor Magenta
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
-Write-Host "  5.1 Innerhalb eines Buckets kopieren" -ForegroundColor DarkGray
+Write-Host "  5.1 Innerhalb eines Buckets kopieren" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1473,7 +1473,7 @@ scoop -Bucket team -Key "Alice-Backup" | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  5.2 Bucket-übergreifend kopieren" -ForegroundColor DarkGray
+Write-Host "  5.2 Bucket-übergreifend kopieren" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1490,7 +1490,7 @@ scoop -Bucket archive -Key "Alice" | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  5.3 Kopieren mit Passthru" -ForegroundColor DarkGray
+Write-Host "  5.3 Kopieren mit Passthru" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1508,7 +1508,7 @@ Remove-BucketObject -Bucket team -Key "Alice-pass" -Quiet
 tut-pause
 
 Write-Host ""
-Write-Host "  5.4 Ein Objekt umbenennen" -ForegroundColor DarkGray
+Write-Host "  5.4 Ein Objekt umbenennen" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1527,7 +1527,7 @@ Rename-BucketObject -Bucket tmp -Key "old-name" -NewKey "new-name" -Quiet
 tut-pause
 
 Write-Host ""
-Write-Host "  5.5 Umbenennen erhält Format" -ForegroundColor DarkGray
+Write-Host "  5.5 Umbenennen erhält Format" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1546,7 +1546,7 @@ Rename-BucketObject -Bucket tmp-json -Key "json-old" -NewKey "json-new" -PassThr
 tut-pause
 
 Write-Host ""
-Write-Host "  5.6 Zwischen Buckets verschieben" -ForegroundColor DarkGray
+Write-Host "  5.6 Zwischen Buckets verschieben" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1569,7 +1569,7 @@ Move-BucketObject -Bucket source -Key "obj1" -DestinationBucket dest -Quiet
 tut-pause
 
 Write-Host ""
-Write-Host "  5.7 Verschieben mit Umbenennung" -ForegroundColor DarkGray
+Write-Host "  5.7 Verschieben mit Umbenennung" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1588,7 +1588,7 @@ Move-BucketObject -Bucket origin -Key "orig-key" -DestinationBucket final -Desti
 tut-pause
 
 Write-Host ""
-Write-Host "  5.8 Verschieben mit Passthru" -ForegroundColor DarkGray
+Write-Host "  5.8 Verschieben mit Passthru" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1606,7 +1606,7 @@ Move-BucketObject -Bucket move-src -Key "m-pass" -DestinationBucket move-dst -Pa
 tut-pause
 
 Write-Host ""
-Write-Host "  5.9 Passthru bei allen Operationen" -ForegroundColor DarkGray
+Write-Host "  5.9 Passthru bei allen Operationen" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1634,10 +1634,10 @@ if ($Adv) {
 
 cls
 Write-Host ""
-Write-Host "  6. Bucket-Verwaltung — dip / Get-Bucket" -ForegroundColor Gray
+Write-Host "  6. Bucket-Verwaltung — dip / Get-Bucket" -ForegroundColor Magenta
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
-Write-Host "  6.1 Buckets mit dip auflisten" -ForegroundColor DarkGray
+Write-Host "  6.1 Buckets mit dip auflisten" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1655,7 +1655,7 @@ dip | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  6.2 Nach Namen filtern" -ForegroundColor DarkGray
+Write-Host "  6.2 Nach Namen filtern" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1673,7 +1673,7 @@ dip "team" | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  6.3 Bucket-Statistiken" -ForegroundColor DarkGray
+Write-Host "  6.3 Bucket-Statistiken" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1689,7 +1689,7 @@ Get-BucketStats -Bucket team | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  6.4 Schlüssel auflisten" -ForegroundColor DarkGray
+Write-Host "  6.4 Schlüssel auflisten" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1706,7 +1706,7 @@ Get-BucketKeys -Bucket team | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  6.5 Objekt-Statistiken" -ForegroundColor DarkGray
+Write-Host "  6.5 Objekt-Statistiken" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1722,7 +1722,7 @@ Get-BucketObjectStats -Bucket team | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  6.6 Schlüssel nach Muster filtern" -ForegroundColor DarkGray
+Write-Host "  6.6 Schlüssel nach Muster filtern" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1737,7 +1737,7 @@ Get-BucketKeys -Bucket team -Match "A*" | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  6.7 Schlüssel über alle Buckets" -ForegroundColor DarkGray
+Write-Host "  6.7 Schlüssel über alle Buckets" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1755,7 +1755,7 @@ Get-BucketKeys -Bucket "*" | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  6.8 Baumansicht" -ForegroundColor DarkGray
+Write-Host "  6.8 Baumansicht" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1773,7 +1773,7 @@ Get-Bucket -Tree -MaxFiles 10 | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  6.9 Nur-Bucket-Baum" -ForegroundColor DarkGray
+Write-Host "  6.9 Nur-Bucket-Baum" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1791,7 +1791,7 @@ Get-Bucket -Tree | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  6.10 Baum mit Objekten" -ForegroundColor DarkGray
+Write-Host "  6.10 Baum mit Objekten" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1808,7 +1808,7 @@ Get-Bucket -Tree -Objects | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  6.11 Rohe Baumausgabe" -ForegroundColor DarkGray
+Write-Host "  6.11 Rohe Baumausgabe" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1826,7 +1826,7 @@ Get-Bucket -Tree -Raw | Select-Object -First 2 | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  6.12 Tiefenbegrenzter Baum" -ForegroundColor DarkGray
+Write-Host "  6.12 Tiefenbegrenzter Baum" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1844,7 +1844,7 @@ Get-Bucket -Tree -Depth 1 | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  6.13 Baum als JSON" -ForegroundColor DarkGray
+Write-Host "  6.13 Baum als JSON" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1862,7 +1862,7 @@ Get-Bucket -Tree -Raw | ConvertTo-Json -Depth 5 | Select-Object -First 5 | Out-H
 tut-pause
 
 Write-Host ""
-Write-Host "  6.14 Saubere übersichtstabelle" -ForegroundColor DarkGray
+Write-Host "  6.14 Saubere übersichtstabelle" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1885,10 +1885,10 @@ if ($Adv) {
 
 cls
 Write-Host ""
-Write-Host "  6a. Remove-Bucket — Sicherheit und Platzhalter" -ForegroundColor Gray
+Write-Host "  6a. Remove-Bucket — Sicherheit und Platzhalter" -ForegroundColor Magenta
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
-Write-Host "  6a.1 Entfernen Vorschau" -ForegroundColor DarkGray
+Write-Host "  6a.1 Entfernen Vorschau" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1903,7 +1903,7 @@ Remove-Bucket "team" -WhatIf
 tut-pause
 
 Write-Host ""
-Write-Host "  6a.2 Platzhalter-Vorschau" -ForegroundColor DarkGray
+Write-Host "  6a.2 Platzhalter-Vorschau" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1918,7 +1918,7 @@ Remove-Bucket "t*" -WhatIf
 tut-pause
 
 Write-Host ""
-Write-Host "  6a.3 Einzelnen Bucket entfernen" -ForegroundColor DarkGray
+Write-Host "  6a.3 Einzelnen Bucket entfernen" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1937,7 +1937,7 @@ Remove-Bucket temp-remove -Force -Confirm:$false | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  6a.4 Sicherheitsprüfung beim Entfernen" -ForegroundColor DarkGray
+Write-Host "  6a.4 Sicherheitsprüfung beim Entfernen" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1966,12 +1966,12 @@ if ($Adv) {
 
 cls
 Write-Host ""
-Write-Host "  7. Export / Import — Export-Bucket, Import-Bucket" -ForegroundColor Gray
+Write-Host "  7. Export / Import — Export-Bucket, Import-Bucket" -ForegroundColor Magenta
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 
 Write-Host ""
-Write-Host "  7.1 Export nach CLIXML" -ForegroundColor DarkGray
+Write-Host "  7.1 Export nach CLIXML" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -1991,7 +1991,7 @@ Export-Bucket -Bucket team -OutputFile (Join-Path $exportDir "team.clixml") -Qui
 tut-pause
 
 Write-Host ""
-Write-Host "  7.2 Export nach JSON" -ForegroundColor DarkGray
+Write-Host "  7.2 Export nach JSON" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2007,7 +2007,7 @@ Export-Bucket -Bucket team -OutputFile (Join-Path $exportDir "team.json") -AsJso
 tut-pause
 
 Write-Host ""
-Write-Host "  7.3 Platzhalter-Export" -ForegroundColor DarkGray
+Write-Host "  7.3 Platzhalter-Export" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2025,7 +2025,7 @@ Export-Bucket -Bucket "t*","config" -OutputFile (Join-Path $exportDir "multi-exp
 tut-pause
 
 Write-Host ""
-Write-Host "  7.4 Import aus CLIXML" -ForegroundColor DarkGray
+Write-Host "  7.4 Import aus CLIXML" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2040,7 +2040,7 @@ Import-Bucket -Bucket restored -InputFile (Join-Path $exportDir "team.clixml") -
 tut-pause
 
 Write-Host ""
-Write-Host "  7.5 Import aus JSON" -ForegroundColor DarkGray
+Write-Host "  7.5 Import aus JSON" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2055,7 +2055,7 @@ Import-Bucket -Bucket restored-json -InputFile (Join-Path $exportDir "team.json"
 tut-pause
 
 Write-Host ""
-Write-Host "  7.6 überschreiben beim Import" -ForegroundColor DarkGray
+Write-Host "  7.6 überschreiben beim Import" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2072,7 +2072,7 @@ Import-Bucket -Bucket import-over -InputFile (Join-Path $exportDir "team.clixml"
 tut-pause
 
 Write-Host ""
-Write-Host "  7.7 JSON-Archive inspizieren" -ForegroundColor DarkGray
+Write-Host "  7.7 JSON-Archive inspizieren" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2094,10 +2094,10 @@ if ($Adv) {
 
 cls
 Write-Host ""
-Write-Host "  8. PSDrive — Buckets wie ein Dateisystem durchsuchen" -ForegroundColor Gray
+Write-Host "  8. PSDrive — Buckets wie ein Dateisystem durchsuchen" -ForegroundColor Magenta
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
-Write-Host "  8.1 Das buckets:-Laufwerk" -ForegroundColor DarkGray
+Write-Host "  8.1 Das buckets:-Laufwerk" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2112,7 +2112,7 @@ Get-PSDrive -Name buckets | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  8.2 Buckets auflisten" -ForegroundColor DarkGray
+Write-Host "  8.2 Buckets auflisten" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2130,7 +2130,7 @@ Get-ChildItem "buckets:\" | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  8.3 Bucket-Ausgabe formatieren" -ForegroundColor DarkGray
+Write-Host "  8.3 Bucket-Ausgabe formatieren" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2148,7 +2148,7 @@ Get-ChildItem "buckets:\" | Select-Object Name, Length, LastWriteTime | Format-T
 tut-pause
 
 Write-Host ""
-Write-Host "  8.4 Objekte in einem Bucket durchsuchen" -ForegroundColor DarkGray
+Write-Host "  8.4 Objekte in einem Bucket durchsuchen" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2164,7 +2164,7 @@ Get-ChildItem "buckets:\team" | Select-Object Name, Length, LastWriteTime | Out-
 tut-pause
 
 Write-Host ""
-Write-Host "  8.5 Container filtern" -ForegroundColor DarkGray
+Write-Host "  8.5 Container filtern" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2181,7 +2181,7 @@ Get-ChildItem "buckets:\" | Where-Object { $_.PSIsContainer } | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  8.6 Objekte lesen" -ForegroundColor DarkGray
+Write-Host "  8.6 Objekte lesen" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2197,7 +2197,7 @@ Get-Content "buckets:\team\Alice" | Select-Object Name, Role, Score | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  8.7 Round-Trip: lesen, ändern, schreiben" -ForegroundColor DarkGray
+Write-Host "  8.7 Round-Trip: lesen, ändern, schreiben" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2217,7 +2217,7 @@ $obj | Set-Content "buckets:\team\Carol"
 tut-pause
 
 Write-Host ""
-Write-Host "  8.8 Objekte entfernen" -ForegroundColor DarkGray
+Write-Host "  8.8 Objekte entfernen" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2234,7 +2234,7 @@ Remove-Item "buckets:\team\psdrive-remove-test" -Force
 tut-pause
 
 Write-Host ""
-Write-Host "  8.9 Existenz prüfen" -ForegroundColor DarkGray
+Write-Host "  8.9 Existenz prüfen" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2251,7 +2251,7 @@ Test-Path "buckets:\team\NonExistent"
 tut-pause
 
 Write-Host ""
-Write-Host "  8.10 Objekte kopieren" -ForegroundColor DarkGray
+Write-Host "  8.10 Objekte kopieren" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2269,7 +2269,7 @@ Remove-BucketObject -Bucket team -Key "Alice-pscopy" -Quiet
 tut-pause
 
 Write-Host ""
-Write-Host "  8.11 Tab-Vervollständigung" -ForegroundColor DarkGray
+Write-Host "  8.11 Tab-Vervollständigung" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2284,10 +2284,10 @@ if ($Adv) {
 
 cls
 Write-Host ""
-Write-Host "  9. Verschachtelte Buckets — Verzeichnishierarchie" -ForegroundColor Gray
+Write-Host "  9. Verschachtelte Buckets — Verzeichnishierarchie" -ForegroundColor Magenta
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
-Write-Host "  9.1 Verschachtelte Buckets erstellen" -ForegroundColor DarkGray
+Write-Host "  9.1 Verschachtelte Buckets erstellen" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2345,7 +2345,7 @@ $deDepts | fill -Bucket "org/eu/de/depts" -KeyProperty Dept -Quiet
 tut-pause
 
 Write-Host ""
-Write-Host "  9.2 Platzhalter in verschachtelten Pfaden" -ForegroundColor DarkGray
+Write-Host "  9.2 Platzhalter in verschachtelten Pfaden" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2366,7 +2366,7 @@ scoop -Bucket "org/eu/*/cities" | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  9.3 Verschachtelte Buckets direkt abfragen" -ForegroundColor DarkGray
+Write-Host "  9.3 Verschachtelte Buckets direkt abfragen" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2387,7 +2387,7 @@ scoop -Bucket "org/eu/de/cities" | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  9.4 Mehrstufige Platzhalter" -ForegroundColor DarkGray
+Write-Host "  9.4 Mehrstufige Platzhalter" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2408,7 +2408,7 @@ scoop -Bucket "org/*/de/*" | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  9.5 Rekursive Bucket-Auflistung" -ForegroundColor DarkGray
+Write-Host "  9.5 Rekursive Bucket-Auflistung" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2429,7 +2429,7 @@ Get-Bucket -Name "org" -Recurse | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  9.6 Baumansicht verschachtelter Buckets" -ForegroundColor DarkGray
+Write-Host "  9.6 Baumansicht verschachtelter Buckets" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2450,7 +2450,7 @@ Get-Bucket -Name "org" -Tree -Objects -MaxFiles 10 | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  9.7 PSDrive mit verschachtelten Pfaden" -ForegroundColor DarkGray
+Write-Host "  9.7 PSDrive mit verschachtelten Pfaden" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2471,7 +2471,7 @@ Get-ChildItem "buckets:\org\eu\de\cities" | Select-Object Name | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  9.8 Rekursive PSDrive-Auflistung" -ForegroundColor DarkGray
+Write-Host "  9.8 Rekursive PSDrive-Auflistung" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2492,7 +2492,7 @@ Get-ChildItem "buckets:\org" -Recurse | Select-Object Name | Format-Table -AutoS
 tut-pause
 
 Write-Host ""
-Write-Host "  9.9 Statistiken zu verschachtelten Buckets" -ForegroundColor DarkGray
+Write-Host "  9.9 Statistiken zu verschachtelten Buckets" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2512,7 +2512,7 @@ Get-BucketStats -Bucket "org/eu/de/cities" | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  9.10 Schlüssel in verschachtelten Buckets" -ForegroundColor DarkGray
+Write-Host "  9.10 Schlüssel in verschachtelten Buckets" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2533,7 +2533,7 @@ Get-BucketKeys -Bucket "org/eu/de/cities" | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  9.11 Bucket-übergreifendes Filtern mit Platzhaltern" -ForegroundColor DarkGray
+Write-Host "  9.11 Bucket-übergreifendes Filtern mit Platzhaltern" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2554,7 +2554,7 @@ scoop -Bucket "org/*/cities" -Filter { $_.Population -gt 2000000 } | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  9.12 Verschachtelte Bäume entfernen" -ForegroundColor DarkGray
+Write-Host "  9.12 Verschachtelte Bäume entfernen" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2580,10 +2580,10 @@ if ($Adv) {
 
 cls
 Write-Host ""
-Write-Host "  10. Eleganter Pipeline-Einsatz" -ForegroundColor Gray
+Write-Host "  10. Eleganter Pipeline-Einsatz" -ForegroundColor Magenta
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
-Write-Host "  10.1 Erzeugen und speichern" -ForegroundColor DarkGray
+Write-Host "  10.1 Erzeugen und speichern" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2600,7 +2600,7 @@ tut-write-code @'
 tut-pause
 
 Write-Host ""
-Write-Host "  10.2 Filtern, ändern, speichern" -ForegroundColor DarkGray
+Write-Host "  10.2 Filtern, ändern, speichern" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2620,7 +2620,7 @@ scoop -Bucket team -Filter { $_.Role -eq "Developer" } |
 tut-pause
 
 Write-Host ""
-Write-Host "  10.3 Filtern, sortieren, projizieren" -ForegroundColor DarkGray
+Write-Host "  10.3 Filtern, sortieren, projizieren" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2640,7 +2640,7 @@ scoop -Bucket team | Where-Object { $_.Score -gt 80 } |
 tut-pause
 
 Write-Host ""
-Write-Host "  10.4 Bucket-übergreifende Iteration" -ForegroundColor DarkGray
+Write-Host "  10.4 Bucket-übergreifende Iteration" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2664,7 +2664,7 @@ $buckets | ForEach-Object { scoop -Bucket $_ -Filter { $_.Score -gt 80 } } |
 tut-pause
 
 Write-Host ""
-Write-Host "  10.5 Nach Bucket gruppieren" -ForegroundColor DarkGray
+Write-Host "  10.5 Nach Bucket gruppieren" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2681,7 +2681,7 @@ scoop | Group-Object _BucketName | Select-Object Name, Count | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  10.6 Nach Eigenschaft gruppieren" -ForegroundColor DarkGray
+Write-Host "  10.6 Nach Eigenschaft gruppieren" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2697,7 +2697,7 @@ scoop -Bucket team | Group-Object Role | Select-Object Name, Count | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  10.7 Statistiken mit Measure-Object" -ForegroundColor DarkGray
+Write-Host "  10.7 Statistiken mit Measure-Object" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2715,7 +2715,7 @@ Write-Host "    Punktestatistik: ø=$([math]::Round($scores.Average,1)) min=$($s
 tut-pause
 
 Write-Host ""
-Write-Host "  10.8 Export nach CSV" -ForegroundColor DarkGray
+Write-Host "  10.8 Export nach CSV" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2735,7 +2735,7 @@ Remove-Item $csvPath -Force -ErrorAction SilentlyContinue
 tut-pause
 
 Write-Host ""
-Write-Host "  10.9 Filter-Vergleich" -ForegroundColor DarkGray
+Write-Host "  10.9 Filter-Vergleich" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2753,7 +2753,7 @@ scoop -Bucket team | Where-Object { $_.Score -gt 80 } | Out-Host
 tut-pause
 
 Write-Host ""
-Write-Host "  10.10 Benutzerdefinierte Formatierung" -ForegroundColor DarkGray
+Write-Host "  10.10 Benutzerdefinierte Formatierung" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2773,7 +2773,7 @@ scoop -Bucket team | ForEach-Object {
 tut-pause
 
 Write-Host ""
-Write-Host "  10.11 Bedingte JSON-Ausgabe" -ForegroundColor DarkGray
+Write-Host "  10.11 Bedingte JSON-Ausgabe" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2788,7 +2788,7 @@ scoop -Bucket team -Filter { $_.Score -gt 80 } | ConvertTo-Json -Depth 5 | Out-H
 tut-pause
 
 Write-Host ""
-Write-Host "  10.12 Round-Trip-Verifikation" -ForegroundColor DarkGray
+Write-Host "  10.12 Round-Trip-Verifikation" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2812,7 +2812,7 @@ if ($Adv) {
 
 cls
 Write-Host ""
-Write-Host "  11. Aliase & Shortcuts Referenz" -ForegroundColor Gray
+Write-Host "  11. Aliase & Shortcuts Referenz" -ForegroundColor Magenta
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 
@@ -2848,7 +2848,7 @@ if ($Sys) {
 
 cls
 Write-Host ""
-Write-Host "  12. Sysadmin-Szenarien" -ForegroundColor Gray
+Write-Host "  12. Sysadmin-Szenarien" -ForegroundColor Magenta
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 
@@ -2883,7 +2883,7 @@ Write-Host ""
 # ---------- 12.1 ----------
 
 Write-Host ""
-Write-Host "  12.1 Serverinventar speichern" -ForegroundColor DarkGray
+Write-Host "  12.1 Serverinventar speichern" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2902,7 +2902,7 @@ tut-pause
 # ---------- 12.2 ----------
 
 Write-Host ""
-Write-Host "  12.2 Fehlerhafte Server finden" -ForegroundColor DarkGray
+Write-Host "  12.2 Fehlerhafte Server finden" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2921,7 +2921,7 @@ tut-pause
 # ---------- 12.3 ----------
 
 Write-Host ""
-Write-Host "  12.3 Server nach Rolle und Spezifikation filtern" -ForegroundColor DarkGray
+Write-Host "  12.3 Server nach Rolle und Spezifikation filtern" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2940,7 +2940,7 @@ tut-pause
 # ---------- 12.4 ----------
 
 Write-Host ""
-Write-Host "  12.4 Server nach Rechenzentrum gruppieren" -ForegroundColor DarkGray
+Write-Host "  12.4 Server nach Rechenzentrum gruppieren" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2958,7 +2958,7 @@ tut-pause
 # ---------- 12.5 ----------
 
 Write-Host ""
-Write-Host "  12.5 Kapazitätsplanung Gesamtsummen" -ForegroundColor DarkGray
+Write-Host "  12.5 Kapazitätsplanung Gesamtsummen" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2976,7 +2976,7 @@ tut-pause
 # ---------- 12.6 ----------
 
 Write-Host ""
-Write-Host "  12.6 Vorfälle mit Zeitstempeln protokollieren" -ForegroundColor DarkGray
+Write-Host "  12.6 Vorfälle mit Zeitstempeln protokollieren" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -2993,7 +2993,7 @@ tut-pause
 # ---------- 12.7 ----------
 
 Write-Host ""
-Write-Host "  12.7 Kritische Vorfälle priorisieren" -ForegroundColor DarkGray
+Write-Host "  12.7 Kritische Vorfälle priorisieren" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -3011,7 +3011,7 @@ tut-pause
 # ---------- 12.8 ----------
 
 Write-Host ""
-Write-Host "  12.8 Batch-Wartungsmodus" -ForegroundColor DarkGray
+Write-Host "  12.8 Batch-Wartungsmodus" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -3035,7 +3035,7 @@ tut-pause
 # ---------- 12.9 ----------
 
 Write-Host ""
-Write-Host "  12.9 Gesundheitsbericht" -ForegroundColor DarkGray
+Write-Host "  12.9 Gesundheitsbericht" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -3053,7 +3053,7 @@ tut-pause
 # ---------- 12.10 ----------
 
 Write-Host ""
-Write-Host "  12.10 Bucket-übergreifende Korrelation" -ForegroundColor DarkGray
+Write-Host "  12.10 Bucket-übergreifende Korrelation" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
@@ -3084,7 +3084,7 @@ tut-pause
 
 cls
 Write-Host ""
-Write-Host "  Herzlichen Glückwunsch!" -ForegroundColor Gray
+Write-Host "  Herzlichen Glückwunsch!" -ForegroundColor Magenta
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 
