@@ -247,48 +247,6 @@ function QuickExportImport {
     }
 }
 
-function QuickArrayTest {
-    Write-Host "`n  --- Quick Array Save/Load ---" -ForegroundColor Cyan
-    $bucket = Read-Host "  Bucket name"
-    $arrayKey = Read-Host "  ArrayKey (name for .arrays/<key>/ dir)"
-    Write-Host "  Enter items (one per line, Key=Value;Key2=Value2). Empty line to finish." -ForegroundColor DarkGray
-    $items = [System.Collections.ArrayList]::new()
-    while ($true) {
-        $input = Read-Host "  "
-        if ([string]::IsNullOrWhiteSpace($input)) { break }
-        $hash = @{}
-        $input -split ";" | ForEach-Object {
-            $pair = $_.Trim() -split "=", 2
-            if ($pair.Count -eq 2) {
-                $hash[$pair[0].Trim()] = $pair[1].Trim()
-            }
-        }
-        if ($hash.Count -gt 0) {
-            $null = $items.Add($hash)
-        }
-    }
-    if ($items.Count -eq 0) {
-        Write-Host "  No items entered." -ForegroundColor Red
-        return
-    }
-    New-BucketObject -Bucket $bucket -InputObject $items -KeyProperty "_Id" -ArrayKey $arrayKey -Quiet
-    Write-Host "  Saved $($items.Count) items to .arrays/$arrayKey/." -ForegroundColor Green
-
-    Write-Host "`n  Reload as grouped array..." -ForegroundColor DarkGray
-    $grouped = @(Get-BucketObject -Bucket $bucket -GroupArrays -WarningAction SilentlyContinue)
-    foreach ($g in $grouped) {
-        if ($g._ArrayGroup -eq $true) {
-            Write-Host "  Array group ($($g._ArrayItems.Count) items):" -ForegroundColor Cyan
-            $g._ArrayItems | ForEach-Object {
-                Write-Host "    $_" -ForegroundColor DarkGray
-            }
-        }
-        else {
-            Write-Host "  Standalone: $g" -ForegroundColor DarkGray
-        }
-    }
-}
-
 function QuickCompress {
     Write-Host "`n  --- Quick Compress Test ---" -ForegroundColor Cyan
     $bucket = Read-Host "  Bucket name"
@@ -366,20 +324,12 @@ function QuickDebug {
     $key = Read-Host "  Key (partial match ok)"
     $basePath = Join-Path $HOME ".buckets"
     $bucketPath = Join-Path $basePath $bucket
-    $arraysPath = Join-Path $bucketPath ".arrays"
 
     $files = @()
     if (Test-Path $bucketPath) {
         $di = [System.IO.DirectoryInfo]::new($bucketPath)
         $files += @($di.GetFiles("*.dat"))
         $files += @($di.GetFiles("*.json"))
-    }
-    if (Test-Path $arraysPath) {
-        $adi = [System.IO.DirectoryInfo]::new($arraysPath)
-        foreach ($sub in $adi.GetDirectories()) {
-            $files += @($sub.GetFiles("*.dat"))
-            $files += @($sub.GetFiles("*.json"))
-        }
     }
 
     $matched = @($files | Where-Object { $_.Name.ToLowerInvariant().StartsWith($key.ToLowerInvariant()) })
@@ -454,7 +404,6 @@ function Show-Menu {
     Write-Host "  [rename]   Rename object key" -ForegroundColor White
     Write-Host ""
     Write-Host "  [filter]   Filter objects (-Match/-Filter)" -ForegroundColor White
-    Write-Host "  [array]    Array save/load test" -ForegroundColor White
     Write-Host "  [compress] Compress test" -ForegroundColor White
     Write-Host "  [bulk]     Bulk save benchmark" -ForegroundColor White
     Write-Host ""
@@ -499,7 +448,6 @@ while ($running) {
             "copy"    { QuickCopy }
             "rename"  { QuickRename }
             "filter"  { QuickFilter }
-            "array"   { QuickArrayTest }
             "compress"{ QuickCompress }
             "bulk"    { QuickBulk }
             "export"  { QuickExportImport }

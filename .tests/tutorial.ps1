@@ -118,6 +118,12 @@ $script:Team = @(
     @{ Name="Frank";   Role="Developer";  Level=4; Skills=@("Rust","Go","Kubernetes");          Active=$true;  Score=91; Joined=(Get-Date).AddDays(-500) }
 )
 
+$script:Staff = @(
+    @{ Name="Dana";  Role="HR";        Level=2; Active=$true;  Score=70 }
+    @{ Name="Eric";  Role="Finance";   Level=3; Active=$true;  Score=82 }
+    @{ Name="Gina";  Role="Marketing"; Level=1; Active=$false; Score=65 }
+)
+
 Write-Host ""
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host "  Buckets Tutorial  v$ver" -ForegroundColor White
@@ -436,6 +442,7 @@ tut-write-code @'
 spill
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
+$script:Staff | fill -Bucket staff -KeyProperty Name -Quiet
 spill | Out-Host
 tut-pause
 
@@ -452,6 +459,7 @@ tut-write-code @'
 spill -Bucket team
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
+$script:Staff | fill -Bucket staff -KeyProperty Name -Quiet
 spill -Bucket team | Out-Host
 tut-pause
 
@@ -547,7 +555,7 @@ tut-write-code @'
 spill -Bucket "t*"
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
-$script:Team | fill -Bucket staff -KeyProperty Name -Quiet
+$script:Staff | fill -Bucket staff -KeyProperty Name -Quiet
 spill -Bucket "t*" | Out-Host
 tut-pause
 
@@ -564,7 +572,7 @@ tut-write-code @'
 spill -Bucket "team", "staff"
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
-$script:Team | fill -Bucket staff -KeyProperty Name -Quiet
+$script:Staff | fill -Bucket staff -KeyProperty Name -Quiet
 spill -Bucket "team", "staff" | Out-Host
 tut-pause
 
@@ -2869,7 +2877,7 @@ spill -Bucket servers -Filter { $_.Role -eq "web" } |
 $script:Servers | fill -Bucket servers -KeyProperty Hostname -Quiet
 spill -Bucket servers -Filter { $_.Role -eq "web" } |
     ForEach-Object { $_ | Add-Member Maintenance $true -Force; $_ } |
-    Set-BucketObject | Out-Host
+    Set-BucketObject
 tut-pause
 
 # ---------- 12.9 ----------
@@ -2884,10 +2892,10 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-spill -Bucket servers | Select Hostname, Status, Location | Sort Status
+spill -Bucket servers | Select Hostname, Status, Location | Sort-Object Status
 '@
 $script:Servers | fill -Bucket servers -KeyProperty Hostname -Quiet
-spill -Bucket servers | Select Hostname, Status, Location | Sort Status | Out-Host
+spill -Bucket servers | Select Hostname, Status, Location | Sort-Object Status | Out-Host
 tut-pause
 
 # ---------- 12.10 ----------
@@ -2942,14 +2950,14 @@ Write-Host @"
 
   What you learned:
 
-    fill / spill / dip          — save, read, list
-    -Key / -KeyProperty         — naming objects
+    fill / spill / dip           — save, read, list
+    -Key / -KeyProperty          — naming objects
     -Overwrite / -AsTimestamp    — replacement and timestamp keys
     -AsJson / -Compress          — storage formats
-    -Match (exact)              — hashtable-based filtering
-    -Filter (scriptblock)       — expression-based comparison (-gt, -like, -contains, -match)
-    Nested property filtering   — `$_.Settings.Enabled with -Filter
-    -First / -Skip              — pagination
+    -Match (exact)               — hashtable-based filtering
+    -Filter (scriptblock)        — expression-based comparison (-gt, -like, -contains, -match)
+    Nested property filtering    — $_.Settings.Enabled with -Filter
+    -First / -Skip               — pagination
     Set-BucketObject             — update in place (pipeline + explicit)
     Partial update / patch       — add properties with hashtable pipe
     Remove-BucketObject          — delete by key / all / match / filter
@@ -2964,7 +2972,7 @@ Write-Host @"
     Nested buckets               — org/eu/de/cities hierarchy with wildcards
     Pipeline patterns            — chain, group, measure, export-csv, expand, custom format
     Cross-bucket queries         — -Filter across all buckets
-    Edge cases                   — `$null values, special chars, empty keys, safety guards
+    Edge cases                   — $null values, special chars, empty keys, safety guards
     Format preservation          — JSON stays .json, binary stays .dat through Rename/Copy
     Server/event management      — inventory, incidents, health reports, cross-bucket correlation
 

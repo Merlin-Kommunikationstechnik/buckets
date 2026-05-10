@@ -493,7 +493,7 @@ function Copy-BucketObject {
     if ($PassThru) {
         [PSCustomObject]@{
             SourceBucket = $Bucket; SourceKey = $Key; DestinationBucket = $DestinationBucket
-            DestinationKey = $safeDestKey; FilePath = $destFile
+            DestinationKey = $safeDestKey
         }
     }
     elseif (-not $Quiet) {
@@ -1468,15 +1468,15 @@ function Move-BucketObject {
     if ($PassThru) {
         [PSCustomObject]@{
             SourceBucket = $Bucket; SourceKey = $Key; DestinationBucket = $DestinationBucket
-            DestinationKey = $safeDestKey; FilePath = $destFile
+            DestinationKey = $safeDestKey
         }
     }
     elseif (-not $Quiet) {
         Write-Host "$Bucket/$Key" -NoNewline -ForegroundColor $script:CPath
-        Write-Host " → " -NoNewline -ForegroundColor $script:CMuted
+        Write-Host " → " -NoNewline -ForegroundColor $script:CNum
         Write-Host "$DestinationBucket/$safeDestKey" -NoNewline -ForegroundColor $script:CPath
         Write-Host " · " -NoNewline -ForegroundColor $script:CMuted
-        Write-Host "moved" -ForegroundColor $script:CNum
+        Write-Host "moved" -ForegroundColor $script:CMuted
     }
 }
 
@@ -2020,7 +2020,7 @@ function Remove-BucketObject {
         if ($PassThru) {
             foreach ($f in $allFiles) {
                 $relPath = $f.FullName.Substring($bucketPath.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar)
-                [PSCustomObject]@{ Bucket = $Bucket; Key = $relPath; FilePath = $f.FullName }
+                [PSCustomObject]@{ Bucket = $Bucket; Key = $relPath }
             }
         }
         elseif (-not $WhatIfPreference -and -not $Quiet) {
@@ -2039,7 +2039,7 @@ function Remove-BucketObject {
         elseif ($PSCmdlet.ShouldProcess("object '$Key' from bucket '$Bucket'", "Remove-BucketObject")) {
             if ($PassThru) {
                 $relPath = $file.FullName.Substring($bucketPath.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar)
-                [PSCustomObject]@{ Bucket = $Bucket; Key = $relPath; FilePath = $file.FullName }
+                [PSCustomObject]@{ Bucket = $Bucket; Key = $relPath }
             }
             [System.IO.File]::Delete($file.FullName)
             $parentDir = [System.IO.Path]::GetDirectoryName($file.FullName)
@@ -2124,7 +2124,7 @@ function Remove-BucketObject {
             foreach ($f in $matchedFiles) {
                 if ($PassThru) {
                     $relPath = $f.FullName.Substring($bucketPath.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar)
-                    [PSCustomObject]@{ Bucket = $Bucket; Key = $relPath; FilePath = $f.FullName }
+                    [PSCustomObject]@{ Bucket = $Bucket; Key = $relPath }
                 }
                 [System.IO.File]::Delete($f.FullName)
             }
@@ -2202,7 +2202,7 @@ function Rename-BucketObject {
     Write-Verbose "Renamed [$Bucket/$Key] to [$Bucket/$safeNewKey]"
 
     if ($PassThru) {
-        [PSCustomObject]@{ Bucket = $Bucket; OldKey = $Key; NewKey = $safeNewKey; FilePath = $destFile }
+        [PSCustomObject]@{ Bucket = $Bucket; OldKey = $Key; NewKey = $safeNewKey }
     }
     elseif (-not $Quiet) {
         Write-Host "$Bucket/$Key" -NoNewline -ForegroundColor $script:CPath
@@ -2269,7 +2269,7 @@ function Set-BucketObject {
     )
 
     begin {
-        $bucketPath = $null; $savedCount = 0
+        $bucketPath = $null; $savedCount = 0; $lastBucket = ''
         $useVerbose = $VerbosePreference -eq 'Continue'; $useQuiet = $Quiet.IsPresent
         $usePassThru = $PassThru.IsPresent
     }
@@ -2395,16 +2395,18 @@ function Set-BucketObject {
 
         if ($writeSuccess) {
             $savedCount++
+            $lastBucket = $Bucket
             if ($useVerbose) { Write-Verbose "Updated [$Bucket/$Key] -> $filePath" }
-            elseif ($usePassThru -or -not $useQuiet) {
-                Write-Output [PSCustomObject]@{ Bucket = $Bucket; Key = $Key; FilePath = $filePath }
+            elseif ($usePassThru) {
+                $out = [PSCustomObject]@{ Bucket = $Bucket; Key = $Key }
+                Write-Output $out
             }
         }
     }
 
     end {
-        if ($savedCount -gt 0 -and -not $useVerbose -and -not $useQuiet) {
-            Write-Host "$Bucket/$Key" -NoNewline -ForegroundColor $script:CPath
+        if ($savedCount -gt 0 -and -not $usePassThru -and -not $useVerbose -and -not $useQuiet) {
+            Write-Host "$lastBucket" -NoNewline -ForegroundColor $script:CPath
             Write-Host " · " -NoNewline -ForegroundColor $script:CMuted
             Write-Host $savedCount -NoNewline -ForegroundColor $script:CNum
             Write-Host " updated" -ForegroundColor $script:CMuted

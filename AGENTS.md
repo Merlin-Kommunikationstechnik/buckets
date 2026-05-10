@@ -37,7 +37,7 @@ PowerShell module for file-based PSObject storage using directory-backed "bucket
 |--------|-----------|
 | `New-BucketObject` | `-InputObject` (pipeline), `-Bucket` (default "default"), `-Key`, `-AsJson`, `-AsTimestamp`, `-Depth`, `-BinaryDepth`, `-Compress`, `-Quiet`, `-Overwrite` |
 | `Get-BucketObject` | `-Bucket` (positional 0, wildcards ok, all if omitted), `-Key` (positional 1), `-Match` (hashtable, supports $null), `-Filter` (scriptblock with `$_`), `-Recurse`, `-First`, `-Skip` |
-| `Set-BucketObject` | `-InputObject` (pipeline binds `_BucketName`/`_BucketKey` or partial update), `-Bucket`, `-Key`, `-AsJson`, `-Compress`, `-Quiet` |
+| `Set-BucketObject` | `-InputObject` (pipeline binds `_BucketName`/`_BucketKey` or partial update), `-Bucket`, `-Key`, `-AsJson`, `-Compress`, `-PassThru`, `-Quiet` |
 | `Remove-BucketObject` | `-Bucket`, `-Key` or `-All` (param sets), `-PassThru`, `-WhatIf` (SupportsShouldProcess) |
 | `Copy-BucketObject` | `-Bucket`, `-Key`, `-DestinationBucket`, `-DestinationKey`, `-PassThru` |
 | `Rename-BucketObject` | `-Bucket`, `-Key`, `-NewKey`, `-PassThru` |
@@ -102,6 +102,9 @@ Benchmarks measure write/read throughput for 1k and 10k objects (simple + comple
 - Binary format is the default (handles complex system objects)
 - `New-BucketObject` default: progress + summary; `-Verbose` for per-object details; `-Quiet` for silence
 - Default path resolves dynamically at call time via `Get-DefaultPath` (not at module load)
-- `Set-BucketObject` outputs result by default; use `-Quiet` for silence
+- `Set-BucketObject` outputs summary line by default; use `-PassThru` to emit objects to pipeline, `-Quiet` for silence
+- Binary serialization auto-increments depth up to 5 if initial depth fails
+- `Remove-BucketObject -All` warns on empty bucket
+- Corrupted files emit warning and return $null (don't break enumeration)
 - Bucket paths cached per session via `$script:BucketPathCache`
 - Path traversal protection: resolved paths must stay within root
