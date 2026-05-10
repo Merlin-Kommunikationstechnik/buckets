@@ -902,7 +902,7 @@ The provider is created automatically on module import via `Sync-BucketDrive`. R
 | `New-BucketObject` (`fill`) | Save objects to a bucket |
 | `Get-BucketObject` (`spill`) | Retrieve objects from buckets |
 | `Set-BucketObject` | Update an existing object |
-| `Remove-BucketObject` | Remove objects by key, filter, or all |
+| `Remove-BucketObject` (`drain`) | Remove objects by key, filter, or all |
 | `Copy-BucketObject` | Copy objects within or between buckets |
 | `Rename-BucketObject` | Rename an object's key |
 | `Move-BucketObject` | Move objects between buckets |
@@ -910,7 +910,7 @@ The provider is created automatically on module import via `Sync-BucketDrive`. R
 | `Get-BucketKeys` | List object keys in a bucket (Bucket + Key only) |
 | `Get-BucketObjectStats` | Detailed per-object stats (format, type, size, timestamps, compression) |
 | `Get-BucketStats` | Show bucket statistics (visible Path, hidden TotalSizeBytes) |
-| `Remove-Bucket` | Remove buckets (supports wildcards, nested, WhatIf) |
+| `Remove-Bucket` (`toss`) | Remove buckets (supports wildcards, nested, WhatIf) |
 | `Export-Bucket` | Export bucket to archive |
 | `Import-Bucket` | Import objects from archive |
 | `Set-BucketRoot` | Override session storage root |

@@ -2492,6 +2492,8 @@ Sync-BucketDrive
 Set-Alias -Name fill -Value New-BucketObject
 Set-Alias -Name spill -Value Get-BucketObject
 Set-Alias -Name dip -Value Get-Bucket
+Set-Alias -Name toss -Value Remove-Bucket
+Set-Alias -Name drain -Value Remove-BucketObject
 Set-Alias -Name ls -Value Get-ChildItem -Scope Global -Force
 
 # --- Argument completers ---
@@ -2604,4 +2606,4 @@ Export-ModuleMember -Function @(
     'Get-BucketKeys', 'Get-BucketObjectStats', 'Remove-Bucket', 'Copy-BucketObject',
     'Rename-BucketObject', 'Move-BucketObject', 'Export-Bucket',
     'Import-Bucket', 'Set-BucketRoot', 'Get-BucketRoot', 'Sync-BucketDrive'
-) -Alias 'fill', 'spill', 'dip'
+) -Alias 'fill', 'spill', 'dip', 'toss', 'drain'

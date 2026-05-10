@@ -297,13 +297,14 @@ Get-BucketRoot
     if ($tree) { $tree | Out-Host } else { Write-Host "    (no buckets yet)" -ForegroundColor DarkGray }
     Write-Host ""
     Write-Host @"
-  The four core cmdlets:
+  The six core cmdlets:
 "@ -ForegroundColor White
     Write-Host ""
     Write-Host "    fill   · New-BucketObject      write objects" -ForegroundColor Cyan
     Write-Host "    spill  · Get-BucketObject      read objects" -ForegroundColor Cyan
-    Write-Host "    dip    · Set-BucketObject      update an object" -ForegroundColor Cyan
-    Write-Host "    rmo    · Remove-BucketObject   delete an object" -ForegroundColor Cyan
+    Write-Host "    dip    · Get-Bucket            list buckets" -ForegroundColor Cyan
+    Write-Host "    drain  · Remove-BucketObject   delete an object" -ForegroundColor Cyan
+    Write-Host "    toss   · Remove-Bucket         delete a bucket" -ForegroundColor Cyan
     Write-Host ""
     Write-Host @"
   Defaults: Binary depth 5, JSON depth 20, path $HOME/.buckets
@@ -3119,9 +3120,10 @@ Get-ChildItem (Get-BucketRoot) -Directory -ErrorAction SilentlyContinue |
 Write-Host ""
 Write-Host @"
 
-  What you learned:
+    What you learned:
 
-    fill / spill / dip           — save, read, list
+    fill / spill / dip / toss / drain
+                                 — save, read, list, delete buckets, delete objects
     -Key / -KeyProperty          — naming objects
     -Overwrite / -AsTimestamp    — replacement and timestamp keys
     -AsJson / -Compress          — storage formats
@@ -3131,7 +3133,7 @@ Write-Host @"
     -First / -Skip               — pagination
     Set-BucketObject             — update in place (pipeline + explicit)
     Partial update / patch       — add properties with hashtable pipe
-    Remove-BucketObject          — delete by key / all / match / filter
+    drain / toss                 — delete objects, delete buckets
     -WhatIf / -PassThru          — safety preview and metadata capture
     Copy / Rename / Move         — object operations with and without pass-through
     PSDrive operations           — Get-Content, Set-Content, Copy-Item, Remove-Item, Test-Path

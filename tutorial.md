@@ -44,15 +44,47 @@ Each object is one file — .dat (binary, default) or .json (opt-in).
 The filename (minus extension) is the object's key.
 
 Current buckets:
-.buckets (0 items, 0 B)
+.buckets (371 items, 56 KB)
+└── logs (371 items, 56 KB)
+  ├── eventlog (101 items, 16 KB)
+  │   ├── Application (30 items, 5 KB)
+  │   │   ├── 2026.05.08 (10 items, 2 KB)
+  │   │   ├── 2026.05.09 (10 items, 2 KB)
+  │   │   └── 2026.05.10 (10 items, 2 KB)
+  │   ├── Security (24 items, 4 KB)
+  │   │   ├── 2026.05.08 (8 items, 1 KB)
+  │   │   ├── 2026.05.09 (8 items, 1 KB)
+  │   │   └── 2026.05.10 (8 items, 1 KB)
+  │   └── System (47 items, 8 KB)
+  │       ├── 2026.05.08 (15 items, 2 KB)
+  │       ├── 2026.05.09 (15 items, 2 KB)
+  │       └── 2026.05.10 (17 items, 4 KB)
+  └── syslog (270 items, 40 KB)
+      ├── db01 (30 items, 4 KB)
+      │   ├── 2026.05.08 (10 items, 1 KB)
+      │   ├── 2026.05.09 (10 items, 1 KB)
+      │   └── 2026.05.10 (10 items, 1 KB)
+      ├── lb01 (60 items, 9 KB)
+      │   ├── 2026.05.08 (20 items, 3 KB)
+      │   ├── 2026.05.09 (20 items, 3 KB)
+      │   └── 2026.05.10 (20 items, 3 KB)
+      ├── web01 (120 items, 18 KB)
+      │   ├── 2026.05.08 (40 items, 6 KB)
+      │   ├── 2026.05.09 (40 items, 6 KB)
+      │   └── 2026.05.10 (40 items, 6 KB)
+      └── web02 (60 items, 9 KB)
+          ├── 2026.05.08 (20 items, 3 KB)
+          ├── 2026.05.09 (20 items, 3 KB)
+          └── 2026.05.10 (20 items, 3 KB)
   (no buckets yet)
 
-The four core cmdlets:
+The six core cmdlets:
 
   fill   · New-BucketObject      write objects
   spill  · Get-BucketObject      read objects
-  dip    · Set-BucketObject      update an object
-  rmo    · Remove-BucketObject   delete an object
+  dip    · Get-Bucket            list buckets
+  drain  · Remove-BucketObject   delete an object
+  toss   · Remove-Bucket         delete a bucket
 
 Defaults: Binary depth 5, JSON depth 20, path C:\Users\berfelde/.buckets
 Override any of them with -BinaryDepth, -Depth, or -Path.
@@ -337,6 +369,377 @@ Port Host
    
    
    
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
+   
 
 ```
 
@@ -353,37 +756,37 @@ spill -Bucket team
 
 ```
 
-Joined : 10.05.2025 17:05:27
-Active : True
 Name   : Alice
+Joined : 10.05.2025 19:13:22
 Role   : Developer
-Level  : 3
-Score  : 95
 Skills : {PowerShell, C#, Azure}
-
-Joined : 11.11.2025 17:05:27
-Active : True
-Name   : Bob
-Role   : Designer
-Level  : 2
-Score  : 72
-Skills : {Figma, CSS, HTML}
-
-Joined : 09.02.2026 17:05:27
-Active : True
-Name   : Carol
-Role   : PM
 Level  : 3
-Score  : 88
-Skills : {Agile, Jira, Confluence}
-
-Joined : 26.12.2024 17:05:27
 Active : True
+Score  : 95
+
+Name   : Bob
+Joined : 11.11.2025 19:13:22
+Role   : Designer
+Skills : {Figma, CSS, HTML}
+Level  : 2
+Active : True
+Score  : 72
+
+Name   : Carol
+Joined : 09.02.2026 19:13:22
+Role   : PM
+Skills : {Agile, Jira, Confluence}
+Level  : 3
+Active : True
+Score  : 88
+
 Name   : Frank
+Joined : 26.12.2024 19:13:22
 Role   : Developer
-Level  : 4
-Score  : 91
 Skills : {Rust, Go, Kubernetes}
+Level  : 4
+Active : True
+Score  : 91
 ```
 
 ### 2.3 Positional bucket lookup
@@ -399,37 +802,37 @@ spill team
 
 ```
 
-Joined : 10.05.2025 17:05:27
-Active : True
 Name   : Alice
+Joined : 10.05.2025 19:13:22
 Role   : Developer
-Level  : 3
-Score  : 95
 Skills : {PowerShell, C#, Azure}
-
-Joined : 11.11.2025 17:05:27
-Active : True
-Name   : Bob
-Role   : Designer
-Level  : 2
-Score  : 72
-Skills : {Figma, CSS, HTML}
-
-Joined : 09.02.2026 17:05:27
-Active : True
-Name   : Carol
-Role   : PM
 Level  : 3
-Score  : 88
-Skills : {Agile, Jira, Confluence}
-
-Joined : 26.12.2024 17:05:27
 Active : True
+Score  : 95
+
+Name   : Bob
+Joined : 11.11.2025 19:13:22
+Role   : Designer
+Skills : {Figma, CSS, HTML}
+Level  : 2
+Active : True
+Score  : 72
+
+Name   : Carol
+Joined : 09.02.2026 19:13:22
+Role   : PM
+Skills : {Agile, Jira, Confluence}
+Level  : 3
+Active : True
+Score  : 88
+
 Name   : Frank
+Joined : 26.12.2024 19:13:22
 Role   : Developer
-Level  : 4
-Score  : 91
 Skills : {Rust, Go, Kubernetes}
+Level  : 4
+Active : True
+Score  : 91
 ```
 
 ### 2.4 Key lookup by name
@@ -445,13 +848,13 @@ spill team "Alice"
 
 ```
 
-Joined : 10.05.2025 17:05:27
-Active : True
 Name   : Alice
+Joined : 10.05.2025 19:13:22
 Role   : Developer
-Level  : 3
-Score  : 95
 Skills : {PowerShell, C#, Azure}
+Level  : 3
+Active : True
+Score  : 95
 ```
 
 ### 2.5 Exact key retrieval
@@ -466,13 +869,13 @@ spill team -Key "Frank"
 
 ```
 
-Joined : 26.12.2024 17:05:27
-Active : True
 Name   : Frank
+Joined : 26.12.2024 19:13:22
 Role   : Developer
-Level  : 4
-Score  : 91
 Skills : {Rust, Go, Kubernetes}
+Level  : 4
+Active : True
+Score  : 91
 ```
 
 ### 2.6 Case-insensitive matching
@@ -488,13 +891,13 @@ spill team -Key "alice"
 
 ```
 
-Joined : 10.05.2025 17:05:27
-Active : True
 Name   : Alice
+Joined : 10.05.2025 19:13:22
 Role   : Developer
-Level  : 3
-Score  : 95
 Skills : {PowerShell, C#, Azure}
+Level  : 3
+Active : True
+Score  : 95
 ```
 
 ### 2.7 Handling missing keys
@@ -522,37 +925,37 @@ spill -Bucket "t*"
 
 ```
 
-Joined : 10.05.2025 17:05:27
-Active : True
 Name   : Alice
+Joined : 10.05.2025 19:13:22
 Role   : Developer
-Level  : 3
-Score  : 95
 Skills : {PowerShell, C#, Azure}
-
-Joined : 11.11.2025 17:05:27
-Active : True
-Name   : Bob
-Role   : Designer
-Level  : 2
-Score  : 72
-Skills : {Figma, CSS, HTML}
-
-Joined : 09.02.2026 17:05:27
-Active : True
-Name   : Carol
-Role   : PM
 Level  : 3
-Score  : 88
-Skills : {Agile, Jira, Confluence}
-
-Joined : 26.12.2024 17:05:27
 Active : True
+Score  : 95
+
+Name   : Bob
+Joined : 11.11.2025 19:13:22
+Role   : Designer
+Skills : {Figma, CSS, HTML}
+Level  : 2
+Active : True
+Score  : 72
+
+Name   : Carol
+Joined : 09.02.2026 19:13:22
+Role   : PM
+Skills : {Agile, Jira, Confluence}
+Level  : 3
+Active : True
+Score  : 88
+
 Name   : Frank
+Joined : 26.12.2024 19:13:22
 Role   : Developer
-Level  : 4
-Score  : 91
 Skills : {Rust, Go, Kubernetes}
+Level  : 4
+Active : True
+Score  : 91
 
 Type    : PSCustomObject
 Ordered : True
@@ -573,55 +976,55 @@ spill -Bucket "team", "staff"
 
 ```
 
-Joined : 10.05.2025 17:05:27
-Active : True
 Name   : Alice
+Joined : 10.05.2025 19:13:22
 Role   : Developer
-Level  : 3
-Score  : 95
 Skills : {PowerShell, C#, Azure}
-
-Joined : 11.11.2025 17:05:27
-Active : True
-Name   : Bob
-Role   : Designer
-Level  : 2
-Score  : 72
-Skills : {Figma, CSS, HTML}
-
-Joined : 09.02.2026 17:05:27
-Active : True
-Name   : Carol
-Role   : PM
 Level  : 3
-Score  : 88
-Skills : {Agile, Jira, Confluence}
-
-Joined : 26.12.2024 17:05:27
 Active : True
+Score  : 95
+
+Name   : Bob
+Joined : 11.11.2025 19:13:22
+Role   : Designer
+Skills : {Figma, CSS, HTML}
+Level  : 2
+Active : True
+Score  : 72
+
+Name   : Carol
+Joined : 09.02.2026 19:13:22
+Role   : PM
+Skills : {Agile, Jira, Confluence}
+Level  : 3
+Active : True
+Score  : 88
+
 Name   : Frank
+Joined : 26.12.2024 19:13:22
 Role   : Developer
-Level  : 4
-Score  : 91
 Skills : {Rust, Go, Kubernetes}
+Level  : 4
+Active : True
+Score  : 91
 
 Role   : HR
-Level  : 2
 Name   : Dana
-Active : True
 Score  : 70
+Level  : 2
+Active : True
 
 Role   : Finance
-Level  : 3
 Name   : Eric
-Active : True
 Score  : 82
+Level  : 3
+Active : True
 
 Role   : Marketing
-Level  : 1
 Name   : Gina
-Active : False
 Score  : 65
+Level  : 1
+Active : False
 ```
 
 ### 2.10 Metadata properties
@@ -697,21 +1100,21 @@ spill -Bucket team -Match @{ Role = "Developer" }
 
 ```
 
-Joined : 10.05.2025 17:05:27
-Active : True
 Name   : Alice
+Joined : 10.05.2025 19:13:22
 Role   : Developer
-Level  : 3
-Score  : 95
 Skills : {PowerShell, C#, Azure}
-
-Joined : 26.12.2024 17:05:27
+Level  : 3
 Active : True
+Score  : 95
+
 Name   : Frank
+Joined : 26.12.2024 19:13:22
 Role   : Developer
-Level  : 4
-Score  : 91
 Skills : {Rust, Go, Kubernetes}
+Level  : 4
+Active : True
+Score  : 91
 ```
 
 ### 2a.2 Matching null values
@@ -728,37 +1131,37 @@ spill -Bucket team -Match @{ Deleted = $null }
 
 ```
 
-Joined : 10.05.2025 17:05:27
-Active : True
 Name   : Alice
+Joined : 10.05.2025 19:13:22
 Role   : Developer
-Level  : 3
-Score  : 95
 Skills : {PowerShell, C#, Azure}
-
-Joined : 11.11.2025 17:05:27
-Active : True
-Name   : Bob
-Role   : Designer
-Level  : 2
-Score  : 72
-Skills : {Figma, CSS, HTML}
-
-Joined : 09.02.2026 17:05:27
-Active : True
-Name   : Carol
-Role   : PM
 Level  : 3
-Score  : 88
-Skills : {Agile, Jira, Confluence}
-
-Joined : 26.12.2024 17:05:27
 Active : True
+Score  : 95
+
+Name   : Bob
+Joined : 11.11.2025 19:13:22
+Role   : Designer
+Skills : {Figma, CSS, HTML}
+Level  : 2
+Active : True
+Score  : 72
+
+Name   : Carol
+Joined : 09.02.2026 19:13:22
+Role   : PM
+Skills : {Agile, Jira, Confluence}
+Level  : 3
+Active : True
+Score  : 88
+
 Name   : Frank
+Joined : 26.12.2024 19:13:22
 Role   : Developer
-Level  : 4
-Score  : 91
 Skills : {Rust, Go, Kubernetes}
+Level  : 4
+Active : True
+Score  : 91
 ```
 
 ### 2a.3 Multi-property matching
@@ -774,21 +1177,21 @@ spill -Bucket team -Match @{ Level = 3; Active = $true }
 
 ```
 
-Joined : 10.05.2025 17:05:27
-Active : True
 Name   : Alice
+Joined : 10.05.2025 19:13:22
 Role   : Developer
-Level  : 3
-Score  : 95
 Skills : {PowerShell, C#, Azure}
-
-Joined : 09.02.2026 17:05:27
-Active : True
-Name   : Carol
-Role   : PM
 Level  : 3
-Score  : 88
+Active : True
+Score  : 95
+
+Name   : Carol
+Joined : 09.02.2026 19:13:22
+Role   : PM
 Skills : {Agile, Jira, Confluence}
+Level  : 3
+Active : True
+Score  : 88
 ```
 
 ### 2a.4 Mixed type matching
@@ -810,10 +1213,10 @@ spill -Bucket match-demo -Match @{ Count = 5; Active = $true }
 
 ```
 
-Name Active Count
----- ------ -----
-A      True     5
-C      True     5
+Name Count Active
+---- ----- ------
+A        5   True
+C        5   True
 ```
 
 ### 2a.5 Case-insensitive string matching
@@ -835,10 +1238,10 @@ spill -Bucket match-demo -Match @{ Color = "red" }
 
 ```
 
-Name  Color
-----  -----
-alpha red
-gamma red
+Color Name
+----- ----
+red   alpha
+red   gamma
 ```
 
 ### 2a.6 Top-level properties only
@@ -872,29 +1275,29 @@ spill -Bucket team -Filter { $_.Score -gt 80 }
 
 ```
 
-Joined : 10.05.2025 17:05:27
-Active : True
 Name   : Alice
+Joined : 10.05.2025 19:13:22
 Role   : Developer
-Level  : 3
-Score  : 95
 Skills : {PowerShell, C#, Azure}
-
-Joined : 09.02.2026 17:05:27
-Active : True
-Name   : Carol
-Role   : PM
 Level  : 3
-Score  : 88
-Skills : {Agile, Jira, Confluence}
-
-Joined : 26.12.2024 17:05:27
 Active : True
+Score  : 95
+
+Name   : Carol
+Joined : 09.02.2026 19:13:22
+Role   : PM
+Skills : {Agile, Jira, Confluence}
+Level  : 3
+Active : True
+Score  : 88
+
 Name   : Frank
+Joined : 26.12.2024 19:13:22
 Role   : Developer
-Level  : 4
-Score  : 91
 Skills : {Rust, Go, Kubernetes}
+Level  : 4
+Active : True
+Score  : 91
 ```
 
 ### 2b.2 Less-than-or-equal comparison
@@ -910,21 +1313,21 @@ spill -Bucket team -Filter { $_.Score -le 90 }
 
 ```
 
-Joined : 11.11.2025 17:05:27
-Active : True
 Name   : Bob
+Joined : 11.11.2025 19:13:22
 Role   : Designer
-Level  : 2
-Score  : 72
 Skills : {Figma, CSS, HTML}
-
-Joined : 09.02.2026 17:05:27
+Level  : 2
 Active : True
+Score  : 72
+
 Name   : Carol
+Joined : 09.02.2026 19:13:22
 Role   : PM
-Level  : 3
-Score  : 88
 Skills : {Agile, Jira, Confluence}
+Level  : 3
+Active : True
+Score  : 88
 ```
 
 ### 2b.3 Regex pattern matching
@@ -940,13 +1343,13 @@ spill -Bucket team -Filter { $_.Name -match "^[AE]" }
 
 ```
 
-Joined : 10.05.2025 17:05:27
-Active : True
 Name   : Alice
+Joined : 10.05.2025 19:13:22
 Role   : Developer
-Level  : 3
-Score  : 95
 Skills : {PowerShell, C#, Azure}
+Level  : 3
+Active : True
+Score  : 95
 ```
 
 ### 2b.4 Wildcard matching with -like
@@ -962,13 +1365,13 @@ spill -Bucket team -Filter { $_.Name -like "*e*" }
 
 ```
 
-Joined : 10.05.2025 17:05:27
-Active : True
 Name   : Alice
+Joined : 10.05.2025 19:13:22
 Role   : Developer
-Level  : 3
-Score  : 95
 Skills : {PowerShell, C#, Azure}
+Level  : 3
+Active : True
+Score  : 95
 ```
 
 ### 2b.5 Combining conditions with -and
@@ -984,21 +1387,21 @@ spill -Bucket team -Filter { $_.Score -gt 80 -and $_.Role -eq "Developer" }
 
 ```
 
-Joined : 10.05.2025 17:05:27
-Active : True
 Name   : Alice
+Joined : 10.05.2025 19:13:22
 Role   : Developer
-Level  : 3
-Score  : 95
 Skills : {PowerShell, C#, Azure}
-
-Joined : 26.12.2024 17:05:27
+Level  : 3
 Active : True
+Score  : 95
+
 Name   : Frank
+Joined : 26.12.2024 19:13:22
 Role   : Developer
-Level  : 4
-Score  : 91
 Skills : {Rust, Go, Kubernetes}
+Level  : 4
+Active : True
+Score  : 91
 ```
 
 ### 2b.6 Combining conditions with -or
@@ -1013,21 +1416,21 @@ spill -Bucket team -Filter { $_.Role -eq "Designer" -or $_.Level -gt 3 }
 
 ```
 
-Joined : 11.11.2025 17:05:27
-Active : True
 Name   : Bob
+Joined : 11.11.2025 19:13:22
 Role   : Designer
-Level  : 2
-Score  : 72
 Skills : {Figma, CSS, HTML}
-
-Joined : 26.12.2024 17:05:27
+Level  : 2
 Active : True
+Score  : 72
+
 Name   : Frank
+Joined : 26.12.2024 19:13:22
 Role   : Developer
-Level  : 4
-Score  : 91
 Skills : {Rust, Go, Kubernetes}
+Level  : 4
+Active : True
+Score  : 91
 ```
 
 ### 2b.7 String length checks
@@ -1048,9 +1451,9 @@ spill -Bucket str-test -Filter { $_.Value.Length -gt 5 }
 
 ```
 
-Name Value
----- -----
-long abcdefghijk
+Value       Name
+-----       ----
+abcdefghijk long
 ```
 
 ### 2b.8 Date comparisons
@@ -1067,13 +1470,13 @@ spill -Bucket team -Filter { $_.Joined -gt $cutoff }
 
 ```
 
-Joined : 09.02.2026 17:05:27
-Active : True
 Name   : Carol
+Joined : 09.02.2026 19:13:22
 Role   : PM
-Level  : 3
-Score  : 88
 Skills : {Agile, Jira, Confluence}
+Level  : 3
+Active : True
+Score  : 88
 ```
 
 ### 2b.9 Nested property access
@@ -1089,13 +1492,13 @@ spill -Bucket team -Filter { $_.Skills -contains "Rust" }
 
 ```
 
-Joined : 26.12.2024 17:05:27
-Active : True
 Name   : Frank
+Joined : 26.12.2024 19:13:22
 Role   : Developer
-Level  : 4
-Score  : 91
 Skills : {Rust, Go, Kubernetes}
+Level  : 4
+Active : True
+Score  : 91
 ```
 
 ### 2b.10 Cross-bucket filtering
@@ -1139,29 +1542,29 @@ spill -Bucket team -First 3
 
 ```
 
-Joined : 10.05.2025 17:05:27
-Active : True
 Name   : Alice
+Joined : 10.05.2025 19:13:22
 Role   : Developer
-Level  : 3
-Score  : 95
 Skills : {PowerShell, C#, Azure}
-
-Joined : 11.11.2025 17:05:27
-Active : True
-Name   : Bob
-Role   : Designer
-Level  : 2
-Score  : 72
-Skills : {Figma, CSS, HTML}
-
-Joined : 09.02.2026 17:05:27
-Active : True
-Name   : Carol
-Role   : PM
 Level  : 3
-Score  : 88
+Active : True
+Score  : 95
+
+Name   : Bob
+Joined : 11.11.2025 19:13:22
+Role   : Designer
+Skills : {Figma, CSS, HTML}
+Level  : 2
+Active : True
+Score  : 72
+
+Name   : Carol
+Joined : 09.02.2026 19:13:22
+Role   : PM
 Skills : {Agile, Jira, Confluence}
+Level  : 3
+Active : True
+Score  : 88
 ```
 
 ### 2c.2 Skipping results with -Skip
@@ -1177,29 +1580,29 @@ spill -Bucket team -Skip 1 -First 3
 
 ```
 
-Joined : 11.11.2025 17:05:27
-Active : True
 Name   : Bob
+Joined : 11.11.2025 19:13:22
 Role   : Designer
-Level  : 2
-Score  : 72
 Skills : {Figma, CSS, HTML}
-
-Joined : 09.02.2026 17:05:27
+Level  : 2
 Active : True
+Score  : 72
+
 Name   : Carol
+Joined : 09.02.2026 19:13:22
 Role   : PM
-Level  : 3
-Score  : 88
 Skills : {Agile, Jira, Confluence}
-
-Joined : 26.12.2024 17:05:27
+Level  : 3
 Active : True
+Score  : 88
+
 Name   : Frank
+Joined : 26.12.2024 19:13:22
 Role   : Developer
-Level  : 4
-Score  : 91
 Skills : {Rust, Go, Kubernetes}
+Level  : 4
+Active : True
+Score  : 91
 ```
 
 ### 2c.3 Filtering with pagination
@@ -1215,29 +1618,29 @@ spill -Bucket team -Filter { $_.Score -gt 70 } -First 3
 
 ```
 
-Joined : 10.05.2025 17:05:27
-Active : True
 Name   : Alice
+Joined : 10.05.2025 19:13:22
 Role   : Developer
-Level  : 3
-Score  : 95
 Skills : {PowerShell, C#, Azure}
-
-Joined : 11.11.2025 17:05:27
-Active : True
-Name   : Bob
-Role   : Designer
-Level  : 2
-Score  : 72
-Skills : {Figma, CSS, HTML}
-
-Joined : 09.02.2026 17:05:27
-Active : True
-Name   : Carol
-Role   : PM
 Level  : 3
-Score  : 88
+Active : True
+Score  : 95
+
+Name   : Bob
+Joined : 11.11.2025 19:13:22
+Role   : Designer
+Skills : {Figma, CSS, HTML}
+Level  : 2
+Active : True
+Score  : 72
+
+Name   : Carol
+Joined : 09.02.2026 19:13:22
+Role   : PM
 Skills : {Agile, Jira, Confluence}
+Level  : 3
+Active : True
+Score  : 88
 ```
 
 ## 3. Update — Set-BucketObject
@@ -1371,32 +1774,32 @@ spill -Bucket team
 
 ```
 
-Joined : 10.05.2025 17:05:27
-Active : True
 Name   : Alice
+Joined : 10.05.2025 19:13:22
 Role   : Developer
-Level  : 3
-Score  : 95
 Skills : {PowerShell, C#, Azure}
+Level  : 3
+Active : True
+Score  : 95
 Email  : alice@contoso.com
 Phone  : 555-0100
 City   : Portland
 
-Joined : 09.02.2026 17:05:27
-Active : True
 Name   : Carol
+Joined : 09.02.2026 19:13:22
 Role   : PM
-Level  : 3
-Score  : 100
 Skills : {Agile, Jira, Confluence}
-
-Joined : 26.12.2024 17:05:27
+Level  : 3
 Active : True
+Score  : 100
+
 Name   : Frank
+Joined : 26.12.2024 19:13:22
 Role   : Developer
-Level  : 4
-Score  : 91
 Skills : {Rust, Go, Kubernetes}
+Level  : 4
+Active : True
+Score  : 91
 ```
 
 ### 4.3 Deleting non-existent key
@@ -1437,40 +1840,40 @@ spill -Bucket team
 
 ```
 
-Joined : 10.05.2025 17:05:27
-Active : True
 Name   : Alice
+Joined : 10.05.2025 19:13:22
 Role   : Developer
-Level  : 3
-Score  : 95
 Skills : {PowerShell, C#, Azure}
+Level  : 3
+Active : True
+Score  : 95
 Email  : alice@contoso.com
 Phone  : 555-0100
 City   : Portland
 
-Joined : 11.11.2025 17:05:27
-Active : True
-Name   : Bob
 Role   : Designer
+Name   : Bob
+Joined : 11.11.2025 19:13:23
+Active : True
+Skills : {Figma, CSS, HTML}
 Level  : 2
 Score  : 72
-Skills : {Figma, CSS, HTML}
 
-Joined : 09.02.2026 17:05:27
-Active : True
 Name   : Carol
+Joined : 09.02.2026 19:13:22
 Role   : PM
-Level  : 3
-Score  : 100
 Skills : {Agile, Jira, Confluence}
-
-Joined : 26.12.2024 17:05:27
+Level  : 3
 Active : True
+Score  : 100
+
 Name   : Frank
+Joined : 26.12.2024 19:13:22
 Role   : Developer
-Level  : 4
-Score  : 91
 Skills : {Rust, Go, Kubernetes}
+Level  : 4
+Active : True
+Score  : 91
 ```
 
 ### 4.6 Delete with -Filter
@@ -1487,40 +1890,40 @@ spill -Bucket team
 
 ```
 
-Joined : 10.05.2025 17:05:27
-Active : True
 Name   : Alice
+Joined : 10.05.2025 19:13:22
 Role   : Developer
-Level  : 3
-Score  : 95
 Skills : {PowerShell, C#, Azure}
+Level  : 3
+Active : True
+Score  : 95
 Email  : alice@contoso.com
 Phone  : 555-0100
 City   : Portland
 
-Joined : 11.11.2025 17:05:27
-Active : True
-Name   : Bob
 Role   : Designer
+Name   : Bob
+Joined : 11.11.2025 19:13:23
+Active : True
+Skills : {Figma, CSS, HTML}
 Level  : 2
 Score  : 72
-Skills : {Figma, CSS, HTML}
 
-Joined : 09.02.2026 17:05:27
-Active : True
 Name   : Carol
+Joined : 09.02.2026 19:13:22
 Role   : PM
-Level  : 3
-Score  : 100
 Skills : {Agile, Jira, Confluence}
-
-Joined : 26.12.2024 17:05:27
+Level  : 3
 Active : True
+Score  : 100
+
 Name   : Frank
+Joined : 26.12.2024 19:13:22
 Role   : Developer
-Level  : 4
-Score  : 91
 Skills : {Rust, Go, Kubernetes}
+Level  : 4
+Active : True
+Score  : 91
 ```
 
 ### 4.7 Delete all with -All
@@ -1572,13 +1975,13 @@ spill -Bucket team -Key "Alice-Backup"
 
 ```
 
-Joined : 10.05.2025 17:05:27
-Active : True
-Name   : Alice
 Role   : Developer
+Name   : Alice
+Joined : 10.05.2025 19:13:23
+Active : True
+Skills : {PowerShell, C#, Azure}
 Level  : 3
 Score  : 95
-Skills : {PowerShell, C#, Azure}
 ```
 
 ### 5.2 Copy across buckets
@@ -1594,13 +1997,13 @@ spill -Bucket archive -Key "Alice"
 
 ```
 
-Joined : 10.05.2025 17:05:27
-Active : True
-Name   : Alice
 Role   : Developer
+Name   : Alice
+Joined : 10.05.2025 19:13:23
+Active : True
+Skills : {PowerShell, C#, Azure}
 Level  : 3
 Score  : 95
-Skills : {PowerShell, C#, Azure}
 ```
 
 ### 5.3 Copy with passthru
@@ -1763,9 +2166,9 @@ archive                1         False
 config                 3         False
 demo                   2         False
 dest                   1         False
-events                 2         False
+events                 4         False
 final                  1         False
-logs                  30         False
+logs                 431          True
 match-demo             6         False
 move-dst               1         False
 move-src               0         False
@@ -1775,7 +2178,7 @@ origin                 0         False
 pass                   2         False
 source                 0         False
 special                1         False
-staff                  3         False
+staff                  7         False
 str-test               2         False
 team                   5         False
 temp                   0         False
@@ -1821,8 +2224,8 @@ Name         : team
 Path         : C:\Users\berfelde\.buckets\team
 ObjectCount  : 5
 TotalSize    : 5.68 KB
-OldestObject : 10.05.2026 17:05:27
-NewestObject : 10.05.2026 17:05:28
+OldestObject : 10.05.2026 19:13:23
+NewestObject : 10.05.2026 19:13:25
 ```
 
 ### 6.4 Listing keys
@@ -1866,7 +2269,7 @@ Key           : Alice-Backup
 Format        : Binary
 Type          : Object
 Size          : 1167
-LastWriteTime : 10.05.2026 17:05:28
+LastWriteTime : 10.05.2026 19:13:25
 IsCompressed  : False
 
 Bucket        : team
@@ -1874,7 +2277,7 @@ Key           : Alice
 Format        : Binary
 Type          : Object
 Size          : 1167
-LastWriteTime : 10.05.2026 17:05:28
+LastWriteTime : 10.05.2026 19:13:25
 IsCompressed  : False
 
 Bucket        : team
@@ -1882,7 +2285,7 @@ Key           : Bob
 Format        : Binary
 Type          : Object
 Size          : 1159
-LastWriteTime : 10.05.2026 17:05:28
+LastWriteTime : 10.05.2026 19:13:25
 IsCompressed  : False
 
 Bucket        : team
@@ -1890,15 +2293,15 @@ Key           : Carol
 Format        : Binary
 Type          : Object
 Size          : 1162
-LastWriteTime : 10.05.2026 17:05:28
+LastWriteTime : 10.05.2026 19:13:25
 IsCompressed  : False
 
 Bucket        : team
 Key           : Frank
 Format        : Binary
 Type          : Object
-Size          : 1166
-LastWriteTime : 10.05.2026 17:05:28
+Size          : 1165
+LastWriteTime : 10.05.2026 19:13:25
 IsCompressed  : False
 ```
 
@@ -1934,79 +2337,486 @@ Get-BucketKeys -Bucket "*"
 
 ```
 
-Bucket       Key
-------       ---
-archive      Alice
-config       app-config
-config       db-settings
-config       app-config
-demo         verbosity-demo
-demo         _ _
-dest         obj1
-events       20260510170527427_0
-events       20260510170527428_1
-final        new-key
-logs         019343dc-47c8-4f4d-b052-a94dc61434f7
-logs         0b62a199-3227-406f-9985-4b5cf5cac6f7
-logs         0fc1960b-da95-4924-905a-aa0429dd21ca
-logs         15e88ade-c4a2-4f30-bde5-78277e5a24d7
-logs         16605005-ec5a-4e93-a413-2ba8adafa2e6
-logs         19279551-9a59-4de1-b52a-eb643c4981c4
-logs         1baa65c5-2d10-4e00-9dfe-62a89ea2536f
-logs         20514876-cc64-4845-b9bf-fbefd9f4971d
-logs         2c9dacff-c28e-41d5-a209-bd1297861b3a
-logs         2cf58e2c-36ea-4593-8d05-6878a56ab755
-logs         3d0e25ae-9273-4f8e-93e3-16fe229ce689
-logs         3e6fe876-bbce-44a2-a3a8-a308ddcbf122
-logs         41412aaf-2933-4e16-aaa7-c8a8ad8f3dad
-logs         41d5e41e-fd8c-40c0-92af-ec53f7eb15d2
-logs         43b84fcb-6de8-4055-baa5-f13d029ee297
-logs         5a0b492d-373d-4c45-8ab8-5eedb648b9c9
-logs         6cac1669-fce1-482f-a705-45c3772ff395
-logs         71442ca9-552f-4aff-9cdf-f79785bbf1f5
-logs         7bf64c1d-1221-4903-bfb6-73ae57a0cebf
-logs         8aebc07e-47e0-4b3f-aff8-4096f1979996
-logs         b17f228d-e655-42bb-8b45-96ce15ab6425
-logs         b6209a4c-5c43-45f2-bf36-0553c6466147
-logs         ba7810b1-6bf5-4039-a555-4e7522f3cfcc
-logs         c3ed54fc-fcf8-44e9-8a4d-0e34e90d9b09
-logs         c64de2f7-c455-4248-a078-4d541d8b461b
-logs         d623d660-0592-4c2e-b12d-401722656ba9
-logs         d7123d80-ae9c-4a88-a2af-840e9bc68514
-logs         df9aab16-39ee-49ca-8ac9-935c0d733597
-logs         e16388c1-e8e4-4e10-826a-d7191d0eab11
-logs         e6a71468-2791-4b0f-a43a-1b037089ce70
-match-demo   A
-match-demo   alpha
-match-demo   B
-match-demo   beta
-match-demo   C
-match-demo   gamma
-move-dst     m-pass
-nested       deep
-nested-match a
-pass         mv-key
-pass         rn-key
-special      my_file_name_test
-staff        Dana
-staff        Eric
-staff        Gina
-str-test     long
-str-test     short
-team         Alice-Backup
-team         Alice
-team         Bob
-team         Carol
-team         Frank
-tmp          new-name
-tmp-json     json-new
-types        custom
-types        hash
-users        Alice
-users        Bob
-users        Carol
-users        Dave
-users        external-ref
+Bucket                               Key
+------                               ---
+archive                              Alice
+config                               app-config
+config                               db-settings
+config                               app-config
+demo                                 verbosity-demo
+demo                                 _ _
+dest                                 obj1
+events                               20260510191323158_0
+events                               20260510191323159_1
+events                               20260510191324090_0
+events                               20260510191324104_1
+final                                new-key
+logs/eventlog/Application/2026.05.08 20260510185259969_0
+logs/eventlog/Application/2026.05.08 20260510185259970_1
+logs/eventlog/Application/2026.05.08 20260510185259971_2
+logs/eventlog/Application/2026.05.08 20260510185259972_3
+logs/eventlog/Application/2026.05.08 20260510185259972_4
+logs/eventlog/Application/2026.05.08 20260510185259973_5
+logs/eventlog/Application/2026.05.08 20260510185259974_6
+logs/eventlog/Application/2026.05.08 20260510185259974_7
+logs/eventlog/Application/2026.05.08 20260510185259975_8
+logs/eventlog/Application/2026.05.08 20260510185259976_9
+logs/eventlog/Application/2026.05.09 20260510185300035_0
+logs/eventlog/Application/2026.05.09 20260510185300036_1
+logs/eventlog/Application/2026.05.09 20260510185300037_2
+logs/eventlog/Application/2026.05.09 20260510185300038_3
+logs/eventlog/Application/2026.05.09 20260510185300039_4
+logs/eventlog/Application/2026.05.09 20260510185300039_5
+logs/eventlog/Application/2026.05.09 20260510185300040_6
+logs/eventlog/Application/2026.05.09 20260510185300040_7
+logs/eventlog/Application/2026.05.09 20260510185300041_8
+logs/eventlog/Application/2026.05.09 20260510185300042_9
+logs/eventlog/Application/2026.05.10 20260510185300103_0
+logs/eventlog/Application/2026.05.10 20260510185300104_1
+logs/eventlog/Application/2026.05.10 20260510185300104_2
+logs/eventlog/Application/2026.05.10 20260510185300105_3
+logs/eventlog/Application/2026.05.10 20260510185300106_4
+logs/eventlog/Application/2026.05.10 20260510185300107_5
+logs/eventlog/Application/2026.05.10 20260510185300109_6
+logs/eventlog/Application/2026.05.10 20260510185300110_7
+logs/eventlog/Application/2026.05.10 20260510185300111_8
+logs/eventlog/Application/2026.05.10 20260510185300112_9
+logs/eventlog/Security/2026.05.08    20260510185259978_0
+logs/eventlog/Security/2026.05.08    20260510185259979_1
+logs/eventlog/Security/2026.05.08    20260510185259981_2
+logs/eventlog/Security/2026.05.08    20260510185259984_3
+logs/eventlog/Security/2026.05.08    20260510185259985_4
+logs/eventlog/Security/2026.05.08    20260510185259987_5
+logs/eventlog/Security/2026.05.08    20260510185259988_6
+logs/eventlog/Security/2026.05.08    20260510185259988_7
+logs/eventlog/Security/2026.05.09    20260510185300051_0
+logs/eventlog/Security/2026.05.09    20260510185300052_1
+logs/eventlog/Security/2026.05.09    20260510185300053_2
+logs/eventlog/Security/2026.05.09    20260510185300053_3
+logs/eventlog/Security/2026.05.09    20260510185300054_4
+logs/eventlog/Security/2026.05.09    20260510185300055_5
+logs/eventlog/Security/2026.05.09    20260510185300056_6
+logs/eventlog/Security/2026.05.09    20260510185300056_7
+logs/eventlog/Security/2026.05.10    20260510185300114_0
+logs/eventlog/Security/2026.05.10    20260510185300115_1
+logs/eventlog/Security/2026.05.10    20260510185300115_2
+logs/eventlog/Security/2026.05.10    20260510185300116_3
+logs/eventlog/Security/2026.05.10    20260510185300117_4
+logs/eventlog/Security/2026.05.10    20260510185300117_5
+logs/eventlog/Security/2026.05.10    20260510185300118_6
+logs/eventlog/Security/2026.05.10    20260510185300119_7
+logs/eventlog/System/2026.05.08      20260510185259934_0
+logs/eventlog/System/2026.05.08      20260510185259935_1
+logs/eventlog/System/2026.05.08      20260510185259935_2
+logs/eventlog/System/2026.05.08      20260510185259936_3
+logs/eventlog/System/2026.05.08      20260510185259937_4
+logs/eventlog/System/2026.05.08      20260510185259937_5
+logs/eventlog/System/2026.05.08      20260510185259938_6
+logs/eventlog/System/2026.05.08      20260510185259939_7
+logs/eventlog/System/2026.05.08      20260510185259939_8
+logs/eventlog/System/2026.05.08      20260510185259940_9
+logs/eventlog/System/2026.05.08      20260510185259941_10
+logs/eventlog/System/2026.05.08      20260510185259941_11
+logs/eventlog/System/2026.05.08      20260510185259942_12
+logs/eventlog/System/2026.05.08      20260510185259943_13
+logs/eventlog/System/2026.05.08      20260510185259943_14
+logs/eventlog/System/2026.05.09      20260510185259992_0
+logs/eventlog/System/2026.05.09      20260510185259993_1
+logs/eventlog/System/2026.05.09      20260510185259993_2
+logs/eventlog/System/2026.05.09      20260510185259994_3
+logs/eventlog/System/2026.05.09      20260510185259995_4
+logs/eventlog/System/2026.05.09      20260510185259996_5
+logs/eventlog/System/2026.05.09      20260510185259996_6
+logs/eventlog/System/2026.05.09      20260510185259997_7
+logs/eventlog/System/2026.05.09      20260510185259998_8
+logs/eventlog/System/2026.05.09      20260510185259998_9
+logs/eventlog/System/2026.05.09      20260510185259999_10
+logs/eventlog/System/2026.05.09      20260510185300029_11
+logs/eventlog/System/2026.05.09      20260510185300030_12
+logs/eventlog/System/2026.05.09      20260510185300031_13
+logs/eventlog/System/2026.05.09      20260510185300032_14
+logs/eventlog/System/2026.05.10      20260510185300060_0
+logs/eventlog/System/2026.05.10      20260510185300061_1
+logs/eventlog/System/2026.05.10      20260510185300076_2
+logs/eventlog/System/2026.05.10      20260510185300077_3
+logs/eventlog/System/2026.05.10      20260510185300079_4
+logs/eventlog/System/2026.05.10      20260510185300080_5
+logs/eventlog/System/2026.05.10      20260510185300081_6
+logs/eventlog/System/2026.05.10      20260510185300081_7
+logs/eventlog/System/2026.05.10      20260510185300082_8
+logs/eventlog/System/2026.05.10      20260510185300083_10
+logs/eventlog/System/2026.05.10      20260510185300083_9
+logs/eventlog/System/2026.05.10      20260510185300084_11
+logs/eventlog/System/2026.05.10      20260510185300098_12
+logs/eventlog/System/2026.05.10      20260510185300099_13
+logs/eventlog/System/2026.05.10      20260510185300100_14
+logs/eventlog/System/2026.05.10      20260510185438663_0
+logs/eventlog/System/2026.05.10      20260510185438664_1
+logs/syslog/db01/2026.05.08          20260510185259800_0
+logs/syslog/db01/2026.05.08          20260510185259801_1
+logs/syslog/db01/2026.05.08          20260510185259801_2
+logs/syslog/db01/2026.05.08          20260510185259802_3
+logs/syslog/db01/2026.05.08          20260510185259803_4
+logs/syslog/db01/2026.05.08          20260510185259804_5
+logs/syslog/db01/2026.05.08          20260510185259804_6
+logs/syslog/db01/2026.05.08          20260510185259805_7
+logs/syslog/db01/2026.05.08          20260510185259806_8
+logs/syslog/db01/2026.05.08          20260510185259806_9
+logs/syslog/db01/2026.05.09          20260510185259813_0
+logs/syslog/db01/2026.05.09          20260510185259814_1
+logs/syslog/db01/2026.05.09          20260510185259814_2
+logs/syslog/db01/2026.05.09          20260510185259815_3
+logs/syslog/db01/2026.05.09          20260510185259816_4
+logs/syslog/db01/2026.05.09          20260510185259816_5
+logs/syslog/db01/2026.05.09          20260510185259817_6
+logs/syslog/db01/2026.05.09          20260510185259818_7
+logs/syslog/db01/2026.05.09          20260510185259818_8
+logs/syslog/db01/2026.05.09          20260510185259819_9
+logs/syslog/db01/2026.05.10          20260510185259832_0
+logs/syslog/db01/2026.05.10          20260510185259833_1
+logs/syslog/db01/2026.05.10          20260510185259834_2
+logs/syslog/db01/2026.05.10          20260510185259834_3
+logs/syslog/db01/2026.05.10          20260510185259835_4
+logs/syslog/db01/2026.05.10          20260510185259836_5
+logs/syslog/db01/2026.05.10          20260510185259836_6
+logs/syslog/db01/2026.05.10          20260510185259837_7
+logs/syslog/db01/2026.05.10          20260510185259838_8
+logs/syslog/db01/2026.05.10          20260510185259839_9
+logs/syslog/lb01/2026.05.08          20260510185259843_0
+logs/syslog/lb01/2026.05.08          20260510185259843_1
+logs/syslog/lb01/2026.05.08          20260510185259844_2
+logs/syslog/lb01/2026.05.08          20260510185259846_3
+logs/syslog/lb01/2026.05.08          20260510185259847_4
+logs/syslog/lb01/2026.05.08          20260510185259848_5
+logs/syslog/lb01/2026.05.08          20260510185259848_6
+logs/syslog/lb01/2026.05.08          20260510185259849_7
+logs/syslog/lb01/2026.05.08          20260510185259851_8
+logs/syslog/lb01/2026.05.08          20260510185259851_9
+logs/syslog/lb01/2026.05.08          20260510185259852_10
+logs/syslog/lb01/2026.05.08          20260510185259853_11
+logs/syslog/lb01/2026.05.08          20260510185259853_12
+logs/syslog/lb01/2026.05.08          20260510185259854_13
+logs/syslog/lb01/2026.05.08          20260510185259855_14
+logs/syslog/lb01/2026.05.08          20260510185259855_15
+logs/syslog/lb01/2026.05.08          20260510185259856_16
+logs/syslog/lb01/2026.05.08          20260510185259858_17
+logs/syslog/lb01/2026.05.08          20260510185259859_18
+logs/syslog/lb01/2026.05.08          20260510185259860_19
+logs/syslog/lb01/2026.05.09          20260510185259872_0
+logs/syslog/lb01/2026.05.09          20260510185259873_1
+logs/syslog/lb01/2026.05.09          20260510185259873_2
+logs/syslog/lb01/2026.05.09          20260510185259875_3
+logs/syslog/lb01/2026.05.09          20260510185259876_4
+logs/syslog/lb01/2026.05.09          20260510185259876_5
+logs/syslog/lb01/2026.05.09          20260510185259877_6
+logs/syslog/lb01/2026.05.09          20260510185259878_7
+logs/syslog/lb01/2026.05.09          20260510185259878_8
+logs/syslog/lb01/2026.05.09          20260510185259879_9
+logs/syslog/lb01/2026.05.09          20260510185259880_10
+logs/syslog/lb01/2026.05.09          20260510185259880_11
+logs/syslog/lb01/2026.05.09          20260510185259881_12
+logs/syslog/lb01/2026.05.09          20260510185259889_13
+logs/syslog/lb01/2026.05.09          20260510185259890_14
+logs/syslog/lb01/2026.05.09          20260510185259892_15
+logs/syslog/lb01/2026.05.09          20260510185259893_16
+logs/syslog/lb01/2026.05.09          20260510185259894_17
+logs/syslog/lb01/2026.05.09          20260510185259894_18
+logs/syslog/lb01/2026.05.09          20260510185259895_19
+logs/syslog/lb01/2026.05.10          20260510185259899_0
+logs/syslog/lb01/2026.05.10          20260510185259908_1
+logs/syslog/lb01/2026.05.10          20260510185259909_2
+logs/syslog/lb01/2026.05.10          20260510185259912_3
+logs/syslog/lb01/2026.05.10          20260510185259912_4
+logs/syslog/lb01/2026.05.10          20260510185259913_5
+logs/syslog/lb01/2026.05.10          20260510185259914_6
+logs/syslog/lb01/2026.05.10          20260510185259915_7
+logs/syslog/lb01/2026.05.10          20260510185259915_8
+logs/syslog/lb01/2026.05.10          20260510185259916_9
+logs/syslog/lb01/2026.05.10          20260510185259917_10
+logs/syslog/lb01/2026.05.10          20260510185259917_11
+logs/syslog/lb01/2026.05.10          20260510185259918_12
+logs/syslog/lb01/2026.05.10          20260510185259919_13
+logs/syslog/lb01/2026.05.10          20260510185259920_14
+logs/syslog/lb01/2026.05.10          20260510185259921_15
+logs/syslog/lb01/2026.05.10          20260510185259921_16
+logs/syslog/lb01/2026.05.10          20260510185259925_17
+logs/syslog/lb01/2026.05.10          20260510185259926_18
+logs/syslog/lb01/2026.05.10          20260510185259926_19
+logs/syslog/web01/2026.05.08         20260510185259555_0
+logs/syslog/web01/2026.05.08         20260510185259556_1
+logs/syslog/web01/2026.05.08         20260510185259557_2
+logs/syslog/web01/2026.05.08         20260510185259558_3
+logs/syslog/web01/2026.05.08         20260510185259558_4
+logs/syslog/web01/2026.05.08         20260510185259559_5
+logs/syslog/web01/2026.05.08         20260510185259560_6
+logs/syslog/web01/2026.05.08         20260510185259560_7
+logs/syslog/web01/2026.05.08         20260510185259561_8
+logs/syslog/web01/2026.05.08         20260510185259561_9
+logs/syslog/web01/2026.05.08         20260510185259562_10
+logs/syslog/web01/2026.05.08         20260510185259563_11
+logs/syslog/web01/2026.05.08         20260510185259563_12
+logs/syslog/web01/2026.05.08         20260510185259564_13
+logs/syslog/web01/2026.05.08         20260510185259565_14
+logs/syslog/web01/2026.05.08         20260510185259565_15
+logs/syslog/web01/2026.05.08         20260510185259566_16
+logs/syslog/web01/2026.05.08         20260510185259568_17
+logs/syslog/web01/2026.05.08         20260510185259569_18
+logs/syslog/web01/2026.05.08         20260510185259569_19
+logs/syslog/web01/2026.05.08         20260510185259570_20
+logs/syslog/web01/2026.05.08         20260510185259571_21
+logs/syslog/web01/2026.05.08         20260510185259571_22
+logs/syslog/web01/2026.05.08         20260510185259572_23
+logs/syslog/web01/2026.05.08         20260510185259573_24
+logs/syslog/web01/2026.05.08         20260510185259573_25
+logs/syslog/web01/2026.05.08         20260510185259574_26
+logs/syslog/web01/2026.05.08         20260510185259581_27
+logs/syslog/web01/2026.05.08         20260510185259582_28
+logs/syslog/web01/2026.05.08         20260510185259583_29
+logs/syslog/web01/2026.05.08         20260510185259583_30
+logs/syslog/web01/2026.05.08         20260510185259584_31
+logs/syslog/web01/2026.05.08         20260510185259585_32
+logs/syslog/web01/2026.05.08         20260510185259585_33
+logs/syslog/web01/2026.05.08         20260510185259586_34
+logs/syslog/web01/2026.05.08         20260510185259587_35
+logs/syslog/web01/2026.05.08         20260510185259587_36
+logs/syslog/web01/2026.05.08         20260510185259588_37
+logs/syslog/web01/2026.05.08         20260510185259589_38
+logs/syslog/web01/2026.05.08         20260510185259589_39
+logs/syslog/web01/2026.05.09         20260510185259596_0
+logs/syslog/web01/2026.05.09         20260510185259596_1
+logs/syslog/web01/2026.05.09         20260510185259597_2
+logs/syslog/web01/2026.05.09         20260510185259598_3
+logs/syslog/web01/2026.05.09         20260510185259599_4
+logs/syslog/web01/2026.05.09         20260510185259619_5
+logs/syslog/web01/2026.05.09         20260510185259620_6
+logs/syslog/web01/2026.05.09         20260510185259621_7
+logs/syslog/web01/2026.05.09         20260510185259621_8
+logs/syslog/web01/2026.05.09         20260510185259622_9
+logs/syslog/web01/2026.05.09         20260510185259623_10
+logs/syslog/web01/2026.05.09         20260510185259623_11
+logs/syslog/web01/2026.05.09         20260510185259624_12
+logs/syslog/web01/2026.05.09         20260510185259625_13
+logs/syslog/web01/2026.05.09         20260510185259625_14
+logs/syslog/web01/2026.05.09         20260510185259626_15
+logs/syslog/web01/2026.05.09         20260510185259632_16
+logs/syslog/web01/2026.05.09         20260510185259632_17
+logs/syslog/web01/2026.05.09         20260510185259633_18
+logs/syslog/web01/2026.05.09         20260510185259634_19
+logs/syslog/web01/2026.05.09         20260510185259635_20
+logs/syslog/web01/2026.05.09         20260510185259636_21
+logs/syslog/web01/2026.05.09         20260510185259636_22
+logs/syslog/web01/2026.05.09         20260510185259637_23
+logs/syslog/web01/2026.05.09         20260510185259640_24
+logs/syslog/web01/2026.05.09         20260510185259642_25
+logs/syslog/web01/2026.05.09         20260510185259643_26
+logs/syslog/web01/2026.05.09         20260510185259643_27
+logs/syslog/web01/2026.05.09         20260510185259644_28
+logs/syslog/web01/2026.05.09         20260510185259645_29
+logs/syslog/web01/2026.05.09         20260510185259645_30
+logs/syslog/web01/2026.05.09         20260510185259646_31
+logs/syslog/web01/2026.05.09         20260510185259647_32
+logs/syslog/web01/2026.05.09         20260510185259647_33
+logs/syslog/web01/2026.05.09         20260510185259648_34
+logs/syslog/web01/2026.05.09         20260510185259648_35
+logs/syslog/web01/2026.05.09         20260510185259649_36
+logs/syslog/web01/2026.05.09         20260510185259650_37
+logs/syslog/web01/2026.05.09         20260510185259650_38
+logs/syslog/web01/2026.05.09         20260510185259651_39
+logs/syslog/web01/2026.05.10         20260510185259680_0
+logs/syslog/web01/2026.05.10         20260510185259681_1
+logs/syslog/web01/2026.05.10         20260510185259684_2
+logs/syslog/web01/2026.05.10         20260510185259685_3
+logs/syslog/web01/2026.05.10         20260510185259686_4
+logs/syslog/web01/2026.05.10         20260510185259686_5
+logs/syslog/web01/2026.05.10         20260510185259687_6
+logs/syslog/web01/2026.05.10         20260510185259688_7
+logs/syslog/web01/2026.05.10         20260510185259688_8
+logs/syslog/web01/2026.05.10         20260510185259689_9
+logs/syslog/web01/2026.05.10         20260510185259690_10
+logs/syslog/web01/2026.05.10         20260510185259690_11
+logs/syslog/web01/2026.05.10         20260510185259691_12
+logs/syslog/web01/2026.05.10         20260510185259691_13
+logs/syslog/web01/2026.05.10         20260510185259692_14
+logs/syslog/web01/2026.05.10         20260510185259693_15
+logs/syslog/web01/2026.05.10         20260510185259693_16
+logs/syslog/web01/2026.05.10         20260510185259694_17
+logs/syslog/web01/2026.05.10         20260510185259695_18
+logs/syslog/web01/2026.05.10         20260510185259695_19
+logs/syslog/web01/2026.05.10         20260510185259696_20
+logs/syslog/web01/2026.05.10         20260510185259697_21
+logs/syslog/web01/2026.05.10         20260510185259697_22
+logs/syslog/web01/2026.05.10         20260510185259698_23
+logs/syslog/web01/2026.05.10         20260510185259698_24
+logs/syslog/web01/2026.05.10         20260510185259699_25
+logs/syslog/web01/2026.05.10         20260510185259700_26
+logs/syslog/web01/2026.05.10         20260510185259701_27
+logs/syslog/web01/2026.05.10         20260510185259702_28
+logs/syslog/web01/2026.05.10         20260510185259703_29
+logs/syslog/web01/2026.05.10         20260510185259703_30
+logs/syslog/web01/2026.05.10         20260510185259704_31
+logs/syslog/web01/2026.05.10         20260510185259705_32
+logs/syslog/web01/2026.05.10         20260510185259707_33
+logs/syslog/web01/2026.05.10         20260510185259707_34
+logs/syslog/web01/2026.05.10         20260510185259708_35
+logs/syslog/web01/2026.05.10         20260510185259709_36
+logs/syslog/web01/2026.05.10         20260510185259709_37
+logs/syslog/web01/2026.05.10         20260510185259710_38
+logs/syslog/web01/2026.05.10         20260510185259711_39
+logs/syslog/web02/2026.05.08         20260510185259723_0
+logs/syslog/web02/2026.05.08         20260510185259724_1
+logs/syslog/web02/2026.05.08         20260510185259725_2
+logs/syslog/web02/2026.05.08         20260510185259726_3
+logs/syslog/web02/2026.05.08         20260510185259726_4
+logs/syslog/web02/2026.05.08         20260510185259727_5
+logs/syslog/web02/2026.05.08         20260510185259728_6
+logs/syslog/web02/2026.05.08         20260510185259728_7
+logs/syslog/web02/2026.05.08         20260510185259729_8
+logs/syslog/web02/2026.05.08         20260510185259730_10
+logs/syslog/web02/2026.05.08         20260510185259730_9
+logs/syslog/web02/2026.05.08         20260510185259731_11
+logs/syslog/web02/2026.05.08         20260510185259732_12
+logs/syslog/web02/2026.05.08         20260510185259733_13
+logs/syslog/web02/2026.05.08         20260510185259735_14
+logs/syslog/web02/2026.05.08         20260510185259736_15
+logs/syslog/web02/2026.05.08         20260510185259737_16
+logs/syslog/web02/2026.05.08         20260510185259738_17
+logs/syslog/web02/2026.05.08         20260510185259738_18
+logs/syslog/web02/2026.05.08         20260510185259740_19
+logs/syslog/web02/2026.05.09         20260510185259753_0
+logs/syslog/web02/2026.05.09         20260510185259754_1
+logs/syslog/web02/2026.05.09         20260510185259754_2
+logs/syslog/web02/2026.05.09         20260510185259755_3
+logs/syslog/web02/2026.05.09         20260510185259756_4
+logs/syslog/web02/2026.05.09         20260510185259756_5
+logs/syslog/web02/2026.05.09         20260510185259757_6
+logs/syslog/web02/2026.05.09         20260510185259758_7
+logs/syslog/web02/2026.05.09         20260510185259758_8
+logs/syslog/web02/2026.05.09         20260510185259759_9
+logs/syslog/web02/2026.05.09         20260510185259760_10
+logs/syslog/web02/2026.05.09         20260510185259760_11
+logs/syslog/web02/2026.05.09         20260510185259761_12
+logs/syslog/web02/2026.05.09         20260510185259761_13
+logs/syslog/web02/2026.05.09         20260510185259762_14
+logs/syslog/web02/2026.05.09         20260510185259763_15
+logs/syslog/web02/2026.05.09         20260510185259764_16
+logs/syslog/web02/2026.05.09         20260510185259765_17
+logs/syslog/web02/2026.05.09         20260510185259766_18
+logs/syslog/web02/2026.05.09         20260510185259767_19
+logs/syslog/web02/2026.05.10         20260510185259771_0
+logs/syslog/web02/2026.05.10         20260510185259772_1
+logs/syslog/web02/2026.05.10         20260510185259773_2
+logs/syslog/web02/2026.05.10         20260510185259773_3
+logs/syslog/web02/2026.05.10         20260510185259774_4
+logs/syslog/web02/2026.05.10         20260510185259775_5
+logs/syslog/web02/2026.05.10         20260510185259775_6
+logs/syslog/web02/2026.05.10         20260510185259776_7
+logs/syslog/web02/2026.05.10         20260510185259777_8
+logs/syslog/web02/2026.05.10         20260510185259778_10
+logs/syslog/web02/2026.05.10         20260510185259778_9
+logs/syslog/web02/2026.05.10         20260510185259779_11
+logs/syslog/web02/2026.05.10         20260510185259780_12
+logs/syslog/web02/2026.05.10         20260510185259780_13
+logs/syslog/web02/2026.05.10         20260510185259789_14
+logs/syslog/web02/2026.05.10         20260510185259790_15
+logs/syslog/web02/2026.05.10         20260510185259791_16
+logs/syslog/web02/2026.05.10         20260510185259793_17
+logs/syslog/web02/2026.05.10         20260510185259793_18
+logs/syslog/web02/2026.05.10         20260510185259794_19
+logs                                 07249bc2-130f-4d4f-a4f2-e201bcf3f65a
+logs                                 0cb0d779-5a19-4dc2-a7f0-024ea493bbf2
+logs                                 0e2fa96f-2242-441d-ab80-4ca8f16ed8ef
+logs                                 1a0d30e3-b98c-42e6-943d-9e48055b7b1d
+logs                                 1a58e979-a5e1-4078-8f73-4364da935d2e
+logs                                 1c47deb9-02fa-444e-9707-df7cd8bda2fc
+logs                                 1cf9f9c4-0f70-408e-ad5f-8ea15d2d36ef
+logs                                 256b9b9e-4a68-4be7-b2ad-3c180bb5382a
+logs                                 32b4a27f-bfe8-4484-ad45-025995869088
+logs                                 347fd291-f57b-42fa-9cd6-ed02c9122b9a
+logs                                 3700ff6e-e6a7-4cd6-8dad-24aca53f7eef
+logs                                 385fa0c0-22fe-40bc-b76e-9279224ded93
+logs                                 423ee420-d317-4d5b-98c6-04215063d012
+logs                                 4247520d-1611-4f9f-89f5-94e84b0211a5
+logs                                 4840466d-b361-4040-bb73-6557c6634a7d
+logs                                 4b84bf6c-7129-47bc-881c-5090c9893cb4
+logs                                 544a0577-9e00-4c2d-9780-a6b71c3ae761
+logs                                 577a2b3e-f8e6-4675-b23b-1410820da559
+logs                                 58193e04-209f-46b8-845b-6b9b99c4809d
+logs                                 5b5edc13-f803-4ae4-83a8-bfce01c3ffac
+logs                                 5cf93dc2-9410-450c-b7d6-3a7871160058
+logs                                 5ee84a8f-2834-4b74-a324-3d732222ce20
+logs                                 6e34e554-9970-4f85-98a7-969dcf861947
+logs                                 73b229b0-45f9-417c-a385-0ccd2dedc2d7
+logs                                 73fc8fd5-6862-4552-8bda-ea58c245a9db
+logs                                 775089de-f6be-488b-8263-35078bd0f449
+logs                                 7ce7b45e-6c7e-425c-bcdf-b4a78e403110
+logs                                 812879f9-3d75-4355-a93d-f44fdfd540fa
+logs                                 83b736a3-c5cf-4808-98e4-f50ef44e7e53
+logs                                 873d60dc-a971-4e84-865c-0ceebeea9c80
+logs                                 8c5f47d3-1165-496f-b9f7-3658eb2de538
+logs                                 8d61201b-f8de-4022-836f-6c028ef42c47
+logs                                 9ae738c5-c6aa-4367-8ecf-7338e7c8d964
+logs                                 9bad40d0-dd17-4fa5-a8a0-f2cd8b618e65
+logs                                 9dc2e1b4-667c-461f-99ff-f225a9fdd51e
+logs                                 a32d433a-eb85-458a-adec-e7967088e179
+logs                                 a75fcb63-6b57-48df-95fd-c53e03afc2d4
+logs                                 add65aa9-ea8e-44f7-8161-e8c310df7beb
+logs                                 b0ebd556-3ae0-416f-935f-ecac70f98fed
+logs                                 b14024ac-a642-421e-923f-d811c24ba7e8
+logs                                 b4466e84-e213-4b2b-828a-4604d7369d6c
+logs                                 b4550f8e-b7c9-42f8-aed6-4197b281adf0
+logs                                 b793f15c-3ad1-4879-ab21-fe935f9caf44
+logs                                 b95bb961-5370-4503-8f69-68e9654ceff4
+logs                                 b98f9952-2151-46c1-a64e-c4022abd9119
+logs                                 baa77c3e-48dd-41b9-8d08-a658f70172e4
+logs                                 be1040ad-1ea6-42d6-828e-8a87bd1323b2
+logs                                 bed1012f-0d31-4f75-a372-74c17c78d7a6
+logs                                 c186a214-dc71-445c-9ad9-5cfd95fc67e2
+logs                                 cc8c6992-3bac-40fd-bd08-a6d2c4f3bf52
+logs                                 de573de7-d1bc-4e5d-b537-582542f42ed1
+logs                                 e2633f43-e26e-48f6-9a50-12472f4e1ccf
+logs                                 e36a050f-af5f-4b97-8f9b-2c6a820d3108
+logs                                 e4f14276-a6c1-4cc2-a8bf-712994850151
+logs                                 e60bc4f4-779f-4f7a-9872-5fc7d9963105
+logs                                 e928f7fe-6cc2-439c-930a-fa65a085ee28
+logs                                 f0c01591-936a-4964-a760-613b1a8e6708
+logs                                 fb99026a-2526-43d9-8d68-e248e2e4dccb
+logs                                 fbf82425-8ba7-49da-9244-f7fb0c93eb0a
+logs                                 fe2859d8-6f37-4a0b-8caf-61aab2a60394
+match-demo                           A
+match-demo                           alpha
+match-demo                           B
+match-demo                           beta
+match-demo                           C
+match-demo                           gamma
+move-dst                             m-pass
+nested                               deep
+nested-match                         a
+pass                                 mv-key
+pass                                 rn-key
+special                              my_file_name_test
+staff                                Alice
+staff                                Bob
+staff                                Carol
+staff                                Dana
+staff                                Eric
+staff                                Frank
+staff                                Gina
+str-test                             long
+str-test                             short
+team                                 Alice-Backup
+team                                 Alice
+team                                 Bob
+team                                 Carol
+team                                 Frank
+tmp                                  new-name
+tmp-json                             json-new
+types                                custom
+types                                hash
+users                                Alice
+users                                Bob
+users                                Carol
+users                                Dave
+users                                external-ref
 ```
 
 ### 6.8 Tree view
@@ -2021,23 +2831,53 @@ limits how many objects are shown per bucket.
 Get-Bucket -Tree -MaxFiles 10
 ```
 
-.buckets (71 items, 29 KB)
+.buckets (478 items, 97 KB)
 ├── archive (1 item, 1 KB)
-├── config (3 items, 541 B)
+├── config (3 items, 540 B)
 ├── demo (2 items, 653 B)
 ├── dest (1 item, 415 B)
-├── events (2 items, 831 B)
+├── events (4 items, 2 KB)
 ├── final (1 item, 337 B)
-├── logs (30 items, 7 KB)
+├── logs (431 items, 71 KB)
+│   ├── eventlog (101 items, 16 KB)
+│   │   ├── Application (30 items, 5 KB)
+│   │   │   ├── 2026.05.08 (10 items, 2 KB)
+│   │   │   ├── 2026.05.09 (10 items, 2 KB)
+│   │   │   └── 2026.05.10 (10 items, 2 KB)
+│   │   ├── Security (24 items, 4 KB)
+│   │   │   ├── 2026.05.08 (8 items, 1 KB)
+│   │   │   ├── 2026.05.09 (8 items, 1 KB)
+│   │   │   └── 2026.05.10 (8 items, 1 KB)
+│   │   └── System (47 items, 8 KB)
+│   │       ├── 2026.05.08 (15 items, 2 KB)
+│   │       ├── 2026.05.09 (15 items, 2 KB)
+│   │       └── 2026.05.10 (17 items, 4 KB)
+│   └── syslog (270 items, 40 KB)
+│       ├── db01 (30 items, 4 KB)
+│       │   ├── 2026.05.08 (10 items, 1 KB)
+│       │   ├── 2026.05.09 (10 items, 1 KB)
+│       │   └── 2026.05.10 (10 items, 1 KB)
+│       ├── lb01 (60 items, 9 KB)
+│       │   ├── 2026.05.08 (20 items, 3 KB)
+│       │   ├── 2026.05.09 (20 items, 3 KB)
+│       │   └── 2026.05.10 (20 items, 3 KB)
+│       ├── web01 (120 items, 18 KB)
+│       │   ├── 2026.05.08 (40 items, 6 KB)
+│       │   ├── 2026.05.09 (40 items, 6 KB)
+│       │   └── 2026.05.10 (40 items, 6 KB)
+│       └── web02 (60 items, 9 KB)
+│           ├── 2026.05.08 (20 items, 3 KB)
+│           ├── 2026.05.09 (20 items, 3 KB)
+│           └── 2026.05.10 (20 items, 3 KB)
 ├── match-demo (6 items, 3 KB)
 ├── move-dst (1 item, 326 B)
 ├── nested (1 item, 1 KB)
 ├── nested-match (1 item, 604 B)
 ├── pass (2 items, 652 B)
 ├── special (1 item, 337 B)
-├── staff (3 items, 2 KB)
+├── staff (7 items, 7 KB)
 ├── str-test (2 items, 835 B)
-├── team (5 items, 6 KB)
+├── team (5 items, 5 KB)
 ├── tmp (1 item, 333 B)
 ├── tmp-json (1 item, 20 B)
 ├── types (2 items, 658 B)
@@ -2055,21 +2895,51 @@ individual objects cluttering the output.
 Get-Bucket -Tree
 ```
 
-.buckets (71 items, 29 KB)
+.buckets (478 items, 97 KB)
 ├── archive (1 item, 1 KB)
 ├── config (3 items, 541 B)
 ├── demo (2 items, 653 B)
 ├── dest (1 item, 415 B)
-├── events (2 items, 831 B)
+├── events (4 items, 2 KB)
 ├── final (1 item, 337 B)
-├── logs (30 items, 7 KB)
+├── logs (431 items, 71 KB)
+│   ├── eventlog (101 items, 16 KB)
+│   │   ├── Application (30 items, 5 KB)
+│   │   │   ├── 2026.05.08 (10 items, 2 KB)
+│   │   │   ├── 2026.05.09 (10 items, 2 KB)
+│   │   │   └── 2026.05.10 (10 items, 2 KB)
+│   │   ├── Security (24 items, 4 KB)
+│   │   │   ├── 2026.05.08 (8 items, 1 KB)
+│   │   │   ├── 2026.05.09 (8 items, 1 KB)
+│   │   │   └── 2026.05.10 (8 items, 1 KB)
+│   │   └── System (47 items, 8 KB)
+│   │       ├── 2026.05.08 (15 items, 2 KB)
+│   │       ├── 2026.05.09 (15 items, 2 KB)
+│   │       └── 2026.05.10 (17 items, 4 KB)
+│   └── syslog (270 items, 40 KB)
+│       ├── db01 (30 items, 4 KB)
+│       │   ├── 2026.05.08 (10 items, 1 KB)
+│       │   ├── 2026.05.09 (10 items, 1 KB)
+│       │   └── 2026.05.10 (10 items, 1 KB)
+│       ├── lb01 (60 items, 9 KB)
+│       │   ├── 2026.05.08 (20 items, 3 KB)
+│       │   ├── 2026.05.09 (20 items, 3 KB)
+│       │   └── 2026.05.10 (20 items, 3 KB)
+│       ├── web01 (120 items, 18 KB)
+│       │   ├── 2026.05.08 (40 items, 6 KB)
+│       │   ├── 2026.05.09 (40 items, 6 KB)
+│       │   └── 2026.05.10 (40 items, 6 KB)
+│       └── web02 (60 items, 9 KB)
+│           ├── 2026.05.08 (20 items, 3 KB)
+│           ├── 2026.05.09 (20 items, 3 KB)
+│           └── 2026.05.10 (20 items, 3 KB)
 ├── match-demo (6 items, 3 KB)
 ├── move-dst (1 item, 326 B)
 ├── nested (1 item, 1 KB)
 ├── nested-match (1 item, 604 B)
 ├── pass (2 items, 652 B)
 ├── special (1 item, 337 B)
-├── staff (3 items, 2 KB)
+├── staff (7 items, 7 KB)
 ├── str-test (2 items, 835 B)
 ├── team (5 items, 6 KB)
 ├── tmp (1 item, 333 B)
@@ -2089,7 +2959,7 @@ visible.
 Get-Bucket -Tree -Objects
 ```
 
-.buckets (71 items, 29 KB)
+.buckets (478 items, 97 KB)
 ├── archive (1 item, 1 KB)
 │   └── Alice
 ├── config (3 items, 541 B)
@@ -2101,18 +2971,176 @@ Get-Bucket -Tree -Objects
 │   └── verbosity-demo
 ├── dest (1 item, 415 B)
 │   └── obj1
-├── events (2 items, 831 B)
-│   ├── 20260510170527427_0
-│   └── 20260510170527428_1
+├── events (4 items, 2 KB)
+│   ├── 20260510191323158_0
+│   ├── 20260510191323159_1
+│   ├── 20260510191324090_0
+│   └── 20260510191324104_1
 ├── final (1 item, 337 B)
 │   └── new-key
-├── logs (30 items, 7 KB)
-│   ├── 019343dc-47c8-4f4d-b052-a94dc61434f7
-│   ├── 0b62a199-3227-406f-9985-4b5cf5cac6f7
-│   ├── 0fc1960b-da95-4924-905a-aa0429dd21ca
-│   ├── 15e88ade-c4a2-4f30-bde5-78277e5a24d7
-│   └── 16605005-ec5a-4e93-a413-2ba8adafa2e6
-│   └── ... 25 more
+├── logs (431 items, 71 KB)
+│   ├── eventlog (101 items, 16 KB)
+│   │   ├── Application (30 items, 5 KB)
+│   │   │   ├── 2026.05.08 (10 items, 2 KB)
+│   │   │   │   ├── 20260510185259969_0
+│   │   │   │   ├── 20260510185259970_1
+│   │   │   │   ├── 20260510185259971_2
+│   │   │   │   ├── 20260510185259972_3
+│   │   │   │   └── 20260510185259972_4
+│   │   │   │   └── ... 5 more
+│   │   │   ├── 2026.05.09 (10 items, 2 KB)
+│   │   │   │   ├── 20260510185300035_0
+│   │   │   │   ├── 20260510185300036_1
+│   │   │   │   ├── 20260510185300037_2
+│   │   │   │   ├── 20260510185300038_3
+│   │   │   │   └── 20260510185300039_4
+│   │   │   │   └── ... 5 more
+│   │   │   └── 2026.05.10 (10 items, 2 KB)
+│   │   │       ├── 20260510185300103_0
+│   │   │       ├── 20260510185300104_1
+│   │   │       ├── 20260510185300104_2
+│   │   │       ├── 20260510185300105_3
+│   │   │       └── 20260510185300106_4
+│   │   │       └── ... 5 more
+│   │   ├── Security (24 items, 4 KB)
+│   │   │   ├── 2026.05.08 (8 items, 1 KB)
+│   │   │   │   ├── 20260510185259978_0
+│   │   │   │   ├── 20260510185259979_1
+│   │   │   │   ├── 20260510185259981_2
+│   │   │   │   ├── 20260510185259984_3
+│   │   │   │   └── 20260510185259985_4
+│   │   │   │   └── ... 3 more
+│   │   │   ├── 2026.05.09 (8 items, 1 KB)
+│   │   │   │   ├── 20260510185300051_0
+│   │   │   │   ├── 20260510185300052_1
+│   │   │   │   ├── 20260510185300053_2
+│   │   │   │   ├── 20260510185300053_3
+│   │   │   │   └── 20260510185300054_4
+│   │   │   │   └── ... 3 more
+│   │   │   └── 2026.05.10 (8 items, 1 KB)
+│   │   │       ├── 20260510185300114_0
+│   │   │       ├── 20260510185300115_1
+│   │   │       ├── 20260510185300115_2
+│   │   │       ├── 20260510185300116_3
+│   │   │       └── 20260510185300117_4
+│   │   │       └── ... 3 more
+│   │   └── System (47 items, 8 KB)
+│   │       ├── 2026.05.08 (15 items, 2 KB)
+│   │       │   ├── 20260510185259934_0
+│   │       │   ├── 20260510185259935_1
+│   │       │   ├── 20260510185259935_2
+│   │       │   ├── 20260510185259936_3
+│   │       │   └── 20260510185259937_4
+│   │       │   └── ... 10 more
+│   │       ├── 2026.05.09 (15 items, 2 KB)
+│   │       │   ├── 20260510185259992_0
+│   │       │   ├── 20260510185259993_1
+│   │       │   ├── 20260510185259993_2
+│   │       │   ├── 20260510185259994_3
+│   │       │   └── 20260510185259995_4
+│   │       │   └── ... 10 more
+│   │       └── 2026.05.10 (17 items, 4 KB)
+│   │           ├── 20260510185300060_0
+│   │           ├── 20260510185300061_1
+│   │           ├── 20260510185300076_2
+│   │           ├── 20260510185300077_3
+│   │           └── 20260510185300079_4
+│   │           └── ... 12 more
+│   ├── syslog (270 items, 40 KB)
+│   │   ├── db01 (30 items, 4 KB)
+│   │   │   ├── 2026.05.08 (10 items, 1 KB)
+│   │   │   │   ├── 20260510185259800_0
+│   │   │   │   ├── 20260510185259801_1
+│   │   │   │   ├── 20260510185259801_2
+│   │   │   │   ├── 20260510185259802_3
+│   │   │   │   └── 20260510185259803_4
+│   │   │   │   └── ... 5 more
+│   │   │   ├── 2026.05.09 (10 items, 1 KB)
+│   │   │   │   ├── 20260510185259813_0
+│   │   │   │   ├── 20260510185259814_1
+│   │   │   │   ├── 20260510185259814_2
+│   │   │   │   ├── 20260510185259815_3
+│   │   │   │   └── 20260510185259816_4
+│   │   │   │   └── ... 5 more
+│   │   │   └── 2026.05.10 (10 items, 1 KB)
+│   │   │       ├── 20260510185259832_0
+│   │   │       ├── 20260510185259833_1
+│   │   │       ├── 20260510185259834_2
+│   │   │       ├── 20260510185259834_3
+│   │   │       └── 20260510185259835_4
+│   │   │       └── ... 5 more
+│   │   ├── lb01 (60 items, 9 KB)
+│   │   │   ├── 2026.05.08 (20 items, 3 KB)
+│   │   │   │   ├── 20260510185259843_0
+│   │   │   │   ├── 20260510185259843_1
+│   │   │   │   ├── 20260510185259844_2
+│   │   │   │   ├── 20260510185259846_3
+│   │   │   │   └── 20260510185259847_4
+│   │   │   │   └── ... 15 more
+│   │   │   ├── 2026.05.09 (20 items, 3 KB)
+│   │   │   │   ├── 20260510185259872_0
+│   │   │   │   ├── 20260510185259873_1
+│   │   │   │   ├── 20260510185259873_2
+│   │   │   │   ├── 20260510185259875_3
+│   │   │   │   └── 20260510185259876_4
+│   │   │   │   └── ... 15 more
+│   │   │   └── 2026.05.10 (20 items, 3 KB)
+│   │   │       ├── 20260510185259899_0
+│   │   │       ├── 20260510185259908_1
+│   │   │       ├── 20260510185259909_2
+│   │   │       ├── 20260510185259912_3
+│   │   │       └── 20260510185259912_4
+│   │   │       └── ... 15 more
+│   │   ├── web01 (120 items, 18 KB)
+│   │   │   ├── 2026.05.08 (40 items, 6 KB)
+│   │   │   │   ├── 20260510185259555_0
+│   │   │   │   ├── 20260510185259556_1
+│   │   │   │   ├── 20260510185259557_2
+│   │   │   │   ├── 20260510185259558_3
+│   │   │   │   └── 20260510185259558_4
+│   │   │   │   └── ... 35 more
+│   │   │   ├── 2026.05.09 (40 items, 6 KB)
+│   │   │   │   ├── 20260510185259596_0
+│   │   │   │   ├── 20260510185259596_1
+│   │   │   │   ├── 20260510185259597_2
+│   │   │   │   ├── 20260510185259598_3
+│   │   │   │   └── 20260510185259599_4
+│   │   │   │   └── ... 35 more
+│   │   │   └── 2026.05.10 (40 items, 6 KB)
+│   │   │       ├── 20260510185259680_0
+│   │   │       ├── 20260510185259681_1
+│   │   │       ├── 20260510185259684_2
+│   │   │       ├── 20260510185259685_3
+│   │   │       └── 20260510185259686_4
+│   │   │       └── ... 35 more
+│   │   └── web02 (60 items, 9 KB)
+│   │       ├── 2026.05.08 (20 items, 3 KB)
+│   │       │   ├── 20260510185259723_0
+│   │       │   ├── 20260510185259724_1
+│   │       │   ├── 20260510185259725_2
+│   │       │   ├── 20260510185259726_3
+│   │       │   └── 20260510185259726_4
+│   │       │   └── ... 15 more
+│   │       ├── 2026.05.09 (20 items, 3 KB)
+│   │       │   ├── 20260510185259753_0
+│   │       │   ├── 20260510185259754_1
+│   │       │   ├── 20260510185259754_2
+│   │       │   ├── 20260510185259755_3
+│   │       │   └── 20260510185259756_4
+│   │       │   └── ... 15 more
+│   │       └── 2026.05.10 (20 items, 3 KB)
+│   │           ├── 20260510185259771_0
+│   │           ├── 20260510185259772_1
+│   │           ├── 20260510185259773_2
+│   │           ├── 20260510185259773_3
+│   │           └── 20260510185259774_4
+│   │           └── ... 15 more
+│   ├── 07249bc2-130f-4d4f-a4f2-e201bcf3f65a
+│   ├── 0cb0d779-5a19-4dc2-a7f0-024ea493bbf2
+│   ├── 0e2fa96f-2242-441d-ab80-4ca8f16ed8ef
+│   ├── 1a0d30e3-b98c-42e6-943d-9e48055b7b1d
+│   └── 1a58e979-a5e1-4078-8f73-4364da935d2e
+│   └── ... 55 more
 ├── match-demo (6 items, 3 KB)
 │   ├── A
 │   ├── alpha
@@ -2131,10 +3159,13 @@ Get-Bucket -Tree -Objects
 │   └── rn-key
 ├── special (1 item, 337 B)
 │   └── my_file_name_test
-├── staff (3 items, 2 KB)
+├── staff (7 items, 7 KB)
+│   ├── Alice
+│   ├── Bob
+│   ├── Carol
 │   ├── Dana
-│   ├── Eric
-│   └── Gina
+│   └── Eric
+│   └── ... 2 more
 ├── str-test (2 items, 835 B)
 │   ├── long
 │   └── short
@@ -2175,8 +3206,8 @@ Get-Bucket -Tree -Raw | Select-Object -First 2
 Name        : .buckets
 Type        : Root
 Path        : 
-ObjectCount : 71
-SizeBytes   : 29219
+ObjectCount : 478
+SizeBytes   : 99741
 Depth       : 0
 Children    : {@{Name=archive; Type=Bucket; Path=archive; ObjectCount=1; SizeBytes=1167; Depth=1; Children=System.Collections.ArrayList; _BucketName=archive; _BucketKey=}, @{Name=config; Type=Bucket; Path=config; ObjectCount=3; SizeBytes=541; Depth=1; Children=System.Collections.ArrayList; _BucketName=config; _BucketKey=}, @{Name=demo; Type=Bucket; Path=demo; ObjectCount=2; SizeBytes=653; Depth=1; Children=System.Collections.ArrayList; _BucketName=demo; _BucketKey=}, @{Name=dest; Type=Bucket; Path=dest; ObjectCount=1; SizeBytes=415; Depth=1; Children=System.Collections.ArrayList; _BucketName=dest; _BucketKey=}…}
 _BucketName : 
@@ -2195,7 +3226,7 @@ only top-level buckets.
 Get-Bucket -Tree -Depth 1
 ```
 
-.buckets (71 items, 29 KB)
+.buckets (478 items, 97 KB)
 
 ### 6.13 Tree to JSON
 ---
@@ -2214,8 +3245,8 @@ Get-Bucket -Tree -Raw | ConvertTo-Json -Depth 5 | Select-Object -First 5
 "Name": ".buckets",
 "Type": "Root",
 "Path": "",
-"ObjectCount": 71,
-"SizeBytes": 29219,
+"ObjectCount": 478,
+"SizeBytes": 99741,
 "Depth": 0,
 "Children": [
   {
@@ -2266,8 +3297,8 @@ Get-Bucket -Tree -Raw | ConvertTo-Json -Depth 5 | Select-Object -First 5
     "Name": "events",
     "Type": "Bucket",
     "Path": "events",
-    "ObjectCount": 2,
-    "SizeBytes": 831,
+    "ObjectCount": 4,
+    "SizeBytes": 1662,
     "Depth": 1,
     "Children": [],
     "_BucketName": "events",
@@ -2288,10 +3319,42 @@ Get-Bucket -Tree -Raw | ConvertTo-Json -Depth 5 | Select-Object -First 5
     "Name": "logs",
     "Type": "Bucket",
     "Path": "logs",
-    "ObjectCount": 30,
-    "SizeBytes": 7448,
+    "ObjectCount": 431,
+    "SizeBytes": 72487,
     "Depth": 1,
-    "Children": [],
+    "Children": [
+      {
+        "Name": "eventlog",
+        "Type": "Bucket",
+        "Path": "logs/eventlog",
+        "ObjectCount": 101,
+        "SizeBytes": 16644,
+        "Depth": 2,
+        "Children": [
+          "@{Name=Application; Type=Bucket; Path=logs/eventlog/Application; ObjectCount=30; SizeBytes=4685; Depth=3; Children=System.Collections.ArrayList; _BucketName=logs/eventlog/Application; _BucketKey=}",
+          "@{Name=Security; Type=Bucket; Path=logs/eventlog/Security; ObjectCount=24; SizeBytes=3664; Depth=3; Children=System.Collections.ArrayList; _BucketName=logs/eventlog/Security; _BucketKey=}",
+          "@{Name=System; Type=Bucket; Path=logs/eventlog/System; ObjectCount=47; SizeBytes=8295; Depth=3; Children=System.Collections.ArrayList; _BucketName=logs/eventlog/System; _BucketKey=}"
+        ],
+        "_BucketName": "logs/eventlog",
+        "_BucketKey": ""
+      },
+      {
+        "Name": "syslog",
+        "Type": "Bucket",
+        "Path": "logs/syslog",
+        "ObjectCount": 270,
+        "SizeBytes": 41075,
+        "Depth": 2,
+        "Children": [
+          "@{Name=db01; Type=Bucket; Path=logs/syslog/db01; ObjectCount=30; SizeBytes=4503; Depth=3; Children=System.Collections.ArrayList; _BucketName=logs/syslog/db01; _BucketKey=}",
+          "@{Name=lb01; Type=Bucket; Path=logs/syslog/lb01; ObjectCount=60; SizeBytes=9115; Depth=3; Children=System.Collections.ArrayList; _BucketName=logs/syslog/lb01; _BucketKey=}",
+          "@{Name=web01; Type=Bucket; Path=logs/syslog/web01; ObjectCount=120; SizeBytes=18351; Depth=3; Children=System.Collections.ArrayList; _BucketName=logs/syslog/web01; _BucketKey=}",
+          "@{Name=web02; Type=Bucket; Path=logs/syslog/web02; ObjectCount=60; SizeBytes=9106; Depth=3; Children=System.Collections.ArrayList; _BucketName=logs/syslog/web02; _BucketKey=}"
+        ],
+        "_BucketName": "logs/syslog",
+        "_BucketKey": ""
+      }
+    ],
     "_BucketName": "logs",
     "_BucketKey": ""
   },
@@ -2365,8 +3428,8 @@ Get-Bucket -Tree -Raw | ConvertTo-Json -Depth 5 | Select-Object -First 5
     "Name": "staff",
     "Type": "Bucket",
     "Path": "staff",
-    "ObjectCount": 3,
-    "SizeBytes": 2032,
+    "ObjectCount": 7,
+    "SizeBytes": 6685,
     "Depth": 1,
     "Children": [],
     "_BucketName": "staff",
@@ -2388,7 +3451,7 @@ Get-Bucket -Tree -Raw | ConvertTo-Json -Depth 5 | Select-Object -First 5
     "Type": "Bucket",
     "Path": "team",
     "ObjectCount": 5,
-    "SizeBytes": 5821,
+    "SizeBytes": 5820,
     "Depth": 1,
     "Children": [],
     "_BucketName": "team",
@@ -2464,9 +3527,9 @@ archive                1
 config                 3
 demo                   2
 dest                   1
-events                 2
+events                 4
 final                  1
-logs                  30
+logs                 431
 match-demo             6
 move-dst               1
 move-src               0
@@ -2476,7 +3539,7 @@ origin                 0
 pass                   2
 source                 0
 special                1
-staff                  3
+staff                  7
 str-test               2
 team                   5
 temp                   0
@@ -2648,69 +3711,69 @@ Get-Content (Join-Path $exportDir "team.json") -Raw | ConvertFrom-Json | Convert
 ```
 [
 {
-  "Joined": "2025-05-10T17:05:27.2054756+02:00",
-  "Active": true,
-  "Name": "Alice",
   "Role": "Developer",
-  "Level": 3,
-  "Score": 95,
+  "Name": "Alice",
+  "Joined": "2025-05-10T19:13:23.4575364+02:00",
+  "Active": true,
   "Skills": [
     "PowerShell",
     "C#",
     "Azure"
-  ]
+  ],
+  "Level": 3,
+  "Score": 95
 },
 {
-  "Joined": "2025-05-10T17:05:27.2054756+02:00",
-  "Active": true,
-  "Name": "Alice",
   "Role": "Developer",
-  "Level": 3,
-  "Score": 95,
+  "Name": "Alice",
+  "Joined": "2025-05-10T19:13:23.4575364+02:00",
+  "Active": true,
   "Skills": [
     "PowerShell",
     "C#",
     "Azure"
-  ]
+  ],
+  "Level": 3,
+  "Score": 95
 },
 {
-  "Joined": "2025-11-11T17:05:27.2082857+01:00",
-  "Active": true,
-  "Name": "Bob",
   "Role": "Designer",
-  "Level": 2,
-  "Score": 72,
+  "Name": "Bob",
+  "Joined": "2025-11-11T19:13:23.4604761+01:00",
+  "Active": true,
   "Skills": [
     "Figma",
     "CSS",
     "HTML"
-  ]
+  ],
+  "Level": 2,
+  "Score": 72
 },
 {
-  "Joined": "2026-02-09T17:05:27.2083787+01:00",
-  "Active": true,
-  "Name": "Carol",
   "Role": "PM",
-  "Level": 3,
-  "Score": 88,
+  "Name": "Carol",
+  "Joined": "2026-02-09T19:13:23.4606118+01:00",
+  "Active": true,
   "Skills": [
     "Agile",
     "Jira",
     "Confluence"
-  ]
+  ],
+  "Level": 3,
+  "Score": 88
 },
 {
-  "Joined": "2024-12-26T17:05:27.2084407+01:00",
-  "Active": true,
-  "Name": "Frank",
   "Role": "Developer",
-  "Level": 4,
-  "Score": 91,
+  "Name": "Frank",
+  "Joined": "2024-12-26T19:13:23.460695+01:00",
+  "Active": true,
   "Skills": [
     "Rust",
     "Go",
     "Kubernetes"
-  ]
+  ],
+  "Level": 4,
+  "Score": 91
 }
 ]
 ```
@@ -2752,33 +3815,33 @@ Get-ChildItem "buckets:\"
 
 Type  LastWriteTime             CreationTime                      Size Name
 ----  -------------             ------------                      ---- ----
-b--   10.05.2026 17:05:28       10.05.2026 17:05:28               1 KB archive
-b--   10.05.2026 17:05:28       10.05.2026 17:05:27              541 B config
-b--   10.05.2026 17:05:27       10.05.2026 17:05:27              653 B demo
-b--   10.05.2026 17:05:28       10.05.2026 17:05:28              415 B dest
-b--   10.05.2026 17:05:27       10.05.2026 17:05:27              831 B events
-b--   10.05.2026 17:05:28       10.05.2026 17:05:28              337 B final
-b--   10.05.2026 17:05:29       10.05.2026 17:05:29               5 KB import-over
-b--   10.05.2026 17:05:27       10.05.2026 17:05:27               7 KB logs
-b--   10.05.2026 17:05:27       10.05.2026 17:05:27               3 KB match-demo
-b--   10.05.2026 17:05:28       10.05.2026 17:05:28              326 B move-dst
-b--   10.05.2026 17:05:28       10.05.2026 17:05:28                0 B move-src
-b--   10.05.2026 17:05:27       10.05.2026 17:05:27               1 KB nested
-b--   10.05.2026 17:05:27       10.05.2026 17:05:27              604 B nested-match
-b--   10.05.2026 17:05:28       10.05.2026 17:05:28                0 B origin
-b--   10.05.2026 17:05:28       10.05.2026 17:05:28              652 B pass
-b--   10.05.2026 17:05:29       10.05.2026 17:05:29               5 KB restored
-b--   10.05.2026 17:05:29       10.05.2026 17:05:29               4 KB restored-json
-b--   10.05.2026 17:05:28       10.05.2026 17:05:28                0 B source
-b--   10.05.2026 17:05:27       10.05.2026 17:05:27              337 B special
-b--   10.05.2026 17:05:27       10.05.2026 17:05:27               2 KB staff
-b--   10.05.2026 17:05:28       10.05.2026 17:05:28              835 B str-test
-b--   10.05.2026 17:05:28       10.05.2026 17:05:27               6 KB team
-b--   10.05.2026 17:05:28       10.05.2026 17:05:28                0 B temp
-b--   10.05.2026 17:05:28       10.05.2026 17:05:28              333 B tmp
-b--   10.05.2026 17:05:28       10.05.2026 17:05:28               20 B tmp-json
-b--   10.05.2026 17:05:27       10.05.2026 17:05:27              658 B types
-b--   10.05.2026 17:05:27       10.05.2026 17:05:27               2 KB users
+b--   10.05.2026 19:13:25       10.05.2026 19:13:25               1 KB archive
+b--   10.05.2026 19:13:24       10.05.2026 19:13:23              541 B config
+b--   10.05.2026 19:13:23       10.05.2026 19:13:23              653 B demo
+b--   10.05.2026 19:13:25       10.05.2026 19:13:25              415 B dest
+b--   10.05.2026 19:13:24       10.05.2026 19:13:23               2 KB events
+b--   10.05.2026 19:13:25       10.05.2026 19:13:25              337 B final
+b--   10.05.2026 19:13:27       10.05.2026 19:13:27               5 KB import-over
+b--   10.05.2026 19:13:24       10.05.2026 18:52:59              71 KB logs
+b--   10.05.2026 19:13:24       10.05.2026 19:13:24               3 KB match-demo
+b--   10.05.2026 19:13:25       10.05.2026 19:13:25              326 B move-dst
+b--   10.05.2026 19:13:25       10.05.2026 19:13:25                0 B move-src
+b--   10.05.2026 19:13:23       10.05.2026 19:13:23               1 KB nested
+b--   10.05.2026 19:13:24       10.05.2026 19:13:24              604 B nested-match
+b--   10.05.2026 19:13:25       10.05.2026 19:13:25                0 B origin
+b--   10.05.2026 19:13:25       10.05.2026 19:13:25              652 B pass
+b--   10.05.2026 19:13:27       10.05.2026 19:13:27               5 KB restored
+b--   10.05.2026 19:13:27       10.05.2026 19:13:27               4 KB restored-json
+b--   10.05.2026 19:13:25       10.05.2026 19:13:25                0 B source
+b--   10.05.2026 19:13:23       10.05.2026 19:13:23              337 B special
+b--   10.05.2026 19:13:25       10.05.2026 19:13:23               7 KB staff
+b--   10.05.2026 19:13:24       10.05.2026 19:13:24              835 B str-test
+b--   10.05.2026 19:13:25       10.05.2026 19:13:23               6 KB team
+b--   10.05.2026 19:13:25       10.05.2026 19:13:25                0 B temp
+b--   10.05.2026 19:13:25       10.05.2026 19:13:25              333 B tmp
+b--   10.05.2026 19:13:25       10.05.2026 19:13:25               20 B tmp-json
+b--   10.05.2026 19:13:23       10.05.2026 19:13:23              658 B types
+b--   10.05.2026 19:13:23       10.05.2026 19:13:23               2 KB users
 ```
 
 ### 8.3 Formatting bucket output
@@ -2797,33 +3860,33 @@ Get-ChildItem "buckets:\" | Select-Object Name, Length, LastWriteTime | Format-T
 
 Name          Length LastWriteTime
 ----          ------ -------------
-archive              10.05.2026 17:05:28
-config               10.05.2026 17:05:28
-demo                 10.05.2026 17:05:27
-dest                 10.05.2026 17:05:28
-events               10.05.2026 17:05:27
-final                10.05.2026 17:05:28
-import-over          10.05.2026 17:05:29
-logs                 10.05.2026 17:05:27
-match-demo           10.05.2026 17:05:27
-move-dst             10.05.2026 17:05:28
-move-src             10.05.2026 17:05:28
-nested               10.05.2026 17:05:27
-nested-match         10.05.2026 17:05:27
-origin               10.05.2026 17:05:28
-pass                 10.05.2026 17:05:28
-restored             10.05.2026 17:05:29
-restored-json        10.05.2026 17:05:29
-source               10.05.2026 17:05:28
-special              10.05.2026 17:05:27
-staff                10.05.2026 17:05:27
-str-test             10.05.2026 17:05:28
-team                 10.05.2026 17:05:28
-temp                 10.05.2026 17:05:28
-tmp                  10.05.2026 17:05:28
-tmp-json             10.05.2026 17:05:28
-types                10.05.2026 17:05:27
-users                10.05.2026 17:05:27
+archive              10.05.2026 19:13:25
+config               10.05.2026 19:13:24
+demo                 10.05.2026 19:13:23
+dest                 10.05.2026 19:13:25
+events               10.05.2026 19:13:24
+final                10.05.2026 19:13:25
+import-over          10.05.2026 19:13:27
+logs                 10.05.2026 19:13:24
+match-demo           10.05.2026 19:13:24
+move-dst             10.05.2026 19:13:25
+move-src             10.05.2026 19:13:25
+nested               10.05.2026 19:13:23
+nested-match         10.05.2026 19:13:24
+origin               10.05.2026 19:13:25
+pass                 10.05.2026 19:13:25
+restored             10.05.2026 19:13:27
+restored-json        10.05.2026 19:13:27
+source               10.05.2026 19:13:25
+special              10.05.2026 19:13:23
+staff                10.05.2026 19:13:25
+str-test             10.05.2026 19:13:24
+team                 10.05.2026 19:13:25
+temp                 10.05.2026 19:13:25
+tmp                  10.05.2026 19:13:25
+tmp-json             10.05.2026 19:13:25
+types                10.05.2026 19:13:23
+users                10.05.2026 19:13:23
 ```
 
 ### 8.4 Browsing objects in a bucket
@@ -2841,11 +3904,11 @@ Get-ChildItem "buckets:\team" | Select-Object Name, Length, LastWriteTime
 
 Name         Length LastWriteTime
 ----         ------ -------------
-Alice-Backup        10.05.2026 17:05:28
-Alice               10.05.2026 17:05:28
-Bob                 10.05.2026 17:05:28
-Carol               10.05.2026 17:05:28
-Frank               10.05.2026 17:05:28
+Alice-Backup        10.05.2026 19:13:25
+Alice               10.05.2026 19:13:25
+Bob                 10.05.2026 19:13:25
+Carol               10.05.2026 19:13:25
+Frank               10.05.2026 19:13:25
 ```
 
 ### 8.5 Filtering containers
@@ -2863,33 +3926,33 @@ Get-ChildItem "buckets:\" | Where-Object { $_.PSIsContainer }
 
 Type  LastWriteTime             CreationTime                      Size Name
 ----  -------------             ------------                      ---- ----
-b--   10.05.2026 17:05:28       10.05.2026 17:05:28               1 KB archive
-b--   10.05.2026 17:05:28       10.05.2026 17:05:27              541 B config
-b--   10.05.2026 17:05:27       10.05.2026 17:05:27              653 B demo
-b--   10.05.2026 17:05:28       10.05.2026 17:05:28              415 B dest
-b--   10.05.2026 17:05:27       10.05.2026 17:05:27              831 B events
-b--   10.05.2026 17:05:28       10.05.2026 17:05:28              337 B final
-b--   10.05.2026 17:05:29       10.05.2026 17:05:29               5 KB import-over
-b--   10.05.2026 17:05:27       10.05.2026 17:05:27               7 KB logs
-b--   10.05.2026 17:05:27       10.05.2026 17:05:27               3 KB match-demo
-b--   10.05.2026 17:05:28       10.05.2026 17:05:28              326 B move-dst
-b--   10.05.2026 17:05:28       10.05.2026 17:05:28                0 B move-src
-b--   10.05.2026 17:05:27       10.05.2026 17:05:27               1 KB nested
-b--   10.05.2026 17:05:27       10.05.2026 17:05:27              604 B nested-match
-b--   10.05.2026 17:05:28       10.05.2026 17:05:28                0 B origin
-b--   10.05.2026 17:05:28       10.05.2026 17:05:28              652 B pass
-b--   10.05.2026 17:05:29       10.05.2026 17:05:29               5 KB restored
-b--   10.05.2026 17:05:29       10.05.2026 17:05:29               4 KB restored-json
-b--   10.05.2026 17:05:28       10.05.2026 17:05:28                0 B source
-b--   10.05.2026 17:05:27       10.05.2026 17:05:27              337 B special
-b--   10.05.2026 17:05:27       10.05.2026 17:05:27               2 KB staff
-b--   10.05.2026 17:05:28       10.05.2026 17:05:28              835 B str-test
-b--   10.05.2026 17:05:28       10.05.2026 17:05:27               6 KB team
-b--   10.05.2026 17:05:28       10.05.2026 17:05:28                0 B temp
-b--   10.05.2026 17:05:28       10.05.2026 17:05:28              333 B tmp
-b--   10.05.2026 17:05:28       10.05.2026 17:05:28               20 B tmp-json
-b--   10.05.2026 17:05:27       10.05.2026 17:05:27              658 B types
-b--   10.05.2026 17:05:27       10.05.2026 17:05:27               2 KB users
+b--   10.05.2026 19:13:25       10.05.2026 19:13:25               1 KB archive
+b--   10.05.2026 19:13:24       10.05.2026 19:13:23              541 B config
+b--   10.05.2026 19:13:23       10.05.2026 19:13:23              653 B demo
+b--   10.05.2026 19:13:25       10.05.2026 19:13:25              415 B dest
+b--   10.05.2026 19:13:24       10.05.2026 19:13:23               2 KB events
+b--   10.05.2026 19:13:25       10.05.2026 19:13:25              337 B final
+b--   10.05.2026 19:13:27       10.05.2026 19:13:27               5 KB import-over
+b--   10.05.2026 19:13:24       10.05.2026 18:52:59              71 KB logs
+b--   10.05.2026 19:13:24       10.05.2026 19:13:24               3 KB match-demo
+b--   10.05.2026 19:13:25       10.05.2026 19:13:25              326 B move-dst
+b--   10.05.2026 19:13:25       10.05.2026 19:13:25                0 B move-src
+b--   10.05.2026 19:13:23       10.05.2026 19:13:23               1 KB nested
+b--   10.05.2026 19:13:24       10.05.2026 19:13:24              604 B nested-match
+b--   10.05.2026 19:13:25       10.05.2026 19:13:25                0 B origin
+b--   10.05.2026 19:13:25       10.05.2026 19:13:25              652 B pass
+b--   10.05.2026 19:13:27       10.05.2026 19:13:27               5 KB restored
+b--   10.05.2026 19:13:27       10.05.2026 19:13:27               4 KB restored-json
+b--   10.05.2026 19:13:25       10.05.2026 19:13:25                0 B source
+b--   10.05.2026 19:13:23       10.05.2026 19:13:23              337 B special
+b--   10.05.2026 19:13:25       10.05.2026 19:13:23               7 KB staff
+b--   10.05.2026 19:13:24       10.05.2026 19:13:24              835 B str-test
+b--   10.05.2026 19:13:25       10.05.2026 19:13:23               6 KB team
+b--   10.05.2026 19:13:25       10.05.2026 19:13:25                0 B temp
+b--   10.05.2026 19:13:25       10.05.2026 19:13:25              333 B tmp
+b--   10.05.2026 19:13:25       10.05.2026 19:13:25               20 B tmp-json
+b--   10.05.2026 19:13:23       10.05.2026 19:13:23              658 B types
+b--   10.05.2026 19:13:23       10.05.2026 19:13:23               2 KB users
 ```
 
 ### 8.6 Reading objects
@@ -3021,12 +4084,12 @@ spill -Bucket "org/eu/*/cities"
 
 ```
 
-Population Country Name
----------- ------- ----
- 3600000 DE      Berlin
- 1500000 DE      Munich
- 8900000 UK      London
-  550000 UK      Manchester
+Name       Population Country
+----       ---------- -------
+Berlin        3600000 DE
+Munich        1500000 DE
+London        8900000 UK
+Manchester     550000 UK
 ```
 
 ### 9.3 Querying nested buckets directly
@@ -3045,10 +4108,10 @@ spill -Bucket "org/eu/de/cities"
 
 ```
 
-Population Country Name
----------- ------- ----
- 3600000 DE      Berlin
- 1500000 DE      Munich
+Name   Population Country
+----   ---------- -------
+Berlin    3600000 DE
+Munich    1500000 DE
 ```
 
 ### 9.4 Multi-level wildcards
@@ -3067,11 +4130,11 @@ spill -Bucket "org/*/de/*"
 
 ```
 
-Population Country Name
----------- ------- ----
- 3600000 DE      Berlin
- 1500000 DE      Munich
-                 
+Name   Population Country
+----   ---------- -------
+Berlin    3600000 DE
+Munich    1500000 DE
+                
 
 ```
 
@@ -3118,7 +4181,7 @@ it easy to see the organizational structure at a glance.
 Get-Bucket -Name "org" -Tree -Objects -MaxFiles 10
 ```
 
-.buckets (93 items, 45 KB)
+.buckets (500 items, 114 KB)
 └── org (7 items, 3 KB)
   ├── eu (6 items, 3 KB)
   │   ├── de (4 items, 2 KB)
@@ -3212,8 +4275,8 @@ Name         : org/eu/de/cities
 Path         : C:\Users\berfelde\.buckets\org\eu\de\cities
 ObjectCount  : 2
 TotalSize    : 1 KB
-OldestObject : 10.05.2026 17:05:29
-NewestObject : 10.05.2026 17:05:29
+OldestObject : 10.05.2026 19:13:27
+NewestObject : 10.05.2026 19:13:27
 ```
 
 ### 9.10 Keys on nested buckets
@@ -3254,11 +4317,11 @@ spill -Bucket "org/*/cities" -Filter { $_.Population -gt 2000000 }
 
 ```
 
-Population Country Name
----------- ------- ----
- 3600000 DE      Berlin
- 8900000 UK      London
- 8300000 US      New York
+Name     Population Country
+----     ---------- -------
+Berlin      3600000 DE
+London      8900000 UK
+New York    8300000 US
 ```
 
 ### 9.12 Removing nested trees
@@ -3380,15 +4443,18 @@ spill | Group-Object _BucketName | Select-Object Name, Count
 
 Name          Count
 ----          -----
+2026.05.08      123
+2026.05.09      123
+2026.05.10      125
 archive           1
 config            3
 demo              3
 dest              1
 dir-listing       5
-events            2
+events            4
 final             1
 import-over       5
-logs             30
+logs             60
 match-demo        6
 move-dst          1
 nested            1
@@ -3397,7 +4463,7 @@ pass              2
 restored          5
 restored-json     5
 special           1
-staff             3
+staff             7
 str-test          2
 team              5
 tmp               1
@@ -3468,71 +4534,71 @@ spill -Bucket team | Where-Object { $_.Score -gt 80 }
 
 ```
 
-Joined : 10.05.2025 17:05:27
-Active : True
-Name   : Alice
 Role   : Developer
+Name   : Alice
+Joined : 10.05.2025 19:13:23
+Active : True
+Skills : {PowerShell, C#, Azure}
 Level  : 3
 Score  : 100
-Skills : {PowerShell, C#, Azure}
 
-Joined : 10.05.2025 17:05:27
-Active : True
-Name   : Alice
 Role   : Developer
+Name   : Alice
+Joined : 10.05.2025 19:13:23
+Active : True
+Skills : {PowerShell, C#, Azure}
 Level  : 3
 Score  : 100
-Skills : {PowerShell, C#, Azure}
 
-Joined : 09.02.2026 17:05:27
-Active : True
-Name   : Carol
-Role   : PM
-Level  : 3
 Score  : 95
-Skills : {Agile, Jira, Confluence}
-
-Joined : 26.12.2024 17:05:27
+Name   : Carol
+Joined : 09.02.2026 19:13:23
 Active : True
-Name   : Frank
+Skills : {Agile, Jira, Confluence}
+Level  : 3
+Role   : PM
+
 Role   : Developer
+Name   : Frank
+Joined : 26.12.2024 19:13:23
+Active : True
+Skills : {Rust, Go, Kubernetes}
 Level  : 4
 Score  : 96
-Skills : {Rust, Go, Kubernetes}
 ```
 ```
 
-Joined : 10.05.2025 17:05:27
-Active : True
-Name   : Alice
 Role   : Developer
+Name   : Alice
+Joined : 10.05.2025 19:13:23
+Active : True
+Skills : {PowerShell, C#, Azure}
 Level  : 3
 Score  : 100
-Skills : {PowerShell, C#, Azure}
 
-Joined : 10.05.2025 17:05:27
-Active : True
-Name   : Alice
 Role   : Developer
+Name   : Alice
+Joined : 10.05.2025 19:13:23
+Active : True
+Skills : {PowerShell, C#, Azure}
 Level  : 3
 Score  : 100
-Skills : {PowerShell, C#, Azure}
 
-Joined : 09.02.2026 17:05:27
-Active : True
-Name   : Carol
-Role   : PM
-Level  : 3
 Score  : 95
-Skills : {Agile, Jira, Confluence}
-
-Joined : 26.12.2024 17:05:27
+Name   : Carol
+Joined : 09.02.2026 19:13:23
 Active : True
-Name   : Frank
+Skills : {Agile, Jira, Confluence}
+Level  : 3
+Role   : PM
+
 Role   : Developer
+Name   : Frank
+Joined : 26.12.2024 19:13:23
+Active : True
+Skills : {Rust, Go, Kubernetes}
 Level  : 4
 Score  : 96
-Skills : {Rust, Go, Kubernetes}
 ```
 
 ### 10.10 Custom formatting
@@ -3569,56 +4635,56 @@ spill -Bucket team -Filter { $_.Score -gt 80 } | ConvertTo-Json -Depth 5
 ```
 [
 {
-  "Joined": "2025-05-10T17:05:27.2054756+02:00",
-  "Active": true,
-  "Name": "Alice",
   "Role": "Developer",
-  "Level": 3,
-  "Score": 100,
+  "Name": "Alice",
+  "Joined": "2025-05-10T19:13:23.4575364+02:00",
+  "Active": true,
   "Skills": [
     "PowerShell",
     "C#",
     "Azure"
-  ]
+  ],
+  "Level": 3,
+  "Score": 100
 },
 {
-  "Joined": "2025-05-10T17:05:27.2054756+02:00",
-  "Active": true,
-  "Name": "Alice",
   "Role": "Developer",
-  "Level": 3,
-  "Score": 100,
+  "Name": "Alice",
+  "Joined": "2025-05-10T19:13:23.4575364+02:00",
+  "Active": true,
   "Skills": [
     "PowerShell",
     "C#",
     "Azure"
-  ]
+  ],
+  "Level": 3,
+  "Score": 100
 },
 {
-  "Joined": "2026-02-09T17:05:27.2083787+01:00",
-  "Active": true,
-  "Name": "Carol",
-  "Role": "PM",
-  "Level": 3,
   "Score": 95,
+  "Name": "Carol",
+  "Joined": "2026-02-09T19:13:23.4606118+01:00",
+  "Active": true,
   "Skills": [
     "Agile",
     "Jira",
     "Confluence"
-  ]
+  ],
+  "Level": 3,
+  "Role": "PM"
 },
 {
-  "Joined": "2024-12-26T17:05:27.2084407+01:00",
-  "Active": true,
-  "Name": "Frank",
   "Role": "Developer",
-  "Level": 4,
-  "Score": 96,
+  "Name": "Frank",
+  "Joined": "2024-12-26T19:13:23.460695+01:00",
+  "Active": true,
   "Skills": [
     "Rust",
     "Go",
     "Kubernetes"
-  ]
+  ],
+  "Level": 4,
+  "Score": 96
 }
 ]
 ```
@@ -3700,25 +4766,25 @@ spill -Bucket servers -Filter { $_.Status -ne "online" }
 
 ```
 
-Location : DC2
-IP       : 10.0.2.50
-CPU      : 8
 Hostname : app-01
-Role     : app
-Disk     : 200
-RAM      : 16
-OS       : Rocky 9
 Status   : offline
-
-Location : DC2
-IP       : 10.0.2.20
+RAM      : 16
 CPU      : 8
+Disk     : 200
+Location : DC2
+Role     : app
+OS       : Rocky 9
+IP       : 10.0.2.50
+
 Hostname : db-02
-Role     : database
-Disk     : 500
-RAM      : 32
-OS       : Debian 12
 Status   : degraded
+RAM      : 32
+CPU      : 8
+Disk     : 500
+Location : DC2
+Role     : database
+OS       : Debian 12
+IP       : 10.0.2.20
 ```
 
 ### 12.3 Targeting servers by role and specs
@@ -3735,25 +4801,25 @@ spill -Bucket servers -Filter { $_.RAM -ge 16 -and $_.Role -eq "database" }
 
 ```
 
-Location : DC1
-IP       : 10.0.1.20
-CPU      : 8
 Hostname : db-01
-Role     : database
-Disk     : 500
-RAM      : 32
-OS       : Debian 12
 Status   : online
-
-Location : DC2
-IP       : 10.0.2.20
-CPU      : 8
-Hostname : db-02
-Role     : database
-Disk     : 500
 RAM      : 32
+CPU      : 8
+Disk     : 500
+Location : DC1
+Role     : database
 OS       : Debian 12
+IP       : 10.0.1.20
+
+Hostname : db-02
 Status   : degraded
+RAM      : 32
+CPU      : 8
+Disk     : 500
+Location : DC2
+Role     : database
+OS       : Debian 12
+IP       : 10.0.2.20
 ```
 
 ### 12.4 Grouping servers by datacenter
@@ -3771,8 +4837,8 @@ spill -Bucket servers | Group-Object Location
 
 Count Name                      Group
 ----- ----                      -----
-  5 DC1                       {@{Location=DC1; IP=10.0.1.1; CPU=4; Hostname=backup-01; Role=backup; Disk=2000; RAM=8; OS=FreeBSD 14; Status=online}, @{Location=DC1; IP=10.0.1.30; CPU=2; Hostname=cache-01; Role=cache; Disk=60; RAM=16; OS=Alpine 3.18; Status=online}, @{Location=DC1; IP=10.0.1.20; CPU=8; Hostname=db-01; Role=database; Disk=500; RAM=32; OS=Debian 12; Status=online}, @{Location=DC1; IP=10.0.1.10; CPU=4; Hostname=web-01; Role=web; Disk=120; RAM=8; OS=Ubuntu 22.04; Status=online}…}
-  3 DC2                       {@{Location=DC2; IP=10.0.2.50; CPU=8; Hostname=app-01; Role=app; Disk=200; RAM=16; OS=Rocky 9; Status=offline}, @{Location=DC2; IP=10.0.2.20; CPU=8; Hostname=db-02; Role=database; Disk=500; RAM=32; OS=Debian 12; Status=degraded}, @{Location=DC2; IP=10.0.1.40; CPU=2; Hostname=mon-01; Role=monitoring; Disk=250; RAM=4; OS=Ubuntu 22.04; Status=online}}
+  5 DC1                       {@{Hostname=backup-01; Status=online; RAM=8; CPU=4; Disk=2000; Location=DC1; Role=backup; OS=FreeBSD 14; IP=10.0.1.1}, @{Hostname=cache-01; Status=online; RAM=16; CPU=2; Disk=60; Location=DC1; Role=cache; OS=Alpine 3.18; IP=10.0.1.30}, @{Hostname=db-01; Status=online; RAM=32; CPU=8; Disk=500; Location=DC1; Role=database; OS=Debian 12; IP=10.0.1.20}, @{Hostname=web-01; Status=online; RAM=8; CPU=4; Disk=120; Location=DC1; Role=web; OS=Ubuntu 22.04; IP=10.0.1.10}…}
+  3 DC2                       {@{Hostname=app-01; Status=offline; RAM=16; CPU=8; Disk=200; Location=DC2; Role=app; OS=Rocky 9; IP=10.0.2.50}, @{Hostname=db-02; Status=degraded; RAM=32; CPU=8; Disk=500; Location=DC2; Role=database; OS=Debian 12; IP=10.0.2.20}, @{Hostname=mon-01; Status=online; RAM=4; CPU=2; Disk=250; Location=DC2; Role=monitoring; OS=Ubuntu 22.04; IP=10.0.1.40}}
 ```
 
 ### 12.5 Capacity planning totals
@@ -3838,14 +4904,14 @@ spill -Bucket incidents -Filter { $_.Severity -in @("ERROR","CRIT") }
 
 ```
 
-Severity Source Message                   Timestamp
--------- ------ -------                   ---------
-ERROR    web-01 Connection pool exhausted 10.05.2026 15:05:30
-ERROR    app-01 Service unreachable       10.05.2026 16:50:30
-CRIT     app-01 Disk /dev/sda1 at 97%     10.05.2026 17:00:30
-ERROR    web-01 Connection pool exhausted 10.05.2026 15:05:30
-ERROR    app-01 Service unreachable       10.05.2026 16:50:30
-CRIT     app-01 Disk /dev/sda1 at 97%     10.05.2026 17:00:30
+Message                   Severity Timestamp           Source
+-------                   -------- ---------           ------
+Connection pool exhausted ERROR    10.05.2026 17:13:29 web-01
+Service unreachable       ERROR    10.05.2026 18:58:29 app-01
+Disk /dev/sda1 at 97%     CRIT     10.05.2026 19:08:29 app-01
+Connection pool exhausted ERROR    10.05.2026 17:13:29 web-01
+Service unreachable       ERROR    10.05.2026 18:58:29 app-01
+Disk /dev/sda1 at 97%     CRIT     10.05.2026 19:08:29 app-01
 ```
 
 ### 12.8 Batch maintenance mode
@@ -3923,9 +4989,10 @@ cleaned up — your system is exactly as it was before we started.
 
 
 
-What you learned:
+  What you learned:
 
-  fill / spill / dip           — save, read, list
+  fill / spill / dip / toss / drain
+                               — save, read, list, delete buckets, delete objects
   -Key / -KeyProperty          — naming objects
   -Overwrite / -AsTimestamp    — replacement and timestamp keys
   -AsJson / -Compress          — storage formats
@@ -3935,7 +5002,7 @@ What you learned:
   -First / -Skip               — pagination
   Set-BucketObject             — update in place (pipeline + explicit)
   Partial update / patch       — add properties with hashtable pipe
-  Remove-BucketObject          — delete by key / all / match / filter
+  drain / toss                 — delete objects, delete buckets
   -WhatIf / -PassThru          — safety preview and metadata capture
   Copy / Rename / Move         — object operations with and without pass-through
   PSDrive operations           — Get-Content, Set-Content, Copy-Item, Remove-Item, Test-Path

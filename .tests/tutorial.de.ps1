@@ -286,13 +286,14 @@ Get-BucketRoot
     if ($tree) { $tree | Out-Host } else { Write-Host "    (noch keine Buckets)" -ForegroundColor DarkGray }
     Write-Host ""
     Write-Host @"
-  Die vier Kern-Cmdlets:
+  Die sechs Kern-Cmdlets:
 "@ -ForegroundColor White
     Write-Host ""
     Write-Host "    fill   · New-BucketObject      Objekte schreiben" -ForegroundColor Cyan
     Write-Host "    spill  · Get-BucketObject      Objekte lesen" -ForegroundColor Cyan
-    Write-Host "    dip    · Set-BucketObject      Objekt aktualisieren" -ForegroundColor Cyan
-    Write-Host "    rmo    · Remove-BucketObject   Objekt loeschen" -ForegroundColor Cyan
+    Write-Host "    dip    · Get-Bucket            Buckets auflisten" -ForegroundColor Cyan
+    Write-Host "    drain  · Remove-BucketObject   Objekt loeschen" -ForegroundColor Cyan
+    Write-Host "    toss   · Remove-Bucket         Bucket loeschen" -ForegroundColor Cyan
     Write-Host ""
     Write-Host @"
   Standardwerte: Binary-Tiefe 5, JSON-Tiefe 20, Pfad $HOME/.buckets
@@ -3101,7 +3102,8 @@ Write-Host @"
 
   Was Sie gelernt haben:
 
-    fill / spill / dip          — save, read, list
+    fill / spill / dip / toss / drain
+                                 — speichern, lesen, auflisten, Buckets loeschen, Objekte loeschen
     -Key / -KeyProperty         — naming objects
     -Overwrite / -AsTimestamp    — replacement and timestamp keys
     -AsJson / -Compress          — storage formats
@@ -3111,7 +3113,7 @@ Write-Host @"
     -First / -Skip              — pagination
     Set-BucketObject             — update in place (pipeline + explicit)
     Partial update / patch       — add properties with hashtable pipe
-    Remove-BucketObject          — delete by key / all / match / filter
+    drain / toss                 — Objekte loeschen, Buckets loeschen
     -WhatIf / -PassThru          — safety preview and metadata capture
     Copy / Rename / Move         — object operations with and without pass-through
     PSDrive operations           — Get-Content, Set-Content, Copy-Item, Remove-Item, Test-Path
