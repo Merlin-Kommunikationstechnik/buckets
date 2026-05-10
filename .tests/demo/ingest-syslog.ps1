@@ -37,52 +37,54 @@ $facilityMap = @{
     20 = "local4"; 21 = "local5"; 22 = "local6"; 23 = "local7"
 }
 
-$day = (Get-Date).ToString("yyyy/MM/dd")
-
-process {
-    $line = $_
-    if ([string]::IsNullOrWhiteSpace($line)) { return }
-
-    $m = $syslogRegex.Match($line)
+function Ingest-Line {
+    param([string]$Line, [string]$FallbackSource)
+    if ([string]::IsNullOrWhiteSpace($Line)) { return }
+    $day = (Get-Date).ToString("yyyy/MM/dd")
+    $m = $syslogRegex.Match($Line)
     if ($m.Success) {
         $pri = [int]$m.Groups[1].Value
         $severity = $severityMap[[math]::Floor($pri % 8)]
         $facility = $facilityMap[[math]::Floor($pri / 8)]
         $hostname = $m.Groups[3].Value
-        $tag = $m.Groups[4].Value
-        $pid = $m.Groups[5].Value
-        $message = $m.Groups[6].Value
-
         [PSCustomObject]@{
-            Timestamp  = $m.Groups[2].Value
-            Hostname   = $hostname
-            Facility   = $facility
-            Severity   = $severity
-            Tag        = $tag
-            PID        = if ($pid) { [int]$pid } else { $null }
-            Message    = $message
-            Raw        = $line
+            Timestamp = $m.Groups[2].Value
+            Hostname  = $hostname
+            Facility  = $facility
+            Severity  = $severity
+            Tag       = $m.Groups[4].Value
+            PID       = if ($m.Groups[5].Value) { [int]$m.Groups[5].Value } else { $null }
+            Message   = $m.Groups[6].Value
+            Raw       = $Line
         } | New-BucketObject -Bucket "logs/syslog/$hostname/$day" -AsTimestamp -AsJson -Compress -Quiet
     } else {
         [PSCustomObject]@{
             Timestamp = (Get-Date -Format "MMM dd HH:mm:ss")
-            Hostname  = $Source
+            Hostname  = $FallbackSource
             Facility  = "unknown"
             Severity  = "info"
             Tag       = "raw"
             PID       = $null
-            Message   = $line
-            Raw       = $line
-        } | New-BucketObject -Bucket "logs/syslog/$Source/$day" -AsTimestamp -AsJson -Compress -Quiet
+            Message   = $Line
+            Raw       = $Line
+        } | New-BucketObject -Bucket "logs/syslog/$FallbackSource/$day" -AsTimestamp -AsJson -Compress -Quiet
     }
 }
 
-begin {
-    if ($MyInvocation.ExpectingInput) { return }
-    $paths = $args
-    if ($paths.Count -eq 0) { $paths = $Source }
-    foreach ($path in $paths) {
-        if (-not (Test-Path $path)) { Write-Warning "File not found: $path"; continue }
-        Get-Content -Path $path | & $MyInvocation.MyCommand.Path -Source ([System.IO.Path]::GetFileNameWithoutExtension($path))
+# Pipeline mode — process each line
+if ($MyInvocation.ExpectingInput) {
+    $input | ForEach-Object { Ingest-Line -Line $_ -FallbackSource $Source }
+    return
+}
+
+# File mode — process each path argument, or use Source as fallback path
+$paths = $args
+if ($paths.Count -eq 0) { $paths = @($Source) }
+foreach ($path in $paths) {
+    if (Test-Path -LiteralPath $path -PathType Leaf) {
+        $src = [System.IO.Path]::GetFileNameWithoutExtension($path)
+        Get-Content -LiteralPath $path | ForEach-Object { Ingest-Line -Line $_ -FallbackSource $src }
+    } else {
+        Write-Warning "File not found: $path"
     }
 }
