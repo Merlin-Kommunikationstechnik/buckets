@@ -225,37 +225,45 @@ if ($GenerateMarkdown) {
             $mode = (Read-Host "  Enter choice [0/1/2/3/4]").Trim()
         } while ($mode -notin @("0","1","2","3","4"))
 
-        if ($mode -eq "0") {
-            cls
-            # ========== Introduction ==========
-            Write-Host ""
-            Write-Host "  0. Introduction" -ForegroundColor Cyan
-            Write-Host "  $Sep" -ForegroundColor DarkGray
-            Write-Host ""
+        if ($mode -eq "0" -or $mode -eq "4") {
+            break  # exit menu to run introduction below
+        }
+        break
+    }
+}
 
-            Write-Host "  0.1 What is Buckets?" -ForegroundColor DarkGray
-            Write-Host "  $Sep" -ForegroundColor DarkGray
-            Write-Host ""
-            Write-Host @"
+# Run introduction for track 0 or 4
+if ($mode -eq "0" -or $mode -eq "4") {
+    cls
+    # ========== Introduction ==========
+    Write-Host ""
+    Write-Host "  0. Introduction" -ForegroundColor Cyan
+    Write-Host "  $Sep" -ForegroundColor DarkGray
+    Write-Host ""
+
+    Write-Host "  0.1 What is Buckets?" -ForegroundColor DarkGray
+    Write-Host "  $Sep" -ForegroundColor DarkGray
+    Write-Host ""
+    Write-Host @"
   Buckets is a PowerShell module for file-based PSObject storage.
   Every object is a file, every bucket is a folder. There is no
   database, no daemon, no config file — just the filesystem.
 "@ -ForegroundColor White
-            Write-Host ""
-            Write-Host "  Two storage formats:" -ForegroundColor White
-            Write-Host @"
+    Write-Host ""
+    Write-Host "  Two storage formats:" -ForegroundColor White
+    Write-Host @"
     Binary (.dat) — via PSSerializer. Fast, preserves full .NET type
                     information. Handles complex objects, circular refs.
     JSON    (.json) — via -AsJson. Human-readable, portable, editable
                     in any text editor.
 "@ -ForegroundColor DarkGray
-            tut-pause
+    tut-pause
 
-            Write-Host ""
-            Write-Host "  0.2 Why Buckets?" -ForegroundColor DarkGray
-            Write-Host "  $Sep" -ForegroundColor DarkGray
-            Write-Host ""
-            Write-Host @"
+    Write-Host ""
+    Write-Host "  0.2 Why Buckets?" -ForegroundColor DarkGray
+    Write-Host "  $Sep" -ForegroundColor DarkGray
+    Write-Host ""
+    Write-Host @"
   Persistent       — objects outlive your PowerShell session
   Shareable        — buckets are folders on disk; copy, sync, commit
   Composable       — pipeline in, pipeline out; just pipe and go
@@ -264,48 +272,45 @@ if ($GenerateMarkdown) {
   Expand/Collapse  — nested structures into browsable directory trees
   Cross-platform   — PowerShell 7+ on Windows, macOS, Linux
 "@ -ForegroundColor White
-            tut-pause
+    tut-pause
 
-            Write-Host ""
-            Write-Host "  0.3 How does it work?" -ForegroundColor DarkGray
-            Write-Host "  $Sep" -ForegroundColor DarkGray
-            Write-Host ""
-            Write-Host @"
+    Write-Host ""
+    Write-Host "  0.3 How does it work?" -ForegroundColor DarkGray
+    Write-Host "  $Sep" -ForegroundColor DarkGray
+    Write-Host ""
+    Write-Host @"
   Every bucket is a directory under a root path. The default root is:
 "@ -ForegroundColor White
-            Write-Host ""
-            tut-write-code @'
+    Write-Host ""
+    tut-write-code @'
 Get-BucketRoot
 '@
-            Get-BucketRoot | Write-Host -ForegroundColor Cyan
-            Write-Host ""
-            Write-Host @"
+    Get-BucketRoot | Write-Host -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host @"
   Each object is one file — .dat (binary, default) or .json (opt-in).
   The filename (minus extension) is the object's key.
 "@ -ForegroundColor White
-            Write-Host ""
-            Write-Host "  Current buckets:" -ForegroundColor DarkGray
-            $tree = Get-Bucket -Tree -ErrorAction SilentlyContinue
-            if ($tree) { $tree | Out-Host } else { Write-Host "    (no buckets yet)" -ForegroundColor DarkGray }
-            Write-Host ""
-            Write-Host @"
+    Write-Host ""
+    Write-Host "  Current buckets:" -ForegroundColor DarkGray
+    $tree = Get-Bucket -Tree -ErrorAction SilentlyContinue
+    if ($tree) { $tree | Out-Host } else { Write-Host "    (no buckets yet)" -ForegroundColor DarkGray }
+    Write-Host ""
+    Write-Host @"
   The four core cmdlets:
 "@ -ForegroundColor White
-            Write-Host ""
-            Write-Host "    fill   · New-BucketObject      write objects" -ForegroundColor Cyan
-            Write-Host "    spill  · Get-BucketObject      read objects" -ForegroundColor Cyan
-            Write-Host "    dip    · Set-BucketObject      update an object" -ForegroundColor Cyan
-            Write-Host "    rmo    · Remove-BucketObject   delete an object" -ForegroundColor Cyan
-            Write-Host ""
-            Write-Host @"
+    Write-Host ""
+    Write-Host "    fill   · New-BucketObject      write objects" -ForegroundColor Cyan
+    Write-Host "    spill  · Get-BucketObject      read objects" -ForegroundColor Cyan
+    Write-Host "    dip    · Set-BucketObject      update an object" -ForegroundColor Cyan
+    Write-Host "    rmo    · Remove-BucketObject   delete an object" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host @"
   Defaults: Binary depth 5, JSON depth 20, path $HOME/.buckets
   Override any of them with -BinaryDepth, -Depth, or -Path.
 "@ -ForegroundColor DarkGray
-            tut-pause
-            continue
-        }
-        break
-    }
+    tut-pause
+    if ($mode -eq "0") { exit }
 }
 $Beg = $mode -in @("1","4")
 $Adv = $mode -in @("2","4")
