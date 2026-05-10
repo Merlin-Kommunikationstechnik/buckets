@@ -4,7 +4,8 @@
     Performance comparison: Buckets storage vs CliXML export/import.
 .DESCRIPTION
     Uses the sysadmin dataset from data.ps1 and benchmarks write/read
-    throughput for both Buckets (default binary format) and CliXML.
+    throughput for Buckets (binary + JSON), plain JSON (Depth 2 + 20),
+    and CliXML formats.
 #>
 
 [CmdletBinding()]
@@ -59,13 +60,20 @@ function Use-Bucket {
     Remove-Bucket $Name -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
 }
 
+function Clear-PhaseBuckets {
+    $createdBuckets.Clear()
+    foreach ($key in $dataKeys) {
+        Use-Bucket $bucketMap[$key]
+    }
+}
+
 Write-InfoBlock -Mode top
 
 # Temp dir prep
 if (Test-Path $tempRoot) { Remove-Item -Path $tempRoot -Recurse -Force }
 New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
 
-# Bucket mapping: data key → bucket name
+# Bucket mapping: data key -> bucket name
 $bucketMap = [ordered]@{
     servers        = "infra/servers"
     services       = "infra/services"
@@ -89,110 +97,129 @@ $bucketMap = [ordered]@{
     configs        = "ops/configs"
 }
 
+$dataKeys = $bucketMap.Keys
+
 # Load dataset
 Write-Host "Loading dataset..." -ForegroundColor DarkGray
 $data = & "$PSScriptRoot/data.ps1" -Quiet -PassThru
 
-$dataKeys = $bucketMap.Keys
 $totalObjects = 0
 foreach ($key in $dataKeys) { $totalObjects += $data[$key].Count }
-$totalBuckets = $bucketMap.Count
+Write-Host "  $totalObjects objects across $($bucketMap.Count) buckets" -ForegroundColor DarkGray
 
-Write-Host "  $totalObjects objects across $totalBuckets buckets" -ForegroundColor DarkGray
-
-# ============================================================
-# 1. Buckets Write
-# ============================================================
-Write-Host "`n[1] Buckets Write" -ForegroundColor Blue
-
-foreach ($key in $dataKeys) {
-    Use-Bucket $bucketMap[$key]
-}
-
-$bw = [System.Diagnostics.Stopwatch]::StartNew()
-foreach ($key in $dataKeys) {
-    $bucket = $bucketMap[$key]
-    $objects = $data[$key]
-    if ($key -eq "incidents") {
-        $objects | New-BucketObject -Bucket $bucket -AsTimestamp -Quiet
+function Write-BucketsPhase {
+    param([bool]$AsJson, [string]$Label)
+    Clear-PhaseBuckets
+    $wt = [System.Diagnostics.Stopwatch]::StartNew()
+    $jsonFlag = if ($AsJson) { @{ AsJson = $true } } else { @{} }
+    foreach ($key in $dataKeys) {
+        $bucket = $bucketMap[$key]
+        $objects = $data[$key]
+        if ($key -eq "incidents") {
+            $objects | New-BucketObject -Bucket $bucket -AsTimestamp -Quiet @jsonFlag
+        }
+        else {
+            $objects | New-BucketObject -Bucket $bucket -KeyProperty _Id -Quiet @jsonFlag
+        }
     }
-    else {
-        $objects | New-BucketObject -Bucket $bucket -KeyProperty _Id -Quiet
+    $writeMs = $wt.ElapsedMilliseconds
+
+    $rt = [System.Diagnostics.Stopwatch]::StartNew()
+    $readCount = 0
+    foreach ($key in $dataKeys) {
+        $bucket = $bucketMap[$key]
+        $objects = Get-BucketObject -Bucket $bucket
+        $readCount += @($objects).Count
     }
+    $readMs = $rt.ElapsedMilliseconds
+
+    Write-Host "  Write: ${writeMs}ms  Read: ${readMs}ms ($readCount objects)" -ForegroundColor DarkGray
+    return @{ WriteMs = $writeMs; ReadMs = $readMs }
 }
-$bucketsWriteMs = $bw.ElapsedMilliseconds
 
-Write-Host "  Write: ${bucketsWriteMs}ms" -ForegroundColor DarkGray
+function Write-FilePhase {
+    param([string]$DirName, [string]$Extension, [scriptblock]$Serialize, [scriptblock]$Deserialize, [string]$Label)
+    $dir = Join-Path $tempRoot $DirName
+    New-Item -ItemType Directory -Path $dir -Force | Out-Null
 
-# ============================================================
-# 2. Buckets Read
-# ============================================================
-Write-Host "`n[2] Buckets Read" -ForegroundColor Blue
-
-$br = [System.Diagnostics.Stopwatch]::StartNew()
-$bucketsReadCount = 0
-foreach ($key in $dataKeys) {
-    $bucket = $bucketMap[$key]
-    $objects = Get-BucketObject -Bucket $bucket
-    $bucketsReadCount += @($objects).Count
-}
-$bucketsReadMs = $br.ElapsedMilliseconds
-
-Write-Host "  Read: ${bucketsReadMs}ms, Objects: $bucketsReadCount" -ForegroundColor DarkGray
-
-# ============================================================
-# 3. CliXML Write
-# ============================================================
-Write-Host "`n[3] CliXML Write" -ForegroundColor Blue
-
-$cw = [System.Diagnostics.Stopwatch]::StartNew()
-$clixmlCount = 0
-foreach ($key in $dataKeys) {
-    $bucket = $bucketMap[$key]
-    $safeDir = $bucket -replace '[\\/:*?"<>|]', '_'
-    $bucketDir = Join-Path $tempRoot $safeDir
-    New-Item -ItemType Directory -Path $bucketDir -Force | Out-Null
-    $objects = $data[$key]
-    $i = 0
-    foreach ($obj in $objects) {
-        $i++
-        $file = Join-Path $bucketDir "$i.clixml"
-        $obj | Export-CliXml -Path $file
-        $clixmlCount++
+    $wt = [System.Diagnostics.Stopwatch]::StartNew()
+    $fileCount = 0
+    foreach ($key in $dataKeys) {
+        $bucket = $bucketMap[$key]
+        $safeDir = $bucket -replace '[\\/:*?"<>|]', '_'
+        $bucketDir = Join-Path $dir $safeDir
+        New-Item -ItemType Directory -Path $bucketDir -Force | Out-Null
+        $objects = $data[$key]
+        $i = 0
+        foreach ($obj in $objects) {
+            $i++
+            $file = Join-Path $bucketDir "$i$Extension"
+            & $Serialize $obj $file
+            $fileCount++
+        }
     }
-}
-$clixmlWriteMs = $cw.ElapsedMilliseconds
+    $writeMs = $wt.ElapsedMilliseconds
 
-Write-Host "  Write: ${clixmlWriteMs}ms, Files: $clixmlCount" -ForegroundColor DarkGray
+    $rt = [System.Diagnostics.Stopwatch]::StartNew()
+    $readCount = 0
+    $files = Get-ChildItem -Path $dir -Recurse -Filter "*$Extension" -ErrorAction SilentlyContinue
+    foreach ($f in $files) {
+        & $Deserialize $f.FullName | Out-Null
+        $readCount++
+    }
+    $readMs = $rt.ElapsedMilliseconds
+
+    Write-Host "  Write: ${writeMs}ms  Read: ${readMs}ms ($readCount files)" -ForegroundColor DarkGray
+    return @{ WriteMs = $writeMs; ReadMs = $readMs }
+}
 
 # ============================================================
-# 4. CliXML Read
+# 1. Buckets (Binary)
 # ============================================================
-Write-Host "`n[4] CliXML Read" -ForegroundColor Blue
+Write-Host "`n[1] Buckets (Binary)" -ForegroundColor Blue
+$bin = Write-BucketsPhase -AsJson:$false -Label "Buckets Binary"
 
-$cr = [System.Diagnostics.Stopwatch]::StartNew()
-$clixmlReadCount = 0
-$clixmlFiles = Get-ChildItem -Path $tempRoot -Recurse -Filter *.clixml -ErrorAction SilentlyContinue
-foreach ($f in $clixmlFiles) {
-    Import-CliXml -Path $f.FullName | Out-Null
-    $clixmlReadCount++
-}
-$clixmlReadMs = $cr.ElapsedMilliseconds
+# ============================================================
+# 2. Buckets (JSON)
+# ============================================================
+Write-Host "`n[2] Buckets (JSON)" -ForegroundColor Blue
+$json = Write-BucketsPhase -AsJson:$true -Label "Buckets JSON"
 
-Write-Host "  Read: ${clixmlReadMs}ms, Objects: $clixmlReadCount" -ForegroundColor DarkGray
+# ============================================================
+# 3. Plain JSON
+# ============================================================
+Write-Host "`n[3] Plain JSON" -ForegroundColor Blue
+
+$pj2 = Write-FilePhase -DirName "json-d2" -Extension ".json" `
+    -Serialize { param($o, $f) [System.IO.File]::WriteAllText($f, ($o | ConvertTo-Json -Depth 2 -Compress), [System.Text.Encoding]::UTF8) } `
+    -Deserialize { param($p) [System.IO.File]::ReadAllText($p, [System.Text.Encoding]::UTF8) | ConvertFrom-Json }
+
+$pj20 = Write-FilePhase -DirName "json-d20" -Extension ".json" `
+    -Serialize { param($o, $f) [System.IO.File]::WriteAllText($f, ($o | ConvertTo-Json -Depth 20 -Compress), [System.Text.Encoding]::UTF8) } `
+    -Deserialize { param($p) [System.IO.File]::ReadAllText($p, [System.Text.Encoding]::UTF8) | ConvertFrom-Json }
+
+Write-Host "  Depth 2:  Write: $($pj2.WriteMs)ms  Read: $($pj2.ReadMs)ms" -ForegroundColor DarkGray
+Write-Host "  Depth 20: Write: $($pj20.WriteMs)ms  Read: $($pj20.ReadMs)ms" -ForegroundColor DarkGray
+
+# ============================================================
+# 4. CliXML
+# ============================================================
+Write-Host "`n[4] CliXML" -ForegroundColor Blue
+$clixml = Write-FilePhase -DirName "clixml" -Extension ".clixml" `
+    -Serialize { param($o, $f) $o | Export-CliXml -Path $f } `
+    -Deserialize { param($p) Import-CliXml -Path $p }
 
 # ============================================================
 # Comparison
 # ============================================================
 Write-Host "`n[Comparison]" -ForegroundColor Blue
 
-$bRatioW = if ($clixmlWriteMs -gt 0) { "{0:N2}" -f ($bucketsWriteMs / $clixmlWriteMs) } else { "N/A" }
-$bRatioR = if ($clixmlReadMs -gt 0) { "{0:N2}" -f ($bucketsReadMs / $clixmlReadMs) } else { "N/A" }
-
-Write-Host ("  {0,-16}  {1,8}  {2,8}" -f "System", "Write", "Read") -ForegroundColor DarkGray
-Write-Host ("  {0,-16}  {1,8}ms  {2,8}ms" -f "Buckets", $bucketsWriteMs, $bucketsReadMs) -ForegroundColor DarkGray
-Write-Host ("  {0,-16}  {1,8}ms  {2,8}ms" -f "CliXML", $clixmlWriteMs, $clixmlReadMs) -ForegroundColor DarkGray
-Write-Host ("  {0,-16}  {1,8}x  {2,8}x" -f "Ratio (B/C)", $bRatioW, $bRatioR) -ForegroundColor DarkGray
+Write-Host ("  {0,-18}  {1,8}  {2,8}" -f "System", "Write", "Read") -ForegroundColor DarkGray
+Write-Host ("  {0,-18}  {1,8}ms  {2,8}ms" -f "Buckets (Bin)", $bin.WriteMs, $bin.ReadMs) -ForegroundColor DarkGray
+Write-Host ("  {0,-18}  {1,8}ms  {2,8}ms" -f "Buckets (JSON)", $json.WriteMs, $json.ReadMs) -ForegroundColor DarkGray
+Write-Host ("  {0,-18}  {1,8}ms  {2,8}ms" -f "Plain JSON (D2)", $pj2.WriteMs, $pj2.ReadMs) -ForegroundColor DarkGray
+Write-Host ("  {0,-18}  {1,8}ms  {2,8}ms" -f "Plain JSON (D20)", $pj20.WriteMs, $pj20.ReadMs) -ForegroundColor DarkGray
+Write-Host ("  {0,-18}  {1,8}ms  {2,8}ms" -f "CliXML", $clixml.WriteMs, $clixml.ReadMs) -ForegroundColor DarkGray
 
 # Cleanup
 foreach ($b in $createdBuckets) {
