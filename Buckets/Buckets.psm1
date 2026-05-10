@@ -1854,6 +1854,8 @@ function Remove-Bucket {
     }
 
     $removedCount = 0
+    # Sort deepest paths first so children are deleted before parents
+    $removable = @($removable | Sort-Object { $_.Path.Length } -Descending)
     foreach ($r in $removable) {
         if (-not [System.IO.Directory]::Exists($r.Path)) { continue }
         $finalDi = [System.IO.DirectoryInfo]::new($r.Path)
