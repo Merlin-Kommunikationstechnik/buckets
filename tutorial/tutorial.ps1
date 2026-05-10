@@ -113,7 +113,7 @@ function tut-write-code($Code) {
     }
     Write-Host ""
     Write-Host ""
-    Write-Host "output:" -ForegroundColor DarkGray
+    Write-Host "  * Output" -ForegroundColor DarkGray
 }
 
 # ---------- helpers ----------
@@ -265,7 +265,7 @@ while ($true) {
         $hasCode = $lesson.PSObject.Properties['Code'] -and $lesson.Code
 
         if ($hasSetup) {
-            Write-Host "  # Setup demo data" -ForegroundColor DarkGreen
+            Write-Host "  * Setup demo data" -ForegroundColor DarkGray
             foreach ($line in ($lesson.SetupCode -split "`n")) {
                 Write-Host "  $line" -ForegroundColor DarkGray
             }
@@ -278,7 +278,7 @@ while ($true) {
         }
 
         if ($hasCode) {
-            if ($hasSetup) { Write-Host "  # Lesson" -ForegroundColor DarkGreen }
+            if ($hasSetup) { Write-Host "  * Lesson" -ForegroundColor DarkGray }
             $script:lastCode = $lesson.Code
             tut-write-code $lesson.Code
             try {
