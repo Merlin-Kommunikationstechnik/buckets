@@ -1108,7 +1108,9 @@ function Get-BucketObject {
     .PARAMETER Filter
     ScriptBlock for custom filtering. Use $_ to reference object properties (e.g., { $_.Age -gt 30 }).
     .PARAMETER Recurse
-    Recursively include objects from nested sub-buckets.
+    Included for backward compatibility. No longer needed — recursion is now the default.
+    .PARAMETER NoRecurse
+    Suppress recursion into nested sub-buckets. Only returns objects from the specified bucket directory.
     .PARAMETER First
     Return only the first N objects.
     .PARAMETER Skip
@@ -1128,7 +1130,9 @@ function Get-BucketObject {
     .EXAMPLE
     Get-BucketObject -Bucket users, orders
     .EXAMPLE
-    Get-BucketObject -Bucket org -Recurse
+    Get-BucketObject -Bucket org
+    .EXAMPLE
+    Get-BucketObject -Bucket org -NoRecurse
     .EXAMPLE
     Get-BucketObject -First 10 -Skip 20
     #>
@@ -1140,6 +1144,7 @@ function Get-BucketObject {
         [hashtable]$Match,
         [scriptblock]$Filter,
         [switch]$Recurse,
+        [switch]$NoRecurse,
         [int]$First,
         [int]$Skip
     )
@@ -1159,7 +1164,7 @@ function Get-BucketObject {
             else {
                 $bp = Get-BucketPath -Name $b -Path $Path
                 $bucketPaths += $bp
-                if ($Recurse) {
+                if ($Recurse -or -not $NoRecurse) {
                     $nested = Get-Bucket -Path $Path -Recurse | Where-Object { $_.Name -like "$b/*" }
                     $bucketPaths += $nested | ForEach-Object { $_.Path }
                 }

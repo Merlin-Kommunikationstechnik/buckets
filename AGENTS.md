@@ -38,7 +38,7 @@ PowerShell module for file-based PSObject storage using directory-backed "bucket
 | Cmdlet | Key Params |
 |--------|-----------|
 | `New-BucketObject` | `-InputObject` (pipeline), `-Bucket` (default "default"), `-Key`, `-AsJson`, `-AsTimestamp`, `-Depth`, `-BinaryDepth`, `-Compress`, `-Quiet`, `-Overwrite` |
-| `Get-BucketObject` | `-Bucket` (positional 0, wildcards ok, all if omitted), `-Key` (positional 1), `-Match` (hashtable, supports $null), `-Filter` (scriptblock with `$_`), `-Recurse`, `-First`, `-Skip` |
+| `Get-BucketObject` | `-Bucket` (positional 0, wildcards ok, all if omitted), `-Key` (positional 1), `-Match` (hashtable, supports $null), `-Filter` (scriptblock with `$_`), `-Recurse` (now default, kept for compat), `-NoRecurse`, `-First`, `-Skip` |
 | `Set-BucketObject` | `-InputObject` (pipeline binds `_BucketName`/`_BucketKey` or partial update), `-Bucket`, `-Key`, `-AsJson`, `-Compress`, `-PassThru`, `-Quiet` |
 | `Remove-BucketObject` | `-Bucket`, `-Key` or `-All` (param sets), `-PassThru`, `-WhatIf` (SupportsShouldProcess) |
 | `Copy-BucketObject` | `-Bucket`, `-Key`, `-DestinationBucket`, `-DestinationKey`, `-PassThru` |

@@ -862,15 +862,15 @@ Test-Edge "Empty bucket (InputObject `@() creates no objects)" {
 }
 
 <#
-  12. Wildcard + -Recurse
-  Verifies: Without -Recurse, a wildcard bucket only returns direct children.
-            With -Recurse, it descends into all sub-buckets.
+  12. -NoRecurse vs default recurse
+  Verifies: With -NoRecurse, a wildcard bucket only returns direct children.
+            Without -NoRecurse (default), it descends into all sub-buckets.
   Why it matters: Users need both shallow and deep search modes.
 #>
-Test-Edge "Wildcard + -Recurse (org/eu returns 1, org/eu -Recurse returns >1)" {
-    $noRecurse = @(Get-BucketObject -Bucket "org/eu" -WarningAction SilentlyContinue).Count
-    $withRecurse = @(Get-BucketObject -Bucket "org/eu" -Recurse -WarningAction SilentlyContinue).Count
-    $withRecurse -gt $noRecurse -and $noRecurse -gt 0
+Test-Edge "Wildcard + -Recurse (org/eu -NoRecurse returns 1, without returns >1)" {
+    $flat = @(Get-BucketObject -Bucket "org/eu" -NoRecurse -WarningAction SilentlyContinue).Count
+    $recursive = @(Get-BucketObject -Bucket "org/eu" -WarningAction SilentlyContinue).Count
+    $recursive -gt $flat -and $flat -gt 0
 }
 
 <#

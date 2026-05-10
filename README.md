@@ -109,9 +109,9 @@ New-BucketObject -Path /tmp/buckets -InputObject $data -KeyProperty Name
 
 ---
 
-### Get-BucketObject (alias: `spill`)
+### Get-BucketObject (alias: `scoop`)
 
-Retrieves objects from one or more buckets.
+Retrieves objects from one or more buckets. Recursion into nested sub-buckets is enabled by default.
 
 ```powershell
 Get-BucketObject
@@ -121,6 +121,7 @@ Get-BucketObject
     [-Match <hashtable>]
     [-Filter <scriptblock>]
     [-Recurse]
+    [-NoRecurse]
     [-First <int>]
     [-Skip <int>]
     [<CommonParameters>]
@@ -133,7 +134,8 @@ Get-BucketObject
 | `-Path` | Storage root directory | `$HOME/.buckets` |
 | `-Match` | Hashtable of exact-match filters (supports `$null` for absent properties) | — |
 | `-Filter` | ScriptBlock for custom filtering (`$_` references the object) | — |
-| `-Recurse` | Recursively include objects from nested sub-buckets | — |
+| `-Recurse` | Included for backward compatibility. Recursion is now the default. | — |
+| `-NoRecurse` | Suppress recursion — only return objects from the specified bucket directory | — |
 | `-First` | Return only the first N objects | — |
 | `-Skip` | Skip the first N objects | — |
 
