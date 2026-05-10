@@ -4,11 +4,62 @@
     Interaktives Tutorial für das Buckets PowerShell-Modul.
     Führt durch alle CRUD-Operationen, Filterung, Pipelines, Aliase,
     PSDrive, verschachtelte Buckets, Export/Import und Bucket-Verwaltung.
+.PARAMETER GenerateMarkdown
+    Im nicht-interaktiven Modus ausführen und tutorial.de.md im Repository-Stammverzeichnis generieren.
 #>
+
+param([switch]$GenerateMarkdown)
 
 $ErrorActionPreference = "Stop"
 
 $Sep = '─' * 55
+
+# Markdown-Generierungsmodus — überschreibt Write-Host/Out-Host, um Ausgabe als Klartext zu erfassen
+if ($GenerateMarkdown) {
+    $PSStyle.OutputRendering = 'PlainText'
+    $script:mdOutput = [System.Text.StringBuilder]::new()
+    [void]$script:mdOutput.AppendLine("# Buckets Tutorial (Deutsch)")
+    [void]$script:mdOutput.AppendLine("")
+
+    # Aliase entfernen, bevor Funktionen definiert werden (Alias hat höhere Priorität)
+    Remove-Item Alias:cls -Force -ErrorAction SilentlyContinue
+    Remove-Item Alias:Clear-Host -Force -ErrorAction SilentlyContinue
+
+    function Write-Host {
+        param(
+            [string]$Object,
+            [string]$ForegroundColor,
+            [switch]$NoNewline
+        )
+        if ($NoNewline) {
+            [void]$script:mdOutput.Append($Object)
+        } else {
+            [void]$script:mdOutput.AppendLine($Object)
+        }
+    }
+
+    function Out-Host {
+        [CmdletBinding()]
+        param([Parameter(ValueFromPipeline=$true)][PSObject]$InputObject)
+        begin { $items = [System.Collections.ArrayList]::new() }
+        process { if ($null -ne $InputObject) { [void]$items.Add($InputObject) } }
+        end {
+            if ($items.Count -gt 0) {
+                [void]$script:mdOutput.AppendLine('```')
+                $str = $items | Out-String -Width 4096
+                $str = $str.TrimEnd([char]13, [char]10)
+                $str = $str -replace "(\r?\n){3,}", "`n`n"
+                $str = $str -replace '(?m)[\t ]+$', ''
+                [void]$script:mdOutput.Append($str)
+                [void]$script:mdOutput.AppendLine('')
+                [void]$script:mdOutput.AppendLine('```')
+            }
+        }
+    }
+
+    function cls {}
+    function Clear-Host {}
+}
 
 function tut-wipe {
     $root = Get-BucketRoot
@@ -22,6 +73,7 @@ function tut-wipe {
 }
 
 function tut-pause {
+    if ($GenerateMarkdown) { return }
     Write-Host ""
     Write-Host "  $Sep" -ForegroundColor DarkGray
     $hasCode = $null -ne $script:lastCode -and $script:lastCode -ne ""
@@ -45,6 +97,14 @@ function tut-pause {
 function tut-write-code($Code) {
     $script:lastCode = $Code
     $clean = $Code -replace "`r`n", "`n"
+    if ($GenerateMarkdown) {
+        [void]$script:mdOutput.AppendLine("")
+        [void]$script:mdOutput.AppendLine('```powershell')
+        [void]$script:mdOutput.AppendLine($clean)
+        [void]$script:mdOutput.AppendLine('```')
+        [void]$script:mdOutput.AppendLine("")
+        return
+    }
     $tokens = $null; $errors = $null
     [void][System.Management.Automation.Language.Parser]::ParseInput($clean, [ref]$tokens, [ref]$errors)
 
@@ -130,58 +190,69 @@ $script:Team = @(
     @{ Name="Frank";   Role="Developer";  Level=4; Skills=@("Rust","Go","Kubernetes");          Active=$true;  Score=91; Joined=(Get-Date).AddDays(-500) }
 )
 
-while ($true) {
-    Write-Host ""
-    Write-Host "  $Sep" -ForegroundColor DarkGray
-    Write-Host "  Buckets Tutorial  v$ver" -ForegroundColor White
-    Write-Host "  dateibasierte PSObject-Speicherung für PowerShell" -ForegroundColor DarkGray
-    Write-Host "  $Sep" -ForegroundColor DarkGray
-    Write-Host ""
-    Write-Host "  Wählen Sie einen Pfad:" -ForegroundColor White
-    Write-Host "    [0] Einführung  — Was, Warum, Wie" -ForegroundColor Yellow
-    Write-Host "    [1] Einsteiger  — CRUD-Grundlagen (erstellen, lesen, aktualisieren, loeschen)" -ForegroundColor Yellow
-    Write-Host "    [2] Fortgeschritten  — Kopieren, Umbenennen, PSDrive, verschachtelte Buckets, Pipelines" -ForegroundColor Yellow
-    Write-Host "    [3] Sysadmin  — Serverinventar, Logs, Vorfaelle, Berichte" -ForegroundColor Yellow
-    Write-Host "    [4] Komplett  — alles" -ForegroundColor Yellow
-    Write-Host ""
-    Write-Host "  Geben Sie 'q' ein, um das Tutorial zu beenden" -ForegroundColor DarkGray
-    Write-Host ""
-    do {
-        $mode = (Read-Host "  Eingabe [0/1/2/3/4]").Trim()
-    } while ($mode -notin @("0","1","2","3","4"))
-
-    if ($mode -eq "0") {
-        cls
-        # ========== Einfuehrung ==========
+if ($GenerateMarkdown) {
+    $mode = "4"
+} else {
+    while ($true) {
         Write-Host ""
-        Write-Host "  0. Einfuehrung" -ForegroundColor Cyan
+        Write-Host "  $Sep" -ForegroundColor DarkGray
+        Write-Host "  Buckets Tutorial  v$ver" -ForegroundColor White
+        Write-Host "  dateibasierte PSObject-Speicherung für PowerShell" -ForegroundColor DarkGray
         Write-Host "  $Sep" -ForegroundColor DarkGray
         Write-Host ""
-
-        Write-Host "  0.1 Was ist Buckets?" -ForegroundColor DarkGray
-        Write-Host "  $Sep" -ForegroundColor DarkGray
+        Write-Host "  Wählen Sie einen Pfad:" -ForegroundColor White
+        Write-Host "    [0] Einführung  — Was, Warum, Wie" -ForegroundColor Yellow
+        Write-Host "    [1] Einsteiger  — CRUD-Grundlagen (erstellen, lesen, aktualisieren, loeschen)" -ForegroundColor Yellow
+        Write-Host "    [2] Fortgeschritten  — Kopieren, Umbenennen, PSDrive, verschachtelte Buckets, Pipelines" -ForegroundColor Yellow
+        Write-Host "    [3] Sysadmin  — Serverinventar, Logs, Vorfaelle, Berichte" -ForegroundColor Yellow
+        Write-Host "    [4] Komplett  — alles" -ForegroundColor Yellow
         Write-Host ""
-        Write-Host @"
+        Write-Host "  Geben Sie 'q' ein, um das Tutorial zu beenden" -ForegroundColor DarkGray
+        Write-Host ""
+        do {
+            $mode = (Read-Host "  Eingabe [0/1/2/3/4]").Trim()
+        } while ($mode -notin @("0","1","2","3","4"))
+
+        if ($mode -eq "0" -or $mode -eq "4") {
+            break  # exit menu to run introduction below
+        }
+        break
+    }
+}
+
+# Run introduction for track 0 or 4
+if ($mode -eq "0" -or $mode -eq "4") {
+    cls
+    # ========== Einfuehrung ==========
+    Write-Host ""
+    Write-Host "  0. Einfuehrung" -ForegroundColor Cyan
+    Write-Host "  $Sep" -ForegroundColor DarkGray
+    Write-Host ""
+
+    Write-Host "  0.1 Was ist Buckets?" -ForegroundColor DarkGray
+    Write-Host "  $Sep" -ForegroundColor DarkGray
+    Write-Host ""
+    Write-Host @"
   Buckets ist ein PowerShell-Modul zur dateibasierten Ablage von
   PSObjects. Jedes Objekt ist eine Datei, jeder Bucket ein Ordner.
   Keine Datenbank, kein Dienst, keine Konfigurationsdatei —
   nur das Dateisystem.
 "@ -ForegroundColor White
-        Write-Host ""
-        Write-Host "  Zwei Speicherformate:" -ForegroundColor White
-        Write-Host @"
+    Write-Host ""
+    Write-Host "  Zwei Speicherformate:" -ForegroundColor White
+    Write-Host @"
     Binary (.dat) — ueber PSSerializer. Schnell, erhaelt vollstaendige
                     .NET-Typinformationen. Komplexe Objekte, Zirkelbezüge.
     JSON    (.json) — via -AsJson. Lesbar, portabel, in jedem
                     Texteditor aenderbar.
 "@ -ForegroundColor DarkGray
-        tut-pause
+    tut-pause
 
-        Write-Host ""
-        Write-Host "  0.2 Warum Buckets?" -ForegroundColor DarkGray
-        Write-Host "  $Sep" -ForegroundColor DarkGray
-        Write-Host ""
-        Write-Host @"
+    Write-Host ""
+    Write-Host "  0.2 Warum Buckets?" -ForegroundColor DarkGray
+    Write-Host "  $Sep" -ForegroundColor DarkGray
+    Write-Host ""
+    Write-Host @"
   Dauerhaft       — Objekte ueberdauern die PowerShell-Sitzung
   Teilbar         — Buckets sind Ordner; kopieren, syncen, einchecken
   Komponierbar    — Pipeline rein, Pipeline raus; einfach uebergeben
@@ -190,47 +261,44 @@ while ($true) {
   Expand/Collapse — verschachtelte Strukturen als Verzeichnisbaeume
   Plattformunabhaengig — PowerShell 7+ auf Windows, macOS, Linux
 "@ -ForegroundColor White
-        tut-pause
+    tut-pause
 
-        Write-Host ""
-        Write-Host "  0.3 Wie funktioniert es?" -ForegroundColor DarkGray
-        Write-Host "  $Sep" -ForegroundColor DarkGray
-        Write-Host ""
-        Write-Host @"
+    Write-Host ""
+    Write-Host "  0.3 Wie funktioniert es?" -ForegroundColor DarkGray
+    Write-Host "  $Sep" -ForegroundColor DarkGray
+    Write-Host ""
+    Write-Host @"
   Jeder Bucket ist ein Verzeichnis unter einem Wurzelpfad. Der Standard ist:
 "@ -ForegroundColor White
-        Write-Host ""
-        tut-write-code @'
+    Write-Host ""
+    tut-write-code @'
 Get-BucketRoot
 '@
-        Get-BucketRoot | Write-Host -ForegroundColor Cyan
-        Write-Host ""
-        Write-Host @"
+    Get-BucketRoot | Write-Host -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host @"
   Jedes Objekt ist eine Datei — .dat (Binary, Standard) oder .json (optional).
   Der Dateiname (ohne Erweiterung) ist der Schluessel des Objekts.
 "@ -ForegroundColor White
-        Write-Host ""
-        Write-Host "  Aktuelle Buckets:" -ForegroundColor DarkGray
-        $tree = Get-Bucket -Tree -ErrorAction SilentlyContinue
-        if ($tree) { $tree | Out-Host } else { Write-Host "    (noch keine Buckets)" -ForegroundColor DarkGray }
-        Write-Host ""
-        Write-Host @"
+    Write-Host ""
+    Write-Host "  Aktuelle Buckets:" -ForegroundColor DarkGray
+    $tree = Get-Bucket -Tree -ErrorAction SilentlyContinue
+    if ($tree) { $tree | Out-Host } else { Write-Host "    (noch keine Buckets)" -ForegroundColor DarkGray }
+    Write-Host ""
+    Write-Host @"
   Die vier Kern-Cmdlets:
 "@ -ForegroundColor White
-        Write-Host ""
-        Write-Host "    fill   · New-BucketObject      Objekte schreiben" -ForegroundColor Cyan
-        Write-Host "    spill  · Get-BucketObject      Objekte lesen" -ForegroundColor Cyan
-        Write-Host "    dip    · Set-BucketObject      Objekt aktualisieren" -ForegroundColor Cyan
-        Write-Host "    rmo    · Remove-BucketObject   Objekt loeschen" -ForegroundColor Cyan
-        Write-Host ""
-        Write-Host @"
+    Write-Host ""
+    Write-Host "    fill   · New-BucketObject      Objekte schreiben" -ForegroundColor Cyan
+    Write-Host "    spill  · Get-BucketObject      Objekte lesen" -ForegroundColor Cyan
+    Write-Host "    dip    · Set-BucketObject      Objekt aktualisieren" -ForegroundColor Cyan
+    Write-Host "    rmo    · Remove-BucketObject   Objekt loeschen" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host @"
   Standardwerte: Binary-Tiefe 5, JSON-Tiefe 20, Pfad $HOME/.buckets
   Alles ueber -BinaryDepth, -Depth oder -Path aenderbar.
 "@ -ForegroundColor DarkGray
-        tut-pause
-        continue
-    }
-    break
+    tut-pause
 }
 $Beg = $mode -in @("1","4")
 $Adv = $mode -in @("2","4")
@@ -3067,3 +3135,33 @@ Write-Host ""
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  Viel Spaß mit Buckets!`n" -ForegroundColor Green
+
+# Write tutorial.de.md in markdown generation mode
+if ($GenerateMarkdown) {
+    $outPath = Join-Path (Split-Path $PSScriptRoot -Parent) "tutorial.de.md"
+    $raw = $script:mdOutput.ToString()
+
+    # Strip leading whitespace (2 spaces) from each line
+    $clean = $raw -replace "(?m)^  ", ""
+
+    # Convert sub-section headings (e.g. "1.1 Speichern", "1b.3 Tief") to ###
+    $clean = $clean -replace "(?m)^(\d+[a-z]?\.\d+\s+\w[^\n]*)", '### $1'
+
+    # Convert main section headings (e.g. "1. Erstellen", "2a. Lesen") to ##
+    $clean = $clean -replace "(?m)^(\d+[a-z]?\.\s+\w[^\n]*)", '## $1'
+
+    # Convert horizontal rule lines to markdown ---
+    $clean = $clean -replace "(?m)^─{20,}", "---"
+
+    # Remove blank lines at start of output code fences
+    $clean = $clean -replace '(?m)^```\n\n+', '```'
+
+    # Collapse 3+ consecutive blank lines into 1 blank line
+    $clean = $clean -replace '(?m)^\n{3,}', "`n`n"
+
+    # Trim trailing whitespace per line
+    $clean = $clean -replace '(?m)[\t ]+$', ''
+
+    [System.IO.File]::WriteAllText($outPath, $clean, [System.Text.UTF8Encoding]::new($false))
+    [Console]::WriteLine("Generated $outPath")
+}
