@@ -78,6 +78,8 @@ Uses `SupportsShouldProcess` for `-WhatIf` support. Parameter sets enforce `-Key
 pwsh -NoProfile -ExecutionPolicy Bypass -File .tests/test.ps1      # Functional tests
 pwsh -NoProfile -ExecutionPolicy Bypass -File .tests/benchmark.ps1  # Performance benchmarks
 pwsh -NoProfile -ExecutionPolicy Bypass -File .tests/new.ps1       # Smoke test latest features
+pwsh -NoProfile -File tutorial/populate-tutorial.ps1                # Populate tutorial bucket data
+pwsh -NoProfile -File tutorial/tutorial.ps1                         # Interactive tutorial
 ```
 Tests wipe `.buckets` directory, then run functional tests: hashtables, nested objects, FileInfo (binary fallback), logs, JSON config, metrics, mixed formats, Copy/Rename/Export/Import, compression, -WhatIf, round-trip integrity (10/10 checks), error conditions, nested buckets with -Recurse, metadata isolation, and -Tree edge cases.
 
@@ -89,6 +91,7 @@ Benchmarks measure write/read throughput for 1k and 10k objects (simple + comple
 - `.tests/new.ps1` — smoke test for latest committed features (overwrite per commit)
 - `.tests/demo/` — demo/showcase scripts
 - `.tests/tools/` — utility/debug scripts (explorer, REPL, diag)
+- `tutorial/` — interactive tutorial system (data, populate, frontend)
 
 ## Release Workflow
 1. **Confirm with the user before releasing** — do not run the workflow without explicit confirmation
