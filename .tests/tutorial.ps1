@@ -301,10 +301,10 @@ Get-BucketRoot
 "@ -ForegroundColor White
     Write-Host ""
     Write-Host "    fill   · New-BucketObject      write objects" -ForegroundColor Cyan
-    Write-Host "    spill  · Get-BucketObject      read objects" -ForegroundColor Cyan
+    Write-Host "    scoop  · Get-BucketObject      read objects" -ForegroundColor Cyan
+    Write-Host "    spill  · Remove-BucketObject   delete an object" -ForegroundColor Cyan
     Write-Host "    dip    · Get-Bucket            list buckets" -ForegroundColor Cyan
-    Write-Host "    drain  · Remove-BucketObject   delete an object" -ForegroundColor Cyan
-    Write-Host "    toss   · Remove-Bucket         delete a bucket" -ForegroundColor Cyan
+    Write-Host "    drain  · Remove-Bucket         delete a bucket" -ForegroundColor Cyan
     Write-Host ""
     Write-Host @"
   Defaults: Binary depth 5, JSON depth 20, path $HOME/.buckets
@@ -599,23 +599,23 @@ if ($Beg) {
 
 cls
 Write-Host ""
-Write-Host "  2. Read — spill / Get-BucketObject" -ForegroundColor Cyan
+Write-Host "  2. Read — scoop / Get-BucketObject" -ForegroundColor Cyan
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  2.1 Spilling all objects" -ForegroundColor DarkGray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
-  The counterpart to fill is spill (short for Get-BucketObject). With no arguments,
+  The counterpart to fill is scoop (short for Get-BucketObject). With no arguments,
   it returns every object from every bucket — useful for getting the lay of the land.
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-spill
+scoop
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
 $script:Staff | fill -Bucket staff -KeyProperty Name -Quiet
-spill | Out-Host
+scoop | Out-Host
 tut-pause
 
 Write-Host ""
@@ -628,11 +628,11 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-spill -Bucket team
+scoop -Bucket team
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
 $script:Staff | fill -Bucket staff -KeyProperty Name -Quiet
-spill -Bucket team | Out-Host
+scoop -Bucket team | Out-Host
 tut-pause
 
 Write-Host ""
@@ -645,10 +645,10 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-spill team
+scoop team
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
-spill team | Out-Host
+scoop team | Out-Host
 tut-pause
 
 Write-Host ""
@@ -661,10 +661,10 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-spill team "Alice"
+scoop team "Alice"
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
-spill team "Alice" | Out-Host
+scoop team "Alice" | Out-Host
 tut-pause
 
 Write-Host ""
@@ -676,10 +676,10 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-spill team -Key "Frank"
+scoop team -Key "Frank"
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
-spill team -Key "Frank" | Out-Host
+scoop team -Key "Frank" | Out-Host
 tut-pause
 
 Write-Host ""
@@ -692,10 +692,10 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-spill team -Key "alice"
+scoop team -Key "alice"
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
-spill team -Key "alice" | Out-Host
+scoop team -Key "alice" | Out-Host
 tut-pause
 
 Write-Host ""
@@ -708,10 +708,10 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-spill -Bucket team -Key "Zoe"
+scoop -Bucket team -Key "Zoe"
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
-spill -Bucket team -Key "Zoe" | Out-Host
+scoop -Bucket team -Key "Zoe" | Out-Host
 tut-pause
 
 Write-Host ""
@@ -724,11 +724,11 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-spill -Bucket "t*"
+scoop -Bucket "t*"
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
 $script:Staff | fill -Bucket staff -KeyProperty Name -Quiet
-spill -Bucket "t*" | Out-Host
+scoop -Bucket "t*" | Out-Host
 tut-pause
 
 Write-Host ""
@@ -741,11 +741,11 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-spill -Bucket "team", "staff"
+scoop -Bucket "team", "staff"
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
 $script:Staff | fill -Bucket staff -KeyProperty Name -Quiet
-spill -Bucket "team", "staff" | Out-Host
+scoop -Bucket "team", "staff" | Out-Host
 tut-pause
 
 Write-Host ""
@@ -759,10 +759,10 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-spill -Bucket team -Key "Bob" | Select _BucketName, _BucketKey, _BucketFile
+scoop -Bucket team -Key "Bob" | Select _BucketName, _BucketKey, _BucketFile
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
-spill -Bucket team -Key "Bob" | Select _BucketName, _BucketKey, _BucketFile | Out-Host
+scoop -Bucket team -Key "Bob" | Select _BucketName, _BucketKey, _BucketFile | Out-Host
 tut-pause
 
 Write-Host ""
@@ -770,15 +770,15 @@ Write-Host "  2.11 Piping to Select-Object" -ForegroundColor DarkGray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
-  Since spill returns regular PowerShell objects, you can pipe them into Select-Object,
+  Since scoop returns regular PowerShell objects, you can pipe them into Select-Object,
   Sort-Object, Group-Object — anything you'd do with any other object in PowerShell.
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-spill -Bucket team | Sort Score -Descending | Select Name, Role, Score
+scoop -Bucket team | Sort Score -Descending | Select Name, Role, Score
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
-spill -Bucket team | Sort Score -Descending | Select Name, Role, Score | Out-Host
+scoop -Bucket team | Sort Score -Descending | Select Name, Role, Score | Out-Host
 tut-pause
 
 Write-Host ""
@@ -791,14 +791,14 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-$dev = spill -Bucket team -Key "Frank"
+$dev = scoop -Bucket team -Key "Frank"
 $dev.Name
 $dev.Role
 $dev.Level
 $dev.Score
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
-$dev = spill -Bucket team -Key "Frank"
+$dev = scoop -Bucket team -Key "Frank"
 $dev.Name
 $dev.Role
 $dev.Level
@@ -824,10 +824,10 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-spill -Bucket team -Match @{ Role = "Developer" }
+scoop -Bucket team -Match @{ Role = "Developer" }
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
-spill -Bucket team -Match @{ Role = "Developer" } | Out-Host
+scoop -Bucket team -Match @{ Role = "Developer" } | Out-Host
 tut-pause
 
 Write-Host ""
@@ -841,10 +841,10 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-spill -Bucket team -Match @{ Deleted = $null }
+scoop -Bucket team -Match @{ Deleted = $null }
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
-spill -Bucket team -Match @{ Deleted = $null } | Out-Host
+scoop -Bucket team -Match @{ Deleted = $null } | Out-Host
 tut-pause
 
 Write-Host ""
@@ -857,10 +857,10 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-spill -Bucket team -Match @{ Level = 3; Active = $true }
+scoop -Bucket team -Match @{ Level = 3; Active = $true }
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
-spill -Bucket team -Match @{ Level = 3; Active = $true } | Out-Host
+scoop -Bucket team -Match @{ Level = 3; Active = $true } | Out-Host
 tut-pause
 
 Write-Host ""
@@ -879,7 +879,7 @@ $data = @(
     @{ Name = "C"; Count = 5; Active = $true }
 )
 New-BucketObject -InputObject $data -Bucket match-demo -KeyProperty Name
-spill -Bucket match-demo -Match @{ Count = 5; Active = $true }
+scoop -Bucket match-demo -Match @{ Count = 5; Active = $true }
 '@
 $data = @(
     @{ Name = "A"; Count = 5; Active = $true }
@@ -887,7 +887,7 @@ $data = @(
     @{ Name = "C"; Count = 5; Active = $true }
 )
 New-BucketObject -InputObject $data -Bucket match-demo -KeyProperty Name -Quiet
-spill -Bucket match-demo -Match @{ Count = 5; Active = $true } | Out-Host
+scoop -Bucket match-demo -Match @{ Count = 5; Active = $true } | Out-Host
 tut-pause
 
 Write-Host ""
@@ -906,7 +906,7 @@ $items = @(
     @{ Name = "gamma"; Color = "red" }
 )
 $items | fill -Bucket match-demo -KeyProperty Name
-spill -Bucket match-demo -Match @{ Color = "red" }
+scoop -Bucket match-demo -Match @{ Color = "red" }
 '@
 $items = @(
     @{ Name = "alpha"; Color = "red" }
@@ -914,7 +914,7 @@ $items = @(
     @{ Name = "gamma"; Color = "red" }
 )
 $items | fill -Bucket match-demo -KeyProperty Name -Quiet
-spill -Bucket match-demo -Match @{ Color = "red" } | Out-Host
+scoop -Bucket match-demo -Match @{ Color = "red" } | Out-Host
 tut-pause
 
 Write-Host ""
@@ -929,11 +929,11 @@ Write-Host ""
 tut-write-code @'
 $data = @{ Id = "a"; Meta = @{ Name = "inner" } }
 $data | fill -Bucket nested-match -KeyProperty Id
-spill -Bucket nested-match -Match @{ Meta = $null }
+scoop -Bucket nested-match -Match @{ Meta = $null }
 '@
 $data = @{ Id = "a"; Meta = @{ Name = "inner" } }
 $data | fill -Bucket nested-match -KeyProperty Id -Quiet
-spill -Bucket nested-match -Match @{ Meta = $null } | Out-Host
+scoop -Bucket nested-match -Match @{ Meta = $null } | Out-Host
 tut-pause
 }
 
@@ -955,10 +955,10 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-spill -Bucket team -Filter { $_.Score -gt 80 }
+scoop -Bucket team -Filter { $_.Score -gt 80 }
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
-spill -Bucket team -Filter { $_.Score -gt 80 } | Out-Host
+scoop -Bucket team -Filter { $_.Score -gt 80 } | Out-Host
 tut-pause
 
 Write-Host ""
@@ -971,10 +971,10 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-spill -Bucket team -Filter { $_.Score -le 90 }
+scoop -Bucket team -Filter { $_.Score -le 90 }
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
-spill -Bucket team -Filter { $_.Score -le 90 } | Out-Host
+scoop -Bucket team -Filter { $_.Score -le 90 } | Out-Host
 tut-pause
 
 Write-Host ""
@@ -987,10 +987,10 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-spill -Bucket team -Filter { $_.Name -match "^[AE]" }
+scoop -Bucket team -Filter { $_.Name -match "^[AE]" }
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
-spill -Bucket team -Filter { $_.Name -match "^[AE]" } | Out-Host
+scoop -Bucket team -Filter { $_.Name -match "^[AE]" } | Out-Host
 tut-pause
 
 Write-Host ""
@@ -1003,10 +1003,10 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-spill -Bucket team -Filter { $_.Name -like "*e*" }
+scoop -Bucket team -Filter { $_.Name -like "*e*" }
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
-spill -Bucket team -Filter { $_.Name -like "*e*" } | Out-Host
+scoop -Bucket team -Filter { $_.Name -like "*e*" } | Out-Host
 tut-pause
 
 Write-Host ""
@@ -1019,10 +1019,10 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-spill -Bucket team -Filter { $_.Score -gt 80 -and $_.Role -eq "Developer" }
+scoop -Bucket team -Filter { $_.Score -gt 80 -and $_.Role -eq "Developer" }
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
-spill -Bucket team -Filter { $_.Score -gt 80 -and $_.Role -eq "Developer" } | Out-Host
+scoop -Bucket team -Filter { $_.Score -gt 80 -and $_.Role -eq "Developer" } | Out-Host
 tut-pause
 
 Write-Host ""
@@ -1034,10 +1034,10 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-spill -Bucket team -Filter { $_.Role -eq "Designer" -or $_.Level -gt 3 }
+scoop -Bucket team -Filter { $_.Role -eq "Designer" -or $_.Level -gt 3 }
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
-spill -Bucket team -Filter { $_.Role -eq "Designer" -or $_.Level -gt 3 } | Out-Host
+scoop -Bucket team -Filter { $_.Role -eq "Designer" -or $_.Level -gt 3 } | Out-Host
 tut-pause
 
 Write-Host ""
@@ -1055,14 +1055,14 @@ $items = @(
     @{ Name = "long";  Value = "abcdefghijk" }
 )
 $items | fill -Bucket str-test -KeyProperty Name
-spill -Bucket str-test -Filter { $_.Value.Length -gt 5 }
+scoop -Bucket str-test -Filter { $_.Value.Length -gt 5 }
 '@
 $items = @(
     @{ Name = "short"; Value = "abc" }
     @{ Name = "long";  Value = "abcdefghijk" }
 )
 $items | fill -Bucket str-test -KeyProperty Name -Quiet
-spill -Bucket str-test -Filter { $_.Value.Length -gt 5 } | Out-Host
+scoop -Bucket str-test -Filter { $_.Value.Length -gt 5 } | Out-Host
 tut-pause
 
 Write-Host ""
@@ -1076,11 +1076,11 @@ Write-Host @"
 Write-Host ""
 tut-write-code @'
 $cutoff = (Get-Date).AddDays(-100)
-spill -Bucket team -Filter { $_.Joined -gt $cutoff }
+scoop -Bucket team -Filter { $_.Joined -gt $cutoff }
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
 $cutoff = (Get-Date).AddDays(-100)
-spill -Bucket team -Filter { $_.Joined -gt $cutoff } | Out-Host
+scoop -Bucket team -Filter { $_.Joined -gt $cutoff } | Out-Host
 tut-pause
 
 Write-Host ""
@@ -1093,10 +1093,10 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-spill -Bucket team -Filter { $_.Skills -contains "Rust" }
+scoop -Bucket team -Filter { $_.Skills -contains "Rust" }
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
-spill -Bucket team -Filter { $_.Skills -contains "Rust" } | Out-Host
+scoop -Bucket team -Filter { $_.Skills -contains "Rust" } | Out-Host
 tut-pause
 
 Write-Host ""
@@ -1110,11 +1110,11 @@ Write-Host @"
 Write-Host ""
 tut-write-code @'
 @{ Name = "HighScore"; Score = 90 } | fill -Bucket config -Key "app-config"
-spill -Filter { $_.Score -gt 80 }
+scoop -Filter { $_.Score -gt 80 }
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
 @{ Name = "HighScore"; Score = 90 } | fill -Bucket config -Key "app-config" -Quiet
-spill -Filter { $_.Score -gt 80 } | Out-Host
+scoop -Filter { $_.Score -gt 80 } | Out-Host
 tut-pause
 }
 
@@ -1135,10 +1135,10 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-spill -Bucket team -First 3
+scoop -Bucket team -First 3
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
-spill -Bucket team -First 3 | Out-Host
+scoop -Bucket team -First 3 | Out-Host
 tut-pause
 
 Write-Host ""
@@ -1151,10 +1151,10 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-spill -Bucket team -Skip 1 -First 3
+scoop -Bucket team -Skip 1 -First 3
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
-spill -Bucket team -Skip 1 -First 3 | Out-Host
+scoop -Bucket team -Skip 1 -First 3 | Out-Host
 tut-pause
 
 Write-Host ""
@@ -1167,10 +1167,10 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-spill -Bucket team -Filter { $_.Score -gt 70 } -First 3
+scoop -Bucket team -Filter { $_.Score -gt 70 } -First 3
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
-spill -Bucket team -Filter { $_.Score -gt 70 } -First 3 | Out-Host
+scoop -Bucket team -Filter { $_.Score -gt 70 } -First 3 | Out-Host
 tut-pause
 }
 
@@ -1186,20 +1186,20 @@ Write-Host "  3.1 Pipeline update with Set-BucketObject" -ForegroundColor DarkGr
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
-  Set-BucketObject updates an existing object in place. When piped from spill, it
+  Set-BucketObject updates an existing object in place. When piped from scoop, it
   auto-detects the bucket and key from the _BucketName and _BucketKey metadata —
   no need to specify them again.
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-spill -Bucket team -Key "Bob" | ForEach-Object {
+scoop -Bucket team -Key "Bob" | ForEach-Object {
     $_.Score = 99
     $_.Role = "Lead"
     $_
 } | Set-BucketObject -Quiet
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
-spill -Bucket team -Key "Bob" | ForEach-Object {
+scoop -Bucket team -Key "Bob" | ForEach-Object {
     $_.Score = 99
     $_.Role = "Lead"
     $_
@@ -1216,12 +1216,12 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-$obj = spill -Bucket team -Key "Carol"
+$obj = scoop -Bucket team -Key "Carol"
 $obj.Score = 100
 Set-BucketObject -Bucket team -Key "Carol" -InputObject $obj -Quiet
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
-$obj = spill -Bucket team -Key "Carol"
+$obj = scoop -Bucket team -Key "Carol"
 $obj.Score = 100
 Set-BucketObject -Bucket team -Key "Carol" -InputObject $obj -Quiet
 tut-pause
@@ -1353,11 +1353,11 @@ Write-Host @"
 Write-Host ""
 tut-write-code @'
 Remove-BucketObject -Bucket team -Key "Bob" -Quiet
-spill -Bucket team
+scoop -Bucket team
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
 Remove-BucketObject -Bucket team -Key "Bob" -Quiet
-spill -Bucket team | Out-Host
+scoop -Bucket team | Out-Host
 tut-pause
 
 Write-Host ""
@@ -1402,11 +1402,11 @@ Write-Host @"
 Write-Host ""
 tut-write-code @'
 Remove-BucketObject -Bucket team -Match @{ Role = "QA" } -Quiet
-spill -Bucket team
+scoop -Bucket team
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
 Remove-BucketObject -Bucket team -Match @{ Role = "QA" } -Quiet
-spill -Bucket team | Out-Host
+scoop -Bucket team | Out-Host
 tut-pause
 
 Write-Host ""
@@ -1420,11 +1420,11 @@ Write-Host @"
 Write-Host ""
 tut-write-code @'
 Remove-BucketObject -Bucket team -Filter { $_.Active -eq $false } -Quiet
-spill -Bucket team
+scoop -Bucket team
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
 Remove-BucketObject -Bucket team -Filter { $_.Active -eq $false } -Quiet
-spill -Bucket team | Out-Host
+scoop -Bucket team | Out-Host
 tut-pause
 
 Write-Host ""
@@ -1437,11 +1437,11 @@ Write-Host @"
 Write-Host ""
 tut-write-code @'
 Remove-BucketObject -Bucket team -All -Quiet
-spill -Bucket team
+scoop -Bucket team
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
 Remove-BucketObject -Bucket team -All -Quiet
-spill -Bucket team | Out-Host
+scoop -Bucket team | Out-Host
 tut-pause
 
 Write-Host ""
@@ -1482,11 +1482,11 @@ Write-Host @"
 Write-Host ""
 tut-write-code @'
 Copy-BucketObject -Bucket team -Key "Alice" -DestinationKey "Alice-Backup" -Quiet
-spill -Bucket team -Key "Alice-Backup"
+scoop -Bucket team -Key "Alice-Backup"
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
 Copy-BucketObject -Bucket team -Key "Alice" -DestinationKey "Alice-Backup" -Quiet
-spill -Bucket team -Key "Alice-Backup" | Out-Host
+scoop -Bucket team -Key "Alice-Backup" | Out-Host
 tut-pause
 
 Write-Host ""
@@ -1499,11 +1499,11 @@ Write-Host @"
 Write-Host ""
 tut-write-code @'
 Copy-BucketObject -Bucket team -Key "Alice" -DestinationBucket archive -Quiet
-spill -Bucket archive -Key "Alice"
+scoop -Bucket archive -Key "Alice"
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
 Copy-BucketObject -Bucket team -Key "Alice" -DestinationBucket archive -Quiet
-spill -Bucket archive -Key "Alice" | Out-Host
+scoop -Bucket archive -Key "Alice" | Out-Host
 tut-pause
 
 Write-Host ""
@@ -2377,12 +2377,12 @@ tut-write-code @'
 @{ Name="Berlin"; Population=3600000; Country="DE" } | fill -Bucket "org/eu/de/cities" -Key "Berlin"
 @{ Name="London"; Population=8900000; Country="UK" } | fill -Bucket "org/eu/uk/cities" -Key "London"
 @{ Name="New York"; Population=8300000; Country="US" } | fill -Bucket "org/us/cities" -Key "New York"
-spill -Bucket "org/eu/*/cities"
+scoop -Bucket "org/eu/*/cities"
 '@
 @{ Name="Berlin"; Population=3600000; Country="DE" } | fill -Bucket "org/eu/de/cities" -Key "Berlin" -Quiet
 @{ Name="London"; Population=8900000; Country="UK" } | fill -Bucket "org/eu/uk/cities" -Key "London" -Quiet
 @{ Name="New York"; Population=8300000; Country="US" } | fill -Bucket "org/us/cities" -Key "New York" -Quiet
-spill -Bucket "org/eu/*/cities" | Out-Host
+scoop -Bucket "org/eu/*/cities" | Out-Host
 tut-pause
 
 Write-Host ""
@@ -2390,7 +2390,7 @@ Write-Host "  9.3 Querying nested buckets directly" -ForegroundColor DarkGray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
-  Query a nested path directly by its full bucket name. Same spill command,
+  Query a nested path directly by its full bucket name. Same scoop command,
   just a deeper path.
 "@ -ForegroundColor White
 Write-Host ""
@@ -2398,12 +2398,12 @@ tut-write-code @'
 @{ Name="Berlin"; Population=3600000; Country="DE" } | fill -Bucket "org/eu/de/cities" -Key "Berlin"
 @{ Name="London"; Population=8900000; Country="UK" } | fill -Bucket "org/eu/uk/cities" -Key "London"
 @{ Name="New York"; Population=8300000; Country="US" } | fill -Bucket "org/us/cities" -Key "New York"
-spill -Bucket "org/eu/de/cities"
+scoop -Bucket "org/eu/de/cities"
 '@
 @{ Name="Berlin"; Population=3600000; Country="DE" } | fill -Bucket "org/eu/de/cities" -Key "Berlin" -Quiet
 @{ Name="London"; Population=8900000; Country="UK" } | fill -Bucket "org/eu/uk/cities" -Key "London" -Quiet
 @{ Name="New York"; Population=8300000; Country="US" } | fill -Bucket "org/us/cities" -Key "New York" -Quiet
-spill -Bucket "org/eu/de/cities" | Out-Host
+scoop -Bucket "org/eu/de/cities" | Out-Host
 tut-pause
 
 Write-Host ""
@@ -2419,12 +2419,12 @@ tut-write-code @'
 @{ Name="Berlin"; Population=3600000; Country="DE" } | fill -Bucket "org/eu/de/cities" -Key "Berlin"
 @{ Name="London"; Population=8900000; Country="UK" } | fill -Bucket "org/eu/uk/cities" -Key "London"
 @{ Name="New York"; Population=8300000; Country="US" } | fill -Bucket "org/us/cities" -Key "New York"
-spill -Bucket "org/*/de/*"
+scoop -Bucket "org/*/de/*"
 '@
 @{ Name="Berlin"; Population=3600000; Country="DE" } | fill -Bucket "org/eu/de/cities" -Key "Berlin" -Quiet
 @{ Name="London"; Population=8900000; Country="UK" } | fill -Bucket "org/eu/uk/cities" -Key "London" -Quiet
 @{ Name="New York"; Population=8300000; Country="US" } | fill -Bucket "org/us/cities" -Key "New York" -Quiet
-spill -Bucket "org/*/de/*" | Out-Host
+scoop -Bucket "org/*/de/*" | Out-Host
 tut-pause
 
 Write-Host ""
@@ -2565,12 +2565,12 @@ tut-write-code @'
 @{ Name="Berlin"; Population=3600000; Country="DE" } | fill -Bucket "org/eu/de/cities" -Key "Berlin"
 @{ Name="London"; Population=8900000; Country="UK" } | fill -Bucket "org/eu/uk/cities" -Key "London"
 @{ Name="New York"; Population=8300000; Country="US" } | fill -Bucket "org/us/cities" -Key "New York"
-spill -Bucket "org/*/cities" -Filter { $_.Population -gt 2000000 }
+scoop -Bucket "org/*/cities" -Filter { $_.Population -gt 2000000 }
 '@
 @{ Name="Berlin"; Population=3600000; Country="DE" } | fill -Bucket "org/eu/de/cities" -Key "Berlin" -Quiet
 @{ Name="London"; Population=8900000; Country="UK" } | fill -Bucket "org/eu/uk/cities" -Key "London" -Quiet
 @{ Name="New York"; Population=8300000; Country="US" } | fill -Bucket "org/us/cities" -Key "New York" -Quiet
-spill -Bucket "org/*/cities" -Filter { $_.Population -gt 2000000 } | Out-Host
+scoop -Bucket "org/*/cities" -Filter { $_.Population -gt 2000000 } | Out-Host
 tut-pause
 
 Write-Host ""
@@ -2629,12 +2629,12 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-spill -Bucket team -Filter { $_.Role -eq "Developer" } |
+scoop -Bucket team -Filter { $_.Role -eq "Developer" } |
     ForEach-Object { $_.Score = $_.Score + 5; $_ } |
     Set-BucketObject -PassThru
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
-spill -Bucket team -Filter { $_.Role -eq "Developer" } |
+scoop -Bucket team -Filter { $_.Role -eq "Developer" } |
     ForEach-Object { $_.Score = $_.Score + 5; $_ } |
     Set-BucketObject -PassThru | Out-Host
 tut-pause
@@ -2649,12 +2649,12 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-spill -Bucket team | Where-Object { $_.Score -gt 80 } |
+scoop -Bucket team | Where-Object { $_.Score -gt 80 } |
     Sort-Object Score -Descending |
     Select-Object Name, Role, Score
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
-spill -Bucket team | Where-Object { $_.Score -gt 80 } |
+scoop -Bucket team | Where-Object { $_.Score -gt 80 } |
     Sort-Object Score -Descending |
     Select-Object Name, Role, Score | Out-Host
 tut-pause
@@ -2672,14 +2672,14 @@ tut-write-code @'
 @{ Name = "HighScore"; Score = 90 } | fill -Bucket config -Key "app-config"
 @{ Name = "DemoItem"; Score = 85 } | fill -Bucket demo -Key "demo-score"
 $buckets = @("team", "config", "demo")
-$buckets | ForEach-Object { spill -Bucket $_ -Filter { $_.Score -gt 80 } } |
+$buckets | ForEach-Object { scoop -Bucket $_ -Filter { $_.Score -gt 80 } } |
     Select-Object _BucketName, Name, Score
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
 @{ Name = "HighScore"; Score = 90 } | fill -Bucket config -Key "app-config" -Quiet
 @{ Name = "DemoItem"; Score = 85 } | fill -Bucket demo -Key "demo-score" -Quiet
 $buckets = @("team", "config", "demo")
-$buckets | ForEach-Object { spill -Bucket $_ -Filter { $_.Score -gt 80 } } |
+$buckets | ForEach-Object { scoop -Bucket $_ -Filter { $_.Score -gt 80 } } |
     Select-Object _BucketName, Name, Score | Out-Host
 tut-pause
 
@@ -2693,11 +2693,11 @@ Write-Host @"
 Write-Host ""
 tut-write-code @'
 @{ Name = "HighScore"; Score = 90 } | fill -Bucket config -Key "app-config"
-spill | Group-Object _BucketName | Select-Object Name, Count
+scoop | Group-Object _BucketName | Select-Object Name, Count
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
 @{ Name = "HighScore"; Score = 90 } | fill -Bucket config -Key "app-config" -Quiet
-spill | Group-Object _BucketName | Select-Object Name, Count | Out-Host
+scoop | Group-Object _BucketName | Select-Object Name, Count | Out-Host
 tut-pause
 
 Write-Host ""
@@ -2710,10 +2710,10 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-spill -Bucket team | Group-Object Role | Select-Object Name, Count
+scoop -Bucket team | Group-Object Role | Select-Object Name, Count
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
-spill -Bucket team | Group-Object Role | Select-Object Name, Count | Out-Host
+scoop -Bucket team | Group-Object Role | Select-Object Name, Count | Out-Host
 tut-pause
 
 Write-Host ""
@@ -2726,11 +2726,11 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-$scores = spill -Bucket team | Measure-Object Score -Average -Minimum -Maximum
+$scores = scoop -Bucket team | Measure-Object Score -Average -Minimum -Maximum
 Write-Host "    Score stats: avg=$([math]::Round($scores.Average,1)) min=$($scores.Minimum) max=$($scores.Maximum)"
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
-$scores = spill -Bucket team | Measure-Object Score -Average -Minimum -Maximum
+$scores = scoop -Bucket team | Measure-Object Score -Average -Minimum -Maximum
 Write-Host "    Score stats: avg=$([math]::Round($scores.Average,1)) min=$($scores.Minimum) max=$($scores.Maximum)"
 tut-pause
 
@@ -2739,18 +2739,18 @@ Write-Host "  10.8 Export to CSV" -ForegroundColor DarkGray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
-  Export spilled data to CSV for use in Excel, Python, or any tool that reads
+  Export scooped data to CSV for use in Excel, Python, or any tool that reads
   tabular data.
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
 $csvPath = Join-Path ([System.IO.Path]::GetTempPath()) "buckets-team.csv"
-spill -Bucket team | Select-Object Name, Role, Score | Export-Csv -Path $csvPath -NoTypeInformation
+scoop -Bucket team | Select-Object Name, Role, Score | Export-Csv -Path $csvPath -NoTypeInformation
 Remove-Item $csvPath -Force -ErrorAction SilentlyContinue
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
 $csvPath = Join-Path ([System.IO.Path]::GetTempPath()) "buckets-team.csv"
-spill -Bucket team | Select-Object Name, Role, Score | Export-Csv -Path $csvPath -NoTypeInformation
+scoop -Bucket team | Select-Object Name, Role, Score | Export-Csv -Path $csvPath -NoTypeInformation
 Remove-Item $csvPath -Force -ErrorAction SilentlyContinue
 tut-pause
 
@@ -2764,12 +2764,12 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-spill -Bucket team -Filter { $_.Score -gt 80 }
-spill -Bucket team | Where-Object { $_.Score -gt 80 }
+scoop -Bucket team -Filter { $_.Score -gt 80 }
+scoop -Bucket team | Where-Object { $_.Score -gt 80 }
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
-spill -Bucket team -Filter { $_.Score -gt 80 } | Out-Host
-spill -Bucket team | Where-Object { $_.Score -gt 80 } | Out-Host
+scoop -Bucket team -Filter { $_.Score -gt 80 } | Out-Host
+scoop -Bucket team | Where-Object { $_.Score -gt 80 } | Out-Host
 tut-pause
 
 Write-Host ""
@@ -2782,12 +2782,12 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-spill -Bucket team | ForEach-Object {
+scoop -Bucket team | ForEach-Object {
     "[$($_.Role)] $($_.Name) — Score: $($_.Score)"
 }
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
-spill -Bucket team | ForEach-Object {
+scoop -Bucket team | ForEach-Object {
     "[$($_.Role)] $($_.Name) — Score: $($_.Score)"
 } | Out-Host
 tut-pause
@@ -2801,10 +2801,10 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-spill -Bucket team -Filter { $_.Score -gt 80 } | ConvertTo-Json -Depth 5
+scoop -Bucket team -Filter { $_.Score -gt 80 } | ConvertTo-Json -Depth 5
 '@
 $script:Team | fill -Bucket team -KeyProperty Name -Quiet
-spill -Bucket team -Filter { $_.Score -gt 80 } | ConvertTo-Json -Depth 5 | Out-Host
+scoop -Bucket team -Filter { $_.Score -gt 80 } | ConvertTo-Json -Depth 5 | Out-Host
 tut-pause
 
 Write-Host ""
@@ -2819,11 +2819,11 @@ Write-Host ""
 tut-write-code @'
 $tmp = @{ Id = "smoke"; Value = 42 }
 $tmp | fill -Bucket smoke-test -KeyProperty Id -Quiet
-spill -Bucket smoke-test | Select-Object Id, Value
+scoop -Bucket smoke-test | Select-Object Id, Value
 '@
 $tmp = @{ Id = "smoke"; Value = 42 }
 $tmp | fill -Bucket smoke-test -KeyProperty Id -Quiet
-spill -Bucket smoke-test | Select-Object Id, Value | Out-Host
+scoop -Bucket smoke-test | Select-Object Id, Value | Out-Host
 tut-pause
 }
 
@@ -2840,7 +2840,7 @@ Write-Host "  Three aliases are exported by the module:" -ForegroundColor DarkGr
 Write-Host @"
 
     fill   = New-BucketObject     — save objects
-    spill  = Get-BucketObject     — retrieve objects
+    scoop  = Get-BucketObject     — retrieve objects
     dip    = Get-Bucket            — list buckets
 
 "@ -ForegroundColor Yellow
@@ -2926,16 +2926,16 @@ Write-Host "  12.2 Finding unhealthy servers" -ForegroundColor DarkGray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host @"
-  The spill alias (short for Get-BucketObject) retrieves stored objects.
+  The scoop alias (short for Get-BucketObject) retrieves stored objects.
   -Filter takes a scriptblock to match conditions — like Where-Object.
   Find servers that aren't fully online: -ne means "not equal".
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-spill -Bucket servers -Filter { $_.Status -ne "online" }
+scoop -Bucket servers -Filter { $_.Status -ne "online" }
 '@
 $script:Servers | fill -Bucket servers -KeyProperty Hostname -Quiet
-spill -Bucket servers -Filter { $_.Status -ne "online" } | Out-Host
+scoop -Bucket servers -Filter { $_.Status -ne "online" } | Out-Host
 tut-pause
 
 # ---------- 12.3 ----------
@@ -2951,10 +2951,10 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-spill -Bucket servers -Filter { $_.RAM -ge 16 -and $_.Role -eq "database" }
+scoop -Bucket servers -Filter { $_.RAM -ge 16 -and $_.Role -eq "database" }
 '@
 $script:Servers | fill -Bucket servers -KeyProperty Hostname -Quiet
-spill -Bucket servers -Filter { $_.RAM -ge 16 -and $_.Role -eq "database" } | Out-Host
+scoop -Bucket servers -Filter { $_.RAM -ge 16 -and $_.Role -eq "database" } | Out-Host
 tut-pause
 
 # ---------- 12.4 ----------
@@ -2969,10 +2969,10 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-spill -Bucket servers | Group-Object Location
+scoop -Bucket servers | Group-Object Location
 '@
 $script:Servers | fill -Bucket servers -KeyProperty Hostname -Quiet
-spill -Bucket servers | Group-Object Location | Out-Host
+scoop -Bucket servers | Group-Object Location | Out-Host
 tut-pause
 
 # ---------- 12.5 ----------
@@ -2987,10 +2987,10 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-spill -Bucket servers | Measure-Object CPU, RAM, Disk -Sum
+scoop -Bucket servers | Measure-Object CPU, RAM, Disk -Sum
 '@
 $script:Servers | fill -Bucket servers -KeyProperty Hostname -Quiet
-spill -Bucket servers | Measure-Object CPU, RAM, Disk -Sum | Out-Host
+scoop -Bucket servers | Measure-Object CPU, RAM, Disk -Sum | Out-Host
 tut-pause
 
 # ---------- 12.6 ----------
@@ -3022,10 +3022,10 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-spill -Bucket incidents -Filter { $_.Severity -in @("ERROR","CRIT") }
+scoop -Bucket incidents -Filter { $_.Severity -in @("ERROR","CRIT") }
 '@
 $script:Incidents | fill -Bucket incidents -AsTimestamp -Quiet
-spill -Bucket incidents -Filter { $_.Severity -in @("ERROR","CRIT") } | Out-Host
+scoop -Bucket incidents -Filter { $_.Severity -in @("ERROR","CRIT") } | Out-Host
 tut-pause
 
 # ---------- 12.8 ----------
@@ -3042,12 +3042,12 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-spill -Bucket servers -Filter { $_.Role -eq "web" } |
+scoop -Bucket servers -Filter { $_.Role -eq "web" } |
     ForEach-Object { $_ | Add-Member Maintenance $true -Force; $_ } |
     Set-BucketObject
 '@
 $script:Servers | fill -Bucket servers -KeyProperty Hostname -Quiet
-spill -Bucket servers -Filter { $_.Role -eq "web" } |
+scoop -Bucket servers -Filter { $_.Role -eq "web" } |
     ForEach-Object { $_ | Add-Member Maintenance $true -Force; $_ } |
     Set-BucketObject
 tut-pause
@@ -3064,10 +3064,10 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-spill -Bucket servers | Select Hostname, Status, Location | Sort-Object Status
+scoop -Bucket servers | Select Hostname, Status, Location | Sort-Object Status
 '@
 $script:Servers | fill -Bucket servers -KeyProperty Hostname -Quiet
-spill -Bucket servers | Select Hostname, Status, Location | Sort-Object Status | Out-Host
+scoop -Bucket servers | Select Hostname, Status, Location | Sort-Object Status | Out-Host
 tut-pause
 
 # ---------- 12.10 ----------
@@ -3083,17 +3083,17 @@ Write-Host @"
 "@ -ForegroundColor White
 Write-Host ""
 tut-write-code @'
-$crit = spill -Bucket incidents -Filter { $_.Severity -eq "CRIT" }
+$crit = scoop -Bucket incidents -Filter { $_.Severity -eq "CRIT" }
 $crit | ForEach-Object {
-    $svr = spill -Bucket servers -Key $_.Source
+    $svr = scoop -Bucket servers -Key $_.Source
     [PSCustomObject]@{ Incident = $_.Message; Server = $svr.Hostname; Status = $svr.Status }
 }
 '@
 $script:Servers | fill -Bucket servers -KeyProperty Hostname -Quiet
 $script:Incidents | fill -Bucket incidents -AsTimestamp -Quiet
-$crit = spill -Bucket incidents -Filter { $_.Severity -eq "CRIT" }
+$crit = scoop -Bucket incidents -Filter { $_.Severity -eq "CRIT" }
 $crit | ForEach-Object {
-    $svr = spill -Bucket servers -Key $_.Source
+    $svr = scoop -Bucket servers -Key $_.Source
     [PSCustomObject]@{ Incident = $_.Message; Server = $svr.Hostname; Status = $svr.Status }
 } | Out-Host
 tut-pause
@@ -3122,8 +3122,8 @@ Write-Host @"
 
     What you learned:
 
-    fill / spill / dip / toss / drain
-                                 — save, read, list, delete buckets, delete objects
+    fill / scoop / spill / dip / drain
+                                 — save, read, delete objects, list, delete buckets
     -Key / -KeyProperty          — naming objects
     -Overwrite / -AsTimestamp    — replacement and timestamp keys
     -AsJson / -Compress          — storage formats
@@ -3133,7 +3133,7 @@ Write-Host @"
     -First / -Skip               — pagination
     Set-BucketObject             — update in place (pipeline + explicit)
     Partial update / patch       — add properties with hashtable pipe
-    drain / toss                 — delete objects, delete buckets
+    scoop / spill / drain         — read, delete objects, delete buckets
     -WhatIf / -PassThru          — safety preview and metadata capture
     Copy / Rename / Move         — object operations with and without pass-through
     PSDrive operations           — Get-Content, Set-Content, Copy-Item, Remove-Item, Test-Path

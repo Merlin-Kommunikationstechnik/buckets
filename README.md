@@ -900,9 +900,9 @@ The provider is created automatically on module import via `Sync-BucketDrive`. R
 | Cmdlet (alias) | Description |
 |----------------|-------------|
 | `New-BucketObject` (`fill`) | Save objects to a bucket |
-| `Get-BucketObject` (`spill`) | Retrieve objects from buckets |
+| `Get-BucketObject` (`scoop`) | Retrieve objects from buckets |
 | `Set-BucketObject` | Update an existing object |
-| `Remove-BucketObject` (`drain`) | Remove objects by key, filter, or all |
+| `Remove-BucketObject` (`spill`) | Remove objects by key, filter, or all |
 | `Copy-BucketObject` | Copy objects within or between buckets |
 | `Rename-BucketObject` | Rename an object's key |
 | `Move-BucketObject` | Move objects between buckets |
@@ -910,7 +910,7 @@ The provider is created automatically on module import via `Sync-BucketDrive`. R
 | `Get-BucketKeys` | List object keys in a bucket (Bucket + Key only) |
 | `Get-BucketObjectStats` | Detailed per-object stats (format, type, size, timestamps, compression) |
 | `Get-BucketStats` | Show bucket statistics (visible Path, hidden TotalSizeBytes) |
-| `Remove-Bucket` (`toss`) | Remove buckets (supports wildcards, nested, WhatIf) |
+| `Remove-Bucket` (`drain`) | Remove buckets (supports wildcards, nested, WhatIf) |
 | `Export-Bucket` | Export bucket to archive |
 | `Import-Bucket` | Import objects from archive |
 | `Set-BucketRoot` | Override session storage root |

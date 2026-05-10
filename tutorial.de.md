@@ -51,10 +51,10 @@ Aktuelle Buckets:
 Die sechs Kern-Cmdlets:
 
   fill   · New-BucketObject      Objekte schreiben
-  spill  · Get-BucketObject      Objekte lesen
+  scoop  · Get-BucketObject      Objekte lesen
+  spill  · Remove-BucketObject   Objekt loeschen
   dip    · Get-Bucket            Buckets auflisten
-  drain  · Remove-BucketObject   Objekt loeschen
-  toss   · Remove-Bucket         Bucket loeschen
+  drain  · Remove-Bucket         Bucket loeschen
 
 Standardwerte: Binary-Tiefe 5, JSON-Tiefe 20, Pfad C:\Users\berfelde/.buckets
 Alles ueber -BinaryDepth, -Depth oder -Path aenderbar.
@@ -270,71 +270,71 @@ stillschweigend übersprungen. Verwenden Sie -Verbose, um die Erklärung des Mod
 ```
 
 
-## 2. Lesen — spill / Get-BucketObject
+## 2. Lesen — scoop / Get-BucketObject
 ---
 
-### 2.1 Alle Objekte anzeigen (spill)
+### 2.1 Alle Objekte anzeigen (scoop)
 ---
 
-Das Gegenstück zu fill ist spill (Kurzform von Get-BucketObject). Ohne Argumente
+Das Gegenstück zu fill ist scoop (Kurzform von Get-BucketObject). Ohne Argumente
 gibt es jedes Objekt aus jedem Bucket zurück — nützlich, um sich einen überblick zu verschaffen.
 
 
 ```powershell
-spill
+scoop
 ```
 
 ```
 
-Port Host
----- ----
-5432 localhost
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
-   
+Host      Port
+----      ----
+localhost 5432
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
 
 ```
 
@@ -346,42 +346,42 @@ die Suche auf einen einzelnen Bucket ein.
 
 
 ```powershell
-spill -Bucket team
+scoop -Bucket team
 ```
 
 ```
 
+Name   : Alice
+Level  : 3
+Joined : 10.05.2025 19:28:39
+Skills : {PowerShell, C#, Azure}
+Active : True
 Score  : 95
 Role   : Developer
-Skills : {PowerShell, C#, Azure}
-Joined : 10.05.2025 19:14:01
-Level  : 3
-Name   : Alice
-Active : True
 
+Name   : Bob
+Level  : 2
+Joined : 11.11.2025 19:28:39
+Skills : {Figma, CSS, HTML}
+Active : True
 Score  : 72
 Role   : Designer
-Skills : {Figma, CSS, HTML}
-Joined : 11.11.2025 19:14:01
-Level  : 2
-Name   : Bob
-Active : True
 
+Name   : Carol
+Level  : 3
+Joined : 09.02.2026 19:28:39
+Skills : {Agile, Jira, Confluence}
+Active : True
 Score  : 88
 Role   : PM
-Skills : {Agile, Jira, Confluence}
-Joined : 09.02.2026 19:14:01
-Level  : 3
-Name   : Carol
-Active : True
 
+Name   : Frank
+Level  : 4
+Joined : 26.12.2024 19:28:39
+Skills : {Rust, Go, Kubernetes}
+Active : True
 Score  : 91
 Role   : Developer
-Skills : {Rust, Go, Kubernetes}
-Joined : 26.12.2024 19:14:01
-Level  : 4
-Name   : Frank
-Active : True
 ```
 
 ### 2.3 Bucket-Suche mit Positionsparameter
@@ -392,42 +392,42 @@ alle Objekte aus diesem Bucket abgerufen.
 
 
 ```powershell
-spill team
+scoop team
 ```
 
 ```
 
+Name   : Alice
+Level  : 3
+Joined : 10.05.2025 19:28:39
+Skills : {PowerShell, C#, Azure}
+Active : True
 Score  : 95
 Role   : Developer
-Skills : {PowerShell, C#, Azure}
-Joined : 10.05.2025 19:14:01
-Level  : 3
-Name   : Alice
-Active : True
 
+Name   : Bob
+Level  : 2
+Joined : 11.11.2025 19:28:39
+Skills : {Figma, CSS, HTML}
+Active : True
 Score  : 72
 Role   : Designer
-Skills : {Figma, CSS, HTML}
-Joined : 11.11.2025 19:14:01
-Level  : 2
-Name   : Bob
-Active : True
 
+Name   : Carol
+Level  : 3
+Joined : 09.02.2026 19:28:39
+Skills : {Agile, Jira, Confluence}
+Active : True
 Score  : 88
 Role   : PM
-Skills : {Agile, Jira, Confluence}
-Joined : 09.02.2026 19:14:01
-Level  : 3
-Name   : Carol
-Active : True
 
+Name   : Frank
+Level  : 4
+Joined : 26.12.2024 19:28:39
+Skills : {Rust, Go, Kubernetes}
+Active : True
 Score  : 91
 Role   : Developer
-Skills : {Rust, Go, Kubernetes}
-Joined : 26.12.2024 19:14:01
-Level  : 4
-Name   : Frank
-Active : True
 ```
 
 ### 2.4 Schlüsselsuche nach Name
@@ -438,18 +438,18 @@ standardmäßig ohne Berücksichtigung der Groß-/Kleinschreibung und als Präfi
 
 
 ```powershell
-spill team "Alice"
+scoop team "Alice"
 ```
 
 ```
 
+Name   : Alice
+Level  : 3
+Joined : 10.05.2025 19:28:39
+Skills : {PowerShell, C#, Azure}
+Active : True
 Score  : 95
 Role   : Developer
-Skills : {PowerShell, C#, Azure}
-Joined : 10.05.2025 19:14:01
-Level  : 3
-Name   : Alice
-Active : True
 ```
 
 ### 2.5 Exakte Schlüsselsuche
@@ -459,18 +459,18 @@ Geben Sie den exakten vollständigen Schlüsselnamen an, um genau dieses eine Ob
 
 
 ```powershell
-spill team -Key "Frank"
+scoop team -Key "Frank"
 ```
 
 ```
 
+Name   : Frank
+Level  : 4
+Joined : 26.12.2024 19:28:39
+Skills : {Rust, Go, Kubernetes}
+Active : True
 Score  : 91
 Role   : Developer
-Skills : {Rust, Go, Kubernetes}
-Joined : 26.12.2024 19:14:01
-Level  : 4
-Name   : Frank
-Active : True
 ```
 
 ### 2.6 Groß-/Kleinschreibung ignorieren
@@ -481,18 +481,18 @@ ohne Berücksichtigung der Groß-/Kleinschreibung erfolgt. Kein Raten mehr.
 
 
 ```powershell
-spill team -Key "alice"
+scoop team -Key "alice"
 ```
 
 ```
 
+Name   : Alice
+Level  : 3
+Joined : 10.05.2025 19:28:39
+Skills : {PowerShell, C#, Azure}
+Active : True
 Score  : 95
 Role   : Developer
-Skills : {PowerShell, C#, Azure}
-Joined : 10.05.2025 19:14:01
-Level  : 3
-Name   : Alice
-Active : True
 ```
 
 ### 2.7 Fehlende Schlüssel behandeln
@@ -503,7 +503,7 @@ kein Absturz, nur ein hilfreicher Hinweis, dass nichts gefunden wurde.
 
 
 ```powershell
-spill -Bucket team -Key "Zoe"
+scoop -Bucket team -Key "Zoe"
 ```
 
 
@@ -515,42 +515,42 @@ Auch in Bucket-Namen können Sie Platzhalter verwenden. "t*" findet jeden Bucket
 
 
 ```powershell
-spill -Bucket "t*"
+scoop -Bucket "t*"
 ```
 
 ```
 
+Name   : Alice
+Level  : 3
+Joined : 10.05.2025 19:28:39
+Skills : {PowerShell, C#, Azure}
+Active : True
 Score  : 95
 Role   : Developer
-Skills : {PowerShell, C#, Azure}
-Joined : 10.05.2025 19:14:01
-Level  : 3
-Name   : Alice
-Active : True
 
+Name   : Bob
+Level  : 2
+Joined : 11.11.2025 19:28:39
+Skills : {Figma, CSS, HTML}
+Active : True
 Score  : 72
 Role   : Designer
-Skills : {Figma, CSS, HTML}
-Joined : 11.11.2025 19:14:01
-Level  : 2
-Name   : Bob
-Active : True
 
+Name   : Carol
+Level  : 3
+Joined : 09.02.2026 19:28:39
+Skills : {Agile, Jira, Confluence}
+Active : True
 Score  : 88
 Role   : PM
-Skills : {Agile, Jira, Confluence}
-Joined : 09.02.2026 19:14:01
-Level  : 3
-Name   : Carol
-Active : True
 
+Name   : Frank
+Level  : 4
+Joined : 26.12.2024 19:28:39
+Skills : {Rust, Go, Kubernetes}
+Active : True
 Score  : 91
 Role   : Developer
-Skills : {Rust, Go, Kubernetes}
-Joined : 26.12.2024 19:14:01
-Level  : 4
-Name   : Frank
-Active : True
 
 Type    : PSCustomObject
 Ordered : True
@@ -566,74 +566,74 @@ die Ergebnisse in einer einzigen Liste.
 
 
 ```powershell
-spill -Bucket "team", "staff"
+scoop -Bucket "team", "staff"
 ```
 
 ```
 
+Name   : Alice
+Level  : 3
+Joined : 10.05.2025 19:28:39
+Skills : {PowerShell, C#, Azure}
+Active : True
 Score  : 95
 Role   : Developer
-Skills : {PowerShell, C#, Azure}
-Joined : 10.05.2025 19:14:01
-Level  : 3
-Name   : Alice
-Active : True
 
+Name   : Bob
+Level  : 2
+Joined : 11.11.2025 19:28:39
+Skills : {Figma, CSS, HTML}
+Active : True
 Score  : 72
 Role   : Designer
-Skills : {Figma, CSS, HTML}
-Joined : 11.11.2025 19:14:01
-Level  : 2
-Name   : Bob
-Active : True
 
+Name   : Carol
+Level  : 3
+Joined : 09.02.2026 19:28:39
+Skills : {Agile, Jira, Confluence}
+Active : True
 Score  : 88
 Role   : PM
-Skills : {Agile, Jira, Confluence}
-Joined : 09.02.2026 19:14:01
-Level  : 3
-Name   : Carol
-Active : True
 
+Name   : Frank
+Level  : 4
+Joined : 26.12.2024 19:28:39
+Skills : {Rust, Go, Kubernetes}
+Active : True
 Score  : 91
 Role   : Developer
-Skills : {Rust, Go, Kubernetes}
-Joined : 26.12.2024 19:14:01
-Level  : 4
-Name   : Frank
-Active : True
 
+Name   : Alice
+Level  : 3
+Joined : 10.05.2025 19:28:39
+Skills : {PowerShell, C#, Azure}
+Active : True
 Score  : 95
 Role   : Developer
-Skills : {PowerShell, C#, Azure}
-Joined : 10.05.2025 19:14:01
-Level  : 3
-Name   : Alice
-Active : True
 
+Name   : Bob
+Level  : 2
+Joined : 11.11.2025 19:28:39
+Skills : {Figma, CSS, HTML}
+Active : True
 Score  : 72
 Role   : Designer
-Skills : {Figma, CSS, HTML}
-Joined : 11.11.2025 19:14:01
-Level  : 2
-Name   : Bob
-Active : True
 
+Name   : Carol
+Level  : 3
+Joined : 09.02.2026 19:28:39
+Skills : {Agile, Jira, Confluence}
+Active : True
 Score  : 88
 Role   : PM
-Skills : {Agile, Jira, Confluence}
-Joined : 09.02.2026 19:14:01
-Level  : 3
-Name   : Carol
-Active : True
 
+Name   : Frank
+Level  : 4
+Joined : 26.12.2024 19:28:39
+Skills : {Rust, Go, Kubernetes}
+Active : True
 Score  : 91
 Role   : Developer
-Skills : {Rust, Go, Kubernetes}
-Joined : 26.12.2024 19:14:01
-Level  : 4
-Name   : Frank
-Active : True
 ```
 
 ### 2.10 Metadaten-Eigenschaften
@@ -645,7 +645,7 @@ Pipeline-Operationen, bei denen der Kontext wichtig ist.
 
 
 ```powershell
-spill -Bucket team -Key "Bob" | Select _BucketName, _BucketKey, _BucketFile
+scoop -Bucket team -Key "Bob" | Select _BucketName, _BucketKey, _BucketFile
 ```
 
 ```
@@ -658,12 +658,12 @@ team        Bob        C:\Users\berfelde\.buckets\team\Bob.dat
 ### 2.11 An Select-Object übergeben
 ---
 
-Da spill normale PowerShell-Objekte zurückgibt, können Sie sie an Select-Object,
+Da scoop normale PowerShell-Objekte zurückgibt, können Sie sie an Select-Object,
 Sort-Object, Group-Object übergeben — alles, was Sie mit jedem anderen PowerShell-Objekt tun würden.
 
 
 ```powershell
-spill -Bucket team | Sort Score -Descending | Select Name, Role, Score
+scoop -Bucket team | Sort Score -Descending | Select Name, Role, Score
 ```
 
 ```
@@ -684,7 +684,7 @@ Variablen und arbeiten Sie damit wie mit jedem anderen PowerShell-Objekt.
 
 
 ```powershell
-$dev = spill -Bucket team -Key "Frank"
+$dev = scoop -Bucket team -Key "Frank"
 $dev.Name
 $dev.Role
 $dev.Level
@@ -703,26 +703,26 @@ und -werten, und Buckets gibt nur Objekte zurück, bei denen alle Eigenschaften 
 
 
 ```powershell
-spill -Bucket team -Match @{ Role = "Developer" }
+scoop -Bucket team -Match @{ Role = "Developer" }
 ```
 
 ```
 
+Name   : Alice
+Level  : 3
+Joined : 10.05.2025 19:28:39
+Skills : {PowerShell, C#, Azure}
+Active : True
 Score  : 95
 Role   : Developer
-Skills : {PowerShell, C#, Azure}
-Joined : 10.05.2025 19:14:01
-Level  : 3
-Name   : Alice
-Active : True
 
+Name   : Frank
+Level  : 4
+Joined : 26.12.2024 19:28:39
+Skills : {Rust, Go, Kubernetes}
+Active : True
 Score  : 91
 Role   : Developer
-Skills : {Rust, Go, Kubernetes}
-Joined : 26.12.2024 19:14:01
-Level  : 4
-Name   : Frank
-Active : True
 ```
 
 ### 2a.2 Null-Werte abgleichen
@@ -733,42 +733,42 @@ gilt sie als übereinstimmung für . Nützlich zum Auffinden von Objekten mit fe
 
 
 ```powershell
-spill -Bucket team -Match @{ Deleted = $null }
+scoop -Bucket team -Match @{ Deleted = $null }
 ```
 
 ```
 
+Name   : Alice
+Level  : 3
+Joined : 10.05.2025 19:28:39
+Skills : {PowerShell, C#, Azure}
+Active : True
 Score  : 95
 Role   : Developer
-Skills : {PowerShell, C#, Azure}
-Joined : 10.05.2025 19:14:01
-Level  : 3
-Name   : Alice
-Active : True
 
+Name   : Bob
+Level  : 2
+Joined : 11.11.2025 19:28:39
+Skills : {Figma, CSS, HTML}
+Active : True
 Score  : 72
 Role   : Designer
-Skills : {Figma, CSS, HTML}
-Joined : 11.11.2025 19:14:01
-Level  : 2
-Name   : Bob
-Active : True
 
+Name   : Carol
+Level  : 3
+Joined : 09.02.2026 19:28:39
+Skills : {Agile, Jira, Confluence}
+Active : True
 Score  : 88
 Role   : PM
-Skills : {Agile, Jira, Confluence}
-Joined : 09.02.2026 19:14:01
-Level  : 3
-Name   : Carol
-Active : True
 
+Name   : Frank
+Level  : 4
+Joined : 26.12.2024 19:28:39
+Skills : {Rust, Go, Kubernetes}
+Active : True
 Score  : 91
 Role   : Developer
-Skills : {Rust, Go, Kubernetes}
-Joined : 26.12.2024 19:14:01
-Level  : 4
-Name   : Frank
-Active : True
 ```
 
 ### 2a.3 Mehrere Eigenschaften abgleichen
@@ -779,26 +779,26 @@ müssen zutreffen, damit ein Objekt zurückgegeben wird.
 
 
 ```powershell
-spill -Bucket team -Match @{ Level = 3; Active = $true }
+scoop -Bucket team -Match @{ Level = 3; Active = $true }
 ```
 
 ```
 
+Name   : Alice
+Level  : 3
+Joined : 10.05.2025 19:28:39
+Skills : {PowerShell, C#, Azure}
+Active : True
 Score  : 95
 Role   : Developer
-Skills : {PowerShell, C#, Azure}
-Joined : 10.05.2025 19:14:01
-Level  : 3
-Name   : Alice
-Active : True
 
+Name   : Carol
+Level  : 3
+Joined : 09.02.2026 19:28:39
+Skills : {Agile, Jira, Confluence}
+Active : True
 Score  : 88
 Role   : PM
-Skills : {Agile, Jira, Confluence}
-Joined : 09.02.2026 19:14:01
-Level  : 3
-Name   : Carol
-Active : True
 ```
 
 ### 2a.4 Gemischte Typen abgleichen
@@ -815,15 +815,15 @@ $data = @(
   @{ Name = "C"; Count = 5; Active = $true }
 )
 New-BucketObject -InputObject $data -Bucket match-demo -KeyProperty Name
-spill -Bucket match-demo -Match @{ Count = 5; Active = $true }
+scoop -Bucket match-demo -Match @{ Count = 5; Active = $true }
 ```
 
 ```
 
-Active Count Name
------- ----- ----
-True     5 A
-True     5 C
+Active Name Count
+------ ---- -----
+True A        5
+True C        5
 ```
 
 ### 2a.5 Groß-/Kleinschreibung bei Zeichenketten
@@ -840,15 +840,15 @@ $items = @(
   @{ Name = "gamma"; Color = "red" }
 )
 $items | fill -Bucket match-demo -KeyProperty Name
-spill -Bucket match-demo -Match @{ Color = "red" }
+scoop -Bucket match-demo -Match @{ Color = "red" }
 ```
 
 ```
 
-Name  Color
-----  -----
-alpha red
-gamma red
+Color Name
+----- ----
+red   alpha
+red   gamma
 ```
 
 ### 2a.6 Nur oberste Eigenschaften
@@ -861,7 +861,7 @@ gamma red
 ```powershell
 $data = @{ Id = "a"; Meta = @{ Name = "inner" } }
 $data | fill -Bucket nested-match -KeyProperty Id
-spill -Bucket nested-match -Match @{ Meta = $null }
+scoop -Bucket nested-match -Match @{ Meta = $null }
 ```
 
 
@@ -877,34 +877,34 @@ Für alles über die exakte Gleichheit hinaus greifen Sie zu -Filter. Er akzepti
 
 
 ```powershell
-spill -Bucket team -Filter { $_.Score -gt 80 }
+scoop -Bucket team -Filter { $_.Score -gt 80 }
 ```
 
 ```
 
+Name   : Alice
+Level  : 3
+Joined : 10.05.2025 19:28:39
+Skills : {PowerShell, C#, Azure}
+Active : True
 Score  : 95
 Role   : Developer
-Skills : {PowerShell, C#, Azure}
-Joined : 10.05.2025 19:14:01
-Level  : 3
-Name   : Alice
-Active : True
 
+Name   : Carol
+Level  : 3
+Joined : 09.02.2026 19:28:39
+Skills : {Agile, Jira, Confluence}
+Active : True
 Score  : 88
 Role   : PM
-Skills : {Agile, Jira, Confluence}
-Joined : 09.02.2026 19:14:01
-Level  : 3
-Name   : Carol
-Active : True
 
+Name   : Frank
+Level  : 4
+Joined : 26.12.2024 19:28:39
+Skills : {Rust, Go, Kubernetes}
+Active : True
 Score  : 91
 Role   : Developer
-Skills : {Rust, Go, Kubernetes}
-Joined : 26.12.2024 19:14:01
-Level  : 4
-Name   : Frank
-Active : True
 ```
 
 ### 2b.2 Kleiner-oder-gleich-Vergleich
@@ -915,26 +915,26 @@ die innerhalb von Buckets statt in der Pipeline ausgeführt wird.
 
 
 ```powershell
-spill -Bucket team -Filter { $_.Score -le 90 }
+scoop -Bucket team -Filter { $_.Score -le 90 }
 ```
 
 ```
 
+Name   : Bob
+Level  : 2
+Joined : 11.11.2025 19:28:39
+Skills : {Figma, CSS, HTML}
+Active : True
 Score  : 72
 Role   : Designer
-Skills : {Figma, CSS, HTML}
-Joined : 11.11.2025 19:14:01
-Level  : 2
-Name   : Bob
-Active : True
 
+Name   : Carol
+Level  : 3
+Joined : 09.02.2026 19:28:39
+Skills : {Agile, Jira, Confluence}
+Active : True
 Score  : 88
 Role   : PM
-Skills : {Agile, Jira, Confluence}
-Joined : 09.02.2026 19:14:01
-Level  : 3
-Name   : Carol
-Active : True
 ```
 
 ### 2b.3 Regex-Mustervergleich
@@ -945,18 +945,18 @@ A oder E beginnen, mit dem Regex "^[AE]".
 
 
 ```powershell
-spill -Bucket team -Filter { $_.Name -match "^[AE]" }
+scoop -Bucket team -Filter { $_.Name -match "^[AE]" }
 ```
 
 ```
 
+Name   : Alice
+Level  : 3
+Joined : 10.05.2025 19:28:39
+Skills : {PowerShell, C#, Azure}
+Active : True
 Score  : 95
 Role   : Developer
-Skills : {PowerShell, C#, Azure}
-Joined : 10.05.2025 19:14:01
-Level  : 3
-Name   : Alice
-Active : True
 ```
 
 ### 2b.4 Platzhaltersuche mit -like
@@ -967,18 +967,18 @@ Buchstaben "e" an beliebiger Stelle enthält.
 
 
 ```powershell
-spill -Bucket team -Filter { $_.Name -like "*e*" }
+scoop -Bucket team -Filter { $_.Name -like "*e*" }
 ```
 
 ```
 
+Name   : Alice
+Level  : 3
+Joined : 10.05.2025 19:28:39
+Skills : {PowerShell, C#, Azure}
+Active : True
 Score  : 95
 Role   : Developer
-Skills : {PowerShell, C#, Azure}
-Joined : 10.05.2025 19:14:01
-Level  : 3
-Name   : Alice
-Active : True
 ```
 
 ### 2b.5 Bedingungen mit -and kombinieren
@@ -989,26 +989,26 @@ Kombinieren Sie Bedingungen mit -and. Beide müssen zutreffen: Punktzahl über 8
 
 
 ```powershell
-spill -Bucket team -Filter { $_.Score -gt 80 -and $_.Role -eq "Developer" }
+scoop -Bucket team -Filter { $_.Score -gt 80 -and $_.Role -eq "Developer" }
 ```
 
 ```
 
+Name   : Alice
+Level  : 3
+Joined : 10.05.2025 19:28:39
+Skills : {PowerShell, C#, Azure}
+Active : True
 Score  : 95
 Role   : Developer
-Skills : {PowerShell, C#, Azure}
-Joined : 10.05.2025 19:14:01
-Level  : 3
-Name   : Alice
-Active : True
 
+Name   : Frank
+Level  : 4
+Joined : 26.12.2024 19:28:39
+Skills : {Rust, Go, Kubernetes}
+Active : True
 Score  : 91
 Role   : Developer
-Skills : {Rust, Go, Kubernetes}
-Joined : 26.12.2024 19:14:01
-Level  : 4
-Name   : Frank
-Active : True
 ```
 
 ### 2b.6 Bedingungen mit -or kombinieren
@@ -1018,26 +1018,26 @@ Kombinieren Sie Bedingungen mit -or. Eine muss zutreffen: Rolle ist "Designer" O
 
 
 ```powershell
-spill -Bucket team -Filter { $_.Role -eq "Designer" -or $_.Level -gt 3 }
+scoop -Bucket team -Filter { $_.Role -eq "Designer" -or $_.Level -gt 3 }
 ```
 
 ```
 
+Name   : Bob
+Level  : 2
+Joined : 11.11.2025 19:28:39
+Skills : {Figma, CSS, HTML}
+Active : True
 Score  : 72
 Role   : Designer
-Skills : {Figma, CSS, HTML}
-Joined : 11.11.2025 19:14:01
-Level  : 2
-Name   : Bob
-Active : True
 
+Name   : Frank
+Level  : 4
+Joined : 26.12.2024 19:28:39
+Skills : {Rust, Go, Kubernetes}
+Active : True
 Score  : 91
 Role   : Developer
-Skills : {Rust, Go, Kubernetes}
-Joined : 26.12.2024 19:14:01
-Level  : 4
-Name   : Frank
-Active : True
 ```
 
 ### 2b.7 Zeichenkettenlängen prüfen
@@ -1053,14 +1053,14 @@ $items = @(
   @{ Name = "long";  Value = "abcdefghijk" }
 )
 $items | fill -Bucket str-test -KeyProperty Name
-spill -Bucket str-test -Filter { $_.Value.Length -gt 5 }
+scoop -Bucket str-test -Filter { $_.Value.Length -gt 5 }
 ```
 
 ```
 
-Name Value
----- -----
-long abcdefghijk
+Value       Name
+-----       ----
+abcdefghijk long
 ```
 
 ### 2b.8 Datumsvergleiche
@@ -1072,18 +1072,18 @@ Auch Datumsvergleiche — keine spezielle Syntax nötig. Vergleichen Sie DateTim
 
 ```powershell
 $cutoff = (Get-Date).AddDays(-100)
-spill -Bucket team -Filter { $_.Joined -gt $cutoff }
+scoop -Bucket team -Filter { $_.Joined -gt $cutoff }
 ```
 
 ```
 
+Name   : Carol
+Level  : 3
+Joined : 09.02.2026 19:28:39
+Skills : {Agile, Jira, Confluence}
+Active : True
 Score  : 88
 Role   : PM
-Skills : {Agile, Jira, Confluence}
-Joined : 09.02.2026 19:14:01
-Level  : 3
-Name   : Carol
-Active : True
 ```
 
 ### 2b.9 Zugriff auf verschachtelte Eigenschaften
@@ -1094,18 +1094,18 @@ Hier prüfen wir, ob eine Array-Eigenschaft einen Wert mit -contains enthält.
 
 
 ```powershell
-spill -Bucket team -Filter { $_.Skills -contains "Rust" }
+scoop -Bucket team -Filter { $_.Skills -contains "Rust" }
 ```
 
 ```
 
+Name   : Frank
+Level  : 4
+Joined : 26.12.2024 19:28:39
+Skills : {Rust, Go, Kubernetes}
+Active : True
 Score  : 91
 Role   : Developer
-Skills : {Rust, Go, Kubernetes}
-Joined : 26.12.2024 19:14:01
-Level  : 4
-Name   : Frank
-Active : True
 ```
 
 ### 2b.10 Bucket-übergreifendes Filtern
@@ -1117,22 +1117,22 @@ bucket-übergreifende Abfrage — nützlich, um Objekte überall in Ihren Daten 
 
 ```powershell
 @{ Name = "HighScore"; Score = 90 } | fill -Bucket config -Key "app-config"
-spill -Filter { $_.Score -gt 80 }
+scoop -Filter { $_.Score -gt 80 }
 ```
 
 ```
 
-Name      Score
-----      -----
-HighScore    90
-Alice        95
-Carol        88
-Frank        91
-Alice        95
-Carol        88
-Frank        91
-Alice        99
-Carol        88
+Score Name
+----- ----
+ 90 HighScore
+ 95 Alice
+ 88 Carol
+ 91 Frank
+ 95 Alice
+ 88 Carol
+ 91 Frank
+ 99 Alice
+ 88 Carol
 ```
 
 ## 2c. Lesen — Seitenwechsel mit -First / -Skip
@@ -1146,34 +1146,34 @@ für die Vorschau großer Datensätze, ohne alles zu laden.
 
 
 ```powershell
-spill -Bucket team -First 3
+scoop -Bucket team -First 3
 ```
 
 ```
 
+Name   : Alice
+Level  : 3
+Joined : 10.05.2025 19:28:39
+Skills : {PowerShell, C#, Azure}
+Active : True
 Score  : 95
 Role   : Developer
-Skills : {PowerShell, C#, Azure}
-Joined : 10.05.2025 19:14:01
-Level  : 3
-Name   : Alice
-Active : True
 
+Name   : Bob
+Level  : 2
+Joined : 11.11.2025 19:28:39
+Skills : {Figma, CSS, HTML}
+Active : True
 Score  : 72
 Role   : Designer
-Skills : {Figma, CSS, HTML}
-Joined : 11.11.2025 19:14:01
-Level  : 2
-Name   : Bob
-Active : True
 
+Name   : Carol
+Level  : 3
+Joined : 09.02.2026 19:28:39
+Skills : {Agile, Jira, Confluence}
+Active : True
 Score  : 88
 Role   : PM
-Skills : {Agile, Jira, Confluence}
-Joined : 09.02.2026 19:14:01
-Level  : 3
-Name   : Carol
-Active : True
 ```
 
 ### 2c.2 Ergebnisse überspringen mit -Skip
@@ -1184,34 +1184,34 @@ gibt die nächsten drei zurück — ein klassisches Seitenwechselmuster.
 
 
 ```powershell
-spill -Bucket team -Skip 1 -First 3
+scoop -Bucket team -Skip 1 -First 3
 ```
 
 ```
 
+Name   : Bob
+Level  : 2
+Joined : 11.11.2025 19:28:39
+Skills : {Figma, CSS, HTML}
+Active : True
 Score  : 72
 Role   : Designer
-Skills : {Figma, CSS, HTML}
-Joined : 11.11.2025 19:14:01
-Level  : 2
-Name   : Bob
-Active : True
 
+Name   : Carol
+Level  : 3
+Joined : 09.02.2026 19:28:39
+Skills : {Agile, Jira, Confluence}
+Active : True
 Score  : 88
 Role   : PM
-Skills : {Agile, Jira, Confluence}
-Joined : 09.02.2026 19:14:01
-Level  : 3
-Name   : Carol
-Active : True
 
+Name   : Frank
+Level  : 4
+Joined : 26.12.2024 19:28:39
+Skills : {Rust, Go, Kubernetes}
+Active : True
 Score  : 91
 Role   : Developer
-Skills : {Rust, Go, Kubernetes}
-Joined : 26.12.2024 19:14:01
-Level  : 4
-Name   : Frank
-Active : True
 ```
 
 ### 2c.3 Filtern mit Seitenwechsel
@@ -1222,34 +1222,34 @@ und nehmen nur die ersten 3 Ergebnisse.
 
 
 ```powershell
-spill -Bucket team -Filter { $_.Score -gt 70 } -First 3
+scoop -Bucket team -Filter { $_.Score -gt 70 } -First 3
 ```
 
 ```
 
+Name   : Alice
+Level  : 3
+Joined : 10.05.2025 19:28:39
+Skills : {PowerShell, C#, Azure}
+Active : True
 Score  : 95
 Role   : Developer
-Skills : {PowerShell, C#, Azure}
-Joined : 10.05.2025 19:14:01
-Level  : 3
-Name   : Alice
-Active : True
 
+Name   : Bob
+Level  : 2
+Joined : 11.11.2025 19:28:39
+Skills : {Figma, CSS, HTML}
+Active : True
 Score  : 72
 Role   : Designer
-Skills : {Figma, CSS, HTML}
-Joined : 11.11.2025 19:14:01
-Level  : 2
-Name   : Bob
-Active : True
 
+Name   : Carol
+Level  : 3
+Joined : 09.02.2026 19:28:39
+Skills : {Agile, Jira, Confluence}
+Active : True
 Score  : 88
 Role   : PM
-Skills : {Agile, Jira, Confluence}
-Joined : 09.02.2026 19:14:01
-Level  : 3
-Name   : Carol
-Active : True
 ```
 
 ## 3. Aktualisieren — Set-BucketObject
@@ -1258,13 +1258,13 @@ Active : True
 ### 3.1 Aktualisierung über die Pipeline
 ---
 
-Set-BucketObject aktualisiert ein vorhandenes Objekt direkt. Wenn es von spill über die Pipeline kommt,
+Set-BucketObject aktualisiert ein vorhandenes Objekt direkt. Wenn es von scoop über die Pipeline kommt,
 erkennt es Bucket und Schlüssel automatisch aus den Metadaten _BucketName und _BucketKey —
 kein erneutes Angeben nötig.
 
 
 ```powershell
-spill -Bucket team -Key "Bob" | ForEach-Object {
+scoop -Bucket team -Key "Bob" | ForEach-Object {
   $_.Score = 99
   $_.Role = "Lead"
   $_
@@ -1280,7 +1280,7 @@ Objekt über -InputObject.
 
 
 ```powershell
-$obj = spill -Bucket team -Key "Carol"
+$obj = scoop -Bucket team -Key "Carol"
 $obj.Score = 100
 Set-BucketObject -Bucket team -Key "Carol" -InputObject $obj -Quiet
 ```
@@ -1378,37 +1378,37 @@ Das Löschen nach Schlüssel ist einfach. Geben Sie den Schlüssel des Objekts a
 
 ```powershell
 Remove-BucketObject -Bucket team -Key "Bob" -Quiet
-spill -Bucket team
+scoop -Bucket team
 ```
 
 ```
 
+Name   : Alice
+Level  : 3
+Joined : 10.05.2025 19:28:39
+Skills : {PowerShell, C#, Azure}
+Active : True
 Score  : 95
 Role   : Developer
-Skills : {PowerShell, C#, Azure}
-Joined : 10.05.2025 19:14:01
-Level  : 3
-Name   : Alice
-Active : True
 Email  : alice@contoso.com
 Phone  : 555-0100
 City   : Portland
 
+Name   : Carol
+Level  : 3
+Joined : 09.02.2026 19:28:39
+Skills : {Agile, Jira, Confluence}
+Active : True
 Score  : 100
 Role   : PM
-Skills : {Agile, Jira, Confluence}
-Joined : 09.02.2026 19:14:01
-Level  : 3
-Name   : Carol
-Active : True
 
+Name   : Frank
+Level  : 4
+Joined : 26.12.2024 19:28:39
+Skills : {Rust, Go, Kubernetes}
+Active : True
 Score  : 91
 Role   : Developer
-Skills : {Rust, Go, Kubernetes}
-Joined : 26.12.2024 19:14:01
-Level  : 4
-Name   : Frank
-Active : True
 ```
 
 ### 4.3 Nicht existenten Schlüssel löschen
@@ -1444,45 +1444,45 @@ mit einem Befehl.
 
 ```powershell
 Remove-BucketObject -Bucket team -Match @{ Role = "QA" } -Quiet
-spill -Bucket team
+scoop -Bucket team
 ```
 
 ```
 
+Name   : Alice
+Level  : 3
+Joined : 10.05.2025 19:28:39
+Skills : {PowerShell, C#, Azure}
+Active : True
 Score  : 95
 Role   : Developer
-Skills : {PowerShell, C#, Azure}
-Joined : 10.05.2025 19:14:01
-Level  : 3
-Name   : Alice
-Active : True
 Email  : alice@contoso.com
 Phone  : 555-0100
 City   : Portland
 
+Name   : Bob
+Level  : 2
+Joined : 11.11.2025 19:28:39
+Skills : {Figma, CSS, HTML}
+Active : True
 Score  : 72
 Role   : Designer
-Skills : {Figma, CSS, HTML}
-Joined : 11.11.2025 19:14:01
-Level  : 2
-Name   : Bob
-Active : True
 
+Name   : Carol
+Level  : 3
+Joined : 09.02.2026 19:28:39
+Skills : {Agile, Jira, Confluence}
+Active : True
 Score  : 100
 Role   : PM
-Skills : {Agile, Jira, Confluence}
-Joined : 09.02.2026 19:14:01
-Level  : 3
-Name   : Carol
-Active : True
 
+Name   : Frank
+Level  : 4
+Joined : 26.12.2024 19:28:39
+Skills : {Rust, Go, Kubernetes}
+Active : True
 Score  : 91
 Role   : Developer
-Skills : {Rust, Go, Kubernetes}
-Joined : 26.12.2024 19:14:01
-Level  : 4
-Name   : Frank
-Active : True
 ```
 
 ### 4.6 Löschen mit -Filter
@@ -1494,45 +1494,45 @@ Hier wird jedes inaktive Mitglied entfernt.
 
 ```powershell
 Remove-BucketObject -Bucket team -Filter { $_.Active -eq $false } -Quiet
-spill -Bucket team
+scoop -Bucket team
 ```
 
 ```
 
+Name   : Alice
+Level  : 3
+Joined : 10.05.2025 19:28:39
+Skills : {PowerShell, C#, Azure}
+Active : True
 Score  : 95
 Role   : Developer
-Skills : {PowerShell, C#, Azure}
-Joined : 10.05.2025 19:14:01
-Level  : 3
-Name   : Alice
-Active : True
 Email  : alice@contoso.com
 Phone  : 555-0100
 City   : Portland
 
+Name   : Bob
+Level  : 2
+Joined : 11.11.2025 19:28:39
+Skills : {Figma, CSS, HTML}
+Active : True
 Score  : 72
 Role   : Designer
-Skills : {Figma, CSS, HTML}
-Joined : 11.11.2025 19:14:01
-Level  : 2
-Name   : Bob
-Active : True
 
+Name   : Carol
+Level  : 3
+Joined : 09.02.2026 19:28:39
+Skills : {Agile, Jira, Confluence}
+Active : True
 Score  : 100
 Role   : PM
-Skills : {Agile, Jira, Confluence}
-Joined : 09.02.2026 19:14:01
-Level  : 3
-Name   : Carol
-Active : True
 
+Name   : Frank
+Level  : 4
+Joined : 26.12.2024 19:28:39
+Skills : {Rust, Go, Kubernetes}
+Active : True
 Score  : 91
 Role   : Developer
-Skills : {Rust, Go, Kubernetes}
-Joined : 26.12.2024 19:14:01
-Level  : 4
-Name   : Frank
-Active : True
 ```
 
 ### 4.7 Alles löschen mit -All
@@ -1543,7 +1543,7 @@ Active : True
 
 ```powershell
 Remove-BucketObject -Bucket team -All -Quiet
-spill -Bucket team
+scoop -Bucket team
 ```
 
 
@@ -1579,18 +1579,18 @@ unberührt — dies ist eine echte Kopie, keine Verschiebung.
 
 ```powershell
 Copy-BucketObject -Bucket team -Key "Alice" -DestinationKey "Alice-Backup" -Quiet
-spill -Bucket team -Key "Alice-Backup"
+scoop -Bucket team -Key "Alice-Backup"
 ```
 
 ```
 
+Name   : Alice
+Level  : 3
+Joined : 10.05.2025 19:28:39
+Skills : {PowerShell, C#, Azure}
+Active : True
 Score  : 95
 Role   : Developer
-Skills : {PowerShell, C#, Azure}
-Joined : 10.05.2025 19:14:01
-Level  : 3
-Name   : Alice
-Active : True
 ```
 
 ### 5.2 Bucket-übergreifend kopieren
@@ -1601,18 +1601,18 @@ Kopieren Sie auch bucket-übergreifend. Geben Sie -DestinationBucket an, um in e
 
 ```powershell
 Copy-BucketObject -Bucket team -Key "Alice" -DestinationBucket archive -Quiet
-spill -Bucket archive -Key "Alice"
+scoop -Bucket archive -Key "Alice"
 ```
 
 ```
 
+Name   : Alice
+Level  : 3
+Joined : 10.05.2025 19:28:39
+Skills : {PowerShell, C#, Azure}
+Active : True
 Score  : 95
 Role   : Developer
-Skills : {PowerShell, C#, Azure}
-Joined : 10.05.2025 19:14:01
-Level  : 3
-Name   : Alice
-Active : True
 ```
 
 ### 5.3 Kopieren mit Passthru
@@ -1832,8 +1832,8 @@ Name         : team
 Path         : C:\Users\berfelde\.buckets\team
 ObjectCount  : 5
 TotalSize    : 5.68 KB
-OldestObject : 10.05.2026 19:14:02
-NewestObject : 10.05.2026 19:14:02
+OldestObject : 10.05.2026 19:28:39
+NewestObject : 10.05.2026 19:28:40
 ```
 
 ### 6.4 Schlüssel auflisten
@@ -1877,7 +1877,7 @@ Key           : Alice-Backup
 Format        : Binary
 Type          : Object
 Size          : 1167
-LastWriteTime : 10.05.2026 19:14:02
+LastWriteTime : 10.05.2026 19:28:40
 IsCompressed  : False
 
 Bucket        : team
@@ -1885,7 +1885,7 @@ Key           : Alice
 Format        : Binary
 Type          : Object
 Size          : 1167
-LastWriteTime : 10.05.2026 19:14:02
+LastWriteTime : 10.05.2026 19:28:40
 IsCompressed  : False
 
 Bucket        : team
@@ -1893,7 +1893,7 @@ Key           : Bob
 Format        : Binary
 Type          : Object
 Size          : 1159
-LastWriteTime : 10.05.2026 19:14:02
+LastWriteTime : 10.05.2026 19:28:40
 IsCompressed  : False
 
 Bucket        : team
@@ -1901,7 +1901,7 @@ Key           : Carol
 Format        : Binary
 Type          : Object
 Size          : 1162
-LastWriteTime : 10.05.2026 19:14:02
+LastWriteTime : 10.05.2026 19:28:40
 IsCompressed  : False
 
 Bucket        : team
@@ -1909,7 +1909,7 @@ Key           : Frank
 Format        : Binary
 Type          : Object
 Size          : 1166
-LastWriteTime : 10.05.2026 19:14:02
+LastWriteTime : 10.05.2026 19:28:40
 IsCompressed  : False
 ```
 
@@ -1954,39 +1954,39 @@ config       app-config
 demo         verbosity-demo
 demo         _ _
 dest         obj1
-events       20260510191402004_0
-events       20260510191402007_1
+events       20260510192839362_0
+events       20260510192839364_1
 final        new-key
-logs         0695ab4c-336e-40b8-b3d1-45596872839f
-logs         0d86e17d-b96d-4b0b-9b1a-a9d8ee636a5c
-logs         0e327473-9184-411b-bba4-39a2bec7c8b4
-logs         17895aa8-1df5-47cf-941d-673423d685e7
-logs         1d31814b-c9fe-49cb-a24d-7014c173e0d3
-logs         248fd341-6562-4bd6-af58-768325e8e63a
-logs         264e15d6-9d02-4be2-b820-5d91742ed98d
-logs         2e3353f5-cc71-4155-86cf-26cfb448d4a2
-logs         32951437-a1b4-4ee6-9ac4-c7cc6d743904
-logs         35d74435-fae1-4869-82d0-982de143686f
-logs         3d14d601-d80b-4f0b-ba56-cf7b63f0de8c
-logs         482e33d1-8a85-4c11-b9a0-82f920db2a95
-logs         4f4dc087-2ff1-4fa2-b3a7-417a5725ba3a
-logs         52e0c734-31a2-4543-8dbf-85072044c88c
-logs         5b2cf5fc-6657-4666-b74c-b7d911de09bb
-logs         732da2ca-d906-4ed0-aa2d-817173036b83
-logs         7a92119c-65a1-469e-be1c-479ef0dea627
-logs         7e957ccd-3f49-4ee5-8b44-bb5943ed2142
-logs         83529cd4-83b2-4e8c-9e58-536041b50cd2
-logs         86b9db63-6ac0-47ac-82bc-1e75df814061
-logs         8ab77542-aa73-4f8a-a1f4-e01a4b0f2fb5
-logs         91195a39-4393-4516-8d64-5e7473630ed2
-logs         9d870a11-9eab-479b-b7b1-86644fd6e1e0
-logs         9e891093-ef24-48fa-9d91-7231848a1dc0
-logs         a63fa01e-1ddf-466d-b104-58e0ef68933b
-logs         b10eaa6c-1e9e-4f61-adeb-ba842dd9c7c8
-logs         ddcd3e6c-b960-42c3-9088-2d12af046a1a
-logs         e0e4eeb0-d5be-479a-ace3-ce3360a61836
-logs         ea4ab727-ad2f-4788-91d1-1e4f6ea9b1c3
-logs         f74a4eaf-0ac6-4b03-b21e-ed223c6194a2
+logs         087d5cfd-27d6-4511-acb2-339f67469c34
+logs         0dc3525a-32ff-4910-a87d-9a9d607d997c
+logs         1865bf18-9274-48c5-9d0c-e5b4086802c3
+logs         1bcb6eef-b61d-49a0-976f-787109abb7f8
+logs         1c47dbcc-2733-4c39-92c8-96096080212a
+logs         217fc815-9cba-4141-bce2-0751cd9f8610
+logs         25f8ba8b-677d-470b-abc7-cbe384d7a9ed
+logs         2af2cd43-0370-43a1-9a93-11b60ff4b7da
+logs         2fa7a348-eb20-419b-8f63-993f500b39fc
+logs         329460ed-742c-4777-aa02-f4bcf9f0e583
+logs         4629836e-f6bb-487d-a989-a9da85ac098f
+logs         4f73c922-0c1e-4d65-9e51-bb460b43e9f5
+logs         63f31b89-7352-41f3-bd2f-d877424e989a
+logs         6e36e165-07d7-4335-b3d0-24210f2fba18
+logs         770479aa-7963-4b62-a5a7-2aeec0c53572
+logs         7ba8e24d-0c67-474f-bf50-a56723f0108f
+logs         7caae246-0433-4b44-98de-718462cfb27e
+logs         96032eb1-7b80-4cae-b586-9c6dc534e99d
+logs         a4c8a3ca-12c6-4a6d-8729-e1099c305f2b
+logs         aa57e780-89e3-4523-8023-2d03cace7e72
+logs         b1c1adea-d24f-4f6e-8590-ac3f82bc8219
+logs         b1eeb496-404d-4f55-8aa1-2e9cebf9b3eb
+logs         b29fef44-b0d7-4969-b796-c39fbd4ce927
+logs         b7fd5938-a7b0-4c3d-b692-1635f8e29316
+logs         c37cfe62-b314-47d6-ba54-e934b6b7ea85
+logs         d412817a-7edb-4024-bd0b-25a60ec8f816
+logs         e9120d4d-dafa-4f94-b4b0-abee5fc9b9cf
+logs         ed993f2d-bf64-4468-b02d-476e303581b4
+logs         fe2bc3a3-b2b6-4005-9b1e-ee3932e35c14
+logs         ff010163-ce8c-4815-9786-bc2495588819
 match-demo   A
 match-demo   alpha
 match-demo   B
@@ -2035,7 +2035,7 @@ Get-Bucket -Tree -MaxFiles 10
 
 .buckets (72 items, 31 KB)
 ├── archive (1 item, 1 KB)
-├── config (3 items, 541 B)
+├── config (3 items, 540 B)
 ├── demo (2 items, 653 B)
 ├── dest (1 item, 415 B)
 ├── events (2 items, 831 B)
@@ -2069,7 +2069,7 @@ Get-Bucket -Tree
 
 .buckets (72 items, 31 KB)
 ├── archive (1 item, 1 KB)
-├── config (3 items, 541 B)
+├── config (3 items, 540 B)
 ├── demo (2 items, 653 B)
 ├── dest (1 item, 415 B)
 ├── events (2 items, 831 B)
@@ -2103,7 +2103,7 @@ Get-Bucket -Tree -Objects
 .buckets (72 items, 31 KB)
 ├── archive (1 item, 1 KB)
 │   └── Alice
-├── config (3 items, 541 B)
+├── config (3 items, 540 B)
 │   ├── app-config
 │   ├── app-config
 │   └── db-settings
@@ -2113,16 +2113,16 @@ Get-Bucket -Tree -Objects
 ├── dest (1 item, 415 B)
 │   └── obj1
 ├── events (2 items, 831 B)
-│   ├── 20260510191402004_0
-│   └── 20260510191402007_1
+│   ├── 20260510192839362_0
+│   └── 20260510192839364_1
 ├── final (1 item, 337 B)
 │   └── new-key
 ├── logs (30 items, 7 KB)
-│   ├── 0695ab4c-336e-40b8-b3d1-45596872839f
-│   ├── 0d86e17d-b96d-4b0b-9b1a-a9d8ee636a5c
-│   ├── 0e327473-9184-411b-bba4-39a2bec7c8b4
-│   ├── 17895aa8-1df5-47cf-941d-673423d685e7
-│   └── 1d31814b-c9fe-49cb-a24d-7014c173e0d3
+│   ├── 087d5cfd-27d6-4511-acb2-339f67469c34
+│   ├── 0dc3525a-32ff-4910-a87d-9a9d607d997c
+│   ├── 1865bf18-9274-48c5-9d0c-e5b4086802c3
+│   ├── 1bcb6eef-b61d-49a0-976f-787109abb7f8
+│   └── 1c47dbcc-2733-4c39-92c8-96096080212a
 │   └── ... 25 more
 ├── match-demo (6 items, 3 KB)
 │   ├── A
@@ -2188,9 +2188,9 @@ Name        : .buckets
 Type        : Root
 Path        : 
 ObjectCount : 72
-SizeBytes   : 31841
+SizeBytes   : 31840
 Depth       : 0
-Children    : {@{Name=archive; Type=Bucket; Path=archive; ObjectCount=1; SizeBytes=1167; Depth=1; Children=System.Collections.ArrayList; _BucketName=archive; _BucketKey=}, @{Name=config; Type=Bucket; Path=config; ObjectCount=3; SizeBytes=541; Depth=1; Children=System.Collections.ArrayList; _BucketName=config; _BucketKey=}, @{Name=demo; Type=Bucket; Path=demo; ObjectCount=2; SizeBytes=653; Depth=1; Children=System.Collections.ArrayList; _BucketName=demo; _BucketKey=}, @{Name=dest; Type=Bucket; Path=dest; ObjectCount=1; SizeBytes=415; Depth=1; Children=System.Collections.ArrayList; _BucketName=dest; _BucketKey=}…}
+Children    : {@{Name=archive; Type=Bucket; Path=archive; ObjectCount=1; SizeBytes=1167; Depth=1; Children=System.Collections.ArrayList; _BucketName=archive; _BucketKey=}, @{Name=config; Type=Bucket; Path=config; ObjectCount=3; SizeBytes=540; Depth=1; Children=System.Collections.ArrayList; _BucketName=config; _BucketKey=}, @{Name=demo; Type=Bucket; Path=demo; ObjectCount=2; SizeBytes=653; Depth=1; Children=System.Collections.ArrayList; _BucketName=demo; _BucketKey=}, @{Name=dest; Type=Bucket; Path=dest; ObjectCount=1; SizeBytes=415; Depth=1; Children=System.Collections.ArrayList; _BucketName=dest; _BucketKey=}…}
 _BucketName : 
 _BucketKey  :
 ```
@@ -2227,7 +2227,7 @@ Get-Bucket -Tree -Raw | ConvertTo-Json -Depth 5 | Select-Object -First 5
 "Type": "Root",
 "Path": "",
 "ObjectCount": 72,
-"SizeBytes": 31841,
+"SizeBytes": 31840,
 "Depth": 0,
 "Children": [
   {
@@ -2246,7 +2246,7 @@ Get-Bucket -Tree -Raw | ConvertTo-Json -Depth 5 | Select-Object -First 5
     "Type": "Bucket",
     "Path": "config",
     "ObjectCount": 3,
-    "SizeBytes": 541,
+    "SizeBytes": 540,
     "Depth": 1,
     "Children": [],
     "_BucketName": "config",
@@ -2660,69 +2660,69 @@ Get-Content (Join-Path $exportDir "team.json") -Raw | ConvertFrom-Json | Convert
 ```
 [
 {
-  "Score": 95,
-  "Role": "Developer",
+  "Name": "Alice",
+  "Level": 3,
+  "Joined": "2025-05-10T19:28:39.1374312+02:00",
   "Skills": [
     "PowerShell",
     "C#",
     "Azure"
   ],
-  "Joined": "2025-05-10T19:14:01.7772283+02:00",
-  "Level": 3,
-  "Name": "Alice",
-  "Active": true
+  "Active": true,
+  "Score": 95,
+  "Role": "Developer"
 },
 {
-  "Score": 95,
-  "Role": "Developer",
+  "Name": "Alice",
+  "Level": 3,
+  "Joined": "2025-05-10T19:28:39.1374312+02:00",
   "Skills": [
     "PowerShell",
     "C#",
     "Azure"
   ],
-  "Joined": "2025-05-10T19:14:01.7772283+02:00",
-  "Level": 3,
-  "Name": "Alice",
-  "Active": true
+  "Active": true,
+  "Score": 95,
+  "Role": "Developer"
 },
 {
-  "Score": 72,
-  "Role": "Designer",
+  "Name": "Bob",
+  "Level": 2,
+  "Joined": "2025-11-11T19:28:39.1401732+01:00",
   "Skills": [
     "Figma",
     "CSS",
     "HTML"
   ],
-  "Joined": "2025-11-11T19:14:01.7799107+01:00",
-  "Level": 2,
-  "Name": "Bob",
-  "Active": true
+  "Active": true,
+  "Score": 72,
+  "Role": "Designer"
 },
 {
-  "Score": 88,
-  "Role": "PM",
+  "Name": "Carol",
+  "Level": 3,
+  "Joined": "2026-02-09T19:28:39.1402664+01:00",
   "Skills": [
     "Agile",
     "Jira",
     "Confluence"
   ],
-  "Joined": "2026-02-09T19:14:01.7800088+01:00",
-  "Level": 3,
-  "Name": "Carol",
-  "Active": true
+  "Active": true,
+  "Score": 88,
+  "Role": "PM"
 },
 {
-  "Score": 91,
-  "Role": "Developer",
+  "Name": "Frank",
+  "Level": 4,
+  "Joined": "2024-12-26T19:28:39.1403288+01:00",
   "Skills": [
     "Rust",
     "Go",
     "Kubernetes"
   ],
-  "Joined": "2024-12-26T19:14:01.7800708+01:00",
-  "Level": 4,
-  "Name": "Frank",
-  "Active": true
+  "Active": true,
+  "Score": 91,
+  "Role": "Developer"
 }
 ]
 ```
@@ -2764,33 +2764,33 @@ Get-ChildItem "buckets:\"
 
 Type  LastWriteTime             CreationTime                      Size Name
 ----  -------------             ------------                      ---- ----
-b--   10.05.2026 19:14:03       10.05.2026 19:14:03               1 KB archive
-b--   10.05.2026 19:14:02       10.05.2026 19:14:01              541 B config
-b--   10.05.2026 19:14:02       10.05.2026 19:14:02              653 B demo
-b--   10.05.2026 19:14:03       10.05.2026 19:14:03              415 B dest
-b--   10.05.2026 19:14:02       10.05.2026 19:14:02              831 B events
-b--   10.05.2026 19:14:03       10.05.2026 19:14:03              337 B final
-b--   10.05.2026 19:14:04       10.05.2026 19:14:04               5 KB import-over
-b--   10.05.2026 19:14:02       10.05.2026 19:14:02               7 KB logs
-b--   10.05.2026 19:14:02       10.05.2026 19:14:02               3 KB match-demo
-b--   10.05.2026 19:14:03       10.05.2026 19:14:03              326 B move-dst
-b--   10.05.2026 19:14:03       10.05.2026 19:14:03                0 B move-src
-b--   10.05.2026 19:14:02       10.05.2026 19:14:02               1 KB nested
-b--   10.05.2026 19:14:02       10.05.2026 19:14:02              604 B nested-match
-b--   10.05.2026 19:14:03       10.05.2026 19:14:03                0 B origin
-b--   10.05.2026 19:14:03       10.05.2026 19:14:03              652 B pass
-b--   10.05.2026 19:14:04       10.05.2026 19:14:04               5 KB restored
-b--   10.05.2026 19:14:04       10.05.2026 19:14:04               4 KB restored-json
-b--   10.05.2026 19:14:03       10.05.2026 19:14:03                0 B source
-b--   10.05.2026 19:14:02       10.05.2026 19:14:02              337 B special
-b--   10.05.2026 19:14:02       10.05.2026 19:14:02               5 KB staff
-b--   10.05.2026 19:14:02       10.05.2026 19:14:02              835 B str-test
-b--   10.05.2026 19:14:03       10.05.2026 19:14:02               6 KB team
-b--   10.05.2026 19:14:02       10.05.2026 19:14:02                0 B temp
-b--   10.05.2026 19:14:03       10.05.2026 19:14:03              333 B tmp
-b--   10.05.2026 19:14:03       10.05.2026 19:14:03               20 B tmp-json
-b--   10.05.2026 19:14:02       10.05.2026 19:14:02              658 B types
-b--   10.05.2026 19:14:01       10.05.2026 19:14:01               2 KB users
+b--   10.05.2026 19:28:40       10.05.2026 19:28:40               1 KB archive
+b--   10.05.2026 19:28:40       10.05.2026 19:28:39              540 B config
+b--   10.05.2026 19:28:39       10.05.2026 19:28:39              653 B demo
+b--   10.05.2026 19:28:40       10.05.2026 19:28:40              415 B dest
+b--   10.05.2026 19:28:39       10.05.2026 19:28:39              831 B events
+b--   10.05.2026 19:28:40       10.05.2026 19:28:40              337 B final
+b--   10.05.2026 19:28:41       10.05.2026 19:28:41               5 KB import-over
+b--   10.05.2026 19:28:39       10.05.2026 19:28:39               7 KB logs
+b--   10.05.2026 19:28:39       10.05.2026 19:28:39               3 KB match-demo
+b--   10.05.2026 19:28:40       10.05.2026 19:28:40              326 B move-dst
+b--   10.05.2026 19:28:40       10.05.2026 19:28:40                0 B move-src
+b--   10.05.2026 19:28:39       10.05.2026 19:28:39               1 KB nested
+b--   10.05.2026 19:28:39       10.05.2026 19:28:39              604 B nested-match
+b--   10.05.2026 19:28:40       10.05.2026 19:28:40                0 B origin
+b--   10.05.2026 19:28:40       10.05.2026 19:28:40              652 B pass
+b--   10.05.2026 19:28:41       10.05.2026 19:28:41               5 KB restored
+b--   10.05.2026 19:28:41       10.05.2026 19:28:41               4 KB restored-json
+b--   10.05.2026 19:28:40       10.05.2026 19:28:40                0 B source
+b--   10.05.2026 19:28:39       10.05.2026 19:28:39              337 B special
+b--   10.05.2026 19:28:39       10.05.2026 19:28:39               5 KB staff
+b--   10.05.2026 19:28:39       10.05.2026 19:28:39              835 B str-test
+b--   10.05.2026 19:28:40       10.05.2026 19:28:39               6 KB team
+b--   10.05.2026 19:28:40       10.05.2026 19:28:40                0 B temp
+b--   10.05.2026 19:28:40       10.05.2026 19:28:40              333 B tmp
+b--   10.05.2026 19:28:40       10.05.2026 19:28:40               20 B tmp-json
+b--   10.05.2026 19:28:39       10.05.2026 19:28:39              658 B types
+b--   10.05.2026 19:28:39       10.05.2026 19:28:39               2 KB users
 ```
 
 ### 8.3 Bucket-Ausgabe formatieren
@@ -2809,33 +2809,33 @@ Get-ChildItem "buckets:\" | Select-Object Name, Length, LastWriteTime | Format-T
 
 Name          Length LastWriteTime
 ----          ------ -------------
-archive              10.05.2026 19:14:03
-config               10.05.2026 19:14:02
-demo                 10.05.2026 19:14:02
-dest                 10.05.2026 19:14:03
-events               10.05.2026 19:14:02
-final                10.05.2026 19:14:03
-import-over          10.05.2026 19:14:04
-logs                 10.05.2026 19:14:02
-match-demo           10.05.2026 19:14:02
-move-dst             10.05.2026 19:14:03
-move-src             10.05.2026 19:14:03
-nested               10.05.2026 19:14:02
-nested-match         10.05.2026 19:14:02
-origin               10.05.2026 19:14:03
-pass                 10.05.2026 19:14:03
-restored             10.05.2026 19:14:04
-restored-json        10.05.2026 19:14:04
-source               10.05.2026 19:14:03
-special              10.05.2026 19:14:02
-staff                10.05.2026 19:14:02
-str-test             10.05.2026 19:14:02
-team                 10.05.2026 19:14:03
-temp                 10.05.2026 19:14:02
-tmp                  10.05.2026 19:14:03
-tmp-json             10.05.2026 19:14:03
-types                10.05.2026 19:14:02
-users                10.05.2026 19:14:01
+archive              10.05.2026 19:28:40
+config               10.05.2026 19:28:40
+demo                 10.05.2026 19:28:39
+dest                 10.05.2026 19:28:40
+events               10.05.2026 19:28:39
+final                10.05.2026 19:28:40
+import-over          10.05.2026 19:28:41
+logs                 10.05.2026 19:28:39
+match-demo           10.05.2026 19:28:39
+move-dst             10.05.2026 19:28:40
+move-src             10.05.2026 19:28:40
+nested               10.05.2026 19:28:39
+nested-match         10.05.2026 19:28:39
+origin               10.05.2026 19:28:40
+pass                 10.05.2026 19:28:40
+restored             10.05.2026 19:28:41
+restored-json        10.05.2026 19:28:41
+source               10.05.2026 19:28:40
+special              10.05.2026 19:28:39
+staff                10.05.2026 19:28:39
+str-test             10.05.2026 19:28:39
+team                 10.05.2026 19:28:40
+temp                 10.05.2026 19:28:40
+tmp                  10.05.2026 19:28:40
+tmp-json             10.05.2026 19:28:40
+types                10.05.2026 19:28:39
+users                10.05.2026 19:28:39
 ```
 
 ### 8.4 Objekte in einem Bucket durchsuchen
@@ -2853,11 +2853,11 @@ Get-ChildItem "buckets:\team" | Select-Object Name, Length, LastWriteTime
 
 Name         Length LastWriteTime
 ----         ------ -------------
-Alice-Backup        10.05.2026 19:14:02
-Alice               10.05.2026 19:14:02
-Bob                 10.05.2026 19:14:02
-Carol               10.05.2026 19:14:02
-Frank               10.05.2026 19:14:02
+Alice-Backup        10.05.2026 19:28:40
+Alice               10.05.2026 19:28:40
+Bob                 10.05.2026 19:28:40
+Carol               10.05.2026 19:28:40
+Frank               10.05.2026 19:28:40
 ```
 
 ### 8.5 Container filtern
@@ -2875,33 +2875,33 @@ Get-ChildItem "buckets:\" | Where-Object { $_.PSIsContainer }
 
 Type  LastWriteTime             CreationTime                      Size Name
 ----  -------------             ------------                      ---- ----
-b--   10.05.2026 19:14:03       10.05.2026 19:14:03               1 KB archive
-b--   10.05.2026 19:14:02       10.05.2026 19:14:01              541 B config
-b--   10.05.2026 19:14:02       10.05.2026 19:14:02              653 B demo
-b--   10.05.2026 19:14:03       10.05.2026 19:14:03              415 B dest
-b--   10.05.2026 19:14:02       10.05.2026 19:14:02              831 B events
-b--   10.05.2026 19:14:03       10.05.2026 19:14:03              337 B final
-b--   10.05.2026 19:14:04       10.05.2026 19:14:04               5 KB import-over
-b--   10.05.2026 19:14:02       10.05.2026 19:14:02               7 KB logs
-b--   10.05.2026 19:14:02       10.05.2026 19:14:02               3 KB match-demo
-b--   10.05.2026 19:14:03       10.05.2026 19:14:03              326 B move-dst
-b--   10.05.2026 19:14:03       10.05.2026 19:14:03                0 B move-src
-b--   10.05.2026 19:14:02       10.05.2026 19:14:02               1 KB nested
-b--   10.05.2026 19:14:02       10.05.2026 19:14:02              604 B nested-match
-b--   10.05.2026 19:14:03       10.05.2026 19:14:03                0 B origin
-b--   10.05.2026 19:14:03       10.05.2026 19:14:03              652 B pass
-b--   10.05.2026 19:14:04       10.05.2026 19:14:04               5 KB restored
-b--   10.05.2026 19:14:04       10.05.2026 19:14:04               4 KB restored-json
-b--   10.05.2026 19:14:03       10.05.2026 19:14:03                0 B source
-b--   10.05.2026 19:14:02       10.05.2026 19:14:02              337 B special
-b--   10.05.2026 19:14:02       10.05.2026 19:14:02               5 KB staff
-b--   10.05.2026 19:14:02       10.05.2026 19:14:02              835 B str-test
-b--   10.05.2026 19:14:03       10.05.2026 19:14:02               6 KB team
-b--   10.05.2026 19:14:02       10.05.2026 19:14:02                0 B temp
-b--   10.05.2026 19:14:03       10.05.2026 19:14:03              333 B tmp
-b--   10.05.2026 19:14:03       10.05.2026 19:14:03               20 B tmp-json
-b--   10.05.2026 19:14:02       10.05.2026 19:14:02              658 B types
-b--   10.05.2026 19:14:01       10.05.2026 19:14:01               2 KB users
+b--   10.05.2026 19:28:40       10.05.2026 19:28:40               1 KB archive
+b--   10.05.2026 19:28:40       10.05.2026 19:28:39              540 B config
+b--   10.05.2026 19:28:39       10.05.2026 19:28:39              653 B demo
+b--   10.05.2026 19:28:40       10.05.2026 19:28:40              415 B dest
+b--   10.05.2026 19:28:39       10.05.2026 19:28:39              831 B events
+b--   10.05.2026 19:28:40       10.05.2026 19:28:40              337 B final
+b--   10.05.2026 19:28:41       10.05.2026 19:28:41               5 KB import-over
+b--   10.05.2026 19:28:39       10.05.2026 19:28:39               7 KB logs
+b--   10.05.2026 19:28:39       10.05.2026 19:28:39               3 KB match-demo
+b--   10.05.2026 19:28:40       10.05.2026 19:28:40              326 B move-dst
+b--   10.05.2026 19:28:40       10.05.2026 19:28:40                0 B move-src
+b--   10.05.2026 19:28:39       10.05.2026 19:28:39               1 KB nested
+b--   10.05.2026 19:28:39       10.05.2026 19:28:39              604 B nested-match
+b--   10.05.2026 19:28:40       10.05.2026 19:28:40                0 B origin
+b--   10.05.2026 19:28:40       10.05.2026 19:28:40              652 B pass
+b--   10.05.2026 19:28:41       10.05.2026 19:28:41               5 KB restored
+b--   10.05.2026 19:28:41       10.05.2026 19:28:41               4 KB restored-json
+b--   10.05.2026 19:28:40       10.05.2026 19:28:40                0 B source
+b--   10.05.2026 19:28:39       10.05.2026 19:28:39              337 B special
+b--   10.05.2026 19:28:39       10.05.2026 19:28:39               5 KB staff
+b--   10.05.2026 19:28:39       10.05.2026 19:28:39              835 B str-test
+b--   10.05.2026 19:28:40       10.05.2026 19:28:39               6 KB team
+b--   10.05.2026 19:28:40       10.05.2026 19:28:40                0 B temp
+b--   10.05.2026 19:28:40       10.05.2026 19:28:40              333 B tmp
+b--   10.05.2026 19:28:40       10.05.2026 19:28:40               20 B tmp-json
+b--   10.05.2026 19:28:39       10.05.2026 19:28:39              658 B types
+b--   10.05.2026 19:28:39       10.05.2026 19:28:39               2 KB users
 ```
 
 ### 8.6 Objekte lesen
@@ -3027,23 +3027,23 @@ jedem EU-Land — Deutschland, UK und so weiter.
 @{ Name="Berlin"; Population=3600000; Country="DE" } | fill -Bucket "org/eu/de/cities" -Key "Berlin"
 @{ Name="London"; Population=8900000; Country="UK" } | fill -Bucket "org/eu/uk/cities" -Key "London"
 @{ Name="New York"; Population=8300000; Country="US" } | fill -Bucket "org/us/cities" -Key "New York"
-spill -Bucket "org/eu/*/cities"
+scoop -Bucket "org/eu/*/cities"
 ```
 
 ```
 
-Country Population Name
-------- ---------- ----
-DE         3600000 Berlin
-DE         1500000 Munich
-UK         8900000 London
-UK          550000 Manchester
+Country Name       Population
+------- ----       ----------
+DE      Berlin        3600000
+DE      Munich        1500000
+UK      London        8900000
+UK      Manchester     550000
 ```
 
 ### 9.3 Verschachtelte Buckets direkt abfragen
 ---
 
-Fragen Sie einen verschachtelten Pfad direkt mit seinem vollständigen Bucket-Namen ab. Gleicher spill-Befehl,
+Fragen Sie einen verschachtelten Pfad direkt mit seinem vollständigen Bucket-Namen ab. Gleicher scoop-Befehl,
 nur ein tieferer Pfad.
 
 
@@ -3051,15 +3051,15 @@ nur ein tieferer Pfad.
 @{ Name="Berlin"; Population=3600000; Country="DE" } | fill -Bucket "org/eu/de/cities" -Key "Berlin"
 @{ Name="London"; Population=8900000; Country="UK" } | fill -Bucket "org/eu/uk/cities" -Key "London"
 @{ Name="New York"; Population=8300000; Country="US" } | fill -Bucket "org/us/cities" -Key "New York"
-spill -Bucket "org/eu/de/cities"
+scoop -Bucket "org/eu/de/cities"
 ```
 
 ```
 
-Country Population Name
-------- ---------- ----
-DE         3600000 Berlin
-DE         1500000 Munich
+Country Name   Population
+------- ----   ----------
+DE      Berlin    3600000
+DE      Munich    1500000
 ```
 
 ### 9.4 Mehrstufige Platzhalter
@@ -3073,16 +3073,16 @@ unter dem "de"-Unterbucket jedes Landes.
 @{ Name="Berlin"; Population=3600000; Country="DE" } | fill -Bucket "org/eu/de/cities" -Key "Berlin"
 @{ Name="London"; Population=8900000; Country="UK" } | fill -Bucket "org/eu/uk/cities" -Key "London"
 @{ Name="New York"; Population=8300000; Country="US" } | fill -Bucket "org/us/cities" -Key "New York"
-spill -Bucket "org/*/de/*"
+scoop -Bucket "org/*/de/*"
 ```
 
 ```
 
-Country Population Name
-------- ---------- ----
-DE         3600000 Berlin
-DE         1500000 Munich
-                 
+Country Name   Population
+------- ----   ----------
+DE      Berlin    3600000
+DE      Munich    1500000
+                       
 
 ```
 
@@ -3223,8 +3223,8 @@ Name         : org/eu/de/cities
 Path         : C:\Users\berfelde\.buckets\org\eu\de\cities
 ObjectCount  : 2
 TotalSize    : 1 KB
-OldestObject : 10.05.2026 19:14:04
-NewestObject : 10.05.2026 19:14:04
+OldestObject : 10.05.2026 19:28:41
+NewestObject : 10.05.2026 19:28:41
 ```
 
 ### 9.10 Schlüssel in verschachtelten Buckets
@@ -3260,16 +3260,16 @@ Finden Sie alle Städte mit mehr als 2 Millionen Einwohnern in allen Ländern.
 @{ Name="Berlin"; Population=3600000; Country="DE" } | fill -Bucket "org/eu/de/cities" -Key "Berlin"
 @{ Name="London"; Population=8900000; Country="UK" } | fill -Bucket "org/eu/uk/cities" -Key "London"
 @{ Name="New York"; Population=8300000; Country="US" } | fill -Bucket "org/us/cities" -Key "New York"
-spill -Bucket "org/*/cities" -Filter { $_.Population -gt 2000000 }
+scoop -Bucket "org/*/cities" -Filter { $_.Population -gt 2000000 }
 ```
 
 ```
 
-Country Population Name
-------- ---------- ----
-DE         3600000 Berlin
-UK         8900000 London
-US         8300000 New York
+Country Name     Population
+------- ----     ----------
+DE      Berlin      3600000
+UK      London      8900000
+US      New York    8300000
 ```
 
 ### 9.12 Verschachtelte Bäume entfernen
@@ -3312,7 +3312,7 @@ mit ForEach-Object und zurückspeichern mit Set-BucketObject. Alles in einem Dur
 
 
 ```powershell
-spill -Bucket team -Filter { $_.Role -eq "Developer" } |
+scoop -Bucket team -Filter { $_.Role -eq "Developer" } |
   ForEach-Object { $_.Score = $_.Score + 5; $_ } |
   Set-BucketObject -PassThru
 ```
@@ -3334,7 +3334,7 @@ ordnet, Select-Object wählt die gewünschten Eigenschaften aus.
 
 
 ```powershell
-spill -Bucket team | Where-Object { $_.Score -gt 80 } |
+scoop -Bucket team | Where-Object { $_.Score -gt 80 } |
   Sort-Object Score -Descending |
   Select-Object Name, Role, Score
 ```
@@ -3360,7 +3360,7 @@ die Ergebnisse mit Bucket-Metadaten projizieren.
 @{ Name = "HighScore"; Score = 90 } | fill -Bucket config -Key "app-config"
 @{ Name = "DemoItem"; Score = 85 } | fill -Bucket demo -Key "demo-score"
 $buckets = @("team", "config", "demo")
-$buckets | ForEach-Object { spill -Bucket $_ -Filter { $_.Score -gt 80 } } |
+$buckets | ForEach-Object { scoop -Bucket $_ -Filter { $_.Score -gt 80 } } |
   Select-Object _BucketName, Name, Score
 ```
 
@@ -3384,7 +3384,7 @@ Gruppieren Sie nach Bucket-Namen, um zu sehen, wie Objekte auf Ihre Buckets vert
 
 ```powershell
 @{ Name = "HighScore"; Score = 90 } | fill -Bucket config -Key "app-config"
-spill | Group-Object _BucketName | Select-Object Name, Count
+scoop | Group-Object _BucketName | Select-Object Name, Count
 ```
 
 ```
@@ -3425,7 +3425,7 @@ Teammitglieder welche Rolle haben.
 
 
 ```powershell
-spill -Bucket team | Group-Object Role | Select-Object Name, Count
+scoop -Bucket team | Group-Object Role | Select-Object Name, Count
 ```
 
 ```
@@ -3445,7 +3445,7 @@ numerische Eigenschaft Ihrer Objekte.
 
 
 ```powershell
-$scores = spill -Bucket team | Measure-Object Score -Average -Minimum -Maximum
+$scores = scoop -Bucket team | Measure-Object Score -Average -Minimum -Maximum
 Write-Host "    Punktestatistik: ø=$([math]::Round($scores.Average,1)) min=$($scores.Minimum) max=$($scores.Maximum)"
 ```
 
@@ -3454,13 +3454,13 @@ Write-Host "    Punktestatistik: ø=$([math]::Round($scores.Average,1)) min=$($s
 ### 10.8 Export nach CSV
 ---
 
-Exportieren Sie gespillte Daten als CSV für Excel, Python oder jedes Tool, das
+Exportieren Sie gescoopte Daten als CSV für Excel, Python oder jedes Tool, das
 tabellarische Daten liest.
 
 
 ```powershell
 $csvPath = Join-Path ([System.IO.Path]::GetTempPath()) "buckets-team.csv"
-spill -Bucket team | Select-Object Name, Role, Score | Export-Csv -Path $csvPath -NoTypeInformation
+scoop -Bucket team | Select-Object Name, Role, Score | Export-Csv -Path $csvPath -NoTypeInformation
 Remove-Item $csvPath -Force -ErrorAction SilentlyContinue
 ```
 
@@ -3473,77 +3473,77 @@ Beide liefern das gleiche Ergebnis — wählen Sie nach Bedarf.
 
 
 ```powershell
-spill -Bucket team -Filter { $_.Score -gt 80 }
-spill -Bucket team | Where-Object { $_.Score -gt 80 }
+scoop -Bucket team -Filter { $_.Score -gt 80 }
+scoop -Bucket team | Where-Object { $_.Score -gt 80 }
 ```
 
 ```
 
+Name   : Alice
+Level  : 3
+Joined : 10.05.2025 19:28:39
+Skills : {PowerShell, C#, Azure}
+Active : True
 Score  : 100
 Role   : Developer
-Skills : {PowerShell, C#, Azure}
-Joined : 10.05.2025 19:14:01
-Level  : 3
-Name   : Alice
-Active : True
 
+Name   : Alice
+Level  : 3
+Joined : 10.05.2025 19:28:39
+Skills : {PowerShell, C#, Azure}
+Active : True
 Score  : 100
 Role   : Developer
-Skills : {PowerShell, C#, Azure}
-Joined : 10.05.2025 19:14:01
-Level  : 3
-Name   : Alice
-Active : True
 
-Score  : 95
-Role   : PM
-Skills : {Agile, Jira, Confluence}
-Joined : 09.02.2026 19:14:01
-Level  : 3
 Name   : Carol
+Joined : 09.02.2026 19:28:39
+Skills : {Agile, Jira, Confluence}
 Active : True
+Role   : PM
+Score  : 95
+Level  : 3
 
+Name   : Frank
+Level  : 4
+Joined : 26.12.2024 19:28:39
+Skills : {Rust, Go, Kubernetes}
+Active : True
 Score  : 96
 Role   : Developer
-Skills : {Rust, Go, Kubernetes}
-Joined : 26.12.2024 19:14:01
-Level  : 4
-Name   : Frank
-Active : True
 ```
 ```
 
+Name   : Alice
+Level  : 3
+Joined : 10.05.2025 19:28:39
+Skills : {PowerShell, C#, Azure}
+Active : True
 Score  : 100
 Role   : Developer
-Skills : {PowerShell, C#, Azure}
-Joined : 10.05.2025 19:14:01
-Level  : 3
-Name   : Alice
-Active : True
 
+Name   : Alice
+Level  : 3
+Joined : 10.05.2025 19:28:39
+Skills : {PowerShell, C#, Azure}
+Active : True
 Score  : 100
 Role   : Developer
-Skills : {PowerShell, C#, Azure}
-Joined : 10.05.2025 19:14:01
-Level  : 3
-Name   : Alice
-Active : True
 
-Score  : 95
-Role   : PM
-Skills : {Agile, Jira, Confluence}
-Joined : 09.02.2026 19:14:01
-Level  : 3
 Name   : Carol
+Joined : 09.02.2026 19:28:39
+Skills : {Agile, Jira, Confluence}
 Active : True
+Role   : PM
+Score  : 95
+Level  : 3
 
+Name   : Frank
+Level  : 4
+Joined : 26.12.2024 19:28:39
+Skills : {Rust, Go, Kubernetes}
+Active : True
 Score  : 96
 Role   : Developer
-Skills : {Rust, Go, Kubernetes}
-Joined : 26.12.2024 19:14:01
-Level  : 4
-Name   : Frank
-Active : True
 ```
 
 ### 10.10 Benutzerdefinierte Formatierung
@@ -3554,7 +3554,7 @@ String für die Anzeige oder Protokollierung um.
 
 
 ```powershell
-spill -Bucket team | ForEach-Object {
+scoop -Bucket team | ForEach-Object {
   "[$($_.Role)] $($_.Name) — Score: $($_.Score)"
 }
 ```
@@ -3574,62 +3574,62 @@ Bedingte Pipeline: zuerst filtern, dann nur passende Objekte in JSON konvertiere
 
 
 ```powershell
-spill -Bucket team -Filter { $_.Score -gt 80 } | ConvertTo-Json -Depth 5
+scoop -Bucket team -Filter { $_.Score -gt 80 } | ConvertTo-Json -Depth 5
 ```
 
 ```
 [
 {
-  "Score": 100,
-  "Role": "Developer",
+  "Name": "Alice",
+  "Level": 3,
+  "Joined": "2025-05-10T19:28:39.1374312+02:00",
   "Skills": [
     "PowerShell",
     "C#",
     "Azure"
   ],
-  "Joined": "2025-05-10T19:14:01.7772283+02:00",
-  "Level": 3,
-  "Name": "Alice",
-  "Active": true
+  "Active": true,
+  "Score": 100,
+  "Role": "Developer"
 },
 {
-  "Score": 100,
-  "Role": "Developer",
+  "Name": "Alice",
+  "Level": 3,
+  "Joined": "2025-05-10T19:28:39.1374312+02:00",
   "Skills": [
     "PowerShell",
     "C#",
     "Azure"
   ],
-  "Joined": "2025-05-10T19:14:01.7772283+02:00",
-  "Level": 3,
-  "Name": "Alice",
-  "Active": true
+  "Active": true,
+  "Score": 100,
+  "Role": "Developer"
 },
 {
-  "Score": 95,
-  "Role": "PM",
+  "Name": "Carol",
+  "Joined": "2026-02-09T19:28:39.1402664+01:00",
   "Skills": [
     "Agile",
     "Jira",
     "Confluence"
   ],
-  "Joined": "2026-02-09T19:14:01.7800088+01:00",
-  "Level": 3,
-  "Name": "Carol",
-  "Active": true
+  "Active": true,
+  "Role": "PM",
+  "Score": 95,
+  "Level": 3
 },
 {
-  "Score": 96,
-  "Role": "Developer",
+  "Name": "Frank",
+  "Level": 4,
+  "Joined": "2024-12-26T19:28:39.1403288+01:00",
   "Skills": [
     "Rust",
     "Go",
     "Kubernetes"
   ],
-  "Joined": "2024-12-26T19:14:01.7800708+01:00",
-  "Level": 4,
-  "Name": "Frank",
-  "Active": true
+  "Active": true,
+  "Score": 96,
+  "Role": "Developer"
 }
 ]
 ```
@@ -3644,7 +3644,7 @@ erhalten Sie genau so zurück.
 ```powershell
 $tmp = @{ Id = "smoke"; Value = 42 }
 $tmp | fill -Bucket smoke-test -KeyProperty Id -Quiet
-spill -Bucket smoke-test | Select-Object Id, Value
+scoop -Bucket smoke-test | Select-Object Id, Value
 ```
 
 ```
@@ -3660,7 +3660,7 @@ smoke    42
 Drei Aliase werden vom Modul exportiert:
 
   fill   = New-BucketObject     — save objects
-  spill  = Get-BucketObject     — retrieve objects
+  scoop  = Get-BucketObject     — retrieve objects
   dip    = Get-Bucket            — list buckets
 
 Zusätzliche Shortcuts:
@@ -3700,36 +3700,36 @@ $script:Servers | fill -Bucket servers -KeyProperty Hostname -Quiet
 ### 12.2 Fehlerhafte Server finden
 ---
 
-Der spill-Alias (Kurzform von Get-BucketObject) ruft gespeicherte Objekte ab.
+Der scoop-Alias (Kurzform von Get-BucketObject) ruft gespeicherte Objekte ab.
 -Filter akzeptiert einen Scriptblock, um Bedingungen zu erfüllen — wie Where-Object.
 Finden Sie Server, die nicht vollständig online sind: -ne bedeutet "ungleich".
 
 
 ```powershell
-spill -Bucket servers -Filter { $_.Status -ne "online" }
+scoop -Bucket servers -Filter { $_.Status -ne "online" }
 ```
 
 ```
 
-OS       : Rocky 9
 Disk     : 200
+OS       : Rocky 9
+CPU      : 8
+Location : DC2
 Status   : offline
-Role     : app
 Hostname : app-01
-Location : DC2
-CPU      : 8
-IP       : 10.0.2.50
 RAM      : 16
+IP       : 10.0.2.50
+Role     : app
 
-OS       : Debian 12
 Disk     : 500
-Status   : degraded
-Role     : database
-Hostname : db-02
-Location : DC2
+OS       : Debian 12
 CPU      : 8
-IP       : 10.0.2.20
+Location : DC2
+Status   : degraded
+Hostname : db-02
 RAM      : 32
+IP       : 10.0.2.20
+Role     : database
 ```
 
 ### 12.3 Server nach Rolle und Spezifikation filtern
@@ -3741,30 +3741,30 @@ Arbeitslast zu identifizieren.
 
 
 ```powershell
-spill -Bucket servers -Filter { $_.RAM -ge 16 -and $_.Role -eq "database" }
+scoop -Bucket servers -Filter { $_.RAM -ge 16 -and $_.Role -eq "database" }
 ```
 
 ```
 
-OS       : Debian 12
 Disk     : 500
-Status   : online
-Role     : database
-Hostname : db-01
+OS       : Debian 12
+CPU      : 8
 Location : DC1
-CPU      : 8
+Status   : online
+Hostname : db-01
+RAM      : 32
 IP       : 10.0.1.20
-RAM      : 32
-
-OS       : Debian 12
-Disk     : 500
-Status   : degraded
 Role     : database
-Hostname : db-02
-Location : DC2
+
+Disk     : 500
+OS       : Debian 12
 CPU      : 8
-IP       : 10.0.2.20
+Location : DC2
+Status   : degraded
+Hostname : db-02
 RAM      : 32
+IP       : 10.0.2.20
+Role     : database
 ```
 
 ### 12.4 Server nach Rechenzentrum gruppieren
@@ -3775,15 +3775,15 @@ ihrer Location-Eigenschaft, um zu sehen, wie viele Hosts in jedem RZ leben.
 
 
 ```powershell
-spill -Bucket servers | Group-Object Location
+scoop -Bucket servers | Group-Object Location
 ```
 
 ```
 
 Count Name                      Group
 ----- ----                      -----
-  5 DC1                       {@{OS=FreeBSD 14; Disk=2000; Status=online; Role=backup; Hostname=backup-01; Location=DC1; CPU=4; IP=10.0.1.1; RAM=8}, @{OS=Alpine 3.18; Disk=60; Status=online; Role=cache; Hostname=cache-01; Location=DC1; CPU=2; IP=10.0.1.30; RAM=16}, @{OS=Debian 12; Disk=500; Status=online; Role=database; Hostname=db-01; Location=DC1; CPU=8; IP=10.0.1.20; RAM=32}, @{OS=Ubuntu 22.04; Disk=120; Status=online; Role=web; Hostname=web-01; Location=DC1; CPU=4; IP=10.0.1.10; RAM=8}…}
-  3 DC2                       {@{OS=Rocky 9; Disk=200; Status=offline; Role=app; Hostname=app-01; Location=DC2; CPU=8; IP=10.0.2.50; RAM=16}, @{OS=Debian 12; Disk=500; Status=degraded; Role=database; Hostname=db-02; Location=DC2; CPU=8; IP=10.0.2.20; RAM=32}, @{OS=Ubuntu 22.04; Disk=250; Status=online; Role=monitoring; Hostname=mon-01; Location=DC2; CPU=2; IP=10.0.1.40; RAM=4}}
+  5 DC1                       {@{Disk=2000; OS=FreeBSD 14; CPU=4; Location=DC1; Status=online; Hostname=backup-01; RAM=8; IP=10.0.1.1; Role=backup}, @{Disk=60; OS=Alpine 3.18; CPU=2; Location=DC1; Status=online; Hostname=cache-01; RAM=16; IP=10.0.1.30; Role=cache}, @{Disk=500; OS=Debian 12; CPU=8; Location=DC1; Status=online; Hostname=db-01; RAM=32; IP=10.0.1.20; Role=database}, @{Disk=120; OS=Ubuntu 22.04; CPU=4; Location=DC1; Status=online; Hostname=web-01; RAM=8; IP=10.0.1.10; Role=web}…}
+  3 DC2                       {@{Disk=200; OS=Rocky 9; CPU=8; Location=DC2; Status=offline; Hostname=app-01; RAM=16; IP=10.0.2.50; Role=app}, @{Disk=500; OS=Debian 12; CPU=8; Location=DC2; Status=degraded; Hostname=db-02; RAM=32; IP=10.0.2.20; Role=database}, @{Disk=250; OS=Ubuntu 22.04; CPU=2; Location=DC2; Status=online; Hostname=mon-01; RAM=4; IP=10.0.1.40; Role=monitoring}}
 ```
 
 ### 12.5 Kapazitätsplanung Gesamtsummen
@@ -3794,7 +3794,7 @@ für die Kapazitätsplanung — wie viel CPU, RAM und Platte haben Sie insgesamt
 
 
 ```powershell
-spill -Bucket servers | Measure-Object CPU, RAM, Disk -Sum
+scoop -Bucket servers | Measure-Object CPU, RAM, Disk -Sum
 ```
 
 ```
@@ -3844,19 +3844,19 @@ im -Filter-Scriptblock gleicht mehrere Werte auf einmal ab.
 
 
 ```powershell
-spill -Bucket incidents -Filter { $_.Severity -in @("ERROR","CRIT") }
+scoop -Bucket incidents -Filter { $_.Severity -in @("ERROR","CRIT") }
 ```
 
 ```
 
-Source Message                   Timestamp           Severity
------- -------                   ---------           --------
-web-01 Connection pool exhausted 10.05.2026 17:14:04 ERROR
-app-01 Service unreachable       10.05.2026 18:59:04 ERROR
-app-01 Disk /dev/sda1 at 97%     10.05.2026 19:09:04 CRIT
-web-01 Connection pool exhausted 10.05.2026 17:14:04 ERROR
-app-01 Service unreachable       10.05.2026 18:59:04 ERROR
-app-01 Disk /dev/sda1 at 97%     10.05.2026 19:09:04 CRIT
+Severity Message                   Source Timestamp
+-------- -------                   ------ ---------
+ERROR    Connection pool exhausted web-01 10.05.2026 17:28:42
+ERROR    Service unreachable       app-01 10.05.2026 19:13:42
+CRIT     Disk /dev/sda1 at 97%     app-01 10.05.2026 19:23:42
+ERROR    Connection pool exhausted web-01 10.05.2026 17:28:42
+ERROR    Service unreachable       app-01 10.05.2026 19:13:42
+CRIT     Disk /dev/sda1 at 97%     app-01 10.05.2026 19:23:42
 ```
 
 ### 12.8 Batch-Wartungsmodus
@@ -3869,7 +3869,7 @@ Die Zusammenfassung bestätigt, wie viele aktualisiert wurden.
 
 
 ```powershell
-spill -Bucket servers -Filter { $_.Role -eq "web" } |
+scoop -Bucket servers -Filter { $_.Role -eq "web" } |
   ForEach-Object { $_ | Add-Member Maintenance $true -Force; $_ } |
   Set-BucketObject
 ```
@@ -3884,7 +3884,7 @@ offline- und degradierte Maschinen nach oben kommen. Wählen Sie nur die relevan
 
 
 ```powershell
-spill -Bucket servers | Select Hostname, Status, Location | Sort Status
+scoop -Bucket servers | Select Hostname, Status, Location | Sort Status
 ```
 
 ```
@@ -3910,9 +3910,9 @@ mit -Key nach. Das verbindet Ihr Ereignisprotokoll mit Ihrem Inventar in einer P
 
 
 ```powershell
-$crit = spill -Bucket incidents -Filter { $_.Severity -eq "CRIT" }
+$crit = scoop -Bucket incidents -Filter { $_.Severity -eq "CRIT" }
 $crit | ForEach-Object {
-  $svr = spill -Bucket servers -Key $_.Source
+  $svr = scoop -Bucket servers -Key $_.Source
   [PSCustomObject]@{ Incident = $_.Message; Server = $svr.Hostname; Status = $svr.Status }
 }
 ```
@@ -3936,8 +3936,8 @@ bereinigt — Ihr System ist genau so, wie es vor dem Start war.
 
 Was Sie gelernt haben:
 
-  fill / spill / dip / toss / drain
-                               — speichern, lesen, auflisten, Buckets loeschen, Objekte loeschen
+  fill / scoop / spill / dip / drain
+                               — speichern, lesen, Objekte loeschen, auflisten, Buckets loeschen
   -Key / -KeyProperty         — naming objects
   -Overwrite / -AsTimestamp    — replacement and timestamp keys
   -AsJson / -Compress          — storage formats
@@ -3947,7 +3947,7 @@ Was Sie gelernt haben:
   -First / -Skip              — pagination
   Set-BucketObject             — update in place (pipeline + explicit)
   Partial update / patch       — add properties with hashtable pipe
-  drain / toss                 — Objekte loeschen, Buckets loeschen
+  scoop / spill / drain         — lesen, Objekte loeschen, Buckets loeschen
   -WhatIf / -PassThru          — safety preview and metadata capture
   Copy / Rename / Move         — object operations with and without pass-through
   PSDrive operations           — Get-Content, Set-Content, Copy-Item, Remove-Item, Test-Path
