@@ -17,6 +17,9 @@ PowerShell module for file-based PSObject storage using directory-backed "bucket
 - `.tests/test.ps1` — test suite
 - `README.md` — documentation
 
+## AI Agent Conventions
+- When posting a plan comment on a GitHub issue, add the `agent.plan` label to the issue
+
 ## Storage Conventions
 - Default path: `$HOME/.buckets` (overridable via `-Path`)
 - Default format: Binary via `PSSerializer` (`.dat`)
@@ -54,20 +57,18 @@ Uses `SupportsShouldProcess` for `-WhatIf` support. Parameter sets enforce `-Key
 ### Compression
 `-Compress` switch enables GZip compression for binary (`.dat`) files. Automatically detected on read via magic bytes (0x1F 0x8B). Achieves ~95% reduction on repetitive data.
 
-## Gotchas — Do NOT Do These
+## Gotchas
+
+### Storage & Serialization
+- `-Key` is a PROPERTY NAME on the input object, not the literal filename — use `-Key "_Id"` with an `_Id` property, or use `-AsTimestamp`
+- `ConvertTo-Json -WarningVariable` captures truncation warnings to trigger binary fallback
+- Corrupted files emit a warning and return `$null` (don't break enumeration)
+
+### PowerShell
 - `Get-ChildItem -Include "*.json", "*.dat"` fails without `-Recurse` — use separate `-Filter` calls
 - `@($InputObject)` enumerates hashtables into key-value pairs — wrap single items in `System.Collections.ArrayList`
 - `-Filter` scriptblock must use `$_` prefix — `Set-Variable` injection does not work with scriptblocks
-- `ConvertTo-Json -WarningVariable` captures truncation warnings to trigger binary fallback
 - Module removes built-in aliases `Save-BucketObject` and `Get-BucketObject` at load
-- `-Key` is a PROPERTY NAME on the input object, not the literal filename. Use `-Key "_Id"` with an `_Id` property, or use `-AsTimestamp`
-
-## Release Workflow
-1. **Confirm with the user before releasing** — do not run the workflow without explicit confirmation
-2. **Do NOT manually bump ModuleVersion** in `Buckets.psd1` — the workflow auto-bumps it
-3. `git push`
-4. `gh workflow run "Release Buckets" --ref main -f release_type=<patch|minor|major>`
-5. Monitor at the returned URL and notify user when done
 
 ## Testing
 ```bash
@@ -86,7 +87,14 @@ Benchmarks measure write/read throughput for 1k and 10k objects (simple + comple
 - `.tests/demo/` — demo/showcase scripts
 - `.tests/tools/` — utility/debug scripts (explorer, REPL, diag)
 
-## Code Style
+## Release Workflow
+1. **Confirm with the user before releasing** — do not run the workflow without explicit confirmation
+2. **Do NOT manually bump ModuleVersion** in `Buckets.psd1` — the workflow auto-bumps it
+3. `git push`
+4. `gh workflow run "Release Buckets" --ref main -f release_type=<patch|minor|major>`
+5. Monitor at the returned URL and notify user when done
+
+## Module Conventions
 - No emojis in code or comments
 - Parameter descriptions in README and help must match actual code exactly
 - All exported cmdlets need full comment-based help with examples
@@ -94,9 +102,5 @@ Benchmarks measure write/read throughput for 1k and 10k objects (simple + comple
 - `New-BucketObject` default: progress + summary; `-Verbose` for per-object details; `-Quiet` for silence
 - Default path resolves dynamically at call time via `Get-DefaultPath` (not at module load)
 - `Set-BucketObject` outputs result by default; use `-Quiet` for silence
-- Binary serialization auto-increments depth up to 5 if initial depth fails
-- `Remove-BucketObject -All` warns on empty bucket
-- Corrupted files emit warning and return $null (don't break enumeration)
 - Bucket paths cached per session via `$script:BucketPathCache`
 - Path traversal protection: resolved paths must stay within root
-- `Depth` validated 1-100, `BinaryDepth` validated 1-10
