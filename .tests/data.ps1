@@ -411,7 +411,7 @@ $extraUsers = foreach ($i in 0..399) {
     $lastLogon = $date.AddDays(-( ($i * 7 + 3) % 60 ))
 
     [PSCustomObject]@{
-        _Id           = "u-$sam"
+        _Id           = "u-$sam-$i"
         SamAccountName = $sam
         DisplayName   = "$fn $ln"
         Email         = "$sam@example.com"
