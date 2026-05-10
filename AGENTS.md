@@ -18,6 +18,7 @@ PowerShell module for file-based PSObject storage using directory-backed "bucket
 - `README.md` — documentation
 
 ## AI Agent Conventions
+- When the user says "look for issues for you", check for open GitHub issues labeled `agent.todo` and bring them up for discussion
 - When posting a plan comment on a GitHub issue, add the `agent.plan` label to the issue
 - All AI agents must flag every GitHub issue body, PR body, and comment they create with `created with ai - model` on the first line (e.g. `created with ai - model big-pickle`)
 
