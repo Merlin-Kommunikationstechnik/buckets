@@ -2550,6 +2550,10 @@ $script:KeyCompleterBlock = {
 Register-ArgumentCompleter -CommandName Copy-BucketObject -ParameterName DestinationBucket -ScriptBlock $script:CompleterBlock
 Register-ArgumentCompleter -CommandName Move-BucketObject -ParameterName DestinationBucket -ScriptBlock $script:CompleterBlock
 
+@('Get-Bucket', 'dip') | ForEach-Object {
+    Register-ArgumentCompleter -CommandName $_ -ParameterName Name -ScriptBlock $script:CompleterBlock
+}
+
 @('Get-BucketObject', 'Set-BucketObject', 'Remove-BucketObject',
   'Copy-BucketObject', 'Rename-BucketObject', 'Move-BucketObject', 'spill') | ForEach-Object {
     Register-ArgumentCompleter -CommandName $_ -ParameterName Key -ScriptBlock $script:KeyCompleterBlock
