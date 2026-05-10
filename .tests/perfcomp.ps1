@@ -17,7 +17,7 @@ $sw = [System.Diagnostics.Stopwatch]::StartNew()
 $startTs = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 
 $createdBuckets = [System.Collections.ArrayList]::new()
-$tempRoot = "$env:TEMP\buckets-perf"
+$tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) "buckets-perf"
 
 function Write-InfoBlock {
     param([string]$Mode)
@@ -172,7 +172,7 @@ Write-Host "`n[4] CliXML Read" -ForegroundColor Blue
 
 $cr = [System.Diagnostics.Stopwatch]::StartNew()
 $clixmlReadCount = 0
-$clixmlFiles = Get-ChildItem -Path $tempRoot -Recurse -Filter *.clixml
+$clixmlFiles = Get-ChildItem -Path $tempRoot -Recurse -Filter *.clixml -ErrorAction SilentlyContinue
 foreach ($f in $clixmlFiles) {
     Import-CliXml -Path $f.FullName | Out-Null
     $clixmlReadCount++
