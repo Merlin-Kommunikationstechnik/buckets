@@ -353,7 +353,9 @@ $firstNames = @(
     "Nina", "Omar", "Paula", "Rex", "Sage", "Troy", "Ursa", "Vince", "Willa", "Xero",
     "Yolanda", "Zeke", "Abby", "Blake", "Cara", "Dean", "Erin", "Finn", "Greer", "Hugh",
     "Indy", "Jett", "Kira", "Lex", "Maya", "Noel", "Ozzy", "Piper", "Rue", "Seth",
-    "Tess", "Vance", "Wren", "Zara"
+    "Tess", "Vance", "Wren", "Zara",
+    "Aria", "Bianca", "Cole", "Drew", "Ellis", "Faye", "Gwen", "Hugo", "Isla", "Joel",
+    "Keira", "Lyle", "Mira", "Nash", "Orla", "Pace", "Rian", "Skye", "Theo", "Vada"
 )
 
 $lastNames = @(
@@ -365,7 +367,9 @@ $lastNames = @(
     "Zimmerman", "Arnold", "Bautista", "Crane", "Dalton", "Erickson", "Fletcher", "Gibbs", "Hale", "Ibarra",
     "Jensen", "Keller", "Lam", "Mack", "Newman", "Ochoa", "Patel", "Riggs", "Saunders", "Tate",
     "Urena", "Voss", "Wallace", "Yu", "Zamora", "Austin", "Banks", "Choi", "Dawson", "England",
-    "Fowler", "Garrison", "House", "Irvin"
+    "Fowler", "Garrison", "House", "Irvin",
+    "Jacobs", "Kane", "Larson", "Mercer", "Norton", "Ortega", "Pierce", "Quintero", "Romero", "Sutton",
+    "Thornton", "Uribe", "Valdez", "Weiss", "Xiong", "Zavala"
 )
 
 $allDepartments = @("IT", "Engineering", "Finance", "HR", "Sales", "Legal", "Marketing", "Operations", "Support", "Product")
@@ -396,9 +400,9 @@ $deptGroup = @{
     "Product"     = "g-engineering"
 }
 
-$extraUsers = foreach ($i in 0..83) {
-    $fn = $firstNames[$i]
-    $ln = $lastNames[$i]
+$extraUsers = foreach ($i in 0..399) {
+    $fn = $firstNames[$i % $firstNames.Count]
+    $ln = $lastNames[$i % $lastNames.Count]
     $sam = "$($fn.Substring(0,1).ToLower())$($ln.ToLower())"
     $dept = $allDepartments[$i % $allDepartments.Count]
     $titles = $deptTitles[$dept]
@@ -484,7 +488,7 @@ $workstationModels = @(
 $workstationOS = @("Windows 11 Pro", "Windows 10 Enterprise", "Ubuntu 22.04 LTS")
 $locations = @("HQ-Floor1", "HQ-Floor2", "HQ-Floor3", "Remote", "Branch-East", "Branch-West")
 
-$workstations = foreach ($i in 1..98) {
+$workstations = foreach ($i in 1..400) {
     $userIdx = ($i - 1) % $adUsers.Count
     $user = $adUsers[$userIdx]
     $model = $workstationModels[($i - 1) % $workstationModels.Count]
