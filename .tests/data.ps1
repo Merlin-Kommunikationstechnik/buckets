@@ -18,10 +18,11 @@
 
 [CmdletBinding()]
 param(
-    [switch]$Quiet
+    [switch]$Quiet,
+    [switch]$PassThru
 )
 
-if ($Quiet) {
+if ($Quiet -or $PassThru) {
     function Write-Host { param($Object, [switch]$NoNewline, $ForegroundColor, $BackgroundColor, $Separator) }
 }
 
@@ -66,7 +67,7 @@ function Write-InfoBlock {
     }
 }
 
-Write-InfoBlock -Mode top
+if (-not $PassThru) { Write-InfoBlock -Mode top }
 
 # ============================================================
 # infra/servers — 18 servers across 2 datacenters
@@ -93,7 +94,7 @@ $servers = @(
     [PSCustomObject]@{ _Id = "srv-log-01"; Hostname = "srv-log-01"; OS = "Debian 12"; CPU = "Intel Xeon Gold 5418Y @ 2.1GHz x 4"; Cores = 8; Threads = 16; RAM_GB = 64; Disk_GB = 2000; IP = "10.0.5.11"; Role = "Log Aggregator"; Location = "dc2-rack-c-01"; Status = "production"; LastBoot = $date.AddDays(-30); Manufacturer = "Dell"; Model = "PowerEdge R750"; Serial = "DL-7X9K1R5"; PurchaseDate = $date.AddDays(-300); WarrantyEnd = $date.AddDays(400); PowerW = 500; UPosition = "U14"; Virtualization = "None"; MonitoringProfile = "standard"; InterfaceCount = 4 },
     [PSCustomObject]@{ _Id = "srv-storage-01"; Hostname = "srv-storage-01"; OS = "FreeBSD 14"; CPU = "Intel Xeon Gold 5418Y @ 2.1GHz x 4"; Cores = 8; Threads = 16; RAM_GB = 64; Disk_GB = 16000; IP = "10.0.12.5"; Role = "Storage Controller"; Location = "dc1-rack-d-02"; Status = "decommissioned"; LastBoot = $date.AddDays(-365); Manufacturer = "HP"; Model = "ProLiant DL380 Gen11"; Serial = "HP-8M9K1L5"; PurchaseDate = $date.AddDays(-1095); WarrantyEnd = $date.AddDays(-365); PowerW = 800; UPosition = "U36"; Virtualization = "None"; MonitoringProfile = "basic"; InterfaceCount = 4; _CertRef = "cert-internal-01" }
 )
-$servers | New-BucketObject -Bucket infra/servers -KeyProperty _Id -Quiet
+if (-not $PassThru) { $servers | New-BucketObject -Bucket infra/servers -KeyProperty _Id -Quiet }
 Write-Host "  $($servers.Count) server records" -ForegroundColor DarkGray
 
 # ============================================================
@@ -121,7 +122,7 @@ $services = @(
     [PSCustomObject]@{ _Id = "svc-kibana"; Name = "kibana"; Server = "srv-log-01"; _ServerRef = "srv-log-01"; Status = "running"; CPU_Pct = 8.0; Mem_MB = 2048; Uptime_Days = 10; Restarts = 0; LastCheck = $date.AddMinutes(-2) },
     [PSCustomObject]@{ _Id = "svc-nfs"; Name = "nfs-server"; Server = "srv-storage-01"; _ServerRef = "srv-storage-01"; Status = "stopped"; CPU_Pct = 0.0; Mem_MB = 0; Uptime_Days = 0; Restarts = 4; LastCheck = $date.AddDays(-30); Error = "Service decommissioned" }
 )
-$services | New-BucketObject -Bucket infra/services -KeyProperty _Id -Quiet
+if (-not $PassThru) { $services | New-BucketObject -Bucket infra/services -KeyProperty _Id -Quiet }
 Write-Host "  $($services.Count) service records" -ForegroundColor DarkGray
 
 # ============================================================
@@ -145,7 +146,7 @@ $disks = @(
     [PSCustomObject]@{ _Id = "disk-log01-data"; Server = "srv-log-01"; _ServerRef = "srv-log-01"; Filesystem = "/data"; Size_GB = 2000; Used_GB = 1650; Avail_GB = 350; Use_Pct = 83; Mount = "/data"; Alert = "WARNING" },
     [PSCustomObject]@{ _Id = "disk-storage01-export"; Server = "srv-storage-01"; _ServerRef = "srv-storage-01"; Filesystem = "/export"; Size_GB = 8000; Used_GB = 5200; Avail_GB = 2800; Use_Pct = 65; Mount = "/export" }
 )
-$disks | New-BucketObject -Bucket infra/storage -KeyProperty _Id -Quiet
+if (-not $PassThru) { $disks | New-BucketObject -Bucket infra/storage -KeyProperty _Id -Quiet }
 Write-Host "  $($disks.Count) disk usage records" -ForegroundColor DarkGray
 
 # ============================================================
@@ -164,7 +165,7 @@ $backups = @(
     [PSCustomObject]@{ _Id = "bkp-monitoring"; Name = "Grafana Dashboard Backup"; Type = "Full"; Schedule = "0 4 * * 6"; Target = "backup-nas-01:/backups/monitoring"; Retention = "90 days"; LastRun = $date.AddDays(-1); NextRun = $date.AddDays(5); Status = "success"; Size_GB = 0.5; Duration_Min = 2; _ServerRefs = @("srv-mon-01") },
     [PSCustomObject]@{ _Id = "bkp-configs"; Name = "Ansible Config Sync"; Type = "Log"; Schedule = "0 * * * *"; Target = "backup-nas-02:/backups/configs"; Retention = "30 days"; LastRun = $date.AddMinutes(-15); NextRun = $date.AddMinutes(45); Status = "success"; Size_GB = 0.1; Duration_Min = 1; _ServerRefs = @("srv-ansible-01") }
 )
-$backups | New-BucketObject -Bucket infra/backups -KeyProperty _Id -Quiet
+if (-not $PassThru) { $backups | New-BucketObject -Bucket infra/backups -KeyProperty _Id -Quiet }
 Write-Host "  $($backups.Count) backup job records" -ForegroundColor DarkGray
 
 # ============================================================
@@ -182,7 +183,7 @@ $containers = @(
     [PSCustomObject]@{ _Id = "ctr-broken"; Name = "old-worker"; Image = "python:3.11-slim"; Host = "srv-container-01"; _HostRef = "srv-container-01"; Ports = ""; Status = "exited"; Restarts = 12; MemLimit_MB = 256; CPUShares = 128; Created = $date.AddDays(-120); Health = "unhealthy" },
     [PSCustomObject]@{ _Id = "ctr-cadvisor"; Name = "cadvisor"; Image = "gcr.io/cadvisor/cadvisor:latest"; Host = "srv-container-01"; _HostRef = "srv-container-01"; Ports = "8085:8085"; Status = "running"; Restarts = 0; MemLimit_MB = 256; CPUShares = 128; Created = $date.AddDays(-7); Health = "healthy" }
 )
-$containers | New-BucketObject -Bucket infra/containers -KeyProperty _Id -Quiet
+if (-not $PassThru) { $containers | New-BucketObject -Bucket infra/containers -KeyProperty _Id -Quiet }
 Write-Host "  $($containers.Count) container records" -ForegroundColor DarkGray
 
 # ============================================================
@@ -200,7 +201,7 @@ $incidents = @(
     [PSCustomObject]@{ Severity = "CRIT"; Source = "srv-container-01"; Message = "Container ctr-broken in crash loop (12 restarts)"; Status = "open"; ResolvedBy = $null; _ServerRef = "srv-container-01" },
     [PSCustomObject]@{ Severity = "WARN"; Source = "srv-log-01"; Message = "Elasticsearch disk watermark reached 83%"; Status = "acknowledged"; ResolvedBy = "grace"; _ServerRef = "srv-log-01" }
 )
-$incidents | New-BucketObject -Bucket infra/incidents -AsTimestamp -Quiet
+if (-not $PassThru) { $incidents | New-BucketObject -Bucket infra/incidents -AsTimestamp -Quiet }
 Write-Host "  $($incidents.Count) incident records" -ForegroundColor DarkGray
 
 # ============================================================
@@ -220,7 +221,7 @@ $monChecks = @(
     [PSCustomObject]@{ _Id = "check-vpn-01"; Target = "srv-vpn-01"; _TargetRef = "srv-vpn-01"; CheckType = "ICMP"; Endpoint = "10.0.7.10"; Status = "pass"; ResponseMs = 3; LastOk = $date.AddMinutes(-1); CheckInterval = 30 },
     [PSCustomObject]@{ _Id = "check-storage-01"; Target = "srv-storage-01"; _TargetRef = "srv-storage-01"; CheckType = "NFS"; Endpoint = "10.0.12.5:/export"; Status = "fail"; ResponseMs = 0; LastOk = $date.AddDays(-30); CheckInterval = 60; Error = "NFS mount timeout — host decommissioned" }
 )
-$monChecks | New-BucketObject -Bucket infra/monitoring -KeyProperty _Id -Quiet
+if (-not $PassThru) { $monChecks | New-BucketObject -Bucket infra/monitoring -KeyProperty _Id -Quiet }
 Write-Host "  $($monChecks.Count) monitoring check records" -ForegroundColor DarkGray
 
 # ============================================================
@@ -238,7 +239,7 @@ $scheduledTasks = @(
     [PSCustomObject]@{ _Id = "cron-container-cleanup"; Name = "Container Image Cleanup"; User = "root"; Schedule = "0 4 * * *"; Command = "/usr/bin/docker image prune -af --filter until=72h"; NextRun = $date.AddHours(5); LastRun = $date.AddDays(-1); Status = "active" },
     [PSCustomObject]@{ _Id = "cron-cert-renew"; Name = "Certificate Renewal Check"; User = "root"; Schedule = "0 6 * * *"; Command = "/usr/local/bin/check-certs.sh --renew"; NextRun = $date.AddHours(6); LastRun = $date.AddDays(-1); Status = "active" }
 )
-$scheduledTasks | New-BucketObject -Bucket infra/scheduled -KeyProperty _Id -Quiet
+if (-not $PassThru) { $scheduledTasks | New-BucketObject -Bucket infra/scheduled -KeyProperty _Id -Quiet }
 Write-Host "  $($scheduledTasks.Count) scheduled task records" -ForegroundColor DarkGray
 
 # ============================================================
@@ -256,7 +257,7 @@ $networks = @(
     [PSCustomObject]@{ _Id = "net-container"; Name = "Container Network"; Subnet = "10.0.6.0/24"; Gateway = "10.0.6.1"; VLAN = 20; Description = "Container host interconnect" },
     [PSCustomObject]@{ _Id = "net-observability"; Name = "Observability"; Subnet = "10.0.5.0/24"; Gateway = "10.0.5.1"; VLAN = 15; Description = "Monitoring, logging, metrics" }
 )
-$networks | New-BucketObject -Bucket network/vlans -KeyProperty _Id -Quiet
+if (-not $PassThru) { $networks | New-BucketObject -Bucket network/vlans -KeyProperty _Id -Quiet }
 Write-Host "  $($networks.Count) VLAN records" -ForegroundColor DarkGray
 
 # ============================================================
@@ -276,7 +277,7 @@ $interfaces = @(
     [PSCustomObject]@{ _Id = "if-vpn-01-wg0"; Server = "srv-vpn-01"; _ServerRef = "srv-vpn-01"; Name = "wg0"; IP = "10.200.0.1"; Netmask = "255.255.255.0"; Gateway = $null; MAC = "virtual"; Speed_Gbps = $null; Duplex = $null; MTU = 1420; Description = "WireGuard tunnel interface" },
     [PSCustomObject]@{ _Id = "if-log-01-bond0"; Server = "srv-log-01"; _ServerRef = "srv-log-01"; Name = "bond0"; IP = "10.0.5.11"; Netmask = "255.255.255.0"; Gateway = "10.0.5.1"; MAC = "00:1a:2b:3c:4d:60"; Speed_Gbps = 25; Duplex = "full"; MTU = 9000 }
 )
-$interfaces | New-BucketObject -Bucket network/interfaces -KeyProperty _Id -Quiet
+if (-not $PassThru) { $interfaces | New-BucketObject -Bucket network/interfaces -KeyProperty _Id -Quiet }
 Write-Host "  $($interfaces.Count) interface records" -ForegroundColor DarkGray
 
 # ============================================================
@@ -300,7 +301,7 @@ $dnsRecords = @(
     [PSCustomObject]@{ _Id = "dns-cname-api"; Name = "api.example.com"; Type = "CNAME"; Value = "srv-lb-01.example.com"; TTL = 300; Zone = "example.com" },
     [PSCustomObject]@{ _Id = "dns-srv-ldap"; Name = "_ldap._tcp.dc.example.com"; Type = "SRV"; Value = "0 389 srv-dc-01.example.com"; TTL = 3600; Zone = "dc.example.com" }
 )
-$dnsRecords | New-BucketObject -Bucket network/dns -KeyProperty _Id -Quiet
+if (-not $PassThru) { $dnsRecords | New-BucketObject -Bucket network/dns -KeyProperty _Id -Quiet }
 Write-Host "  $($dnsRecords.Count) DNS records" -ForegroundColor DarkGray
 
 # ============================================================
@@ -319,7 +320,7 @@ $firewall = @(
     [PSCustomObject]@{ _Id = "fw-008"; Source = "10.0.6.0/24"; Dest = "any"; Port = "2375,2376"; Protocol = "TCP"; Action = "ALLOW"; Rule = "Container API access" },
     [PSCustomObject]@{ _Id = "fw-009"; Source = "10.200.0.0/24"; Dest = "10.0.2.0/24"; Port = "5432,3306"; Protocol = "TCP"; Action = "ALLOW"; Rule = "VPN tunnel — database access" }
 )
-$firewall | New-BucketObject -Bucket network/firewall -KeyProperty _Id -Quiet
+if (-not $PassThru) { $firewall | New-BucketObject -Bucket network/firewall -KeyProperty _Id -Quiet }
 Write-Host "  $($firewall.Count) firewall rules" -ForegroundColor DarkGray
 
 # ============================================================
@@ -429,8 +430,8 @@ $extraUsers = foreach ($i in 0..83) {
     }
 }
 
-$adUsers | New-BucketObject -Bucket org/users -KeyProperty _Id -Quiet
-$extraUsers | New-BucketObject -Bucket org/users -KeyProperty _Id -Quiet
+if (-not $PassThru) { $adUsers | New-BucketObject -Bucket org/users -KeyProperty _Id -Quiet }
+if (-not $PassThru) { $extraUsers | New-BucketObject -Bucket org/users -KeyProperty _Id -Quiet }
 $adUsers += $extraUsers
 Write-Host "  $($adUsers.Count) user accounts" -ForegroundColor DarkGray
 
@@ -450,7 +451,7 @@ $groups = @(
     [PSCustomObject]@{ _Id = "g-marketing"; Name = "Marketing"; Description = "Marketing department"; Members = @("maria", "nick") },
     [PSCustomObject]@{ _Id = "g-operations"; Name = "Operations"; Description = "Operations department"; Members = @() }
 )
-$groups | New-BucketObject -Bucket org/groups -KeyProperty _Id -Quiet
+if (-not $PassThru) { $groups | New-BucketObject -Bucket org/groups -KeyProperty _Id -Quiet }
 Write-Host "  $($groups.Count) group records" -ForegroundColor DarkGray
 
 # ============================================================
@@ -465,7 +466,7 @@ $roles = @(
     [PSCustomObject]@{ _Id = "role-developer"; Name = "Developer"; Permissions = @("infra:containers:read", "infra:monitoring:read", "ops:packages:read"); AssignedTo = @("frank", "maria"); Priority = 4 },
     [PSCustomObject]@{ _Id = "role-helpdesk"; Name = "Help Desk"; Permissions = @("org:users:read", "org:users:reset-password", "infra:monitoring:read"); AssignedTo = @("jack"); Priority = 5 }
 )
-$roles | New-BucketObject -Bucket org/roles -KeyProperty _Id -Quiet
+if (-not $PassThru) { $roles | New-BucketObject -Bucket org/roles -KeyProperty _Id -Quiet }
 Write-Host "  $($roles.Count) role records" -ForegroundColor DarkGray
 
 # ============================================================
@@ -510,7 +511,7 @@ $workstations = foreach ($i in 1..98) {
     }
 }
 
-$workstations | New-BucketObject -Bucket org/clients -KeyProperty _Id -Quiet
+if (-not $PassThru) { $workstations | New-BucketObject -Bucket org/clients -KeyProperty _Id -Quiet }
 Write-Host "  $($workstations.Count) workstation records" -ForegroundColor DarkGray
 
 # ============================================================
@@ -529,7 +530,7 @@ $sslCerts = @(
     [PSCustomObject]@{ _Id = "cert-vpn-01"; Domain = "vpn.example.com"; Issuer = "Corp CA"; Expiry = $date.AddDays(365); DaysLeft = 365; Type = "Single"; KeySize = 4096; Algorithm = "RSA" },
     [PSCustomObject]@{ _Id = "cert-mon-01"; Domain = "mon.example.com"; Issuer = "Let's Encrypt"; Expiry = $date.AddDays(25); DaysLeft = 25; Type = "Single"; KeySize = 4096; Algorithm = "RSA" }
 )
-$sslCerts | New-BucketObject -Bucket security/certificates -KeyProperty _Id -Quiet
+if (-not $PassThru) { $sslCerts | New-BucketObject -Bucket security/certificates -KeyProperty _Id -Quiet }
 Write-Host "  $($sslCerts.Count) certificate records" -ForegroundColor DarkGray
 
 # ============================================================
@@ -545,7 +546,7 @@ $auditLogs = @(
     [PSCustomObject]@{ _Id = "audit-005"; Timestamp = $date.AddHours(-3); User = "grace"; Action = "cert.renew"; Target = "cert-api-01"; Detail = "Manually triggered certificate renewal for api.example.com"; Result = "success" },
     [PSCustomObject]@{ _Id = "audit-006"; Timestamp = $date.AddMinutes(-30); User = "monitoring"; Action = "alert.trigger"; Target = "check-dns-01"; Detail = "DNS query response time degraded (>300ms)"; Result = "warning" }
 )
-$auditLogs | New-BucketObject -Bucket security/audit -KeyProperty _Id -Quiet
+if (-not $PassThru) { $auditLogs | New-BucketObject -Bucket security/audit -KeyProperty _Id -Quiet }
 Write-Host "  $($auditLogs.Count) audit log records" -ForegroundColor DarkGray
 
 # ============================================================
@@ -567,7 +568,7 @@ $packages = @(
     [PSCustomObject]@{ _Id = "pkg-elasticsearch"; Server = "srv-log-01"; _ServerRef = "srv-log-01"; Name = "elasticsearch"; Version = "8.12.0"; Architecture = "amd64"; Size_KB = 350000; Repo = "elastic 8.x"; Installed = $date.AddDays(-30) },
     [PSCustomObject]@{ _Id = "pkg-wireguard"; Server = "srv-vpn-01"; _ServerRef = "srv-vpn-01"; Name = "wireguard-tools"; Version = "1.0.20210914"; Architecture = "x86_64"; Size_KB = 380; Repo = "alpine main"; Installed = $date.AddDays(-180) }
 )
-$packages | New-BucketObject -Bucket ops/packages -KeyProperty _Id -Quiet
+if (-not $PassThru) { $packages | New-BucketObject -Bucket ops/packages -KeyProperty _Id -Quiet }
 Write-Host "  $($packages.Count) package records" -ForegroundColor DarkGray
 
 # ============================================================
@@ -583,12 +584,35 @@ $configs = @(
     [PSCustomObject]@{ _Id = "cfg-wireguard-tunnel"; Service = "wireguard"; _ServiceRef = "svc-wireguard"; Type = "wireguard.conf"; Path = "/etc/wireguard/wg0.conf"; LastModified = $date.AddDays(-90); Version = "v1.0.0"; ManagedBy = "alice" },
     [PSCustomObject]@{ _Id = "cfg-elasticsearch-yaml"; Service = "elasticsearch"; _ServiceRef = "svc-elasticsearch"; Type = "elasticsearch.yml"; Path = "/etc/elasticsearch/elasticsearch.yml"; LastModified = $date.AddDays(-5); Version = "v2.0.0"; ManagedBy = "grace" }
 )
-$configs | New-BucketObject -Bucket ops/configs -KeyProperty _Id -Quiet
+if (-not $PassThru) { $configs | New-BucketObject -Bucket ops/configs -KeyProperty _Id -Quiet }
 Write-Host "  $($configs.Count) config records" -ForegroundColor DarkGray
 
 # ============================================================
 # Summary
 # ============================================================
+if ($PassThru) { return @{
+    servers       = $servers
+    services      = $services
+    disks         = $disks
+    backups       = $backups
+    containers    = $containers
+    incidents     = $incidents
+    monChecks     = $monChecks
+    scheduledTasks = $scheduledTasks
+    networks      = $networks
+    interfaces    = $interfaces
+    dnsRecords    = $dnsRecords
+    firewall      = $firewall
+    adUsers       = $adUsers
+    groups        = $groups
+    roles         = $roles
+    workstations  = $workstations
+    sslCerts      = $sslCerts
+    auditLogs     = $auditLogs
+    packages      = $packages
+    configs       = $configs
+} }
+
 Write-Host ""
 $totalBuckets = @(
     "infra/servers",
