@@ -267,7 +267,7 @@ while ($true) {
         if ($hasSetup) {
             Write-Host "  · Setup demo data" -ForegroundColor DarkGray
             foreach ($line in ($lesson.SetupCode -split "`n")) {
-                Write-Host "  $line" -ForegroundColor DarkGray
+                Write-Host $line -ForegroundColor DarkGray
             }
             Write-Host ""
             try {
