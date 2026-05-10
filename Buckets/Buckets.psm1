@@ -43,10 +43,11 @@ $script:CSkip   = 'Yellow'
 
 # --- Hidden property helper ---
 $script:HiddenFlags = [System.Reflection.BindingFlags]::Instance -bor [System.Reflection.BindingFlags]::NonPublic -bor [System.Reflection.BindingFlags]::Public
+$script:IsHiddenProp = [System.Management.Automation.PSNoteProperty].GetProperty('IsHidden', $script:HiddenFlags)
 function Add-HiddenProperty {
     param([PSObject]$Target, [string]$Name, $Value)
     $prop = [System.Management.Automation.PSNoteProperty]::new($Name, $Value)
-    [System.Management.Automation.PSNoteProperty].GetProperty('IsHidden', $script:HiddenFlags).SetValue($prop, $true)
+    $script:IsHiddenProp.SetValue($prop, $true)
     $Target.PSObject.Properties.Add($prop)
 }
 
@@ -339,10 +340,10 @@ function Read-BucketFile {
 function Get-ObjectFiles {
     param([string]$BucketPath, [string]$Key)
 
+    $di = [System.IO.DirectoryInfo]::new($BucketPath)
     if (-not [string]::IsNullOrWhiteSpace($Key)) {
         $results = [System.Collections.ArrayList]::new()
         $target = $Key.ToLowerInvariant()
-        $di = [System.IO.DirectoryInfo]::new($BucketPath)
         foreach ($f in @($di.GetFiles("*.json")) + @($di.GetFiles("*.dat"))) {
             $base = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
             $baseLower = $base.ToLowerInvariant()
@@ -353,12 +354,7 @@ function Get-ObjectFiles {
         return $results.ToArray()
     }
     else {
-        $results = [System.Collections.ArrayList]::new()
-        $di = [System.IO.DirectoryInfo]::new($BucketPath)
-        foreach ($f in @($di.GetFiles("*.json")) + @($di.GetFiles("*.dat"))) {
-            $null = $results.Add($f)
-        }
-        return $results.ToArray()
+        return @($di.GetFiles("*.json")) + @($di.GetFiles("*.dat"))
     }
 }
 
@@ -1194,16 +1190,9 @@ function Get-BucketObject {
 
             $relativePath = $file.FullName.Substring($bucketPath.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar)
             $keyWithoutExt = [System.IO.Path]::ChangeExtension($relativePath, $null).TrimEnd('.')
-            $n1 = [System.Management.Automation.PSNoteProperty]::new('_BucketName', $bucketName)
-            $n2 = [System.Management.Automation.PSNoteProperty]::new('_BucketKey', $keyWithoutExt)
-            $n3 = [System.Management.Automation.PSNoteProperty]::new('_BucketFile', $file.FullName)
-            $hidden = [System.Reflection.BindingFlags]::Instance -bor [System.Reflection.BindingFlags]::NonPublic -bor [System.Reflection.BindingFlags]::Public
-            [System.Management.Automation.PSNoteProperty].GetProperty('IsHidden', $hidden).SetValue($n1, $true)
-            [System.Management.Automation.PSNoteProperty].GetProperty('IsHidden', $hidden).SetValue($n2, $true)
-            [System.Management.Automation.PSNoteProperty].GetProperty('IsHidden', $hidden).SetValue($n3, $true)
-            $obj.PSObject.Properties.Add($n1)
-            $obj.PSObject.Properties.Add($n2)
-            $obj.PSObject.Properties.Add($n3)
+            Add-HiddenProperty -Target $obj -Name '_BucketName' -Value $bucketName
+            Add-HiddenProperty -Target $obj -Name '_BucketKey' -Value $keyWithoutExt
+            Add-HiddenProperty -Target $obj -Name '_BucketFile' -Value $file.FullName
             $null = $allObjects.Add($obj)
         }
     }
