@@ -279,14 +279,11 @@ while ($true) {
 
         if ($hasCode) {
             if ($hasSetup) { Write-Host "  · Lesson" -ForegroundColor DarkGray }
-            $indented = $lesson.Code -replace "(?m)^", "  "
-            tut-write-code $indented
             $script:lastCode = $lesson.Code
+            tut-write-code $lesson.Code
             try {
                 $output = Invoke-Expression $lesson.Code 2>&1
-                if ($output) {
-                    ($output | Out-String -Stream) | ForEach-Object { Write-Host "  $_" }
-                }
+                if ($output) { $output | Out-Host }
             } catch {
                 Write-Host "  Error: $_" -ForegroundColor Red
             }
