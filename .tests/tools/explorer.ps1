@@ -67,32 +67,6 @@ function Scan-Buckets {
     return @($buckets)
 }
 
-function Scan-Arrays {
-    param([string]$Bucket)
-    $root = Get-RootPath
-    $arraysPath = Join-Path $root "$Bucket/.arrays"
-    if (-not [System.IO.Directory]::Exists($arraysPath)) {
-        return @()
-    }
-    $groups = [System.Collections.ArrayList]::new()
-    $adi = [System.IO.DirectoryInfo]::new($arraysPath)
-    foreach ($sub in $adi.GetDirectories()) {
-        $dat = @($sub.GetFiles("*.dat"))
-        $json = @($sub.GetFiles("*.json"))
-        $all = $dat + $json
-        $size = ($all | ForEach-Object { $_.Length } | Measure-Object -Sum).Sum
-        $null = $groups.Add([PSCustomObject]@{
-            Key      = $sub.Name
-            Count    = $all.Count
-            Size     = $size
-            SizeF    = Format-Size -Bytes $size
-            Modified = ($all | Sort-Object LastWriteTime -Descending | Select-Object -First 1).LastWriteTime
-            Format   = if ($json.Count -gt 0) { "JSON" } else { "Binary" }
-        })
-    }
-    return @($groups)
-}
-
 function Scan-Objects {
     param([string]$Bucket)
     $root = Get-RootPath
@@ -102,40 +76,6 @@ function Scan-Objects {
     }
     $files = [System.Collections.ArrayList]::new()
     $di = [System.IO.DirectoryInfo]::new($bucketPath)
-    foreach ($f in $di.GetFiles("*.dat")) {
-        $null = $files.Add([PSCustomObject]@{
-            Key      = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
-            File     = $f.Name
-            Size     = $f.Length
-            SizeF    = Format-Size -Bytes $f.Length
-            Modified = $f.LastWriteTime
-            Format   = "Binary"
-            InArray  = $false
-        })
-    }
-    foreach ($f in $di.GetFiles("*.json")) {
-        $null = $files.Add([PSCustomObject]@{
-            Key      = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
-            File     = $f.Name
-            Size     = $f.Length
-            SizeF    = Format-Size -Bytes $f.Length
-            Modified = $f.LastWriteTime
-            Format   = "JSON"
-            InArray  = $false
-        })
-    }
-    return @($files)
-}
-
-function Scan-ArrayItems {
-    param([string]$Bucket, [string]$ArrayKey)
-    $root = Get-RootPath
-    $arrayPath = Join-Path $root "$Bucket/.arrays/$ArrayKey"
-    if (-not [System.IO.Directory]::Exists($arrayPath)) {
-        return @()
-    }
-    $files = [System.Collections.ArrayList]::new()
-    $di = [System.IO.DirectoryInfo]::new($arrayPath)
     foreach ($f in $di.GetFiles("*.dat")) {
         $null = $files.Add([PSCustomObject]@{
             Key      = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
@@ -160,10 +100,7 @@ function Scan-ArrayItems {
 }
 
 function Read-ObjectContent {
-    param([string]$Bucket, [string]$Key, [string]$ArrayKey)
-    if ($ArrayKey) {
-        return Get-BucketObject -Bucket $Bucket -ArrayKey $ArrayKey -Key $Key -WarningAction SilentlyContinue
-    }
+    param([string]$Bucket, [string]$Key)
     return Get-BucketObject -Bucket $Bucket -Key $Key -WarningAction SilentlyContinue
 }
 
@@ -188,8 +125,6 @@ function Show-BucketList {
         $b = $buckets[$i]
         $isLast = $i -eq $buckets.Count - 1
         $connector = if ($isLast) { "`" " } else { "| " }
-        $arrays = @(Scan-Arrays -Bucket $b.Name)
-        $hasArrays = $arrays.Count -gt 0
 
         Write-Host "  $connector" -ForegroundColor DarkGray
         Write-Host "  +- " -ForegroundColor DarkGray -NoNewline
@@ -204,18 +139,6 @@ function Show-BucketList {
 
         $totalSize += $b.TotalSize
         $totalObjects += $b.ObjectCount
-
-        if ($hasArrays) {
-            for ($j = 0; $j -lt $arrays.Count; $j++) {
-                $a = $arrays[$j]
-                $aLast = $j -eq $arrays.Count - 1
-                $aConn = if ($isLast -and $aLast) { "   " } else { "|  " }
-                $aBranch = if ($aLast) { "`--" } else { "|--" }
-                Write-Host "  $aConn $aBranch " -ForegroundColor DarkGray -NoNewline
-                Write-Host "$($a.Key)" -ForegroundColor Magenta -NoNewline
-                Write-Host " [$($a.Count) items, $($a.SizeF), $($a.Format)]" -ForegroundColor DarkGray
-            }
-        }
     }
 
     Write-Host "  " -NoNewline
@@ -255,70 +178,16 @@ function Show-StandaloneObjects {
     return $objects
 }
 
-function Show-ArrayGroups {
-    param([string]$Bucket)
-    $arrays = Scan-Arrays -Bucket $Bucket
-    if ($arrays.Count -eq 0) {
-        Write-Host "  (no array groups)" -ForegroundColor DarkGray
-        Write-Host ""
-        return @()
-    }
-
-    Write-Host "  Array groups ($($arrays.Count))" -ForegroundColor Magenta
-    Write-Host "  $("=" * 60)" -ForegroundColor DarkGray
-
-    for ($i = 0; $i -lt $arrays.Count; $i++) {
-        $a = $arrays[$i]
-        $isLast = $i -eq $arrays.Count - 1
-        $branch = if ($isLast) { "`--" } else { "|--" }
-
-        Write-Host "  $branch " -ForegroundColor DarkGray -NoNewline
-        Write-Host "$($a.Key)" -ForegroundColor Magenta -NoNewline
-        Write-Host " [$($a.Count) items, $($a.SizeF), $($a.Format)]" -ForegroundColor DarkGray -NoNewline
-        Write-Host " (modified: $($a.Modified.ToString('MM-dd HH:mm')))" -ForegroundColor DarkGray
-    }
-    Write-Host ""
-
-    return $arrays
-}
-
-function Show-ArrayItems {
-    param([string]$Bucket, [string]$ArrayKey)
-    $items = Scan-ArrayItems -Bucket $Bucket -ArrayKey $ArrayKey
-    if ($items.Count -eq 0) {
-        Write-Host "  (no items in this array group)" -ForegroundColor DarkGray
-        Write-Host ""
-        return @()
-    }
-
-    Write-Host "  .arrays/$ArrayKey/ ($($items.Count) items)" -ForegroundColor Magenta
-    Write-Host "  $("=" * 60)" -ForegroundColor DarkGray
-
-    for ($i = 0; $i -lt $items.Count; $i++) {
-        $it = $items[$i]
-        $isLast = $i -eq $items.Count - 1
-        $branch = if ($isLast) { "`--" } else { "|--" }
-
-        Write-Host "  $branch " -ForegroundColor DarkGray -NoNewline
-        Write-Host "$($it.Key)" -ForegroundColor White -NoNewline
-        Write-Host " [$($it.SizeF), $($it.Format)]" -ForegroundColor DarkGray -NoNewline
-        Write-Host " ($($it.Modified.ToString('MM-dd HH:mm')))" -ForegroundColor DarkGray
-    }
-    Write-Host ""
-
-    return $items
-}
-
 function Show-ObjectDetail {
-    param([string]$Bucket, [string]$Key, [string]$ArrayKey)
-    $obj = Read-ObjectContent -Bucket $Bucket -Key $Key -ArrayKey $ArrayKey
+    param([string]$Bucket, [string]$Key)
+    $obj = Read-ObjectContent -Bucket $Bucket -Key $Key
     if (-not $obj) {
         Write-Host "  Object not found or corrupted." -ForegroundColor Red
         Write-Host ""
         return
     }
 
-    $title = if ($ArrayKey) { ".arrays/$ArrayKey/$Key" } else { "$Bucket/$Key" }
+    $title = "$Bucket/$Key"
     Write-Host "  Object: $title" -ForegroundColor Cyan
     Write-Host "  $("=" * 60)" -ForegroundColor DarkGray
 
@@ -351,7 +220,6 @@ function Show-Help {
     Write-Host "  Commands:" -ForegroundColor Cyan
     Write-Host "    cd <bucket>        Enter a bucket" -ForegroundColor White
     Write-Host "    cd ..              Go back" -ForegroundColor White
-    Write-Host "    cd <bucket>/<key>  Enter an array group" -ForegroundColor White
     Write-Host "    ls                 List current view" -ForegroundColor White
     Write-Host "    cat <key>          View object details" -ForegroundColor White
     Write-Host "    find <pattern>     Search keys across all buckets" -ForegroundColor White
@@ -365,9 +233,8 @@ function Show-Help {
 
 # --- State machine ---
 
-$state = "root"  # root | bucket | array
+$state = "root"  # root | bucket
 $stateBucket = ""
-$stateArrayKey = ""
 
 function Render-View {
     switch ($state) {
@@ -378,11 +245,6 @@ function Render-View {
         "bucket" {
             Write-Host "  /$stateBucket" -ForegroundColor Cyan
             Show-StandaloneObjects -Bucket $stateBucket
-            Show-ArrayGroups -Bucket $stateBucket
-        }
-        "array" {
-            Write-Host "  /$stateBucket/$stateArrayKey" -ForegroundColor Magenta
-            Show-ArrayItems -Bucket $stateBucket -ArrayKey $stateArrayKey
         }
     }
 }
@@ -403,37 +265,13 @@ function Handle-Command {
         }
         "cd" {
             if ($arg -eq ".." -or $arg -eq "") {
-                if ($state -eq "array") {
-                    $script:state = "bucket"
-                    $script:stateArrayKey = ""
-                }
-                elseif ($state -eq "bucket") {
+                if ($state -eq "bucket") {
                     $script:state = "root"
                     $script:stateBucket = ""
                 }
                 else {
                     Write-Host "  Already at root." -ForegroundColor DarkGray
                     Write-Host ""
-                }
-            }
-            elseif ($arg -match "/") {
-                $bucketPart, $arrayPart = $arg -split "/", 2
-                $buckets = Scan-Buckets
-                $match = $buckets | Where-Object { $_.Name -eq $bucketPart }
-                if (-not $match) {
-                    Write-Host "  Bucket '$bucketPart' not found." -ForegroundColor Red
-                    Write-Host ""
-                    return $true
-                }
-                $script:state = "array"
-                $script:stateBucket = $bucketPart
-                $script:stateArrayKey = $arrayPart
-                $arrays = Scan-Arrays -Bucket $stateBucket
-                $aMatch = $arrays | Where-Object { $_.Key -eq $arrayPart }
-                if (-not $aMatch) {
-                    Write-Host "  Array group '$arrayPart' not found in '$bucketPart'." -ForegroundColor Red
-                    Write-Host ""
-                    return $true
                 }
             }
             else {
@@ -468,13 +306,10 @@ function Handle-Command {
                 "bucket" {
                     Show-ObjectDetail -Bucket $stateBucket -Key $arg
                 }
-                "array" {
-                    Show-ObjectDetail -Bucket $stateBucket -Key $arg -ArrayKey $stateArrayKey
-                }
             }
             return $true
         }
-        "find" {
+"find" {
             if ([string]::IsNullOrWhiteSpace($arg)) {
                 Write-Host "  Usage: find <pattern>" -ForegroundColor Red
                 Write-Host ""
@@ -495,18 +330,6 @@ function Handle-Command {
                     Write-Host " [$($m.SizeF), $($m.Format)]" -ForegroundColor DarkGray
                     $found++
                 }
-                $arrays = @(Scan-Arrays -Bucket $b.Name)
-                foreach ($a in $arrays) {
-                    $items = @(Scan-ArrayItems -Bucket $b.Name -ArrayKey $a.Key)
-                    $matchedItems = $items | Where-Object { $_.Key -like "*$arg*" }
-                    foreach ($m in $matchedItems) {
-                        Write-Host "  " -NoNewline
-                        Write-Host "$($b.Name)/.arrays/$($a.Key)/" -ForegroundColor Magenta -NoNewline
-                        Write-Host "$($m.Key)" -ForegroundColor White -NoNewline
-                        Write-Host " [$($m.SizeF), $($m.Format)]" -ForegroundColor DarkGray
-                        $found++
-                    }
-                }
             }
             if ($found -eq 0) {
                 Write-Host "  No matches." -ForegroundColor DarkGray
@@ -518,7 +341,7 @@ function Handle-Command {
             Write-Host ""
             return $true
         }
-        "stats" {
+            "stats" {
             Write-Host ""
             Write-Host "  Bucket Statistics" -ForegroundColor Cyan
             Write-Host "  $("=" * 60)" -ForegroundColor DarkGray
@@ -550,38 +373,14 @@ function Handle-Command {
                 Write-Host " [$($b.ObjectCount) objects, $($b.TotalSizeF)]" -ForegroundColor DarkGray
 
                 $standalone = @(Scan-Objects -Bucket $b.Name)
-                $arrays = @(Scan-Arrays -Bucket $b.Name)
-                $totalItems = $standalone.Count + $arrays.Count
-                $idx = 0
-                foreach ($o in $standalone) {
-                    $idx++
-                    $oLast = $idx -eq $totalItems
+                for ($j = 0; $j -lt $standalone.Count; $j++) {
+                    $o = $standalone[$j]
+                    $oLast = $j -eq $standalone.Count - 1
                     $oConn = if ($isLast -and $oLast) { "   " } else { "|  " }
                     $oBranch = if ($oLast) { "`--" } else { "|--" }
                     Write-Host "  $oConn $oBranch " -ForegroundColor DarkGray -NoNewline
                     Write-Host "$($o.Key)" -ForegroundColor White -NoNewline
                     Write-Host " [$($o.SizeF), $($o.Format)]" -ForegroundColor DarkGray
-                }
-                foreach ($a in $arrays) {
-                    $idx++
-                    $aLast = $idx -eq $totalItems
-                    $aConn = if ($isLast -and $aLast) { "   " } else { "|  " }
-                    $aBranch = if ($aLast) { "`--" } else { "|--" }
-                    Write-Host "  $aConn $aBranch " -ForegroundColor DarkGray -NoNewline
-                    Write-Host "$($a.Key)" -ForegroundColor Magenta -NoNewline
-                    Write-Host " [$($a.Count) items, $($a.SizeF)]" -ForegroundColor DarkGray
-
-                    $items = @(Scan-ArrayItems -Bucket $b.Name -ArrayKey $a.Key)
-                    for ($j = 0; $j -lt $items.Count; $j++) {
-                        $it = $items[$j]
-                        $itLast = $j -eq $items.Count - 1
-                        $itConn = if ($isLast -and $aLast -and $itLast) { "       " } elseif ($aLast) { "       " } else { "|     " }
-                        $itBranch = if ($itLast) { "`---" } else { "|---" }
-                        $innerConn = if ($aLast) { "    " } else { "|   " }
-                        Write-Host "  $aConn $innerConn $itConn $itBranch " -ForegroundColor DarkGray -NoNewline
-                        Write-Host "$($it.Key)" -ForegroundColor White -NoNewline
-                        Write-Host " [$($it.SizeF), $($it.Format)]" -ForegroundColor DarkGray
-                    }
                 }
             }
             Write-Host ""
@@ -596,7 +395,6 @@ function Handle-Command {
                     Write-Host "  Wiped." -ForegroundColor Green
                     $script:state = "root"
                     $script:stateBucket = ""
-                    $script:stateArrayKey = ""
                 }
                 else {
                     Write-Host "  No .buckets directory." -ForegroundColor DarkGray
@@ -637,7 +435,6 @@ while ($running) {
     $prompt = switch ($state) {
         "root"  { "/> " }
         "bucket" { "/$stateBucket> " }
-        "array" { "/$stateBucket/$stateArrayKey> " }
     }
     $userCmd = Read-Host -Prompt $prompt
     $running = Handle-Command -UserInput $userCmd

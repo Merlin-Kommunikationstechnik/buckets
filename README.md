@@ -183,6 +183,7 @@ Get-BucketObject -Bucket users -Skip 5 -First 5
 ### Set-BucketObject
 
 Updates an existing object in a bucket. Preserves the storage format.
+Outputs a summary line by default. Use `-PassThru` to emit updated objects to the pipeline.
 
 ```powershell
 Set-BucketObject
@@ -194,6 +195,7 @@ Set-BucketObject
     [-BinaryDepth <int>]
     [-AsJson]
     [-Compress]
+    [-PassThru]
     [-Quiet]
     [<CommonParameters>]
 ```
@@ -208,7 +210,8 @@ Set-BucketObject
 | `-BinaryDepth` | Binary serialization depth (1–100) | `5` |
 | `-AsJson` | Force JSON format | — |
 | `-Compress` | GZip compress binary output | `false` |
-| `-Quiet` | Suppress output | `false` |
+| `-PassThru` | Emit PSCustomObject with Bucket and Key to pipeline | `false` |
+| `-Quiet` | Suppress all output | `false` |
 
 #### Examples
 
