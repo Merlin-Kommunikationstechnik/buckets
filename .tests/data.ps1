@@ -23,7 +23,6 @@ param(
 
 if ($Quiet) {
     function Write-Host { param($Object, [switch]$NoNewline, $ForegroundColor, $BackgroundColor, $Separator) }
-    function Out-Host { param($InputObject) }
 }
 
 Remove-Module Buckets -ErrorAction SilentlyContinue
@@ -623,130 +622,132 @@ $totalObjects = (
     $auditLogs.Count + $packages.Count + $configs.Count
 )
 
-Write-Host "  Buckets created: $($totalBuckets.Count)" -ForegroundColor DarkGray
-Write-Host "  Objects created: $totalObjects" -ForegroundColor DarkGray
+if (-not $Quiet) {
+    Write-Host "  Buckets created: $($totalBuckets.Count)" -ForegroundColor DarkGray
+    Write-Host "  Objects created: $totalObjects" -ForegroundColor DarkGray
 
-Write-Host "`n[Bucket Overview]" -ForegroundColor Blue
-Get-Bucket -Tree | Select-Object -First 30 | Out-Host
+    Write-Host "`n[Bucket Overview]" -ForegroundColor Blue
+    Get-Bucket -Tree | Select-Object -First 30 | Out-Host
 
-# ============================================================
-# Relationship Queries — cross-bucket examples
-# ============================================================
-Write-Host "`n[Relationship Queries]" -ForegroundColor Blue
+    # ============================================================
+    # Relationship Queries — cross-bucket examples
+    # ============================================================
+    Write-Host "`n[Relationship Queries]" -ForegroundColor Blue
 
-# 1. Services on non-production servers
-Write-Host "`n  Q1: Services on non-production servers" -ForegroundColor DarkGray
-$offline = spill -Bucket infra/servers -Filter { $_.Status -ne "production" }
-$offline | ForEach-Object {
-    $svr = $_
-    spill -Bucket infra/services -Match @{ _ServerRef = $svr._Id }
-} | Out-Host
+    # 1. Services on non-production servers
+    Write-Host "`n  Q1: Services on non-production servers" -ForegroundColor DarkGray
+    $offline = spill -Bucket infra/servers -Filter { $_.Status -ne "production" }
+    $offline | ForEach-Object {
+        $svr = $_
+        spill -Bucket infra/services -Match @{ _ServerRef = $svr._Id }
+    } | Out-Host
 
-# 2. Critical disks (>80%) with server details
-Write-Host "`n  Q2: Critical disks with server details" -ForegroundColor DarkGray
-$critical = spill -Bucket infra/storage -Filter { $_.Use_Pct -ge 80 }
-$critical | ForEach-Object {
-    $disk = $_
-    $svr = spill -Bucket infra/servers -Key $disk._ServerRef
-    [PSCustomObject]@{
-        Server   = $svr.Hostname
-        Mount    = $disk.Mount
-        Used_Pct = $disk.Use_Pct
-        Alert    = $disk.Alert
-    }
-} | Format-Table -AutoSize | Out-Host
+    # 2. Critical disks (>80%) with server details
+    Write-Host "`n  Q2: Critical disks with server details" -ForegroundColor DarkGray
+    $critical = spill -Bucket infra/storage -Filter { $_.Use_Pct -ge 80 }
+    $critical | ForEach-Object {
+        $disk = $_
+        $svr = spill -Bucket infra/servers -Key $disk._ServerRef
+        [PSCustomObject]@{
+            Server   = $svr.Hostname
+            Mount    = $disk.Mount
+            Used_Pct = $disk.Use_Pct
+            Alert    = $disk.Alert
+        }
+    } | Format-Table -AutoSize | Out-Host
 
-# 3. Open incidents with source server details
-Write-Host "`n  Q3: Open incidents with server details" -ForegroundColor DarkGray
-$open = spill -Bucket infra/incidents -Filter { $_.Status -eq "open" }
-$open | ForEach-Object {
-    $inc = $_
-    $svr = spill -Bucket infra/servers -Key $inc._ServerRef
-    [PSCustomObject]@{
-        Severity = $inc.Severity
-        Source   = $inc.Source
-        Message  = $inc.Message
-        Location = $svr.Location
-    }
-} | Format-Table -AutoSize | Out-Host
+    # 3. Open incidents with source server details
+    Write-Host "`n  Q3: Open incidents with server details" -ForegroundColor DarkGray
+    $open = spill -Bucket infra/incidents -Filter { $_.Status -eq "open" }
+    $open | ForEach-Object {
+        $inc = $_
+        $svr = spill -Bucket infra/servers -Key $inc._ServerRef
+        [PSCustomObject]@{
+            Severity = $inc.Severity
+            Source   = $inc.Source
+            Message  = $inc.Message
+            Location = $svr.Location
+        }
+    } | Format-Table -AutoSize | Out-Host
 
-# 4. Failing monitoring checks with container details
-Write-Host "`n  Q4: Failing monitoring checks" -ForegroundColor DarkGray
-$failing = spill -Bucket infra/monitoring -Filter { $_.Status -ne "pass" }
-$failing | ForEach-Object {
-    $check = $_
-    $svr = spill -Bucket infra/servers -Key $check._TargetRef
-    [PSCustomObject]@{
-        CheckType = $check.CheckType
-        Target    = $check.Target
-        Status    = $check.Status
-        Error     = $check.Error
-        Location  = $svr.Location
-    }
-} | Format-Table -AutoSize | Out-Host
+    # 4. Failing monitoring checks with container details
+    Write-Host "`n  Q4: Failing monitoring checks" -ForegroundColor DarkGray
+    $failing = spill -Bucket infra/monitoring -Filter { $_.Status -ne "pass" }
+    $failing | ForEach-Object {
+        $check = $_
+        $svr = spill -Bucket infra/servers -Key $check._TargetRef
+        [PSCustomObject]@{
+            CheckType = $check.CheckType
+            Target    = $check.Target
+            Status    = $check.Status
+            Error     = $check.Error
+            Location  = $svr.Location
+        }
+    } | Format-Table -AutoSize | Out-Host
 
-# 5. Containers by health status
-Write-Host "`n  Q5: Containers by health status" -ForegroundColor DarkGray
-spill -Bucket infra/containers | Group-Object Health | Select-Object Name, Count | Out-Host
+    # 5. Containers by health status
+    Write-Host "`n  Q5: Containers by health status" -ForegroundColor DarkGray
+    spill -Bucket infra/containers | Group-Object Health | Select-Object Name, Count | Out-Host
 
-# 6. Users grouped by department
-Write-Host "`n  Q6: Users by department" -ForegroundColor DarkGray
-spill -Bucket org/users | Group-Object Department | Select-Object Name, Count | Out-Host
+    # 6. Users grouped by department
+    Write-Host "`n  Q6: Users by department" -ForegroundColor DarkGray
+    spill -Bucket org/users | Group-Object Department | Select-Object Name, Count | Out-Host
 
-# 7. Certificates expiring within 90 days
-Write-Host "`n  Q7: Certificates expiring within 90 days" -ForegroundColor DarkGray
-spill -Bucket security/certificates -Filter { $_.DaysLeft -le 90 -and $_.DaysLeft -gt 0 } | Out-Host
+    # 7. Certificates expiring within 90 days
+    Write-Host "`n  Q7: Certificates expiring within 90 days" -ForegroundColor DarkGray
+    spill -Bucket security/certificates -Filter { $_.DaysLeft -le 90 -and $_.DaysLeft -gt 0 } | Out-Host
 
-# 8. Audit log entries grouped by result
-Write-Host "`n  Q8: Audit log by result" -ForegroundColor DarkGray
-spill -Bucket security/audit | Group-Object Result | Select-Object Name, Count | Out-Host
+    # 8. Audit log entries grouped by result
+    Write-Host "`n  Q8: Audit log by result" -ForegroundColor DarkGray
+    spill -Bucket security/audit | Group-Object Result | Select-Object Name, Count | Out-Host
 
-# 9. Server resource totals by location
-Write-Host "`n  Q9: Server resource totals (infra/servers)" -ForegroundColor DarkGray
-spill -Bucket infra/servers | Measure-Object RAM_GB, Disk_GB -Sum | Out-Host
+    # 9. Server resource totals by location
+    Write-Host "`n  Q9: Server resource totals (infra/servers)" -ForegroundColor DarkGray
+    spill -Bucket infra/servers | Measure-Object RAM_GB, Disk_GB -Sum | Out-Host
 
-# 10. Interfaces grouped by speed
-Write-Host "`n  Q10: Interfaces by speed" -ForegroundColor DarkGray
-spill -Bucket network/interfaces | Group-Object Speed_Gbps | Select-Object Name, Count | Out-Host
+    # 10. Interfaces grouped by speed
+    Write-Host "`n  Q10: Interfaces by speed" -ForegroundColor DarkGray
+    spill -Bucket network/interfaces | Group-Object Speed_Gbps | Select-Object Name, Count | Out-Host
 
-# 11. Packages grouped by server
-Write-Host "`n  Q11: Packages by server" -ForegroundColor DarkGray
-spill -Bucket ops/packages | Group-Object _ServerRef | Select-Object Name, Count | Out-Host
+    # 11. Packages grouped by server
+    Write-Host "`n  Q11: Packages by server" -ForegroundColor DarkGray
+    spill -Bucket ops/packages | Group-Object _ServerRef | Select-Object Name, Count | Out-Host
 
-# 12. All services on container hosts
-Write-Host "`n  Q12: Services on container hosts" -ForegroundColor DarkGray
-$containerHosts = spill -Bucket infra/servers -Filter { $_.Role -eq "Container Host" }
-$containerHosts | ForEach-Object {
-    $svr = $_
-    spill -Bucket infra/services -Match @{ _ServerRef = $svr._Id }
-} | Out-Host
+    # 12. All services on container hosts
+    Write-Host "`n  Q12: Services on container hosts" -ForegroundColor DarkGray
+    $containerHosts = spill -Bucket infra/servers -Filter { $_.Role -eq "Container Host" }
+    $containerHosts | ForEach-Object {
+        $svr = $_
+        spill -Bucket infra/services -Match @{ _ServerRef = $svr._Id }
+    } | Out-Host
 
-# 13. Backups referencing database servers
-Write-Host "`n  Q13: Backups for database servers" -ForegroundColor DarkGray
-$dbKeys = (spill -Bucket infra/servers -Filter { $_.Role -eq "Database" })._Id
-spill -Bucket infra/backups | Where-Object {
-    $found = $false
-    foreach ($ref in $_._ServerRefs) { if ($dbKeys -contains $ref) { $found = $true; break } }
-    $found
-} | Out-Host
+    # 13. Backups referencing database servers
+    Write-Host "`n  Q13: Backups for database servers" -ForegroundColor DarkGray
+    $dbKeys = (spill -Bucket infra/servers -Filter { $_.Role -eq "Database" })._Id
+    spill -Bucket infra/backups | Where-Object {
+        $found = $false
+        foreach ($ref in $_._ServerRefs) { if ($dbKeys -contains $ref) { $found = $true; break } }
+        $found
+    } | Out-Host
 
-# 14. Servers with cert refs showing cert expiry
-Write-Host "`n  Q14: Servers with certificate expiry" -ForegroundColor DarkGray
-$hasCert = spill -Bucket infra/servers -Filter { $null -ne $_._CertRef }
-$hasCert | ForEach-Object {
-    $svr = $_
-    $cert = spill -Bucket security/certificates -Key $svr._CertRef
-    [PSCustomObject]@{
-        Server     = $svr.Hostname
-        CertDomain = $cert.Domain
-        Issuer     = $cert.Issuer
-        DaysLeft   = $cert.DaysLeft
-    }
-} | Format-Table -AutoSize | Out-Host
+    # 14. Servers with cert refs showing cert expiry
+    Write-Host "`n  Q14: Servers with certificate expiry" -ForegroundColor DarkGray
+    $hasCert = spill -Bucket infra/servers -Filter { $null -ne $_._CertRef }
+    $hasCert | ForEach-Object {
+        $svr = $_
+        $cert = spill -Bucket security/certificates -Key $svr._CertRef
+        [PSCustomObject]@{
+            Server     = $svr.Hostname
+            CertDomain = $cert.Domain
+            Issuer     = $cert.Issuer
+            DaysLeft   = $cert.DaysLeft
+        }
+    } | Format-Table -AutoSize | Out-Host
 
-# 15. Config profiles grouped by service
-Write-Host "`n  Q15: Configs by service" -ForegroundColor DarkGray
-spill -Bucket ops/configs | Group-Object Service | Select-Object Name, Count | Out-Host
+    # 15. Config profiles grouped by service
+    Write-Host "`n  Q15: Configs by service" -ForegroundColor DarkGray
+    spill -Bucket ops/configs | Group-Object Service | Select-Object Name, Count | Out-Host
 
-Write-Host ""
-Write-InfoBlock -Mode bottom
+    Write-Host ""
+    Write-InfoBlock -Mode bottom
+}
