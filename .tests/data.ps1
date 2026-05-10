@@ -21,6 +21,11 @@ param(
     [switch]$Quiet
 )
 
+if ($Quiet) {
+    function Write-Host { param($Object, [switch]$NoNewline, $ForegroundColor, $BackgroundColor, $Separator) }
+    function Out-Host { param($InputObject) }
+}
+
 Remove-Module Buckets -ErrorAction SilentlyContinue
 Import-Module "$PSScriptRoot/../Buckets" -Force
 
@@ -622,7 +627,7 @@ Write-Host "  Buckets created: $($totalBuckets.Count)" -ForegroundColor DarkGray
 Write-Host "  Objects created: $totalObjects" -ForegroundColor DarkGray
 
 Write-Host "`n[Bucket Overview]" -ForegroundColor Blue
-Get-Bucket -Tree | Select-Object -First 30
+Get-Bucket -Tree | Select-Object -First 30 | Out-Host
 
 # ============================================================
 # Relationship Queries — cross-bucket examples
