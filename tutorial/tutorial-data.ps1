@@ -84,6 +84,58 @@ $alice = @{ Name = "Alice"; Role = "admin"; Score = 95 }
 '@
                                 Code = 'New-BucketObject -InputObject $alice -Bucket users -Key "Alice"'
                             }
+                            @{
+                                Key = "02-keyproperty"
+                                Title = "Auto-keying with -KeyProperty"
+                                Body = @'
+  -KeyProperty uses a property value as the key instead of specifying -Key
+  manually. Pass the property name, and each object's value for that property
+  becomes its filename. Useful when your data already has a natural ID.
+'@
+                                SetupCode = @'
+$users = @(
+    @{ Name = "Alice"; Role = "Developer" }
+    @{ Name = "Bob";   Role = "Designer" }
+    @{ Name = "Carol"; Role = "PM" }
+)
+'@
+                                Code = '$users | fill -Bucket team -KeyProperty Name'
+                            }
+                            @{
+                                Key = "03-asjson"
+                                Title = "JSON format with -AsJson"
+                                Body = @'
+  -AsJson stores objects as .json files instead of binary .dat. JSON files are
+  human-readable and editable in any text editor. Great for config, logs, or any
+  data you want to inspect or diff.
+'@
+                                SetupCode = @'
+$alice = @{ Name = "Alice"; Role = "admin"; Score = 95 }
+'@
+                                Code = @'
+New-BucketObject -InputObject $alice -Bucket config -Key "app-config" -AsJson -Quiet
+Get-ChildItem (Join-Path (Get-BucketRoot) "config")
+'@
+                            }
+                            @{
+                                Key = "04-overwrite"
+                                Title = "Overwriting existing objects"
+                                Body = @'
+  By default, fill skips existing keys to prevent accidental overwrites.
+  Add -Overwrite to replace an existing object. Try saving twice — the
+  second without -Overwrite skips, with -Overwrite replaces.
+'@
+                                SetupCode = @'
+$alice  = @{ Name = "Alice"; Role = "admin";  Score = 95 }
+$alice2 = @{ Name = "Alice"; Role = "manager"; Score = 99 }
+'@
+                                Code = @'
+New-BucketObject -InputObject $alice  -Bucket users -Key "Alice" -Quiet
+New-BucketObject -InputObject $alice2 -Bucket users -Key "Alice" -Quiet
+New-BucketObject -InputObject $alice2 -Bucket users -Key "Alice" -Overwrite -Quiet
+scoop -Bucket users -Key "Alice" | Select-Object Name, Role, Score
+'@
+                            }
                         )
                     }
                     @{
@@ -113,6 +165,67 @@ $teamData | fill -Bucket team -KeyProperty Name -Quiet
 $staffData | fill -Bucket staff -KeyProperty Name -Quiet
 '@
                                 Code = 'scoop'
+                            }
+                            @{
+                                Key = "02-by-key"
+                                Title = "Retrieving a single object"
+                                Body = @'
+  scoop with -Key returns one specific object. Use this when you know
+  the exact key — much faster than filtering.
+'@
+                                SetupCode = @'
+$teamData = @(
+    @{ Name="Alice";   Role="Developer";  Level=3; Score=95 }
+    @{ Name="Bob";     Role="Designer";   Level=2; Score=72 }
+    @{ Name="Carol";   Role="PM";         Level=3; Score=88 }
+    @{ Name="Frank";   Role="Developer";  Level=4; Score=91 }
+)
+$teamData | fill -Bucket team -KeyProperty Name -Quiet
+'@
+                                Code = 'scoop -Bucket team -Key "Alice"'
+                            }
+                            @{
+                                Key = "03-match"
+                                Title = "Filtering with -Match"
+                                Body = @'
+  -Match takes a hashtable and returns objects where all specified
+  properties match (AND logic). Great for quick lookups.
+'@
+                                SetupCode = @'
+$teamData = @(
+    @{ Name="Alice";   Role="Developer";  Level=3; Score=95 }
+    @{ Name="Bob";     Role="Designer";   Level=2; Score=72 }
+    @{ Name="Carol";   Role="PM";         Level=3; Score=88 }
+    @{ Name="Frank";   Role="Developer";  Level=4; Score=91 }
+)
+$teamData | fill -Bucket team -KeyProperty Name -Quiet
+'@
+                                Code = @'
+scoop -Bucket team -Match @{ Role = "Developer" }
+scoop -Bucket team -Match @{ Level = 3 }
+scoop -Bucket team -Match @{ Role = "Developer"; Level = 3 }
+'@
+                            }
+                            @{
+                                Key = "04-filter"
+                                Title = "Filtering with -Filter"
+                                Body = @'
+  -Filter uses a PowerShell scriptblock with $_ for the current object.
+  More flexible than -Match — supports comparisons, operators, any logic.
+'@
+                                SetupCode = @'
+$teamData = @(
+    @{ Name="Alice";   Role="Developer";  Level=3; Score=95 }
+    @{ Name="Bob";     Role="Designer";   Level=2; Score=72 }
+    @{ Name="Carol";   Role="PM";         Level=3; Score=88 }
+    @{ Name="Frank";   Role="Developer";  Level=4; Score=91 }
+)
+$teamData | fill -Bucket team -KeyProperty Name -Quiet
+'@
+                                Code = @'
+scoop -Bucket team -Filter { $_.Level -gt 2 }
+scoop -Bucket team -Filter { $_.Score -ge 90 }
+'@
                             }
                         )
                     }
@@ -145,6 +258,25 @@ scoop -Bucket team -Key "Bob" | ForEach-Object {
 } | Set-BucketObject -PassThru
 '@
                             }
+                            @{
+                                Key = "02-patch"
+                                Title = "Partial update with -InputObject"
+                                Body = @'
+  Pass a hashtable to -InputObject to update only specific properties.
+  Other properties stay untouched — like a partial PATCH in REST APIs.
+'@
+                                SetupCode = @'
+$teamData = @(
+    @{ Name="Alice";   Role="Developer";  Level=3; Score=95 }
+    @{ Name="Bob";     Role="Designer";   Level=2; Score=72 }
+)
+$teamData | fill -Bucket team -KeyProperty Name -Quiet
+'@
+                                Code = @'
+Set-BucketObject -Bucket team -Key "Bob" -InputObject @{ Role = "Lead" } -PassThru
+scoop -Bucket team -Key "Bob"
+'@
+                            }
                         )
                     }
                     @{
@@ -168,6 +300,47 @@ $teamData = @(
 $teamData | fill -Bucket team -KeyProperty Name -Quiet
 '@
                                 Code = 'Remove-BucketObject -Bucket team -Key "Bob" -WhatIf'
+                            }
+                            @{
+                                Key = "02-all"
+                                Title = "Removing all objects with -All"
+                                Body = @'
+  -All removes every object from a bucket in one go. The bucket directory
+  stays. Always safe to preview with -WhatIf first.
+'@
+                                SetupCode = @'
+$teamData = @(
+    @{ Name="Alice"; Role="Developer"; Level=3 }
+    @{ Name="Bob";   Role="Designer";  Level=2 }
+    @{ Name="Carol"; Role="PM";        Level=3 }
+)
+$teamData | fill -Bucket team -KeyProperty Name -Quiet
+'@
+                                Code = @'
+Remove-BucketObject -Bucket team -All -WhatIf
+Remove-BucketObject -Bucket team -All -Quiet
+'@
+                            }
+                            @{
+                                Key = "03-match"
+                                Title = "Filtered removal with -Match"
+                                Body = @'
+  -Match also works on Remove-BucketObject. Deletes only objects
+  whose properties match the hashtable. Useful for bulk cleanup.
+'@
+                                SetupCode = @'
+$teamData = @(
+    @{ Name="Alice"; Role="Developer"; Level=3; Status="active" }
+    @{ Name="Bob";   Role="Designer";  Level=2; Status="archived" }
+    @{ Name="Carol"; Role="PM";        Level=3; Status="active" }
+    @{ Name="Frank"; Role="Developer"; Level=4; Status="archived" }
+)
+$teamData | fill -Bucket team -KeyProperty Name -Quiet
+'@
+                                Code = @'
+Remove-BucketObject -Bucket team -Match @{ Status = "archived" } -WhatIf
+Remove-BucketObject -Bucket team -Match @{ Status = "archived" } -PassThru
+'@
                             }
                         )
                     }
