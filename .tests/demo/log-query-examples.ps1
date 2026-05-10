@@ -45,6 +45,9 @@ function New-DemoLog {
     } | New-BucketObject -Bucket "logs/syslog/$Hostname/$day" -AsTimestamp -AsJson -Compress -Quiet
 }
 
+# Clean previous run
+Remove-Bucket "logs" -Recurse -Force -Confirm:$false -Quiet -ErrorAction SilentlyContinue
+
 $hosts = @("web01", "web02", "db01", "lb01")
 
 # Seed 3 days of data across all hosts
@@ -64,78 +67,83 @@ foreach ($h in $hosts) {
 
 Write-Host "`nDemo data seeded.`n" -ForegroundColor Green
 
+$todayStr = $today.ToString("yyyy/MM/dd")
+$yesterday = $today.AddDays(-1).ToString("yyyy/MM/dd")
+$twoDaysAgo = $today.AddDays(-2).ToString("yyyy/MM/dd")
+$ym = $today.ToString("yyyy/MM")
+
 # ---------- 1. Tree view ----------
 
-Write-Host "1) Tree view of log structure" -ForegroundColor Cyan
+Write-Host "═══ 1. Tree view  ═══════════════════════════════════════" -ForegroundColor Cyan
 Get-Bucket -Tree -Depth 4 logs
 Write-Host ""
 
 # ---------- 2. Recent entries from a host ----------
 
-Write-Host "2) Last 10 entries from web01" -ForegroundColor Cyan
-Get-BucketObject -Bucket "logs/syslog/web01/*" -Recurse -First 10
-Write-Host ""
+Write-Host "═══ 2. Last 10 entries from web01  ═════════════════════" -ForegroundColor Cyan
+Get-BucketObject -Bucket "logs/syslog/web01/*" -Recurse -First 10 |
+    Select-Object Severity, Tag, Message | Format-Table -AutoSize | Out-Host
 
 # ---------- 3. Errors from all hosts (last 2 days) ----------
 
-Write-Host "3) Errors and criticals from all hosts (last 2 days)" -ForegroundColor Cyan
-$yesterday = $today.AddDays(-1).ToString("yyyy/MM/dd")
-Get-BucketObject -Bucket "logs/syslog/*/$yesterday" -Recurse -Filter { $_.Severity -in @("err","crit") }
-Write-Host ""
+Write-Host "═══ 3. Errors+criticals, all hosts ($yesterday)  ═══════" -ForegroundColor Cyan
+Get-BucketObject -Bucket "logs/syslog/*/$yesterday" -Recurse -Filter { $_.Severity -in @("err","crit") } |
+    Select-Object Hostname, Severity, Tag, Message | Format-Table -AutoSize | Out-Host
 
-# ---------- 4. Events by host with count ----------
+# ---------- 4. Event count by host (today) ----------
 
-Write-Host "4) Event count by host (today)" -ForegroundColor Cyan
-$todayStr = $today.ToString("yyyy/MM/dd")
+Write-Host "═══ 4. Event count by host (today)  ════════════════════" -ForegroundColor Cyan
 Get-BucketObject -Bucket "logs/syslog/*/$todayStr" -Recurse |
-    Group-Object Hostname | Select-Object Name, Count
-Write-Host ""
+    Group-Object Hostname | Select-Object @{N="Host";E="Name"}, Count |
+    Format-Table -AutoSize | Out-Host
 
 # ---------- 5. Specific service (sshd) events ----------
 
-Write-Host "5) sshd events on db01" -ForegroundColor Cyan
-Get-BucketObject -Bucket "logs/syslog/db01/*" -Recurse -Filter { $_.Tag -eq "sshd" }
-Write-Host ""
+Write-Host "═══ 5. sshd events on db01  ════════════════════════════" -ForegroundColor Cyan
+Get-BucketObject -Bucket "logs/syslog/db01/*" -Recurse -Filter { $_.Tag -eq "sshd" } |
+    Select-Object Severity, @{N="Msg";E={$_.Message.Substring(0,[Math]::Min(50,$_.Message.Length))}} |
+    Format-Table -AutoSize | Out-Host
 
 # ---------- 6. Date range with wildcards ----------
 
-Write-Host "6) Entries from first 2 days of this month" -ForegroundColor Cyan
-$ym = $today.ToString("yyyy/MM")
-Get-BucketObject -Bucket "logs/syslog/web01/$ym/0*" -Recurse -First 10
-Write-Host ""
+Write-Host "═══ 6. First 5 entries from the day before yesterday  ══" -ForegroundColor Cyan
+Get-BucketObject -Bucket "logs/syslog/web01/$twoDaysAgo" -First 5 |
+    Select-Object Severity, Tag, Message | Format-Table -AutoSize | Out-Host
 
 # ---------- 7. Pagination ----------
 
-Write-Host "7) Paginate: skip 10, take 5 from db01 today" -ForegroundColor Cyan
-Get-BucketObject -Bucket "logs/syslog/db01/$todayStr" -Skip 10 -First 5
-Write-Host ""
+Write-Host "═══ 7. Paginate: skip 3, take 5 from db01  ═════════════" -ForegroundColor Cyan
+Get-BucketObject -Bucket "logs/syslog/db01/$todayStr" -Skip 3 -First 5 |
+    Select-Object Severity, Tag, Message | Format-Table -AutoSize | Out-Host
 
 # ---------- 8. Stats ----------
 
-Write-Host "8) Bucket stats" -ForegroundColor Cyan
-Get-BucketStats -Bucket logs/syslog | Select-Object Name, ObjectCount, TotalSize, OldestObject
-Write-Host ""
+Write-Host "═══ 8. Per-host totals (all dates)  ════════════════════" -ForegroundColor Cyan
+Get-BucketObject -Bucket "logs/syslog/*/*" -Recurse |
+    Group-Object Hostname | Select-Object @{N="Host";E="Name"}, Count |
+    Sort-Object Host | Format-Table -AutoSize | Out-Host
 
-# ---------- 9. Cross-bucket query ----------
+# ---------- 9. Cross-bucket query (criticals) ----------
 
-Write-Host "9) All critical events across all log buckets" -ForegroundColor Cyan
-Get-BucketObject -Bucket "logs/syslog/*/*" -Recurse -Filter { $_.Severity -eq "crit" }
-Write-Host ""
+Write-Host "═══ 9. All critical events (all hosts/all dates)  ══════" -ForegroundColor Cyan
+Get-BucketObject -Bucket "logs/syslog/*/*" -Recurse -Filter { $_.Severity -eq "crit" } |
+    Select-Object Hostname, @{N="Msg";E={$_.Message.Substring(0,[Math]::Min(50,$_.Message.Length))}} |
+    Format-Table -AutoSize -GroupBy Hostname | Out-Host
 
 # ---------- 10. Export for analysis ----------
 
-Write-Host "10) Export all errors to CSV for offline analysis" -ForegroundColor Cyan
+Write-Host "═══ 10. Export errors to CSV  ══════════════════════════" -ForegroundColor Cyan
 $tmpExport = Join-Path ([System.IO.Path]::GetTempPath()) "syslog-errors.csv"
 Get-BucketObject -Bucket "logs/syslog/*/*" -Recurse -Filter { $_.Severity -in @("err","crit") } |
-    Export-Csv -Path $tmpExport -NoTypeInformation
-Write-Host "    Exported to $tmpExport"
+    Select-Object Hostname, Severity, Tag, Message | Export-Csv -Path $tmpExport -NoTypeInformation
+Write-Host "  Exported $((Import-Csv $tmpExport).Count) rows → $tmpExport" -ForegroundColor DarkGray
 Write-Host ""
 
 # ---------- 11. Rotation (dry run) ----------
 
-Write-Host "11) Rotation preview: remove 2-day-old data" -ForegroundColor Cyan
-$twoDaysAgo = $today.AddDays(-2).ToString("yyyy/MM/dd")
-Remove-Bucket -Bucket "logs/syslog/*/$twoDaysAgo" -Recurse -WhatIf
+Write-Host "═══ 11. Rotation preview  ═══════════════════════════════" -ForegroundColor Cyan
+Write-Host "  WhatIf: remove-bucket ""logs/syslog/*/$twoDaysAgo""" -ForegroundColor DarkGray
+Remove-Bucket -Bucket "logs/syslog/*/$twoDaysAgo" -Recurse -WhatIf 2>&1 | Out-Host
 Write-Host ""
 
 Write-Host "All query patterns completed." -ForegroundColor Green
