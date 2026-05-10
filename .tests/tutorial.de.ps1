@@ -225,7 +225,7 @@ if ($mode -eq "0" -or $mode -eq "4") {
     cls
     # ========== Einfuehrung ==========
     Write-Host ""
-    Write-Host "  0. Einfuehrung" -ForegroundColor Cyan
+    Write-Host "  0. Einfuehrung" -ForegroundColor Gray
     Write-Host "  $Sep" -ForegroundColor DarkGray
     Write-Host ""
 
@@ -310,7 +310,7 @@ if ($Beg) {
 # ---------- chapter 1: Create ----------
 
 Write-Host ""
-Write-Host "  1. Erstellen" -ForegroundColor Cyan
+Write-Host "  1. Erstellen" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  1.1 Ihr erstes Objekt speichern" -ForegroundColor DarkGray
@@ -473,7 +473,7 @@ if ($Beg) {
 
 cls
 Write-Host ""
-Write-Host "  1b. Erstellen — leise, ausführlich und Randfälle" -ForegroundColor Cyan
+Write-Host "  1b. Erstellen — leise, ausführlich und Randfälle" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  1b.1 Leise und ausführliche Ausgabe" -ForegroundColor DarkGray
@@ -586,7 +586,7 @@ if ($Beg) {
 
 cls
 Write-Host ""
-Write-Host "  2. Lesen — scoop / Get-BucketObject" -ForegroundColor Cyan
+Write-Host "  2. Lesen — scoop / Get-BucketObject" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  2.1 Alle Objekte anzeigen (scoop)" -ForegroundColor DarkGray
@@ -796,7 +796,7 @@ if ($Beg) {
 
 cls
 Write-Host ""
-Write-Host "  2a. Lesen — filtern mit -Match" -ForegroundColor Cyan
+Write-Host "  2a. Lesen — filtern mit -Match" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  2a.1 Exakte übereinstimmung" -ForegroundColor DarkGray
@@ -925,7 +925,7 @@ if ($Beg) {
 
 cls
 Write-Host ""
-Write-Host "  2b. Lesen — vergleichen mit -Filter" -ForegroundColor Cyan
+Write-Host "  2b. Lesen — vergleichen mit -Filter" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  2b.1 Filtern mit Scriptblock" -ForegroundColor DarkGray
@@ -1106,7 +1106,7 @@ if ($Beg) {
 
 cls
 Write-Host ""
-Write-Host "  2c. Lesen — Seitenwechsel mit -First / -Skip" -ForegroundColor Cyan
+Write-Host "  2c. Lesen — Seitenwechsel mit -First / -Skip" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  2c.1 Ergebnisse begrenzen mit -First" -ForegroundColor DarkGray
@@ -1162,7 +1162,7 @@ if ($Beg) {
 
 cls
 Write-Host ""
-Write-Host "  3. Aktualisieren — Set-BucketObject" -ForegroundColor Cyan
+Write-Host "  3. Aktualisieren — Set-BucketObject" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  3.1 Aktualisierung über die Pipeline" -ForegroundColor DarkGray
@@ -1308,7 +1308,7 @@ if ($Beg) {
 
 cls
 Write-Host ""
-Write-Host "  4. Löschen — Remove-BucketObject" -ForegroundColor Cyan
+Write-Host "  4. Löschen — Remove-BucketObject" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  4.1 Vorschau mit -WhatIf" -ForegroundColor DarkGray
@@ -1452,7 +1452,7 @@ if ($Adv) {
 
 cls
 Write-Host ""
-Write-Host "  5. Objektoperationen — Kopieren, Umbenennen, Verschieben" -ForegroundColor Cyan
+Write-Host "  5. Objektoperationen — Kopieren, Umbenennen, Verschieben" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  5.1 Innerhalb eines Buckets kopieren" -ForegroundColor DarkGray
@@ -1634,7 +1634,7 @@ if ($Adv) {
 
 cls
 Write-Host ""
-Write-Host "  6. Bucket-Verwaltung — dip / Get-Bucket" -ForegroundColor Cyan
+Write-Host "  6. Bucket-Verwaltung — dip / Get-Bucket" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  6.1 Buckets mit dip auflisten" -ForegroundColor DarkGray
@@ -1885,7 +1885,7 @@ if ($Adv) {
 
 cls
 Write-Host ""
-Write-Host "  6a. Remove-Bucket — Sicherheit und Platzhalter" -ForegroundColor Cyan
+Write-Host "  6a. Remove-Bucket — Sicherheit und Platzhalter" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  6a.1 Entfernen Vorschau" -ForegroundColor DarkGray
@@ -1966,7 +1966,7 @@ if ($Adv) {
 
 cls
 Write-Host ""
-Write-Host "  7. Export / Import — Export-Bucket, Import-Bucket" -ForegroundColor Cyan
+Write-Host "  7. Export / Import — Export-Bucket, Import-Bucket" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 
@@ -2094,7 +2094,7 @@ if ($Adv) {
 
 cls
 Write-Host ""
-Write-Host "  8. PSDrive — Buckets wie ein Dateisystem durchsuchen" -ForegroundColor Cyan
+Write-Host "  8. PSDrive — Buckets wie ein Dateisystem durchsuchen" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  8.1 Das buckets:-Laufwerk" -ForegroundColor DarkGray
@@ -2284,7 +2284,7 @@ if ($Adv) {
 
 cls
 Write-Host ""
-Write-Host "  9. Verschachtelte Buckets — Verzeichnishierarchie" -ForegroundColor Cyan
+Write-Host "  9. Verschachtelte Buckets — Verzeichnishierarchie" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  9.1 Verschachtelte Buckets erstellen" -ForegroundColor DarkGray
@@ -2580,7 +2580,7 @@ if ($Adv) {
 
 cls
 Write-Host ""
-Write-Host "  10. Eleganter Pipeline-Einsatz" -ForegroundColor Cyan
+Write-Host "  10. Eleganter Pipeline-Einsatz" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  10.1 Erzeugen und speichern" -ForegroundColor DarkGray
@@ -2812,7 +2812,7 @@ if ($Adv) {
 
 cls
 Write-Host ""
-Write-Host "  11. Aliase & Shortcuts Referenz" -ForegroundColor Cyan
+Write-Host "  11. Aliase & Shortcuts Referenz" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 
@@ -2848,7 +2848,7 @@ if ($Sys) {
 
 cls
 Write-Host ""
-Write-Host "  12. Sysadmin-Szenarien" -ForegroundColor Cyan
+Write-Host "  12. Sysadmin-Szenarien" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 
@@ -3084,7 +3084,7 @@ tut-pause
 
 cls
 Write-Host ""
-Write-Host "  Herzlichen Glückwunsch!" -ForegroundColor Cyan
+Write-Host "  Herzlichen Glückwunsch!" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 

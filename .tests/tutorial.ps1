@@ -237,7 +237,7 @@ if ($mode -eq "0" -or $mode -eq "4") {
     cls
     # ========== Introduction ==========
     Write-Host ""
-    Write-Host "  0. Introduction" -ForegroundColor Cyan
+    Write-Host "  0. Introduction" -ForegroundColor Gray
     Write-Host "  $Sep" -ForegroundColor DarkGray
     Write-Host ""
 
@@ -322,7 +322,7 @@ if ($Beg) {
 # ---------- chapter 1: Create ----------
 
 Write-Host ""
-Write-Host "  1. Create" -ForegroundColor Cyan
+Write-Host "  1. Create" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  1.1 Saving your first object" -ForegroundColor DarkGray
@@ -485,7 +485,7 @@ if ($Beg) {
 
 cls
 Write-Host ""
-Write-Host "  1b. Create — quiet, verbose, and edge cases" -ForegroundColor Cyan
+Write-Host "  1b. Create — quiet, verbose, and edge cases" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  1b.1 Quiet and verbose output" -ForegroundColor DarkGray
@@ -599,7 +599,7 @@ if ($Beg) {
 
 cls
 Write-Host ""
-Write-Host "  2. Read — scoop / Get-BucketObject" -ForegroundColor Cyan
+Write-Host "  2. Read — scoop / Get-BucketObject" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  2.1 Spilling all objects" -ForegroundColor DarkGray
@@ -811,7 +811,7 @@ if ($Beg) {
 
 cls
 Write-Host ""
-Write-Host "  2a. Read — filtering with -Match" -ForegroundColor Cyan
+Write-Host "  2a. Read — filtering with -Match" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  2a.1 Exact match filtering" -ForegroundColor DarkGray
@@ -942,7 +942,7 @@ if ($Beg) {
 
 cls
 Write-Host ""
-Write-Host "  2b. Read — comparison with -Filter" -ForegroundColor Cyan
+Write-Host "  2b. Read — comparison with -Filter" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  2b.1 Scriptblock filtering" -ForegroundColor DarkGray
@@ -1123,7 +1123,7 @@ if ($Beg) {
 
 cls
 Write-Host ""
-Write-Host "  2c. Read — pagination with -First / -Skip" -ForegroundColor Cyan
+Write-Host "  2c. Read — pagination with -First / -Skip" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  2c.1 Limiting results with -First" -ForegroundColor DarkGray
@@ -1179,7 +1179,7 @@ if ($Beg) {
 
 cls
 Write-Host ""
-Write-Host "  3. Update — Set-BucketObject" -ForegroundColor Cyan
+Write-Host "  3. Update — Set-BucketObject" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  3.1 Pipeline update with Set-BucketObject" -ForegroundColor DarkGray
@@ -1325,7 +1325,7 @@ if ($Beg) {
 
 cls
 Write-Host ""
-Write-Host "  4. Delete — Remove-BucketObject" -ForegroundColor Cyan
+Write-Host "  4. Delete — Remove-BucketObject" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  4.1 Preview with -WhatIf" -ForegroundColor DarkGray
@@ -1469,7 +1469,7 @@ if ($Adv) {
 
 cls
 Write-Host ""
-Write-Host "  5. Object Operations — Copy, Rename, Move" -ForegroundColor Cyan
+Write-Host "  5. Object Operations — Copy, Rename, Move" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  5.1 Copy within a bucket" -ForegroundColor DarkGray
@@ -1652,7 +1652,7 @@ if ($Adv) {
 
 cls
 Write-Host ""
-Write-Host "  6. Bucket Management — dip / Get-Bucket" -ForegroundColor Cyan
+Write-Host "  6. Bucket Management — dip / Get-Bucket" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  6.1 Listing buckets with dip" -ForegroundColor DarkGray
@@ -1904,7 +1904,7 @@ if ($Adv) {
 
 cls
 Write-Host ""
-Write-Host "  6a. Remove-Bucket — safety and wildcards" -ForegroundColor Cyan
+Write-Host "  6a. Remove-Bucket — safety and wildcards" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  6a.1 Preview removal" -ForegroundColor DarkGray
@@ -1985,7 +1985,7 @@ if ($Adv) {
 
 cls
 Write-Host ""
-Write-Host "  7. Export / Import — Export-Bucket, Import-Bucket" -ForegroundColor Cyan
+Write-Host "  7. Export / Import — Export-Bucket, Import-Bucket" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 
@@ -2113,7 +2113,7 @@ if ($Adv) {
 
 cls
 Write-Host ""
-Write-Host "  8. PSDrive — navigate buckets like a filesystem" -ForegroundColor Cyan
+Write-Host "  8. PSDrive — navigate buckets like a filesystem" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  8.1 The buckets: drive" -ForegroundColor DarkGray
@@ -2304,7 +2304,7 @@ if ($Adv) {
 
 cls
 Write-Host ""
-Write-Host "  9. Nested Buckets — directory hierarchy" -ForegroundColor Cyan
+Write-Host "  9. Nested Buckets — directory hierarchy" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  9.1 Creating nested buckets" -ForegroundColor DarkGray
@@ -2600,7 +2600,7 @@ if ($Adv) {
 
 cls
 Write-Host ""
-Write-Host "  10. Sleek Pipeline Patterns" -ForegroundColor Cyan
+Write-Host "  10. Sleek Pipeline Patterns" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "  10.1 Generate and fill" -ForegroundColor DarkGray
@@ -2832,7 +2832,7 @@ if ($Adv) {
 
 cls
 Write-Host ""
-Write-Host "  11. Aliases & Shortcuts Reference" -ForegroundColor Cyan
+Write-Host "  11. Aliases & Shortcuts Reference" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 
@@ -2868,7 +2868,7 @@ if ($Sys) {
 
 cls
 Write-Host ""
-Write-Host "  12. Sysadmin Scenarios" -ForegroundColor Cyan
+Write-Host "  12. Sysadmin Scenarios" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 
@@ -3104,7 +3104,7 @@ tut-pause
 
 cls
 Write-Host ""
-Write-Host "  Congratulations!" -ForegroundColor Cyan
+Write-Host "  Congratulations!" -ForegroundColor Gray
 Write-Host "  $Sep" -ForegroundColor DarkGray
 Write-Host ""
 

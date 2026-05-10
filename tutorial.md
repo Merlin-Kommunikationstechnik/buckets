@@ -354,37 +354,37 @@ scoop -Bucket team
 
 ```
 
-Role   : Developer
 Score  : 95
 Level  : 3
 Name   : Alice
-Active : True
-Joined : 10.05.2025 19:48:39
 Skills : {PowerShell, C#, Azure}
+Active : True
+Joined : 10.05.2025 20:52:01
+Role   : Developer
 
-Role   : Designer
 Score  : 72
 Level  : 2
 Name   : Bob
-Active : True
-Joined : 11.11.2025 19:48:39
 Skills : {Figma, CSS, HTML}
+Active : True
+Joined : 11.11.2025 20:52:01
+Role   : Designer
 
-Role   : PM
 Score  : 88
 Level  : 3
 Name   : Carol
-Active : True
-Joined : 09.02.2026 19:48:39
 Skills : {Agile, Jira, Confluence}
+Active : True
+Joined : 09.02.2026 20:52:01
+Role   : PM
 
-Role   : Developer
 Score  : 91
 Level  : 4
 Name   : Frank
-Active : True
-Joined : 26.12.2024 19:48:39
 Skills : {Rust, Go, Kubernetes}
+Active : True
+Joined : 26.12.2024 20:52:01
+Role   : Developer
 ```
 
 ### 2.3 Positional bucket lookup
@@ -400,37 +400,37 @@ scoop team
 
 ```
 
-Role   : Developer
 Score  : 95
 Level  : 3
 Name   : Alice
-Active : True
-Joined : 10.05.2025 19:48:39
 Skills : {PowerShell, C#, Azure}
+Active : True
+Joined : 10.05.2025 20:52:01
+Role   : Developer
 
-Role   : Designer
 Score  : 72
 Level  : 2
 Name   : Bob
-Active : True
-Joined : 11.11.2025 19:48:39
 Skills : {Figma, CSS, HTML}
+Active : True
+Joined : 11.11.2025 20:52:01
+Role   : Designer
 
-Role   : PM
 Score  : 88
 Level  : 3
 Name   : Carol
-Active : True
-Joined : 09.02.2026 19:48:39
 Skills : {Agile, Jira, Confluence}
+Active : True
+Joined : 09.02.2026 20:52:01
+Role   : PM
 
-Role   : Developer
 Score  : 91
 Level  : 4
 Name   : Frank
-Active : True
-Joined : 26.12.2024 19:48:39
 Skills : {Rust, Go, Kubernetes}
+Active : True
+Joined : 26.12.2024 20:52:01
+Role   : Developer
 ```
 
 ### 2.4 Key lookup by name
@@ -446,13 +446,13 @@ scoop team "Alice"
 
 ```
 
-Role   : Developer
 Score  : 95
 Level  : 3
 Name   : Alice
-Active : True
-Joined : 10.05.2025 19:48:39
 Skills : {PowerShell, C#, Azure}
+Active : True
+Joined : 10.05.2025 20:52:01
+Role   : Developer
 ```
 
 ### 2.5 Exact key retrieval
@@ -467,13 +467,13 @@ scoop team -Key "Frank"
 
 ```
 
-Role   : Developer
 Score  : 91
 Level  : 4
 Name   : Frank
-Active : True
-Joined : 26.12.2024 19:48:39
 Skills : {Rust, Go, Kubernetes}
+Active : True
+Joined : 26.12.2024 20:52:01
+Role   : Developer
 ```
 
 ### 2.6 Case-insensitive matching
@@ -489,13 +489,13 @@ scoop team -Key "alice"
 
 ```
 
-Role   : Developer
 Score  : 95
 Level  : 3
 Name   : Alice
-Active : True
-Joined : 10.05.2025 19:48:39
 Skills : {PowerShell, C#, Azure}
+Active : True
+Joined : 10.05.2025 20:52:01
+Role   : Developer
 ```
 
 ### 2.7 Handling missing keys
@@ -523,37 +523,37 @@ scoop -Bucket "t*"
 
 ```
 
-Role   : Developer
 Score  : 95
 Level  : 3
 Name   : Alice
-Active : True
-Joined : 10.05.2025 19:48:39
 Skills : {PowerShell, C#, Azure}
+Active : True
+Joined : 10.05.2025 20:52:01
+Role   : Developer
 
-Role   : Designer
 Score  : 72
 Level  : 2
 Name   : Bob
-Active : True
-Joined : 11.11.2025 19:48:39
 Skills : {Figma, CSS, HTML}
+Active : True
+Joined : 11.11.2025 20:52:01
+Role   : Designer
 
-Role   : PM
 Score  : 88
 Level  : 3
 Name   : Carol
-Active : True
-Joined : 09.02.2026 19:48:39
 Skills : {Agile, Jira, Confluence}
+Active : True
+Joined : 09.02.2026 20:52:01
+Role   : PM
 
-Role   : Developer
 Score  : 91
 Level  : 4
 Name   : Frank
-Active : True
-Joined : 26.12.2024 19:48:39
 Skills : {Rust, Go, Kubernetes}
+Active : True
+Joined : 26.12.2024 20:52:01
+Role   : Developer
 
 Type    : PSCustomObject
 Ordered : True
@@ -574,53 +574,53 @@ scoop -Bucket "team", "staff"
 
 ```
 
-Role   : Developer
 Score  : 95
 Level  : 3
 Name   : Alice
-Active : True
-Joined : 10.05.2025 19:48:39
 Skills : {PowerShell, C#, Azure}
+Active : True
+Joined : 10.05.2025 20:52:01
+Role   : Developer
 
-Role   : Designer
 Score  : 72
 Level  : 2
 Name   : Bob
-Active : True
-Joined : 11.11.2025 19:48:39
 Skills : {Figma, CSS, HTML}
+Active : True
+Joined : 11.11.2025 20:52:01
+Role   : Designer
 
-Role   : PM
 Score  : 88
 Level  : 3
 Name   : Carol
-Active : True
-Joined : 09.02.2026 19:48:39
 Skills : {Agile, Jira, Confluence}
+Active : True
+Joined : 09.02.2026 20:52:01
+Role   : PM
 
-Role   : Developer
 Score  : 91
 Level  : 4
 Name   : Frank
-Active : True
-Joined : 26.12.2024 19:48:39
 Skills : {Rust, Go, Kubernetes}
+Active : True
+Joined : 26.12.2024 20:52:01
+Role   : Developer
 
-Role   : HR
 Active : True
 Name   : Dana
+Role   : HR
 Level  : 2
 Score  : 70
 
-Role   : Finance
 Active : True
 Name   : Eric
+Role   : Finance
 Level  : 3
 Score  : 82
 
-Role   : Marketing
 Active : False
 Name   : Gina
+Role   : Marketing
 Level  : 1
 Score  : 65
 ```
@@ -698,21 +698,21 @@ scoop -Bucket team -Match @{ Role = "Developer" }
 
 ```
 
-Role   : Developer
 Score  : 95
 Level  : 3
 Name   : Alice
-Active : True
-Joined : 10.05.2025 19:48:39
 Skills : {PowerShell, C#, Azure}
-
+Active : True
+Joined : 10.05.2025 20:52:01
 Role   : Developer
+
 Score  : 91
 Level  : 4
 Name   : Frank
-Active : True
-Joined : 26.12.2024 19:48:39
 Skills : {Rust, Go, Kubernetes}
+Active : True
+Joined : 26.12.2024 20:52:01
+Role   : Developer
 ```
 
 ### 2a.2 Matching null values
@@ -729,37 +729,37 @@ scoop -Bucket team -Match @{ Deleted = $null }
 
 ```
 
-Role   : Developer
 Score  : 95
 Level  : 3
 Name   : Alice
-Active : True
-Joined : 10.05.2025 19:48:39
 Skills : {PowerShell, C#, Azure}
+Active : True
+Joined : 10.05.2025 20:52:01
+Role   : Developer
 
-Role   : Designer
 Score  : 72
 Level  : 2
 Name   : Bob
-Active : True
-Joined : 11.11.2025 19:48:39
 Skills : {Figma, CSS, HTML}
+Active : True
+Joined : 11.11.2025 20:52:01
+Role   : Designer
 
-Role   : PM
 Score  : 88
 Level  : 3
 Name   : Carol
-Active : True
-Joined : 09.02.2026 19:48:39
 Skills : {Agile, Jira, Confluence}
+Active : True
+Joined : 09.02.2026 20:52:01
+Role   : PM
 
-Role   : Developer
 Score  : 91
 Level  : 4
 Name   : Frank
-Active : True
-Joined : 26.12.2024 19:48:39
 Skills : {Rust, Go, Kubernetes}
+Active : True
+Joined : 26.12.2024 20:52:01
+Role   : Developer
 ```
 
 ### 2a.3 Multi-property matching
@@ -775,21 +775,21 @@ scoop -Bucket team -Match @{ Level = 3; Active = $true }
 
 ```
 
-Role   : Developer
 Score  : 95
 Level  : 3
 Name   : Alice
-Active : True
-Joined : 10.05.2025 19:48:39
 Skills : {PowerShell, C#, Azure}
+Active : True
+Joined : 10.05.2025 20:52:01
+Role   : Developer
 
-Role   : PM
 Score  : 88
 Level  : 3
 Name   : Carol
-Active : True
-Joined : 09.02.2026 19:48:39
 Skills : {Agile, Jira, Confluence}
+Active : True
+Joined : 09.02.2026 20:52:01
+Role   : PM
 ```
 
 ### 2a.4 Mixed type matching
@@ -811,10 +811,10 @@ scoop -Bucket match-demo -Match @{ Count = 5; Active = $true }
 
 ```
 
-Count Active Name
------ ------ ----
-  5   True A
-  5   True C
+Active Count Name
+------ ----- ----
+True     5 A
+True     5 C
 ```
 
 ### 2a.5 Case-insensitive string matching
@@ -873,29 +873,29 @@ scoop -Bucket team -Filter { $_.Score -gt 80 }
 
 ```
 
-Role   : Developer
 Score  : 95
 Level  : 3
 Name   : Alice
-Active : True
-Joined : 10.05.2025 19:48:39
 Skills : {PowerShell, C#, Azure}
+Active : True
+Joined : 10.05.2025 20:52:01
+Role   : Developer
 
-Role   : PM
 Score  : 88
 Level  : 3
 Name   : Carol
-Active : True
-Joined : 09.02.2026 19:48:39
 Skills : {Agile, Jira, Confluence}
+Active : True
+Joined : 09.02.2026 20:52:01
+Role   : PM
 
-Role   : Developer
 Score  : 91
 Level  : 4
 Name   : Frank
-Active : True
-Joined : 26.12.2024 19:48:39
 Skills : {Rust, Go, Kubernetes}
+Active : True
+Joined : 26.12.2024 20:52:01
+Role   : Developer
 ```
 
 ### 2b.2 Less-than-or-equal comparison
@@ -911,21 +911,21 @@ scoop -Bucket team -Filter { $_.Score -le 90 }
 
 ```
 
-Role   : Designer
 Score  : 72
 Level  : 2
 Name   : Bob
-Active : True
-Joined : 11.11.2025 19:48:39
 Skills : {Figma, CSS, HTML}
+Active : True
+Joined : 11.11.2025 20:52:01
+Role   : Designer
 
-Role   : PM
 Score  : 88
 Level  : 3
 Name   : Carol
-Active : True
-Joined : 09.02.2026 19:48:39
 Skills : {Agile, Jira, Confluence}
+Active : True
+Joined : 09.02.2026 20:52:01
+Role   : PM
 ```
 
 ### 2b.3 Regex pattern matching
@@ -941,13 +941,13 @@ scoop -Bucket team -Filter { $_.Name -match "^[AE]" }
 
 ```
 
-Role   : Developer
 Score  : 95
 Level  : 3
 Name   : Alice
-Active : True
-Joined : 10.05.2025 19:48:39
 Skills : {PowerShell, C#, Azure}
+Active : True
+Joined : 10.05.2025 20:52:01
+Role   : Developer
 ```
 
 ### 2b.4 Wildcard matching with -like
@@ -963,13 +963,13 @@ scoop -Bucket team -Filter { $_.Name -like "*e*" }
 
 ```
 
-Role   : Developer
 Score  : 95
 Level  : 3
 Name   : Alice
-Active : True
-Joined : 10.05.2025 19:48:39
 Skills : {PowerShell, C#, Azure}
+Active : True
+Joined : 10.05.2025 20:52:01
+Role   : Developer
 ```
 
 ### 2b.5 Combining conditions with -and
@@ -985,21 +985,21 @@ scoop -Bucket team -Filter { $_.Score -gt 80 -and $_.Role -eq "Developer" }
 
 ```
 
-Role   : Developer
 Score  : 95
 Level  : 3
 Name   : Alice
-Active : True
-Joined : 10.05.2025 19:48:39
 Skills : {PowerShell, C#, Azure}
-
+Active : True
+Joined : 10.05.2025 20:52:01
 Role   : Developer
+
 Score  : 91
 Level  : 4
 Name   : Frank
-Active : True
-Joined : 26.12.2024 19:48:39
 Skills : {Rust, Go, Kubernetes}
+Active : True
+Joined : 26.12.2024 20:52:01
+Role   : Developer
 ```
 
 ### 2b.6 Combining conditions with -or
@@ -1014,21 +1014,21 @@ scoop -Bucket team -Filter { $_.Role -eq "Designer" -or $_.Level -gt 3 }
 
 ```
 
-Role   : Designer
 Score  : 72
 Level  : 2
 Name   : Bob
-Active : True
-Joined : 11.11.2025 19:48:39
 Skills : {Figma, CSS, HTML}
+Active : True
+Joined : 11.11.2025 20:52:01
+Role   : Designer
 
-Role   : Developer
 Score  : 91
 Level  : 4
 Name   : Frank
-Active : True
-Joined : 26.12.2024 19:48:39
 Skills : {Rust, Go, Kubernetes}
+Active : True
+Joined : 26.12.2024 20:52:01
+Role   : Developer
 ```
 
 ### 2b.7 String length checks
@@ -1049,9 +1049,9 @@ scoop -Bucket str-test -Filter { $_.Value.Length -gt 5 }
 
 ```
 
-Name Value
----- -----
-long abcdefghijk
+Value       Name
+-----       ----
+abcdefghijk long
 ```
 
 ### 2b.8 Date comparisons
@@ -1068,13 +1068,13 @@ scoop -Bucket team -Filter { $_.Joined -gt $cutoff }
 
 ```
 
-Role   : PM
 Score  : 88
 Level  : 3
 Name   : Carol
-Active : True
-Joined : 09.02.2026 19:48:39
 Skills : {Agile, Jira, Confluence}
+Active : True
+Joined : 09.02.2026 20:52:01
+Role   : PM
 ```
 
 ### 2b.9 Nested property access
@@ -1090,13 +1090,13 @@ scoop -Bucket team -Filter { $_.Skills -contains "Rust" }
 
 ```
 
-Role   : Developer
 Score  : 91
 Level  : 4
 Name   : Frank
-Active : True
-Joined : 26.12.2024 19:48:39
 Skills : {Rust, Go, Kubernetes}
+Active : True
+Joined : 26.12.2024 20:52:01
+Role   : Developer
 ```
 
 ### 2b.10 Cross-bucket filtering
@@ -1140,29 +1140,29 @@ scoop -Bucket team -First 3
 
 ```
 
-Role   : Developer
 Score  : 95
 Level  : 3
 Name   : Alice
-Active : True
-Joined : 10.05.2025 19:48:39
 Skills : {PowerShell, C#, Azure}
+Active : True
+Joined : 10.05.2025 20:52:01
+Role   : Developer
 
-Role   : Designer
 Score  : 72
 Level  : 2
 Name   : Bob
-Active : True
-Joined : 11.11.2025 19:48:39
 Skills : {Figma, CSS, HTML}
+Active : True
+Joined : 11.11.2025 20:52:01
+Role   : Designer
 
-Role   : PM
 Score  : 88
 Level  : 3
 Name   : Carol
-Active : True
-Joined : 09.02.2026 19:48:39
 Skills : {Agile, Jira, Confluence}
+Active : True
+Joined : 09.02.2026 20:52:01
+Role   : PM
 ```
 
 ### 2c.2 Skipping results with -Skip
@@ -1178,29 +1178,29 @@ scoop -Bucket team -Skip 1 -First 3
 
 ```
 
-Role   : Designer
 Score  : 72
 Level  : 2
 Name   : Bob
-Active : True
-Joined : 11.11.2025 19:48:39
 Skills : {Figma, CSS, HTML}
+Active : True
+Joined : 11.11.2025 20:52:01
+Role   : Designer
 
-Role   : PM
 Score  : 88
 Level  : 3
 Name   : Carol
-Active : True
-Joined : 09.02.2026 19:48:39
 Skills : {Agile, Jira, Confluence}
+Active : True
+Joined : 09.02.2026 20:52:01
+Role   : PM
 
-Role   : Developer
 Score  : 91
 Level  : 4
 Name   : Frank
-Active : True
-Joined : 26.12.2024 19:48:39
 Skills : {Rust, Go, Kubernetes}
+Active : True
+Joined : 26.12.2024 20:52:01
+Role   : Developer
 ```
 
 ### 2c.3 Filtering with pagination
@@ -1216,29 +1216,29 @@ scoop -Bucket team -Filter { $_.Score -gt 70 } -First 3
 
 ```
 
-Role   : Developer
 Score  : 95
 Level  : 3
 Name   : Alice
-Active : True
-Joined : 10.05.2025 19:48:39
 Skills : {PowerShell, C#, Azure}
+Active : True
+Joined : 10.05.2025 20:52:01
+Role   : Developer
 
-Role   : Designer
 Score  : 72
 Level  : 2
 Name   : Bob
-Active : True
-Joined : 11.11.2025 19:48:39
 Skills : {Figma, CSS, HTML}
+Active : True
+Joined : 11.11.2025 20:52:01
+Role   : Designer
 
-Role   : PM
 Score  : 88
 Level  : 3
 Name   : Carol
-Active : True
-Joined : 09.02.2026 19:48:39
 Skills : {Agile, Jira, Confluence}
+Active : True
+Joined : 09.02.2026 20:52:01
+Role   : PM
 ```
 
 ## 3. Update — Set-BucketObject
@@ -1372,32 +1372,32 @@ scoop -Bucket team
 
 ```
 
-Role   : Developer
 Score  : 95
 Level  : 3
 Name   : Alice
-Active : True
-Joined : 10.05.2025 19:48:39
 Skills : {PowerShell, C#, Azure}
+Active : True
+Joined : 10.05.2025 20:52:01
+Role   : Developer
 Email  : alice@contoso.com
 Phone  : 555-0100
 City   : Portland
 
-Role   : PM
 Score  : 100
 Level  : 3
 Name   : Carol
-Active : True
-Joined : 09.02.2026 19:48:39
 Skills : {Agile, Jira, Confluence}
+Active : True
+Joined : 09.02.2026 20:52:01
+Role   : PM
 
-Role   : Developer
 Score  : 91
 Level  : 4
 Name   : Frank
-Active : True
-Joined : 26.12.2024 19:48:39
 Skills : {Rust, Go, Kubernetes}
+Active : True
+Joined : 26.12.2024 20:52:01
+Role   : Developer
 ```
 
 ### 4.3 Deleting non-existent key
@@ -1438,40 +1438,40 @@ scoop -Bucket team
 
 ```
 
-Role   : Developer
 Score  : 95
 Level  : 3
 Name   : Alice
-Active : True
-Joined : 10.05.2025 19:48:39
 Skills : {PowerShell, C#, Azure}
+Active : True
+Joined : 10.05.2025 20:52:01
+Role   : Developer
 Email  : alice@contoso.com
 Phone  : 555-0100
 City   : Portland
 
-Role   : Designer
 Score  : 72
 Level  : 2
 Name   : Bob
-Active : True
-Joined : 11.11.2025 19:48:39
 Skills : {Figma, CSS, HTML}
+Active : True
+Joined : 11.11.2025 20:52:01
+Role   : Designer
 
-Role   : PM
 Score  : 100
 Level  : 3
 Name   : Carol
-Active : True
-Joined : 09.02.2026 19:48:39
 Skills : {Agile, Jira, Confluence}
+Active : True
+Joined : 09.02.2026 20:52:01
+Role   : PM
 
-Role   : Developer
 Score  : 91
 Level  : 4
 Name   : Frank
-Active : True
-Joined : 26.12.2024 19:48:39
 Skills : {Rust, Go, Kubernetes}
+Active : True
+Joined : 26.12.2024 20:52:01
+Role   : Developer
 ```
 
 ### 4.6 Delete with -Filter
@@ -1488,40 +1488,40 @@ scoop -Bucket team
 
 ```
 
-Role   : Developer
 Score  : 95
 Level  : 3
 Name   : Alice
-Active : True
-Joined : 10.05.2025 19:48:39
 Skills : {PowerShell, C#, Azure}
+Active : True
+Joined : 10.05.2025 20:52:01
+Role   : Developer
 Email  : alice@contoso.com
 Phone  : 555-0100
 City   : Portland
 
-Role   : Designer
 Score  : 72
 Level  : 2
 Name   : Bob
-Active : True
-Joined : 11.11.2025 19:48:39
 Skills : {Figma, CSS, HTML}
+Active : True
+Joined : 11.11.2025 20:52:01
+Role   : Designer
 
-Role   : PM
 Score  : 100
 Level  : 3
 Name   : Carol
-Active : True
-Joined : 09.02.2026 19:48:39
 Skills : {Agile, Jira, Confluence}
+Active : True
+Joined : 09.02.2026 20:52:01
+Role   : PM
 
-Role   : Developer
 Score  : 91
 Level  : 4
 Name   : Frank
-Active : True
-Joined : 26.12.2024 19:48:39
 Skills : {Rust, Go, Kubernetes}
+Active : True
+Joined : 26.12.2024 20:52:01
+Role   : Developer
 ```
 
 ### 4.7 Delete all with -All
@@ -1573,13 +1573,13 @@ scoop -Bucket team -Key "Alice-Backup"
 
 ```
 
-Role   : Developer
 Score  : 95
 Level  : 3
 Name   : Alice
-Active : True
-Joined : 10.05.2025 19:48:39
 Skills : {PowerShell, C#, Azure}
+Active : True
+Joined : 10.05.2025 20:52:01
+Role   : Developer
 ```
 
 ### 5.2 Copy across buckets
@@ -1595,13 +1595,13 @@ scoop -Bucket archive -Key "Alice"
 
 ```
 
-Role   : Developer
 Score  : 95
 Level  : 3
 Name   : Alice
-Active : True
-Joined : 10.05.2025 19:48:39
 Skills : {PowerShell, C#, Azure}
+Active : True
+Joined : 10.05.2025 20:52:01
+Role   : Developer
 ```
 
 ### 5.3 Copy with passthru
@@ -1822,8 +1822,8 @@ Name         : team
 Path         : C:\Users\berfelde\.buckets\team
 ObjectCount  : 5
 TotalSize    : 5.68 KB
-OldestObject : 10.05.2026 19:48:39
-NewestObject : 10.05.2026 19:48:40
+OldestObject : 10.05.2026 20:52:01
+NewestObject : 10.05.2026 20:52:03
 ```
 
 ### 6.4 Listing keys
@@ -1867,7 +1867,7 @@ Key           : Alice-Backup
 Format        : Binary
 Type          : Object
 Size          : 1167
-LastWriteTime : 10.05.2026 19:48:40
+LastWriteTime : 10.05.2026 20:52:03
 IsCompressed  : False
 
 Bucket        : team
@@ -1875,7 +1875,7 @@ Key           : Alice
 Format        : Binary
 Type          : Object
 Size          : 1167
-LastWriteTime : 10.05.2026 19:48:40
+LastWriteTime : 10.05.2026 20:52:03
 IsCompressed  : False
 
 Bucket        : team
@@ -1883,7 +1883,7 @@ Key           : Bob
 Format        : Binary
 Type          : Object
 Size          : 1159
-LastWriteTime : 10.05.2026 19:48:40
+LastWriteTime : 10.05.2026 20:52:03
 IsCompressed  : False
 
 Bucket        : team
@@ -1891,7 +1891,7 @@ Key           : Carol
 Format        : Binary
 Type          : Object
 Size          : 1162
-LastWriteTime : 10.05.2026 19:48:40
+LastWriteTime : 10.05.2026 20:52:03
 IsCompressed  : False
 
 Bucket        : team
@@ -1899,7 +1899,7 @@ Key           : Frank
 Format        : Binary
 Type          : Object
 Size          : 1166
-LastWriteTime : 10.05.2026 19:48:40
+LastWriteTime : 10.05.2026 20:52:03
 IsCompressed  : False
 ```
 
@@ -1944,39 +1944,39 @@ config       app-config
 demo         verbosity-demo
 demo         _ _
 dest         obj1
-events       20260510194839652_0
-events       20260510194839653_1
+events       20260510205201843_0
+events       20260510205201845_1
 final        new-key
-logs         034323c5-f6e8-4cb8-8aa1-12f204c409ee
-logs         0e53c378-1e8d-48b0-b056-92014135dc77
-logs         0ed4e379-f46c-47ee-bcd1-d4928704ab45
-logs         160a3508-1a44-45bf-86f8-b8aacf5b6749
-logs         1ef394a2-fa4b-4e64-bf8d-52aba92a3f25
-logs         1fc8603f-caf1-4992-9ba3-90c140fd19c7
-logs         2ae3d4e6-87b8-46c3-9fa5-d89840d425ce
-logs         2dfb2cd1-eb05-4bd7-b1b1-647dc44fe737
-logs         3a2109d6-ca6b-46ef-b8cb-9004bdfa65a2
-logs         48537d08-4a8c-4ad3-9bf4-40190afc2837
-logs         5f0d0744-cf40-42a3-a2e5-6b062aff28ef
-logs         743c3b98-b9bf-42fe-a300-1df9526867e7
-logs         7f853890-c125-458d-a299-e8964c7982d9
-logs         815d5498-0591-44e6-9015-5cc80672690d
-logs         8255706b-8b39-4f76-94c8-830fe191880e
-logs         82a255a1-8a94-431e-97e7-c9a8999d72b1
-logs         83edf148-8043-400a-afdb-44f7dc18cdc5
-logs         8d3324b5-3dba-4948-b1cc-730613dcfc00
-logs         950fa753-be27-44d6-8ef0-6da0dff8c453
-logs         9ed68736-81f6-4d8c-a2e2-c4a8c6981ef2
-logs         a7c46711-d234-48a4-8731-296fbe418656
-logs         a9992cc3-5f74-44dd-8913-26435e0c9dbf
-logs         b6509e64-4ef7-4c0d-8ed5-26020fdd3d49
-logs         b6d2a20e-6979-430b-9c29-5efefc919b2b
-logs         bdfaade2-3165-47eb-abdb-04557fbb2e5c
-logs         be3337be-283d-4d3e-b067-fb6b073a7511
-logs         dd3b2dab-ec18-4d1b-ae21-dc58c0f57b33
-logs         ef6edf27-7ef0-4f50-87c9-e5f2058731f5
-logs         fa7eac1c-5f98-40c2-8a46-c549f85c719b
-logs         ff5cef6f-2b3c-4e02-b1c4-0337321833c7
+logs         0411e032-06d8-4975-b619-ca111614a9c9
+logs         0da67f3c-9732-4462-aac5-3c71719217f3
+logs         0f9f35c4-6f02-40e7-b665-9914e19d1004
+logs         1b9706a4-f801-4f64-891c-5b14a38638d2
+logs         2a0f33f7-e607-4ecb-b440-c19942d33163
+logs         31cca8c0-3891-4f40-858f-eb57726fae7a
+logs         32d40030-b30e-473e-bf51-cbbe82d54d04
+logs         4a94bb3e-3982-40da-b6e8-781e9f389c6d
+logs         4bac8270-afa7-4a4f-898b-f3221034c2f3
+logs         53457107-68e8-4ba3-ba4c-5ae120599f66
+logs         58439753-cd60-4134-8508-a59a97ec1e40
+logs         6a406d13-f039-4590-b651-0d8f747b7b1a
+logs         6c310303-99b0-455c-835c-bd4112f5fd13
+logs         7a867fdb-92e7-4dd7-9748-80ac65b57598
+logs         7eaa7644-1925-4f79-bf36-371084adf882
+logs         8118c456-09dd-4b57-a400-80c309493728
+logs         8f472023-6db1-4b04-9a90-6493cf363d42
+logs         991b8c71-b1c8-4343-9a40-7ceb874885cd
+logs         9ea5dfd5-2d28-4fcd-9f8c-d77a205706bb
+logs         a11a2de8-c38c-47cb-8cf7-7ee2f1aafe8a
+logs         a5bd0be5-92eb-42d3-a9b2-dfc088c1398e
+logs         ad54b45f-1729-43b1-9ae0-5c00d740ff0b
+logs         b7adcafe-1e2a-470c-aea5-5e899c0f753e
+logs         c2644219-284e-4503-aff2-1986b9b6a35e
+logs         d551a9fb-da45-4c00-8b13-b578fc9e6867
+logs         e7add147-284b-4d58-97e3-731a9dcf39c6
+logs         eeb0fa0e-b6d8-4456-83de-4203dc9b2f1e
+logs         f2c2cfb9-a35f-479a-b140-8775b8f1df98
+logs         f4cc9739-1ec2-448e-8f19-157029b24187
+logs         f9753eec-a4a8-4f59-af4f-9a3f64382715
 match-demo   A
 match-demo   alpha
 match-demo   B
@@ -2000,7 +2000,6 @@ team         Bob
 team         Carol
 team         Frank
 tmp          new-name
-tmp-json     json-new
 types        custom
 types        hash
 users        Alice
@@ -2022,7 +2021,7 @@ limits how many objects are shown per bucket.
 Get-Bucket -Tree -MaxFiles 10
 ```
 
-.buckets (71 items, 28 KB)
+.buckets (70 items, 28 KB)
 ├── archive (1 item, 1 KB)
 ├── config (3 items, 541 B)
 ├── demo (2 items, 653 B)
@@ -2040,7 +2039,6 @@ Get-Bucket -Tree -MaxFiles 10
 ├── str-test (2 items, 835 B)
 ├── team (5 items, 6 KB)
 ├── tmp (1 item, 333 B)
-├── tmp-json (1 item, 20 B)
 ├── types (2 items, 658 B)
 └── users (5 items, 2 KB)
 
@@ -2056,12 +2054,12 @@ individual objects cluttering the output.
 Get-Bucket -Tree
 ```
 
-.buckets (71 items, 28 KB)
+.buckets (70 items, 28 KB)
 ├── archive (1 item, 1 KB)
 ├── config (3 items, 541 B)
 ├── demo (2 items, 653 B)
 ├── dest (1 item, 415 B)
-├── events (4 items, 2 KB)
+├── events (2 items, 831 B)
 ├── final (1 item, 337 B)
 ├── logs (30 items, 7 KB)
 ├── match-demo (6 items, 3 KB)
@@ -2074,7 +2072,6 @@ Get-Bucket -Tree
 ├── str-test (2 items, 835 B)
 ├── team (5 items, 6 KB)
 ├── tmp (1 item, 333 B)
-├── tmp-json (1 item, 20 B)
 ├── types (2 items, 658 B)
 └── users (5 items, 2 KB)
 
@@ -2090,7 +2087,7 @@ visible.
 Get-Bucket -Tree -Objects
 ```
 
-.buckets (78 items, 30 KB)
+.buckets (70 items, 28 KB)
 ├── archive (1 item, 1 KB)
 │   └── Alice
 ├── config (3 items, 541 B)
@@ -2102,20 +2099,18 @@ Get-Bucket -Tree -Objects
 │   └── verbosity-demo
 ├── dest (1 item, 415 B)
 │   └── obj1
-├── events (4 items, 2 KB)
-│   ├── 20260510194839652_0
-│   ├── 20260510194839653_1
-│   ├── 20260510194841292_0
-│   └── 20260510194841305_1
+├── events (2 items, 831 B)
+│   ├── 20260510205201843_0
+│   └── 20260510205201845_1
 ├── final (1 item, 337 B)
 │   └── new-key
-├── logs (60 items, 14 KB)
-│   ├── 034323c5-f6e8-4cb8-8aa1-12f204c409ee
-│   ├── 0cca48e2-cf86-4f07-b572-403f02a1ba0f
-│   ├── 0e53c378-1e8d-48b0-b056-92014135dc77
-│   ├── 0ed4e379-f46c-47ee-bcd1-d4928704ab45
-│   └── 160a3508-1a44-45bf-86f8-b8aacf5b6749
-│   └── ... 55 more
+├── logs (30 items, 7 KB)
+│   ├── 0411e032-06d8-4975-b619-ca111614a9c9
+│   ├── 0da67f3c-9732-4462-aac5-3c71719217f3
+│   ├── 0f9f35c4-6f02-40e7-b665-9914e19d1004
+│   ├── 1b9706a4-f801-4f64-891c-5b14a38638d2
+│   └── 2a0f33f7-e607-4ecb-b440-c19942d33163
+│   └── ... 25 more
 ├── match-demo (6 items, 3 KB)
 │   ├── A
 │   ├── alpha
@@ -2149,8 +2144,6 @@ Get-Bucket -Tree -Objects
 │   └── Frank
 ├── tmp (1 item, 333 B)
 │   └── new-name
-├── tmp-json (1 item, 20 B)
-│   └── json-new
 ├── types (2 items, 658 B)
 │   ├── custom
 │   └── hash
@@ -2178,8 +2171,8 @@ Get-Bucket -Tree -Raw | Select-Object -First 2
 Name        : .buckets
 Type        : Root
 Path        : 
-ObjectCount : 103
-SizeBytes   : 37370
+ObjectCount : 87
+SizeBytes   : 33621
 Depth       : 0
 Children    : {@{Name=archive; Type=Bucket; Path=archive; ObjectCount=1; SizeBytes=1167; Depth=1; Children=System.Collections.ArrayList; _BucketName=archive; _BucketKey=}, @{Name=config; Type=Bucket; Path=config; ObjectCount=3; SizeBytes=541; Depth=1; Children=System.Collections.ArrayList; _BucketName=config; _BucketKey=}, @{Name=demo; Type=Bucket; Path=demo; ObjectCount=2; SizeBytes=653; Depth=1; Children=System.Collections.ArrayList; _BucketName=demo; _BucketKey=}, @{Name=dest; Type=Bucket; Path=dest; ObjectCount=1; SizeBytes=415; Depth=1; Children=System.Collections.ArrayList; _BucketName=dest; _BucketKey=}…}
 _BucketName : 
@@ -2198,7 +2191,7 @@ only top-level buckets.
 Get-Bucket -Tree -Depth 1
 ```
 
-.buckets (103 items, 36 KB)
+.buckets (102 items, 36 KB)
 
 ### 6.13 Tree to JSON
 ---
@@ -2217,8 +2210,8 @@ Get-Bucket -Tree -Raw | ConvertTo-Json -Depth 5 | Select-Object -First 5
 "Name": ".buckets",
 "Type": "Root",
 "Path": "",
-"ObjectCount": 103,
-"SizeBytes": 37370,
+"ObjectCount": 102,
+"SizeBytes": 37350,
 "Depth": 0,
 "Children": [
   {
@@ -2409,17 +2402,6 @@ Get-Bucket -Tree -Raw | ConvertTo-Json -Depth 5 | Select-Object -First 5
     "_BucketKey": ""
   },
   {
-    "Name": "tmp-json",
-    "Type": "Bucket",
-    "Path": "tmp-json",
-    "ObjectCount": 1,
-    "SizeBytes": 20,
-    "Depth": 1,
-    "Children": [],
-    "_BucketName": "tmp-json",
-    "_BucketKey": ""
-  },
-  {
     "Name": "types",
     "Type": "Bucket",
     "Path": "types",
@@ -2484,7 +2466,6 @@ str-test               2
 team                   5
 temp                   0
 tmp                    1
-tmp-json               1
 types                  2
 users                  5
 ```
@@ -2522,7 +2503,6 @@ What if: Remove the following bucket(s)
   team (5 objects, 5.68 KB)
   temp (0 objects, 0 KB)
   tmp (1 object, 0.33 KB)
-  tmp-json (1 object, 0.02 KB)
   types (2 objects, 0.64 KB)
 
 
@@ -2651,69 +2631,69 @@ Get-Content (Join-Path $exportDir "team.json") -Raw | ConvertFrom-Json | Convert
 ```
 [
 {
-  "Role": "Developer",
   "Score": 95,
   "Level": 3,
   "Name": "Alice",
-  "Active": true,
-  "Joined": "2025-05-10T19:48:39.4266055+02:00",
   "Skills": [
     "PowerShell",
     "C#",
     "Azure"
-  ]
+  ],
+  "Active": true,
+  "Joined": "2025-05-10T20:52:01.6229552+02:00",
+  "Role": "Developer"
 },
 {
-  "Role": "Developer",
   "Score": 95,
   "Level": 3,
   "Name": "Alice",
-  "Active": true,
-  "Joined": "2025-05-10T19:48:39.4266055+02:00",
   "Skills": [
     "PowerShell",
     "C#",
     "Azure"
-  ]
+  ],
+  "Active": true,
+  "Joined": "2025-05-10T20:52:01.6229552+02:00",
+  "Role": "Developer"
 },
 {
-  "Role": "Designer",
   "Score": 72,
   "Level": 2,
   "Name": "Bob",
-  "Active": true,
-  "Joined": "2025-11-11T19:48:39.4300325+01:00",
   "Skills": [
     "Figma",
     "CSS",
     "HTML"
-  ]
+  ],
+  "Active": true,
+  "Joined": "2025-11-11T20:52:01.6257962+01:00",
+  "Role": "Designer"
 },
 {
-  "Role": "PM",
   "Score": 88,
   "Level": 3,
   "Name": "Carol",
-  "Active": true,
-  "Joined": "2026-02-09T19:48:39.4301368+01:00",
   "Skills": [
     "Agile",
     "Jira",
     "Confluence"
-  ]
+  ],
+  "Active": true,
+  "Joined": "2026-02-09T20:52:01.6258905+01:00",
+  "Role": "PM"
 },
 {
-  "Role": "Developer",
   "Score": 91,
   "Level": 4,
   "Name": "Frank",
-  "Active": true,
-  "Joined": "2024-12-26T19:48:39.4301983+01:00",
   "Skills": [
     "Rust",
     "Go",
     "Kubernetes"
-  ]
+  ],
+  "Active": true,
+  "Joined": "2024-12-26T20:52:01.6259523+01:00",
+  "Role": "Developer"
 }
 ]
 ```
@@ -2755,33 +2735,32 @@ Get-ChildItem "buckets:\"
 
 Type  LastWriteTime             CreationTime                      Size Name
 ----  -------------             ------------                      ---- ----
-b--   10.05.2026 19:48:40       10.05.2026 19:48:40               1 KB archive
-b--   10.05.2026 19:48:40       10.05.2026 19:48:39              541 B config
-b--   10.05.2026 19:48:39       10.05.2026 19:48:39              653 B demo
-b--   10.05.2026 19:48:40       10.05.2026 19:48:40              415 B dest
-b--   10.05.2026 19:48:41       10.05.2026 19:48:39               2 KB events
-b--   10.05.2026 19:48:40       10.05.2026 19:48:40              337 B final
-b--   10.05.2026 19:48:41       10.05.2026 19:48:41               5 KB import-over
-b--   10.05.2026 19:48:41       10.05.2026 19:48:39              14 KB logs
-b--   10.05.2026 19:48:40       10.05.2026 19:48:40               3 KB match-demo
-b--   10.05.2026 19:48:40       10.05.2026 19:48:40              326 B move-dst
-b--   10.05.2026 19:48:40       10.05.2026 19:48:40                0 B move-src
-b--   10.05.2026 19:48:39       10.05.2026 19:48:39               1 KB nested
-b--   10.05.2026 19:48:40       10.05.2026 19:48:40              604 B nested-match
-b--   10.05.2026 19:48:40       10.05.2026 19:48:40                0 B origin
-b--   10.05.2026 19:48:41       10.05.2026 19:48:41              652 B pass
-b--   10.05.2026 19:48:41       10.05.2026 19:48:41               5 KB restored
-b--   10.05.2026 19:48:41       10.05.2026 19:48:41               4 KB restored-json
-b--   10.05.2026 19:48:40       10.05.2026 19:48:40                0 B source
-b--   10.05.2026 19:48:39       10.05.2026 19:48:39              337 B special
-b--   10.05.2026 19:48:39       10.05.2026 19:48:39               2 KB staff
-b--   10.05.2026 19:48:40       10.05.2026 19:48:40              835 B str-test
-b--   10.05.2026 19:48:40       10.05.2026 19:48:39               6 KB team
-b--   10.05.2026 19:48:40       10.05.2026 19:48:40                0 B temp
-b--   10.05.2026 19:48:40       10.05.2026 19:48:40              333 B tmp
-b--   10.05.2026 19:48:40       10.05.2026 19:48:40               20 B tmp-json
-b--   10.05.2026 19:48:39       10.05.2026 19:48:39              658 B types
-b--   10.05.2026 19:48:39       10.05.2026 19:48:39               2 KB users
+b--   10.05.2026 20:52:03       10.05.2026 20:52:03               1 KB archive
+b--   10.05.2026 20:52:02       10.05.2026 20:52:01              541 B config
+b--   10.05.2026 20:52:01       10.05.2026 20:52:01              653 B demo
+b--   10.05.2026 20:52:03       10.05.2026 20:52:03              415 B dest
+b--   10.05.2026 20:52:03       10.05.2026 20:52:01               2 KB events
+b--   10.05.2026 20:52:03       10.05.2026 20:52:03              337 B final
+b--   10.05.2026 20:52:04       10.05.2026 20:52:04               5 KB import-over
+b--   10.05.2026 20:52:03       10.05.2026 20:52:01              14 KB logs
+b--   10.05.2026 20:52:02       10.05.2026 20:52:02               3 KB match-demo
+b--   10.05.2026 20:52:03       10.05.2026 20:52:03              326 B move-dst
+b--   10.05.2026 20:52:03       10.05.2026 20:52:03                0 B move-src
+b--   10.05.2026 20:52:01       10.05.2026 20:52:01               1 KB nested
+b--   10.05.2026 20:52:02       10.05.2026 20:52:02              604 B nested-match
+b--   10.05.2026 20:52:03       10.05.2026 20:52:03                0 B origin
+b--   10.05.2026 20:52:03       10.05.2026 20:52:03              652 B pass
+b--   10.05.2026 20:52:04       10.05.2026 20:52:04               5 KB restored
+b--   10.05.2026 20:52:04       10.05.2026 20:52:04               4 KB restored-json
+b--   10.05.2026 20:52:03       10.05.2026 20:52:03                0 B source
+b--   10.05.2026 20:52:01       10.05.2026 20:52:01              337 B special
+b--   10.05.2026 20:52:04       10.05.2026 20:52:01               7 KB staff
+b--   10.05.2026 20:52:02       10.05.2026 20:52:02              835 B str-test
+b--   10.05.2026 20:52:03       10.05.2026 20:52:01               6 KB team
+b--   10.05.2026 20:52:03       10.05.2026 20:52:03                0 B temp
+b--   10.05.2026 20:52:03       10.05.2026 20:52:03              333 B tmp
+b--   10.05.2026 20:52:01       10.05.2026 20:52:01              658 B types
+b--   10.05.2026 20:52:01       10.05.2026 20:52:01               2 KB users
 ```
 
 ### 8.3 Formatting bucket output
@@ -2800,33 +2779,32 @@ Get-ChildItem "buckets:\" | Select-Object Name, Length, LastWriteTime | Format-T
 
 Name          Length LastWriteTime
 ----          ------ -------------
-archive              10.05.2026 19:48:40
-config               10.05.2026 19:48:40
-demo                 10.05.2026 19:48:39
-dest                 10.05.2026 19:48:40
-events               10.05.2026 19:48:41
-final                10.05.2026 19:48:40
-import-over          10.05.2026 19:48:41
-logs                 10.05.2026 19:48:41
-match-demo           10.05.2026 19:48:40
-move-dst             10.05.2026 19:48:40
-move-src             10.05.2026 19:48:40
-nested               10.05.2026 19:48:39
-nested-match         10.05.2026 19:48:40
-origin               10.05.2026 19:48:40
-pass                 10.05.2026 19:48:41
-restored             10.05.2026 19:48:41
-restored-json        10.05.2026 19:48:41
-source               10.05.2026 19:48:40
-special              10.05.2026 19:48:39
-staff                10.05.2026 19:48:39
-str-test             10.05.2026 19:48:40
-team                 10.05.2026 19:48:40
-temp                 10.05.2026 19:48:40
-tmp                  10.05.2026 19:48:40
-tmp-json             10.05.2026 19:48:40
-types                10.05.2026 19:48:39
-users                10.05.2026 19:48:39
+archive              10.05.2026 20:52:03
+config               10.05.2026 20:52:02
+demo                 10.05.2026 20:52:01
+dest                 10.05.2026 20:52:03
+events               10.05.2026 20:52:03
+final                10.05.2026 20:52:03
+import-over          10.05.2026 20:52:04
+logs                 10.05.2026 20:52:03
+match-demo           10.05.2026 20:52:02
+move-dst             10.05.2026 20:52:03
+move-src             10.05.2026 20:52:03
+nested               10.05.2026 20:52:01
+nested-match         10.05.2026 20:52:02
+origin               10.05.2026 20:52:03
+pass                 10.05.2026 20:52:03
+restored             10.05.2026 20:52:04
+restored-json        10.05.2026 20:52:04
+source               10.05.2026 20:52:03
+special              10.05.2026 20:52:01
+staff                10.05.2026 20:52:04
+str-test             10.05.2026 20:52:02
+team                 10.05.2026 20:52:03
+temp                 10.05.2026 20:52:03
+tmp                  10.05.2026 20:52:03
+types                10.05.2026 20:52:01
+users                10.05.2026 20:52:01
 ```
 
 ### 8.4 Browsing objects in a bucket
@@ -2844,11 +2822,11 @@ Get-ChildItem "buckets:\team" | Select-Object Name, Length, LastWriteTime
 
 Name         Length LastWriteTime
 ----         ------ -------------
-Alice-Backup        10.05.2026 19:48:40
-Alice               10.05.2026 19:48:40
-Bob                 10.05.2026 19:48:40
-Carol               10.05.2026 19:48:40
-Frank               10.05.2026 19:48:40
+Alice-Backup        10.05.2026 20:52:03
+Alice               10.05.2026 20:52:03
+Bob                 10.05.2026 20:52:03
+Carol               10.05.2026 20:52:03
+Frank               10.05.2026 20:52:03
 ```
 
 ### 8.5 Filtering containers
@@ -2866,33 +2844,32 @@ Get-ChildItem "buckets:\" | Where-Object { $_.PSIsContainer }
 
 Type  LastWriteTime             CreationTime                      Size Name
 ----  -------------             ------------                      ---- ----
-b--   10.05.2026 19:48:40       10.05.2026 19:48:40               1 KB archive
-b--   10.05.2026 19:48:40       10.05.2026 19:48:39              541 B config
-b--   10.05.2026 19:48:39       10.05.2026 19:48:39              653 B demo
-b--   10.05.2026 19:48:40       10.05.2026 19:48:40              415 B dest
-b--   10.05.2026 19:48:41       10.05.2026 19:48:39               2 KB events
-b--   10.05.2026 19:48:40       10.05.2026 19:48:40              337 B final
-b--   10.05.2026 19:48:41       10.05.2026 19:48:41               5 KB import-over
-b--   10.05.2026 19:48:41       10.05.2026 19:48:39              14 KB logs
-b--   10.05.2026 19:48:40       10.05.2026 19:48:40               3 KB match-demo
-b--   10.05.2026 19:48:40       10.05.2026 19:48:40              326 B move-dst
-b--   10.05.2026 19:48:40       10.05.2026 19:48:40                0 B move-src
-b--   10.05.2026 19:48:39       10.05.2026 19:48:39               1 KB nested
-b--   10.05.2026 19:48:40       10.05.2026 19:48:40              604 B nested-match
-b--   10.05.2026 19:48:40       10.05.2026 19:48:40                0 B origin
-b--   10.05.2026 19:48:41       10.05.2026 19:48:41              652 B pass
-b--   10.05.2026 19:48:41       10.05.2026 19:48:41               5 KB restored
-b--   10.05.2026 19:48:41       10.05.2026 19:48:41               4 KB restored-json
-b--   10.05.2026 19:48:40       10.05.2026 19:48:40                0 B source
-b--   10.05.2026 19:48:39       10.05.2026 19:48:39              337 B special
-b--   10.05.2026 19:48:39       10.05.2026 19:48:39               2 KB staff
-b--   10.05.2026 19:48:40       10.05.2026 19:48:40              835 B str-test
-b--   10.05.2026 19:48:40       10.05.2026 19:48:39               6 KB team
-b--   10.05.2026 19:48:40       10.05.2026 19:48:40                0 B temp
-b--   10.05.2026 19:48:40       10.05.2026 19:48:40              333 B tmp
-b--   10.05.2026 19:48:40       10.05.2026 19:48:40               20 B tmp-json
-b--   10.05.2026 19:48:39       10.05.2026 19:48:39              658 B types
-b--   10.05.2026 19:48:39       10.05.2026 19:48:39               2 KB users
+b--   10.05.2026 20:52:03       10.05.2026 20:52:03               1 KB archive
+b--   10.05.2026 20:52:02       10.05.2026 20:52:01              541 B config
+b--   10.05.2026 20:52:01       10.05.2026 20:52:01              653 B demo
+b--   10.05.2026 20:52:03       10.05.2026 20:52:03              415 B dest
+b--   10.05.2026 20:52:03       10.05.2026 20:52:01               2 KB events
+b--   10.05.2026 20:52:03       10.05.2026 20:52:03              337 B final
+b--   10.05.2026 20:52:04       10.05.2026 20:52:04               5 KB import-over
+b--   10.05.2026 20:52:03       10.05.2026 20:52:01              14 KB logs
+b--   10.05.2026 20:52:02       10.05.2026 20:52:02               3 KB match-demo
+b--   10.05.2026 20:52:03       10.05.2026 20:52:03              326 B move-dst
+b--   10.05.2026 20:52:03       10.05.2026 20:52:03                0 B move-src
+b--   10.05.2026 20:52:01       10.05.2026 20:52:01               1 KB nested
+b--   10.05.2026 20:52:02       10.05.2026 20:52:02              604 B nested-match
+b--   10.05.2026 20:52:03       10.05.2026 20:52:03                0 B origin
+b--   10.05.2026 20:52:03       10.05.2026 20:52:03              652 B pass
+b--   10.05.2026 20:52:04       10.05.2026 20:52:04               5 KB restored
+b--   10.05.2026 20:52:04       10.05.2026 20:52:04               4 KB restored-json
+b--   10.05.2026 20:52:03       10.05.2026 20:52:03                0 B source
+b--   10.05.2026 20:52:01       10.05.2026 20:52:01              337 B special
+b--   10.05.2026 20:52:04       10.05.2026 20:52:01               7 KB staff
+b--   10.05.2026 20:52:02       10.05.2026 20:52:02              835 B str-test
+b--   10.05.2026 20:52:03       10.05.2026 20:52:01               6 KB team
+b--   10.05.2026 20:52:03       10.05.2026 20:52:03                0 B temp
+b--   10.05.2026 20:52:03       10.05.2026 20:52:03              333 B tmp
+b--   10.05.2026 20:52:01       10.05.2026 20:52:01              658 B types
+b--   10.05.2026 20:52:01       10.05.2026 20:52:01               2 KB users
 ```
 
 ### 8.6 Reading objects
@@ -3024,12 +3001,12 @@ scoop -Bucket "org/eu/*/cities"
 
 ```
 
-Population Country Name
----------- ------- ----
- 3600000 DE      Berlin
- 1500000 DE      Munich
- 8900000 UK      London
-  550000 UK      Manchester
+Country Population Name
+------- ---------- ----
+DE         3600000 Berlin
+DE         1500000 Munich
+UK         8900000 London
+UK          550000 Manchester
 ```
 
 ### 9.3 Querying nested buckets directly
@@ -3048,10 +3025,10 @@ scoop -Bucket "org/eu/de/cities"
 
 ```
 
-Population Country Name
----------- ------- ----
- 3600000 DE      Berlin
- 1500000 DE      Munich
+Country Population Name
+------- ---------- ----
+DE         3600000 Berlin
+DE         1500000 Munich
 ```
 
 ### 9.4 Multi-level wildcards
@@ -3070,10 +3047,10 @@ scoop -Bucket "org/*/de/*"
 
 ```
 
-Population Country Name
----------- ------- ----
- 3600000 DE      Berlin
- 1500000 DE      Munich
+Country Population Name
+------- ---------- ----
+DE         3600000 Berlin
+DE         1500000 Munich
                  
 
 ```
@@ -3121,7 +3098,7 @@ it easy to see the organizational structure at a glance.
 Get-Bucket -Name "org" -Tree -Objects -MaxFiles 10
 ```
 
-.buckets (125 items, 53 KB)
+.buckets (128 items, 58 KB)
 └── org (7 items, 3 KB)
   ├── eu (6 items, 3 KB)
   │   ├── de (4 items, 2 KB)
@@ -3215,8 +3192,8 @@ Name         : org/eu/de/cities
 Path         : C:\Users\berfelde\.buckets\org\eu\de\cities
 ObjectCount  : 2
 TotalSize    : 1 KB
-OldestObject : 10.05.2026 19:48:42
-NewestObject : 10.05.2026 19:48:42
+OldestObject : 10.05.2026 20:52:04
+NewestObject : 10.05.2026 20:52:04
 ```
 
 ### 9.10 Keys on nested buckets
@@ -3257,11 +3234,11 @@ scoop -Bucket "org/*/cities" -Filter { $_.Population -gt 2000000 }
 
 ```
 
-Population Country Name
----------- ------- ----
- 3600000 DE      Berlin
- 8900000 UK      London
- 8300000 US      New York
+Country Population Name
+------- ---------- ----
+DE         3600000 Berlin
+UK         8900000 London
+US         8300000 New York
 ```
 
 ### 9.12 Removing nested trees
@@ -3400,11 +3377,10 @@ pass              2
 restored          5
 restored-json     5
 special           1
-staff             3
+staff             7
 str-test          2
 team              5
 tmp               1
-tmp-json          1
 types             2
 users             5
 ```
@@ -3424,8 +3400,8 @@ scoop -Bucket team | Group-Object Role | Select-Object Name, Count
 
 Name      Count
 ----      -----
-Designer      1
 Developer     3
+Lead          1
 PM            1
 ```
 
@@ -3441,7 +3417,7 @@ $scores = scoop -Bucket team | Measure-Object Score -Average -Minimum -Maximum
 Write-Host "    Score stats: avg=$([math]::Round($scores.Average,1)) min=$($scores.Minimum) max=$($scores.Maximum)"
 ```
 
-  Score stats: avg=92.6 min=72 max=100
+  Score stats: avg=99 min=96 max=100
 
 ### 10.8 Export to CSV
 ---
@@ -3471,71 +3447,77 @@ scoop -Bucket team | Where-Object { $_.Score -gt 80 }
 
 ```
 
-Role   : Developer
 Score  : 100
 Level  : 3
 Name   : Alice
-Active : True
-Joined : 10.05.2025 19:48:39
 Skills : {PowerShell, C#, Azure}
-
+Active : True
+Joined : 10.05.2025 20:52:01
 Role   : Developer
+
 Score  : 100
 Level  : 3
 Name   : Alice
-Active : True
-Joined : 10.05.2025 19:48:39
 Skills : {PowerShell, C#, Azure}
+Active : True
+Joined : 10.05.2025 20:52:01
+Role   : Developer
+Email  : alice@contoso.com
+Phone  : 555-0100
+City   : Portland
 
-Score  : 95
+Level  : 3
 Name   : Carol
-Role   : PM
-Level  : 3
-Active : True
-Joined : 09.02.2026 19:48:39
 Skills : {Agile, Jira, Confluence}
+Score  : 100
+Joined : 09.02.2026 20:52:01
+Role   : PM
+Active : True
 
-Role   : Developer
 Score  : 96
 Level  : 4
 Name   : Frank
-Active : True
-Joined : 26.12.2024 19:48:39
 Skills : {Rust, Go, Kubernetes}
+Active : True
+Joined : 26.12.2024 20:52:01
+Role   : Developer
 ```
 ```
 
-Role   : Developer
 Score  : 100
 Level  : 3
 Name   : Alice
-Active : True
-Joined : 10.05.2025 19:48:39
 Skills : {PowerShell, C#, Azure}
-
+Active : True
+Joined : 10.05.2025 20:52:01
 Role   : Developer
+
 Score  : 100
 Level  : 3
 Name   : Alice
-Active : True
-Joined : 10.05.2025 19:48:39
 Skills : {PowerShell, C#, Azure}
+Active : True
+Joined : 10.05.2025 20:52:01
+Role   : Developer
+Email  : alice@contoso.com
+Phone  : 555-0100
+City   : Portland
 
-Score  : 95
+Level  : 3
 Name   : Carol
-Role   : PM
-Level  : 3
-Active : True
-Joined : 09.02.2026 19:48:39
 Skills : {Agile, Jira, Confluence}
+Score  : 100
+Joined : 09.02.2026 20:52:01
+Role   : PM
+Active : True
 
-Role   : Developer
 Score  : 96
 Level  : 4
 Name   : Frank
-Active : True
-Joined : 26.12.2024 19:48:39
 Skills : {Rust, Go, Kubernetes}
+Active : True
+Joined : 26.12.2024 20:52:01
+Role   : Developer
 ```
 
 ### 10.10 Custom formatting
@@ -3555,7 +3537,7 @@ scoop -Bucket team | ForEach-Object {
 [Developer] Alice — Score: 100
 [Developer] Alice — Score: 100
 [Designer] Bob — Score: 72
-[PM] Carol — Score: 95
+[PM] Carol — Score: 100
 [Developer] Frank — Score: 96
 ```
 
@@ -3572,56 +3554,59 @@ scoop -Bucket team -Filter { $_.Score -gt 80 } | ConvertTo-Json -Depth 5
 ```
 [
 {
-  "Role": "Developer",
   "Score": 100,
   "Level": 3,
   "Name": "Alice",
-  "Active": true,
-  "Joined": "2025-05-10T19:48:39.4266055+02:00",
   "Skills": [
     "PowerShell",
     "C#",
     "Azure"
-  ]
+  ],
+  "Active": true,
+  "Joined": "2025-05-10T20:52:01.6229552+02:00",
+  "Role": "Developer"
 },
 {
-  "Role": "Developer",
   "Score": 100,
   "Level": 3,
   "Name": "Alice",
-  "Active": true,
-  "Joined": "2025-05-10T19:48:39.4266055+02:00",
   "Skills": [
     "PowerShell",
     "C#",
     "Azure"
-  ]
+  ],
+  "Active": true,
+  "Joined": "2025-05-10T20:52:01.6229552+02:00",
+  "Role": "Developer",
+  "Email": "alice@contoso.com",
+  "Phone": "555-0100",
+  "City": "Portland"
 },
 {
-  "Score": 95,
+  "Level": 3,
   "Name": "Carol",
-  "Role": "PM",
-  "Level": 3,
-  "Active": true,
-  "Joined": "2026-02-09T19:48:39.4301368+01:00",
   "Skills": [
     "Agile",
     "Jira",
     "Confluence"
-  ]
+  ],
+  "Score": 100,
+  "Joined": "2026-02-09T20:52:01.6258905+01:00",
+  "Role": "PM",
+  "Active": true
 },
 {
-  "Role": "Developer",
   "Score": 96,
   "Level": 4,
   "Name": "Frank",
-  "Active": true,
-  "Joined": "2024-12-26T19:48:39.4301983+01:00",
   "Skills": [
     "Rust",
     "Go",
     "Kubernetes"
-  ]
+  ],
+  "Active": true,
+  "Joined": "2024-12-26T20:52:01.6259523+01:00",
+  "Role": "Developer"
 }
 ]
 ```
@@ -3703,25 +3688,25 @@ scoop -Bucket servers -Filter { $_.Status -ne "online" }
 
 ```
 
-OS       : Rocky 9
-Role     : app
+Location : DC2
 RAM      : 16
-Disk     : 200
-Hostname : app-01
-Location : DC2
 Status   : offline
-CPU      : 8
 IP       : 10.0.2.50
-
-OS       : Debian 12
-Role     : database
-RAM      : 32
-Disk     : 500
-Hostname : db-02
-Location : DC2
-Status   : degraded
+Disk     : 200
+OS       : Rocky 9
+Hostname : app-01
+Role     : app
 CPU      : 8
+
+Location : DC2
+RAM      : 32
+Status   : degraded
 IP       : 10.0.2.20
+Disk     : 500
+OS       : Debian 12
+Hostname : db-02
+Role     : database
+CPU      : 8
 ```
 
 ### 12.3 Targeting servers by role and specs
@@ -3738,25 +3723,25 @@ scoop -Bucket servers -Filter { $_.RAM -ge 16 -and $_.Role -eq "database" }
 
 ```
 
-OS       : Debian 12
-Role     : database
-RAM      : 32
-Disk     : 500
-Hostname : db-01
 Location : DC1
-Status   : online
-CPU      : 8
-IP       : 10.0.1.20
-
-OS       : Debian 12
-Role     : database
 RAM      : 32
+Status   : online
+IP       : 10.0.1.20
 Disk     : 500
-Hostname : db-02
-Location : DC2
-Status   : degraded
+OS       : Debian 12
+Hostname : db-01
+Role     : database
 CPU      : 8
+
+Location : DC2
+RAM      : 32
+Status   : degraded
 IP       : 10.0.2.20
+Disk     : 500
+OS       : Debian 12
+Hostname : db-02
+Role     : database
+CPU      : 8
 ```
 
 ### 12.4 Grouping servers by datacenter
@@ -3774,8 +3759,8 @@ scoop -Bucket servers | Group-Object Location
 
 Count Name                      Group
 ----- ----                      -----
-  5 DC1                       {@{OS=FreeBSD 14; Role=backup; RAM=8; Disk=2000; Hostname=backup-01; Location=DC1; Status=online; CPU=4; IP=10.0.1.1}, @{OS=Alpine 3.18; Role=cache; RAM=16; Disk=60; Hostname=cache-01; Location=DC1; Status=online; CPU=2; IP=10.0.1.30}, @{OS=Debian 12; Role=database; RAM=32; Disk=500; Hostname=db-01; Location=DC1; Status=online; CPU=8; IP=10.0.1.20}, @{OS=Ubuntu 22.04; Role=web; RAM=8; Disk=120; Hostname=web-01; Location=DC1; Status=online; CPU=4; IP=10.0.1.10}…}
-  3 DC2                       {@{OS=Rocky 9; Role=app; RAM=16; Disk=200; Hostname=app-01; Location=DC2; Status=offline; CPU=8; IP=10.0.2.50}, @{OS=Debian 12; Role=database; RAM=32; Disk=500; Hostname=db-02; Location=DC2; Status=degraded; CPU=8; IP=10.0.2.20}, @{OS=Ubuntu 22.04; Role=monitoring; RAM=4; Disk=250; Hostname=mon-01; Location=DC2; Status=online; CPU=2; IP=10.0.1.40}}
+  5 DC1                       {@{Location=DC1; RAM=8; Status=online; IP=10.0.1.1; Disk=2000; OS=FreeBSD 14; Hostname=backup-01; Role=backup; CPU=4}, @{Location=DC1; RAM=16; Status=online; IP=10.0.1.30; Disk=60; OS=Alpine 3.18; Hostname=cache-01; Role=cache; CPU=2}, @{Location=DC1; RAM=32; Status=online; IP=10.0.1.20; Disk=500; OS=Debian 12; Hostname=db-01; Role=database; CPU=8}, @{Location=DC1; RAM=8; Status=online; IP=10.0.1.10; Disk=120; OS=Ubuntu 22.04; Hostname=web-01; Role=web; CPU=4}…}
+  3 DC2                       {@{Location=DC2; RAM=16; Status=offline; IP=10.0.2.50; Disk=200; OS=Rocky 9; Hostname=app-01; Role=app; CPU=8}, @{Location=DC2; RAM=32; Status=degraded; IP=10.0.2.20; Disk=500; OS=Debian 12; Hostname=db-02; Role=database; CPU=8}, @{Location=DC2; RAM=4; Status=online; IP=10.0.1.40; Disk=250; OS=Ubuntu 22.04; Hostname=mon-01; Role=monitoring; CPU=2}}
 ```
 
 ### 12.5 Capacity planning totals
@@ -3841,14 +3826,14 @@ scoop -Bucket incidents -Filter { $_.Severity -in @("ERROR","CRIT") }
 
 ```
 
-Source Severity Timestamp           Message
------- -------- ---------           -------
-web-01 ERROR    10.05.2026 17:48:43 Connection pool exhausted
-app-01 ERROR    10.05.2026 19:33:43 Service unreachable
-app-01 CRIT     10.05.2026 19:43:43 Disk /dev/sda1 at 97%
-web-01 ERROR    10.05.2026 17:48:43 Connection pool exhausted
-app-01 ERROR    10.05.2026 19:33:43 Service unreachable
-app-01 CRIT     10.05.2026 19:43:43 Disk /dev/sda1 at 97%
+Severity Timestamp           Source Message
+-------- ---------           ------ -------
+ERROR    10.05.2026 18:52:05 web-01 Connection pool exhausted
+ERROR    10.05.2026 20:37:05 app-01 Service unreachable
+CRIT     10.05.2026 20:47:05 app-01 Disk /dev/sda1 at 97%
+ERROR    10.05.2026 18:52:05 web-01 Connection pool exhausted
+ERROR    10.05.2026 20:37:05 app-01 Service unreachable
+CRIT     10.05.2026 20:47:05 app-01 Disk /dev/sda1 at 97%
 ```
 
 ### 12.8 Batch maintenance mode
