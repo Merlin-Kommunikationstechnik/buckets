@@ -11,13 +11,13 @@ A PowerShell module for file-based PSObject storage. Store, retrieve, and manage
 ```powershell
 Import-Module ./Buckets
 
-# Save objects (binary by default)
+# Save objects (binary by default) — alias: fill
 New-BucketObject -InputObject @{ Name = "Alice"; Age = 30 } -KeyProperty Name
 
-# Retrieve
+# Retrieve — alias: spill
 Get-BucketObject | Select-Object Name, Age
 
-# List buckets
+# List buckets — alias: dip
 Get-Bucket
 ```
 
@@ -34,7 +34,7 @@ Binary files can be compressed via `-Compress` (GZip, ~95% reduction on repetiti
 
 ## Cmdlets
 
-### New-BucketObject
+### New-BucketObject (alias: `fill`)
 
 Saves PSObjects to a bucket. Creates the bucket if it doesn't exist.
 
@@ -65,6 +65,7 @@ New-BucketObject
 | `-Depth` | JSON serialization depth (1–100) | `20` |
 | `-BinaryDepth` | Binary serialization depth (1–100) | `5` |
 | `-Compress` | GZip compress binary output | `false` |
+| `-Overwrite` | Overwrite existing objects with the same key | `false` |
 | `-Quiet` | Suppress output | `false` |
 
     )
@@ -78,6 +79,9 @@ Without `-Key` or `-KeyProperty`, each object gets a unique GUID filename.
 #### Examples
 
 ```powershell
+# Using the fill alias
+@{ Name = "test" } | fill -Bucket demo
+
 # Default: progress and summary
 New-BucketObject -InputObject @{ Name = "test" }
 
@@ -105,7 +109,7 @@ New-BucketObject -Path /tmp/buckets -InputObject $data -KeyProperty Name
 
 ---
 
-### Get-BucketObject
+### Get-BucketObject (alias: `spill`)
 
 Retrieves objects from one or more buckets.
 
@@ -138,6 +142,10 @@ Retrieved objects include metadata properties: `_BucketName`, `_BucketKey`, `_Bu
 #### Examples
 
 ```powershell
+# Using the spill alias
+spill users
+spill users "Alice"
+
 # All objects from a bucket (positional)
 Get-BucketObject users
 
@@ -374,7 +382,7 @@ Move-BucketObject -Bucket users -Key "Alice" -DestinationBucket archive -Destina
 
 ---
 
-### Get-Bucket
+### Get-Bucket (alias: `dip`)
 
 Lists available buckets with object counts. Supports tree visualization.
 
@@ -382,6 +390,7 @@ Lists available buckets with object counts. Supports tree visualization.
 Get-Bucket
     [[-Name] <string>]
     [-Path <string>]
+    [-Recurse]
     [-Tree]
     [-Objects]
     [-Raw]
@@ -403,6 +412,10 @@ Get-Bucket
 #### Examples
 
 ```powershell
+# Using the dip alias
+dip
+dip -Tree
+
 # List all buckets (recursive scan)
 Get-Bucket
 
@@ -884,16 +897,16 @@ The provider is created automatically on module import via `Sync-BucketDrive`. R
 
 ## API Reference
 
-| Cmdlet | Description |
-|--------|-------------|
-| `New-BucketObject` | Save objects to a bucket |
-| `Get-BucketObject` | Retrieve objects from buckets |
+| Cmdlet (alias) | Description |
+|----------------|-------------|
+| `New-BucketObject` (`fill`) | Save objects to a bucket |
+| `Get-BucketObject` (`spill`) | Retrieve objects from buckets |
 | `Set-BucketObject` | Update an existing object |
 | `Remove-BucketObject` | Remove objects by key, filter, or all |
 | `Copy-BucketObject` | Copy objects within or between buckets |
 | `Rename-BucketObject` | Rename an object's key |
 | `Move-BucketObject` | Move objects between buckets |
-| `Get-Bucket` | List buckets (text or tree view) |
+| `Get-Bucket` (`dip`) | List buckets (text or tree view) |
 | `Get-BucketKeys` | List object keys in a bucket (Bucket + Key only) |
 | `Get-BucketObjectStats` | Detailed per-object stats (format, type, size, timestamps, compression) |
 | `Get-BucketStats` | Show bucket statistics (visible Path, hidden TotalSizeBytes) |
