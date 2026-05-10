@@ -19,7 +19,7 @@ PowerShell module for file-based PSObject storage using directory-backed "bucket
 
 ## AI Agent Conventions
 - When posting a plan comment on a GitHub issue, add the `agent.plan` label to the issue
-- All AI agents must include the model name in their GitHub comments (e.g. `big-pickle`, `claude-sonnet-4`, `gpt-4o`)
+- All AI agents must flag every GitHub issue body, PR body, and comment they create with the model name on the first line (e.g. `Model: big-pickle`)
 
 ## Storage Conventions
 - Default path: `$HOME/.buckets` (overridable via `-Path`)
