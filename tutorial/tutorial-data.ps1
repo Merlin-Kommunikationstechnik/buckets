@@ -56,7 +56,10 @@ $TutorialData = @{
   Defaults: Binary depth 5, JSON depth 20, path $HOME/.buckets
   Override any of them with -BinaryDepth, -Depth, or -Path.
 '@
-                                Code = 'Get-BucketRoot'
+                                Code = @'
+# Show the root directory where all bucket data lives
+Get-BucketRoot
+'@
                             }
                         )
                     }
@@ -80,9 +83,13 @@ $TutorialData = @{
   hashtables, custom objects, even FileInfo — all survive the round trip.
 '@
                                 SetupCode = @'
+# Create a sample user hashtable to store in a bucket
 $alice = @{ Name = "Alice"; Role = "admin"; Score = 95 }
 '@
-                                Code = 'New-BucketObject -InputObject $alice -Bucket users -Key "Alice"'
+                                Code = @'
+# Save the hashtable as an object in the "users" bucket with key "Alice"
+New-BucketObject -InputObject $alice -Bucket users -Key "Alice"
+'@
                             }
                             @{
                                 Key = "02-keyproperty"
@@ -93,13 +100,17 @@ $alice = @{ Name = "Alice"; Role = "admin"; Score = 95 }
   becomes its filename. Useful when your data already has a natural ID.
 '@
                                 SetupCode = @'
+# Three user records — the "Name" value will serve as each object's key
 $users = @(
     @{ Name = "Alice"; Role = "Developer" }
     @{ Name = "Bob";   Role = "Designer" }
     @{ Name = "Carol"; Role = "PM" }
 )
 '@
-                                Code = '$users | fill -Bucket team -KeyProperty Name'
+                                Code = @'
+# Pipe the array to fill; -KeyProperty "Name" auto-extracts the key from each object
+$users | fill -Bucket team -KeyProperty Name
+'@
                             }
                             @{
                                 Key = "03-asjson"
@@ -110,10 +121,13 @@ $users = @(
   data you want to inspect or diff.
 '@
                                 SetupCode = @'
+# Sample config object for JSON format demo
 $alice = @{ Name = "Alice"; Role = "admin"; Score = 95 }
 '@
                                 Code = @'
+# Store as human-readable JSON (.json) instead of binary (.dat)
 New-BucketObject -InputObject $alice -Bucket config -Key "app-config" -AsJson -Quiet
+# List the .json file on disk to confirm the format
 Get-ChildItem (Join-Path (Get-BucketRoot) "config")
 '@
                             }
@@ -126,13 +140,18 @@ Get-ChildItem (Join-Path (Get-BucketRoot) "config")
   second without -Overwrite skips, with -Overwrite replaces.
 '@
                                 SetupCode = @'
+# Two versions of "Alice" — same key name, different property values
 $alice  = @{ Name = "Alice"; Role = "admin";  Score = 95 }
 $alice2 = @{ Name = "Alice"; Role = "manager"; Score = 99 }
 '@
                                 Code = @'
+# First save succeeds — key "Alice" doesn't exist yet
 New-BucketObject -InputObject $alice  -Bucket users -Key "Alice" -Quiet
+# Second save WITHOUT -Overwrite is silently skipped (key already exists)
 New-BucketObject -InputObject $alice2 -Bucket users -Key "Alice" -Quiet
+# Third save WITH -Overwrite replaces the existing object
 New-BucketObject -InputObject $alice2 -Bucket users -Key "Alice" -Overwrite -Quiet
+# Verify the overwritten data: Role=manager, Score=99
 scoop -Bucket users -Key "Alice" | Select-Object Name, Role, Score
 '@
                             }
@@ -150,21 +169,27 @@ scoop -Bucket users -Key "Alice" | Select-Object Name, Role, Score
   it returns every object from every bucket — useful for getting the lay of the land.
 '@
                                 SetupCode = @'
+# Team members for one department
 $teamData = @(
     @{ Name="Alice";   Role="Developer";  Level=3 }
     @{ Name="Bob";     Role="Designer";   Level=2 }
     @{ Name="Carol";   Role="PM";         Level=3 }
     @{ Name="Frank";   Role="Developer";  Level=4 }
 )
+# Staff members for another department
 $staffData = @(
     @{ Name="Dana";  Role="HR";        Level=2 }
     @{ Name="Eric";  Role="Finance";   Level=3 }
     @{ Name="Gina";  Role="Marketing"; Level=1 }
 )
+# Store each dataset in its own bucket, keyed by the "Name" property
 $teamData | fill -Bucket team -KeyProperty Name -Quiet
 $staffData | fill -Bucket staff -KeyProperty Name -Quiet
 '@
-                                Code = 'scoop'
+                                Code = @'
+# With no arguments, scoop returns every object from every bucket
+scoop
+'@
                             }
                             @{
                                 Key = "02-by-key"
@@ -174,24 +199,7 @@ $staffData | fill -Bucket staff -KeyProperty Name -Quiet
   the exact key — much faster than filtering.
 '@
                                 SetupCode = @'
-$teamData = @(
-    @{ Name="Alice";   Role="Developer";  Level=3; Score=95 }
-    @{ Name="Bob";     Role="Designer";   Level=2; Score=72 }
-    @{ Name="Carol";   Role="PM";         Level=3; Score=88 }
-    @{ Name="Frank";   Role="Developer";  Level=4; Score=91 }
-)
-$teamData | fill -Bucket team -KeyProperty Name -Quiet
-'@
-                                Code = 'scoop -Bucket team -Key "Alice"'
-                            }
-                            @{
-                                Key = "03-match"
-                                Title = "Filtering with -Match"
-                                Body = @'
-  -Match takes a hashtable and returns objects where all specified
-  properties match (AND logic). Great for quick lookups.
-'@
-                                SetupCode = @'
+# Team data with scores — used for both by-key and filtering exercises
 $teamData = @(
     @{ Name="Alice";   Role="Developer";  Level=3; Score=95 }
     @{ Name="Bob";     Role="Designer";   Level=2; Score=72 }
@@ -201,8 +209,33 @@ $teamData = @(
 $teamData | fill -Bucket team -KeyProperty Name -Quiet
 '@
                                 Code = @'
+# Retrieve exactly one object by its key — much faster than filtering all objects
+scoop -Bucket team -Key "Alice"
+'@
+                            }
+                            @{
+                                Key = "03-match"
+                                Title = "Filtering with -Match"
+                                Body = @'
+  -Match takes a hashtable and returns objects where all specified
+  properties match (AND logic). Great for quick lookups.
+'@
+                                SetupCode = @'
+# Sample team with varied roles and levels for -Match demos
+$teamData = @(
+    @{ Name="Alice";   Role="Developer";  Level=3; Score=95 }
+    @{ Name="Bob";     Role="Designer";   Level=2; Score=72 }
+    @{ Name="Carol";   Role="PM";         Level=3; Score=88 }
+    @{ Name="Frank";   Role="Developer";  Level=4; Score=91 }
+)
+$teamData | fill -Bucket team -KeyProperty Name -Quiet
+'@
+                                Code = @'
+# All developers (2 results)
 scoop -Bucket team -Match @{ Role = "Developer" }
+# All level-3 members (2 results)
 scoop -Bucket team -Match @{ Level = 3 }
+# AND logic: developer AND level 3 (1 result)
 scoop -Bucket team -Match @{ Role = "Developer"; Level = 3 }
 '@
                             }
@@ -214,6 +247,7 @@ scoop -Bucket team -Match @{ Role = "Developer"; Level = 3 }
   More flexible than -Match — supports comparisons, operators, any logic.
 '@
                                 SetupCode = @'
+# Same team data used for -Match, now demonstrating -Filter comparisons
 $teamData = @(
     @{ Name="Alice";   Role="Developer";  Level=3; Score=95 }
     @{ Name="Bob";     Role="Designer";   Level=2; Score=72 }
@@ -223,7 +257,9 @@ $teamData = @(
 $teamData | fill -Bucket team -KeyProperty Name -Quiet
 '@
                                 Code = @'
+# Scriptblock filter: members whose Level is greater than 2
 scoop -Bucket team -Filter { $_.Level -gt 2 }
+# Members whose Score is greater than or equal to 90
 scoop -Bucket team -Filter { $_.Score -ge 90 }
 '@
                             }
@@ -242,6 +278,7 @@ scoop -Bucket team -Filter { $_.Score -ge 90 }
   no need to specify them again.
 '@
                                 SetupCode = @'
+# Team data for the pipeline update exercise
 $teamData = @(
     @{ Name="Alice";   Role="Developer";  Level=3; Score=95 }
     @{ Name="Bob";     Role="Designer";   Level=2; Score=72 }
@@ -251,10 +288,11 @@ $teamData = @(
 $teamData | fill -Bucket team -KeyProperty Name -Quiet
 '@
                                 Code = @'
+# Retrieve Bob, modify properties, then pipe back to Set-BucketObject
 scoop -Bucket team -Key "Bob" | ForEach-Object {
-    $_.Score = 99
-    $_.Role = "Lead"
-    $_
+    $_.Score = 99       # Update Score in place
+    $_.Role = "Lead"    # Promote Bob to Lead
+    $_                  # Pass the modified object downstream
 } | Set-BucketObject -PassThru
 '@
                             }
@@ -266,6 +304,7 @@ scoop -Bucket team -Key "Bob" | ForEach-Object {
   Other properties stay untouched — like a partial PATCH in REST APIs.
 '@
                                 SetupCode = @'
+# Smaller dataset for the partial-update demo
 $teamData = @(
     @{ Name="Alice";   Role="Developer";  Level=3; Score=95 }
     @{ Name="Bob";     Role="Designer";   Level=2; Score=72 }
@@ -273,7 +312,9 @@ $teamData = @(
 $teamData | fill -Bucket team -KeyProperty Name -Quiet
 '@
                                 Code = @'
+# Partial update: only Role changes; Level, Score stay untouched
 Set-BucketObject -Bucket team -Key "Bob" -InputObject @{ Role = "Lead" } -PassThru
+# Confirm Bob now has Role=Lead while other properties remain unchanged
 scoop -Bucket team -Key "Bob"
 '@
                             }
@@ -291,6 +332,7 @@ scoop -Bucket team -Key "Bob"
   safe to try before you delete.
 '@
                                 SetupCode = @'
+# Sample data to safely preview deletion with -WhatIf
 $teamData = @(
     @{ Name="Alice";   Role="Developer";  Level=3 }
     @{ Name="Bob";     Role="Designer";   Level=2 }
@@ -299,7 +341,10 @@ $teamData = @(
 )
 $teamData | fill -Bucket team -KeyProperty Name -Quiet
 '@
-                                Code = 'Remove-BucketObject -Bucket team -Key "Bob" -WhatIf'
+                                Code = @'
+# Preview what would be deleted — no actual removal, perfectly safe
+Remove-BucketObject -Bucket team -Key "Bob" -WhatIf
+'@
                             }
                             @{
                                 Key = "02-all"
@@ -309,6 +354,7 @@ $teamData | fill -Bucket team -KeyProperty Name -Quiet
   stays. Always safe to preview with -WhatIf first.
 '@
                                 SetupCode = @'
+# Three objects to demonstrate bulk removal with -All
 $teamData = @(
     @{ Name="Alice"; Role="Developer"; Level=3 }
     @{ Name="Bob";   Role="Designer";  Level=2 }
@@ -317,7 +363,9 @@ $teamData = @(
 $teamData | fill -Bucket team -KeyProperty Name -Quiet
 '@
                                 Code = @'
+# Preview: shows exactly what -All would delete (dry run, nothing removed)
 Remove-BucketObject -Bucket team -All -WhatIf
+# Actually delete everything in the bucket (the bucket directory stays on disk)
 Remove-BucketObject -Bucket team -All -Quiet
 '@
                             }
@@ -329,6 +377,7 @@ Remove-BucketObject -Bucket team -All -Quiet
   whose properties match the hashtable. Useful for bulk cleanup.
 '@
                                 SetupCode = @'
+# Mix of active and archived records for targeted deletion by status
 $teamData = @(
     @{ Name="Alice"; Role="Developer"; Level=3; Status="active" }
     @{ Name="Bob";   Role="Designer";  Level=2; Status="archived" }
@@ -338,7 +387,9 @@ $teamData = @(
 $teamData | fill -Bucket team -KeyProperty Name -Quiet
 '@
                                 Code = @'
+# Preview: only archived objects would be removed, active ones kept
 Remove-BucketObject -Bucket team -Match @{ Status = "archived" } -WhatIf
+# Actually remove archived objects, showing which keys were deleted
 Remove-BucketObject -Bucket team -Match @{ Status = "archived" } -PassThru
 '@
                             }
@@ -362,6 +413,7 @@ Remove-BucketObject -Bucket team -Match @{ Status = "archived" } -PassThru
   untouched — this is a true copy, not a move.
 '@
                                 SetupCode = @'
+# Team data to demonstrate copy operations within a bucket
 $teamData = @(
     @{ Name="Alice";   Role="Developer";  Level=3 }
     @{ Name="Bob";     Role="Designer";   Level=2 }
@@ -371,7 +423,9 @@ $teamData = @(
 $teamData | fill -Bucket team -KeyProperty Name -Quiet
 '@
                                 Code = @'
+# Copy Alice's object to a new key "Alice-Backup" — original stays untouched
 Copy-BucketObject -Bucket team -Key "Alice" -DestinationKey "Alice-Backup" -Quiet
+# Retrieve the copy to confirm it holds the same data as the original
 scoop -Bucket team -Key "Alice-Backup"
 '@
                             }
@@ -389,9 +443,13 @@ scoop -Bucket team -Key "Alice-Backup"
   timestamps. It's the first command to run when you want an overview.
 '@
                                 SetupCode = @'
+# Seed a sample config bucket so there is something to list with dip
 @{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson -Quiet
 '@
-                                Code = 'dip'
+                                Code = @'
+# dip (Get-Bucket) shows all buckets with object counts and timestamps
+dip
+'@
                             }
                         )
                     }
@@ -407,16 +465,20 @@ scoop -Bucket team -Key "Alice-Backup"
   .NET type information for perfect round-trip fidelity.
 '@
                                 SetupCode = @'
+# Two records to export to a CLIXML archive
 $teamData = @(
     @{ Name="Alice";   Role="Developer";  Level=3 }
     @{ Name="Bob";     Role="Designer";   Level=2 }
 )
 $teamData | fill -Bucket team -KeyProperty Name -Quiet
+# Create a temp directory for the export file
 $exportDir = Join-Path ([System.IO.Path]::GetTempPath()) "buckets-tutorial-export"
 $null = New-Item -ItemType Directory -Path $exportDir -Force -ErrorAction SilentlyContinue
 '@
                                 Code = @'
+# Export the entire "team" bucket to a CLIXML archive file
 Export-Bucket -Bucket team -OutputFile (Join-Path $exportDir "team.clixml") -Quiet
+# Show the exported file on disk
 Get-ChildItem $exportDir
 '@
                             }
@@ -433,7 +495,10 @@ Get-ChildItem $exportDir
   Buckets registers a custom PSDrive called "buckets:". You can navigate it with
   cd, Get-ChildItem, Get-Content — just like any other drive.
 '@
-                                Code = 'Get-PSDrive -Name buckets'
+                                Code = @'
+# The module registers "buckets:" as a PSDrive for filesystem-style navigation
+Get-PSDrive -Name buckets
+'@
                             }
                         )
                     }
@@ -450,28 +515,33 @@ Get-ChildItem $exportDir
   each level a real subdirectory.
 '@
                                 Code = @'
+# German cities in a nested path: org > eu > de > cities
 $deCities = @(
     @{ Name = "Berlin"; Population = 3600000; Country = "DE" }
     @{ Name = "Munich"; Population = 1500000; Country = "DE" }
 )
 New-BucketObject -InputObject $deCities -Bucket "org/eu/de/cities" -KeyProperty Name -Quiet
 
+# UK cities in org/eu/uk/cities
 $ukCities = @(
     @{ Name = "London"; Population = 8900000; Country = "UK" }
     @{ Name = "Manchester"; Population = 550000; Country = "UK" }
 )
 $ukCities | fill -Bucket "org/eu/uk/cities" -KeyProperty Name -Quiet
 
+# US cities in org/us/cities
 $usCities = @(
     @{ Name = "New York"; Population = 8300000; Country = "US" }
 )
 $usCities | fill -Bucket "org/us/cities" -KeyProperty Name -Quiet
 
+# Departments under org/eu/de/depts — different entity type in same hierarchy
 $deDepts = @(
     @{ Dept = "Engineering"; Lead = "Alice" }
     @{ Dept = "Marketing"; Lead = "Bob" }
 )
 $deDepts | fill -Bucket "org/eu/de/depts" -KeyProperty Dept -Quiet
+# Show the full hierarchy as a tree
 Get-Bucket -Tree -Name "org" -Objects
 '@
                             }
@@ -489,8 +559,10 @@ Get-Bucket -Tree -Name "org" -Objects
   input and emit objects with metadata. Here's how to chain them together.
 '@
                                 Code = @'
+# Generate 5 items on the fly, pipe each directly into a bucket
 1..5 | ForEach-Object { @{ Name = "item-$_"; Value = $_ * 10 } } |
     fill -Bucket "dir-listing" -KeyProperty Name -Quiet
+# Retrieve everything from the new bucket
 scoop -Bucket "dir-listing"
 '@
                             }
@@ -544,6 +616,7 @@ scoop -Bucket "dir-listing"
   The -Quiet switch suppresses the summary output.
 '@
                                 Code = @'
+# Define a realistic server inventory as an array of hashtables
 $servers = @(
     @{ Hostname="web-01";   IP="10.0.1.10"; OS="Ubuntu 22.04";  Role="web";        CPU=4;  RAM=8;  Disk=120; Status="online";   Location="DC1" }
     @{ Hostname="web-02";   IP="10.0.1.11"; OS="Ubuntu 22.04";  Role="web";        CPU=4;  RAM=8;  Disk=120; Status="online";   Location="DC1" }
@@ -554,6 +627,7 @@ $servers = @(
     @{ Hostname="app-01";   IP="10.0.2.50"; OS="Rocky 9";       Role="app";        CPU=8;  RAM=16; Disk=200; Status="offline";  Location="DC2" }
     @{ Hostname="backup-01";IP="10.0.1.1";  OS="FreeBSD 14";    Role="backup";     CPU=4;  RAM=8;  Disk=2000;Status="online";   Location="DC1" }
 )
+# Store inventory in the "servers" bucket, keyed by hostname
 $servers | fill -Bucket servers -KeyProperty Hostname -Quiet
 '@
                             }
