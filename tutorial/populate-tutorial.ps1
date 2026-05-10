@@ -50,6 +50,9 @@ foreach ($lang in $languages) {
                     Title = $lesson.Title
                     Body  = $lesson.Body
                 }
+                if ($lesson.ContainsKey("SetupCode") -and $null -ne $lesson.SetupCode -and $lesson.SetupCode -ne "") {
+                    $props.SetupCode = $lesson.SetupCode
+                }
                 if ($lesson.ContainsKey("Code") -and $null -ne $lesson.Code -and $lesson.Code -ne "") {
                     $props.Code = $lesson.Code
                 }

@@ -251,14 +251,34 @@ while ($true) {
 
         cls
         Write-Host ""
-        Write-Host "── Chapter: $(Get-DisplayTitle $chapter.Name) ──" -ForegroundColor Magenta
-        Write-Host "── Section: $sectionTitle ──" -ForegroundColor Gray
-        Write-Host "── Lesson $($idx+1)/$($allLessons.Count): $($lesson.Title) ──" -ForegroundColor White
+        Write-Host "── Chapter: $(Get-DisplayTitle $chapter.Name) ──" -ForegroundColor DarkGray
+        Write-Host "── Section: $sectionTitle ──" -ForegroundColor DarkGray
+        Write-Host "── Lesson $($idx+1)/$($allLessons.Count): $($lesson.Title) ──" -ForegroundColor Cyan
+        Write-Host ""
         Write-Host ""
         Write-Host $lesson.Body -ForegroundColor White
         Write-Host ""
+        Write-Host ""
 
-        if ($lesson.PSObject.Properties['Code'] -and $lesson.Code) {
+        $script:lastCode = $null
+        $hasSetup = $lesson.PSObject.Properties['SetupCode'] -and $lesson.SetupCode
+        $hasCode = $lesson.PSObject.Properties['Code'] -and $lesson.Code
+
+        if ($hasSetup) {
+            Write-Host "  # Setup demo data" -ForegroundColor DarkGreen
+            foreach ($line in ($lesson.SetupCode -split "`n")) {
+                Write-Host "  $line" -ForegroundColor DarkGray
+            }
+            Write-Host ""
+            try {
+                $null = Invoke-Expression $lesson.SetupCode 2>&1
+            } catch {
+                Write-Host "  Setup error: $_" -ForegroundColor Red
+            }
+        }
+
+        if ($hasCode) {
+            if ($hasSetup) { Write-Host "  # Lesson" -ForegroundColor DarkGreen }
             $script:lastCode = $lesson.Code
             tut-write-code $lesson.Code
             try {
@@ -267,8 +287,6 @@ while ($true) {
             } catch {
                 Write-Host "  Error: $_" -ForegroundColor Red
             }
-        } else {
-            $script:lastCode = $null
         }
 
         $r = tut-pause

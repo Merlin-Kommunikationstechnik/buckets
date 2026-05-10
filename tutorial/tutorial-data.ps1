@@ -79,10 +79,10 @@ $TutorialData = @{
   Buckets uses a binary format that preserves the full .NET type information, so
   hashtables, custom objects, even FileInfo — all survive the round trip.
 '@
-                                Code = @'
+                                SetupCode = @'
 $alice = @{ Name = "Alice"; Role = "admin"; Score = 95 }
-New-BucketObject -InputObject $alice -Bucket users -Key "Alice"
 '@
+                                Code = 'New-BucketObject -InputObject $alice -Bucket users -Key "Alice"'
                             }
                         )
                     }
@@ -97,7 +97,7 @@ New-BucketObject -InputObject $alice -Bucket users -Key "Alice"
   The counterpart to fill is scoop (short for Get-BucketObject). With no arguments,
   it returns every object from every bucket — useful for getting the lay of the land.
 '@
-                                Code = @'
+                                SetupCode = @'
 $teamData = @(
     @{ Name="Alice";   Role="Developer";  Level=3 }
     @{ Name="Bob";     Role="Designer";   Level=2 }
@@ -111,8 +111,8 @@ $staffData = @(
 )
 $teamData | fill -Bucket team -KeyProperty Name -Quiet
 $staffData | fill -Bucket staff -KeyProperty Name -Quiet
-scoop
 '@
+                                Code = 'scoop'
                             }
                         )
                     }
@@ -128,7 +128,7 @@ scoop
   auto-detects the bucket and key from the _BucketName and _BucketKey metadata —
   no need to specify them again.
 '@
-                                Code = @'
+                                SetupCode = @'
 $teamData = @(
     @{ Name="Alice";   Role="Developer";  Level=3; Score=95 }
     @{ Name="Bob";     Role="Designer";   Level=2; Score=72 }
@@ -136,6 +136,8 @@ $teamData = @(
     @{ Name="Frank";   Role="Developer";  Level=4; Score=91 }
 )
 $teamData | fill -Bucket team -KeyProperty Name -Quiet
+'@
+                                Code = @'
 scoop -Bucket team -Key "Bob" | ForEach-Object {
     $_.Score = 99
     $_.Role = "Lead"
@@ -156,7 +158,7 @@ scoop -Bucket team -Key "Bob" | ForEach-Object {
   -WhatIf previews what would be deleted without actually removing anything. Always
   safe to try before you delete.
 '@
-                                Code = @'
+                                SetupCode = @'
 $teamData = @(
     @{ Name="Alice";   Role="Developer";  Level=3 }
     @{ Name="Bob";     Role="Designer";   Level=2 }
@@ -164,8 +166,8 @@ $teamData = @(
     @{ Name="Frank";   Role="Developer";  Level=4 }
 )
 $teamData | fill -Bucket team -KeyProperty Name -Quiet
-Remove-BucketObject -Bucket team -Key "Bob" -WhatIf
 '@
+                                Code = 'Remove-BucketObject -Bucket team -Key "Bob" -WhatIf'
                             }
                         )
                     }
@@ -186,7 +188,7 @@ Remove-BucketObject -Bucket team -Key "Bob" -WhatIf
   Copy an object within the same bucket but with a different key. The original stays
   untouched — this is a true copy, not a move.
 '@
-                                Code = @'
+                                SetupCode = @'
 $teamData = @(
     @{ Name="Alice";   Role="Developer";  Level=3 }
     @{ Name="Bob";     Role="Designer";   Level=2 }
@@ -194,6 +196,8 @@ $teamData = @(
     @{ Name="Frank";   Role="Developer";  Level=4 }
 )
 $teamData | fill -Bucket team -KeyProperty Name -Quiet
+'@
+                                Code = @'
 Copy-BucketObject -Bucket team -Key "Alice" -DestinationKey "Alice-Backup" -Quiet
 scoop -Bucket team -Key "Alice-Backup"
 '@
@@ -211,10 +215,10 @@ scoop -Bucket team -Key "Alice-Backup"
   dip (short for Get-Bucket) lists all your buckets with their object counts and
   timestamps. It's the first command to run when you want an overview.
 '@
-                                Code = @'
+                                SetupCode = @'
 @{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson -Quiet
-dip
 '@
+                                Code = 'dip'
                             }
                         )
                     }
@@ -229,7 +233,7 @@ dip
   Export saves an entire bucket to an archive file. CLIXML (the default) preserves
   .NET type information for perfect round-trip fidelity.
 '@
-                                Code = @'
+                                SetupCode = @'
 $teamData = @(
     @{ Name="Alice";   Role="Developer";  Level=3 }
     @{ Name="Bob";     Role="Designer";   Level=2 }
@@ -237,6 +241,8 @@ $teamData = @(
 $teamData | fill -Bucket team -KeyProperty Name -Quiet
 $exportDir = Join-Path ([System.IO.Path]::GetTempPath()) "buckets-tutorial-export"
 $null = New-Item -ItemType Directory -Path $exportDir -Force -ErrorAction SilentlyContinue
+'@
+                                Code = @'
 Export-Bucket -Bucket team -OutputFile (Join-Path $exportDir "team.clixml") -Quiet
 Get-ChildItem $exportDir
 '@
