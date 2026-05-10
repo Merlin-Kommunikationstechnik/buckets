@@ -7,8 +7,8 @@
     complex, in binary and JSON formats.
 #>
 
-Remove-Module Buckets -ErrorAction SilentlyContinue
-Import-Module "$PSScriptRoot/../Buckets" -Force
+#Remove-Module Buckets -ErrorAction SilentlyContinue
+#Import-Module "$PSScriptRoot/../Buckets" -Force
 
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
 $startTs = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
