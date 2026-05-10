@@ -71,7 +71,7 @@ function tut-write-code($Code) {
     $cm[[System.Management.Automation.Language.TokenKind]::StringExpandable] = 'DarkYellow'
     $cm[[System.Management.Automation.Language.TokenKind]::HereStringLiteral] = 'DarkYellow'
     $cm[[System.Management.Automation.Language.TokenKind]::HereStringExpandable] = 'DarkYellow'
-    $cm[[System.Management.Automation.Language.TokenKind]::Comment] = 'DarkGreen'
+    $cm[[System.Management.Automation.Language.TokenKind]::Comment] = 'DarkGray'
     $cm[[System.Management.Automation.Language.TokenKind]::Number] = 'Yellow'
 
     $tk = [System.Management.Automation.Language.TokenKind]
