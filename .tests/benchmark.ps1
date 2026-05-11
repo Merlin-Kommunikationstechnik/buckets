@@ -23,7 +23,7 @@ $createdBuckets = [System.Collections.ArrayList]::new()
 function Use-Bucket {
     param([string]$Name)
     $null = $createdBuckets.Add($Name)
-    Remove-Bucket $Name -Force -Confirm:$false -WarningAction SilentlyContinue
+    Remove-Bucket $Name -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet | Out-Null
 }
 
 function Write-InfoBlock {
@@ -238,7 +238,7 @@ function Measure-DepthBench {
     $datFiles = @(Get-ChildItem -Path $dir -Filter *.dat -ErrorAction SilentlyContinue)
     $totalSize = ($jsonFiles | Measure-Object -Property Length -Sum).Sum + ($datFiles | Measure-Object -Property Length -Sum).Sum
     $sizeStr = if ($totalSize -gt 1MB) { "$([math]::Round($totalSize/1MB,1))MB" } else { "$([math]::Round($totalSize/1KB))KB" }
-    Write-Host ("  {0,-40} Write {1,5}ms  Read {2,5}ms  {3,6}  JSON:{4}  Dat:{5}" -f $Label, $writeMs, $readMs, $sizeStr, $jsonFiles.Count, $datFiles.Count) -ForegroundColor DarkGray
+    Write-Host ("  {0,-50} Write {1,5}ms  Read {2,5}ms  {3,6}  JSON:{4}  Dat:{5}" -f $Label, $writeMs, $readMs, $sizeStr, $jsonFiles.Count, $datFiles.Count) -ForegroundColor DarkGray
 }
 
 Measure-DepthBench "DirectoryInfo (all items) @ Depth 1" -Depth 1 -Items $homeItems -Bucket "dep-d1" -KeyProp Name
@@ -304,7 +304,7 @@ Remove-Funnel -Name "bench-strip" -Quiet -Confirm:$false
 # ============================================================
 # Cleanup
 # ============================================================
-foreach ($b in $createdBuckets) { Remove-Bucket $b -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse }
+foreach ($b in $createdBuckets) { Remove-Bucket $b -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet | Out-Null }
 
 Set-BucketRoot (Join-Path $HOME ".buckets")
 Remove-Item $testRoot -Recurse -Force -ErrorAction SilentlyContinue
