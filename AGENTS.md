@@ -19,9 +19,15 @@ PowerShell module for file-based PSObject storage using directory-backed "bucket
 
 ## AI Agent Conventions
 - When the user says "look for issues for you", check for open GitHub issues labeled `agent.todo` and bring them up for discussion
-- When posting a plan comment on a GitHub issue, add the `agent.plan` label to the issue
-- After pushing a solution to an issue, add the `agent.done` label to the issue
 - All AI agents must flag every GitHub issue body, PR body, and comment they create with `created with ai - model` on the first line (e.g. `created with ai - model big-pickle`)
+
+### GitHub Issue Workflow
+1. **Find** — `gh issue list --label agent.todo --state open` to find issues
+2. **Plan** — post a comment starting with `created with ai - model big-pickle` containing the implementation plan
+3. **Label** — `gh issue edit <N> --add-label agent.plan`
+4. **Build** — implement the solution
+5. **Comment** — post a brief summary starting with `created with ai - model big-pickle`
+6. **Label** — remove `agent.todo` + `agent.plan`, add `agent.done`
 
 ## Storage Conventions
 - Default path: `$HOME/.buckets` (overridable via `-Path`)
