@@ -37,21 +37,24 @@ function tut-pause {
     Write-Host "  $Sep" -ForegroundColor DarkGray
     $hasCode = $null -ne $script:lastCode -and $script:lastCode -ne ""
     if ($hasCode) {
-        Write-Host "  [Enter] next · [b] back · [c] copy code · [m] menu · [q] quit > " -NoNewline -ForegroundColor DarkGray
+        Write-Host "  [Enter] next · [b] back · [c] copy · [m] menu · [q] quit > " -NoNewline -ForegroundColor DarkGray
     } else {
         Write-Host "  [Enter] next · [b] back · [m] menu · [q] quit > " -NoNewline -ForegroundColor DarkGray
     }
-    $r = Read-Host
-    if ($r -eq "c" -and $hasCode) {
+    do {
+        $key = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
+    } while ($key.Character -notin @("b", "c", "m", "q") -and $key.VirtualKeyCode -ne 13)
+    if ($key.VirtualKeyCode -eq 13) { return "next" }
+    if ($key.Character -eq "b") { return "back" }
+    if ($key.Character -eq "c" -and $hasCode) {
         $script:lastCode | Set-Clipboard
+        Write-Host ""
         Write-Host "  Code copied to clipboard." -ForegroundColor Green
         Start-Sleep -Milliseconds 500
         return (tut-pause)
     }
-    if ($r -eq "q") { return "quit" }
-    if ($r -eq "b") { return "back" }
-    if ($r -eq "m") { return "menu" }
-    return "next"
+    if ($key.Character -eq "m") { return "menu" }
+    return "quit"
 }
 
 # ---------- syntax highlighting ----------
