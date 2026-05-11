@@ -98,14 +98,14 @@ $config = [PSCustomObject]@{
     Database = [PSCustomObject]@{ Host = "localhost"; Port = 5432; Name = "app_db" }
     Cache    = [PSCustomObject]@{ Provider = "Redis"; TTL = 3600 }
 }
-New-BucketObject -Bucket config -InputObject $config -KeyProperty _Id -Compress
+New-BucketObject -Bucket config -InputObject $config -KeyProperty _Id -AsBinary -Compress
 Use-Bucket "config"
 
-Write-Host "`n  Saving JSON config (explicit -AsJson):" -ForegroundColor DarkGray
+Write-Host "`n  Saving JSON config (default format):" -ForegroundColor DarkGray
 $jsonConfig = [PSCustomObject]@{
     _Id = "web-config"; Theme = "dark"; Language = "en"
 }
-New-BucketObject -Bucket config -InputObject $jsonConfig -KeyProperty _Id -AsJson
+New-BucketObject -Bucket config -InputObject $jsonConfig -KeyProperty _Id
 
 # ============================================================
 # 2. Get-Bucket — tree view
@@ -183,14 +183,14 @@ Write-Host "── 6. Export / Import ──────────────
 $exportFile = Join-Path $PSScriptRoot "demo-export.clixml"
 $exportJson = Join-Path $PSScriptRoot "demo-export.json"
 
-Write-Host "`n  Export-Bucket (CLIXML):" -ForegroundColor DarkGray
-Export-Bucket -Bucket users -OutputFile $exportFile
+Write-Host "`n  Export-Bucket (CLIXML/binary):" -ForegroundColor DarkGray
+Export-Bucket -Bucket users -OutputFile $exportFile -AsBinary
 
 Write-Host "`n  Export-Bucket (JSON):" -ForegroundColor DarkGray
-Export-Bucket -Bucket users -OutputFile $exportJson -AsJson
+Export-Bucket -Bucket users -OutputFile $exportJson
 
 Write-Host "`n  Import-Bucket (restore):" -ForegroundColor DarkGray
-Import-Bucket -Bucket restored-users -InputFile $exportFile
+Import-Bucket -Bucket restored-users -InputFile $exportFile -AsBinary
 
 Remove-Item $exportFile, $exportJson -Force
 

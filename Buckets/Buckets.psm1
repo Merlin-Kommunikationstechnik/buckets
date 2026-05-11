@@ -4,8 +4,9 @@
 .DESCRIPTION
     Buckets provides a simple way to store, retrieve, and manage PowerShell objects
     in directory-based collections called "buckets". Objects are automatically serialized
-    to binary (default) or JSON format, with auto-depth adjustment for JSON (up to depth
+    to JSON (default) or binary format, with auto-depth adjustment for JSON (up to depth
     100) and automatic fallback to binary when JSON cannot faithfully represent the object.
+    Use -AsBinary for full .NET type preservation via PSSerializer.
 #>
 
 # --- Provider compilation ---
@@ -224,7 +225,7 @@ function Resolve-ItemKey {
 
 function Save-BucketFile {
     param(
-        [string]$Path, $Item, [string]$Extension, [bool]$AsJson, [bool]$Compress,
+        [string]$Path, $Item, [string]$Extension, [bool]$AsBinary, [bool]$Compress,
         [int]$Depth = 20, [int]$BinaryDepth = 5, [bool]$Overwrite,
         [string]$BucketPath, [string]$Bucket
     )
@@ -238,7 +239,30 @@ function Save-BucketFile {
     }
 
     $writeSuccess = $false
-    if ($AsJson) {
+    if ($AsBinary) {
+        $currentDepth = $BinaryDepth
+        while ($currentDepth -le 10) {
+            try {
+                $xml = [System.Management.Automation.PSSerializer]::Serialize($Item, $currentDepth)
+                $rawBytes = [System.Text.Encoding]::UTF8.GetBytes($xml)
+                if ($Compress) {
+                    $ms = [System.IO.MemoryStream]::new()
+                    $cs = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionLevel]::Optimal)
+                    $cs.Write($rawBytes, 0, $rawBytes.Length)
+                    $cs.Close()
+                    [System.IO.File]::WriteAllBytes($Path, $ms.ToArray())
+                }
+                else {
+                    [System.IO.File]::WriteAllBytes($Path, $rawBytes)
+                }
+                if ($currentDepth -gt $BinaryDepth) { $result.Fallback = $true }
+                $writeSuccess = $true
+                break
+            }
+            catch { $currentDepth++ }
+        }
+    }
+    else {
         $currentJsonDepth = $Depth
         while ($currentJsonDepth -le 100) {
             $jsonWarning = $null
@@ -279,29 +303,6 @@ function Save-BucketFile {
             catch {
                 Write-Verbose "Failed to serialize object '$([System.IO.Path]::GetFileNameWithoutExtension($Path))' as binary: $_"
             }
-        }
-    }
-    else {
-        $currentDepth = $BinaryDepth
-        while ($currentDepth -le 10) {
-            try {
-                $xml = [System.Management.Automation.PSSerializer]::Serialize($Item, $currentDepth)
-                $rawBytes = [System.Text.Encoding]::UTF8.GetBytes($xml)
-                if ($Compress) {
-                    $ms = [System.IO.MemoryStream]::new()
-                    $cs = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionLevel]::Optimal)
-                    $cs.Write($rawBytes, 0, $rawBytes.Length)
-                    $cs.Close()
-                    [System.IO.File]::WriteAllBytes($Path, $ms.ToArray())
-                }
-                else {
-                    [System.IO.File]::WriteAllBytes($Path, $rawBytes)
-                }
-                if ($currentDepth -gt $BinaryDepth) { $result.Fallback = $true }
-                $writeSuccess = $true
-                break
-            }
-            catch { $currentDepth++ }
         }
     }
 
@@ -564,29 +565,30 @@ function Export-Bucket {
     .DESCRIPTION
     Serializes all objects in a bucket to a single JSON or CLIXML archive file.
     Includes object metadata (_BucketName, _BucketKey) for easy restoration.
+    Default format is JSON. Use -AsBinary for CLIXML/PSSerializer format with full .NET type preservation.
     .PARAMETER Bucket
     Bucket name to export. Supports wildcards.
     .PARAMETER Path
     Root directory for bucket storage. Default: $HOME/.buckets.
     .PARAMETER OutputFile
     Path to the output archive file.
-    .PARAMETER AsJson
-    Export as JSON archive (default is CLIXML/PSSerializer).
+    .PARAMETER AsBinary
+    Export as CLIXML/PSSerializer binary archive (default is JSON).
     .PARAMETER Compress
-    Enable GZip compression for CLIXML archives.
+    Enable GZip compression for CLIXML archives. Only effective with -AsBinary.
     .PARAMETER Quiet
     Suppress all output.
     .EXAMPLE
-    Export-Bucket -Bucket users -OutputFile "./users-backup.clixml"
+    Export-Bucket -Bucket users -OutputFile "./users-backup.json"
     .EXAMPLE
-    Export-Bucket -Bucket "config*" -OutputFile "./config-backup.json" -AsJson
+    Export-Bucket -Bucket "config*" -OutputFile "./config-backup.clixml" -AsBinary
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)][string[]]$Bucket,
         [string]$Path,
         [Parameter(Mandatory = $true)][string]$OutputFile,
-        [switch]$AsJson,
+        [switch]$AsBinary,
         [switch]$Compress,
         [switch]$Quiet
     )
@@ -617,11 +619,7 @@ function Export-Bucket {
         $null = [System.IO.Directory]::CreateDirectory($outputDir)
     }
 
-    if ($AsJson) {
-        $json = ConvertTo-Json -InputObject $allObjects -Depth 20 -Compress
-        [System.IO.File]::WriteAllText($OutputFile, $json, [System.Text.Encoding]::UTF8)
-    }
-    else {
+    if ($AsBinary) {
         $xml = [System.Management.Automation.PSSerializer]::Serialize($allObjects, 10)
         $rawBytes = [System.Text.Encoding]::UTF8.GetBytes($xml)
         if ($Compress) {
@@ -634,6 +632,10 @@ function Export-Bucket {
         else {
             [System.IO.File]::WriteAllBytes($OutputFile, $rawBytes)
         }
+    }
+    else {
+        $json = ConvertTo-Json -InputObject $allObjects -Depth 20 -Compress
+        [System.IO.File]::WriteAllText($OutputFile, $json, [System.Text.Encoding]::UTF8)
     }
 
     if (-not $Quiet) {
@@ -1339,7 +1341,9 @@ function Import-Bucket {
     .SYNOPSIS
     Imports objects from an archive file into a bucket.
     .DESCRIPTION
-    Reads objects from a CLIXML or JSON archive file and stores them in a bucket.
+    Reads objects from a JSON or CLIXML archive file and stores them in a bucket.
+    Format is auto-detected by file extension (.json = JSON, otherwise = CLIXML/binary).
+    Use -AsBinary to force CLIXML/binary format regardless of extension.
     Preserves original keys if objects have _BucketKey metadata; otherwise generates new keys.
     .PARAMETER Bucket
     Destination bucket name. Creates the bucket if it doesn't exist.
@@ -1347,35 +1351,34 @@ function Import-Bucket {
     Root directory for bucket storage. Default: $HOME/.buckets.
     .PARAMETER InputFile
     Path to the archive file to import.
-    .PARAMETER AsJson
-    Force import from JSON format (auto-detected by file extension if omitted).
+    .PARAMETER AsBinary
+    Force import from CLIXML/binary format (auto-detected by file extension if omitted).
     .PARAMETER Overwrite
     Overwrite existing objects with the same key.
     .PARAMETER Quiet
     Suppress all output.
     .EXAMPLE
-    Import-Bucket -Bucket users -InputFile "./users-backup.clixml"
+    Import-Bucket -Bucket users -InputFile "./users-backup.json"
     .EXAMPLE
-    Import-Bucket -Bucket config -InputFile "./config-backup.json" -Overwrite
+    Import-Bucket -Bucket config -InputFile "./config-backup.clixml" -AsBinary
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)][string]$Bucket,
         [Parameter(Mandatory = $true)][string]$InputFile,
         [string]$Path,
-        [switch]$AsJson,
+[switch]$AsBinary,
         [switch]$Overwrite,
         [switch]$Quiet
     )
 
     if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
-    $Path = Resolve-SafePath -Path $Path
     if (-not [System.IO.File]::Exists($InputFile)) {
         throw "Input file '$InputFile' not found"
     }
 
     $rawBytes = [System.IO.File]::ReadAllBytes($InputFile)
-    $useJson = $AsJson -or $InputFile -like "*.json"
+    $useJson = -not $AsBinary -and $InputFile -like "*.json"
 
     if ($useJson) {
         $content = [System.IO.File]::ReadAllText($InputFile, [System.Text.Encoding]::UTF8)
@@ -1549,11 +1552,11 @@ function New-BucketObject {
     Saves a PSObject to a bucket. Creates the bucket if it doesn't exist.
     .DESCRIPTION
     Serializes one or more PowerShell objects and stores them in a bucket directory.
-    Arrays are stored as individual files. By default objects are serialized to binary
-    format using PSSerializer for full .NET type preservation. Use -AsJson for
-    human-readable JSON format. When -AsJson is used, depth is auto-incremented up to
-    100 to avoid truncation. If JSON still cannot faithfully represent the object,
-    it falls back to binary format and emits a warning.
+    Arrays are stored as individual files. By default objects are serialized to JSON
+    format for human readability and interoperability. Use -AsBinary for .NET type
+    preservation via PSSerializer. JSON depth is auto-incremented up to 100 to avoid
+    truncation. If JSON still cannot faithfully represent the object, it falls back
+    to binary format and emits a warning.
     .PARAMETER InputObject
     The object(s) to store. Accepts pipeline input. Arrays are stored as individual files.
     .PARAMETER Bucket
@@ -1570,10 +1573,10 @@ function New-BucketObject {
     Maximum depth for binary (PSSerializer) serialization. Default: 5.
     .PARAMETER AsTimestamp
     Use a timestamp-based filename (yyyyMMddHHmmssfff_index) instead of a GUID. Ignored if -Key or -KeyProperty is also specified.
-    .PARAMETER AsJson
-    Store objects as JSON instead of binary format.
+    .PARAMETER AsBinary
+    Store objects as binary (.dat) instead of JSON (.json). Use for full .NET type preservation.
     .PARAMETER Compress
-    Enable GZip compression for binary files to reduce disk usage.
+    Enable GZip compression for binary files to reduce disk usage. Only effective with -AsBinary.
     .PARAMETER Quiet
     Suppress all output. No progress indicator, no summary.
     .PARAMETER Overwrite
@@ -1584,9 +1587,9 @@ function New-BucketObject {
     .EXAMPLE
     New-BucketObject -Bucket users -InputObject $users -KeyProperty Name
     .EXAMPLE
-    New-BucketObject -Bucket config -InputObject $config -Key "app-settings" -AsJson
+    New-BucketObject -Bucket config -InputObject $config -Key "app-settings"
     .EXAMPLE
-    New-BucketObject -Bucket users -InputObject @{ Name = "Alice"; Email = "alice@new.com"; Role = "manager"; Active = $true } -KeyProperty Name -Overwrite
+    New-BucketObject -Bucket users -InputObject $user -KeyProperty Name -AsBinary
     #>
     [CmdletBinding()]
     param(
@@ -1598,7 +1601,7 @@ function New-BucketObject {
         [ValidateRange(1, 100)][int]$Depth = 20,
         [ValidateRange(1, 100)][int]$BinaryDepth = 5,
         [switch]$AsTimestamp,
-        [switch]$AsJson,
+        [switch]$AsBinary,
         [switch]$Compress,
         [switch]$Overwrite,
         [switch]$Quiet,
@@ -1607,7 +1610,7 @@ function New-BucketObject {
 
     begin {
         $bucketPath = Ensure-BucketExists -Name $Bucket -Path $Path
-        $extension = if ($AsJson) { ".json" } else { ".dat" }
+        $extension = if ($AsBinary) { ".dat" } else { ".json" }
         $savedCount = 0; $skippedCount = 0; $fallbackCount = 0; $formatFallbackCount = 0; $failedCount = 0; $totalCount = 0
         $useVerbose = $VerbosePreference -eq 'Continue'
         $useQuiet = $Quiet.IsPresent
@@ -1641,7 +1644,7 @@ function New-BucketObject {
                 $itemFilename = Get-BucketFilename -Item $item -Key $Key -KeyProperty $KeyProperty -AsTimestamp:$AsTimestamp.IsPresent -Index $index -Extension $extension
                 if ($null -eq $itemFilename) { $skippedCount++; $index++; continue }
                 $itemFilePath = Join-Path $bucketPath $itemFilename
-                $writeResult = Save-BucketFile -Path $itemFilePath -Item $item -Extension $extension -AsJson:$AsJson.IsPresent -Compress:$Compress.IsPresent -Depth $Depth -BinaryDepth $BinaryDepth -Overwrite:$Overwrite.IsPresent -BucketPath $bucketPath -Bucket $Bucket
+                $writeResult = Save-BucketFile -Path $itemFilePath -Item $item -Extension $extension -AsBinary:$AsBinary.IsPresent -Compress:$Compress.IsPresent -Depth $Depth -BinaryDepth $BinaryDepth -Overwrite:$Overwrite.IsPresent -BucketPath $bucketPath -Bucket $Bucket
                 if ($writeResult.Success) {
                     $savedCount++
                     if ($showProgress -and $totalForItems -gt 50) {
@@ -1677,7 +1680,7 @@ function New-BucketObject {
                 $itemFilename = Get-BucketFilename -Item $item -Key $Key -KeyProperty $KeyProperty -AsTimestamp:$AsTimestamp.IsPresent -Index $index -Extension $extension
                 if ($null -eq $itemFilename) { $skippedCount++; $index++; continue }
                 $itemFilePath = Join-Path $bucketPath $itemFilename
-                $writeResult = Save-BucketFile -Path $itemFilePath -Item $item -Extension $extension -AsJson:$AsJson.IsPresent -Compress:$Compress.IsPresent -Depth $Depth -BinaryDepth $BinaryDepth -Overwrite:$Overwrite.IsPresent -BucketPath $bucketPath -Bucket $Bucket
+                $writeResult = Save-BucketFile -Path $itemFilePath -Item $item -Extension $extension -AsBinary:$AsBinary.IsPresent -Compress:$Compress.IsPresent -Depth $Depth -BinaryDepth $BinaryDepth -Overwrite:$Overwrite.IsPresent -BucketPath $bucketPath -Bucket $Bucket
                 if ($writeResult.Success) {
                     $savedCount++
                     if ($showProgress -and $totalForItems -gt 50) {
@@ -2329,10 +2332,10 @@ function Set-BucketObject {
     Maximum depth for JSON serialization. Default: 20.
     .PARAMETER BinaryDepth
     Maximum depth for binary (PSSerializer) serialization. Default: 5.
-    .PARAMETER AsJson
-    Force JSON format for the updated file.
+    .PARAMETER AsBinary
+    Force binary (.dat) format for the updated file. Default is JSON (.json).
     .PARAMETER Compress
-    Enable GZip compression for binary files.
+    Enable GZip compression for binary files. Only effective with -AsBinary.
     .PARAMETER Quiet
     Suppress all output. No summary.
     .EXAMPLE
@@ -2352,7 +2355,7 @@ function Set-BucketObject {
         [string]$Path,
         [ValidateRange(1, 100)][int]$Depth = 20,
         [ValidateRange(1, 100)][int]$BinaryDepth = 5,
-        [switch]$AsJson,
+        [switch]$AsBinary,
         [switch]$Compress,
         [switch]$PassThru,
         [switch]$Quiet
@@ -2405,7 +2408,7 @@ function Set-BucketObject {
         }
 
         $filePath = $file.FullName
-        $useJson = $file.Extension -eq ".json" -or $AsJson
+        $useJson = $file.Extension -eq ".json" -and -not $AsBinary
 
         if ($isPatch) {
             $existing = Read-BucketFile -File ([System.IO.FileInfo]::new($filePath))

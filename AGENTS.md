@@ -38,10 +38,10 @@ PowerShell module for file-based PSObject storage using directory-backed "bucket
 
 ## Storage Conventions
 - Default path: `$HOME/.buckets` (overridable via `-Path`)
-- Default format: Binary via `PSSerializer` (`.dat`)
-- JSON format: `-AsJson` switch (`.json`)
-- JSON auto-depth: `-AsJson` auto-increments depth from `-Depth` (default 20) up to 100 to avoid truncation; falls back to binary with `Write-Warning` if still truncated or on exception
-- `BinaryDepth` default: 5 (ValidateRange 1-100), `Depth` default: 20
+- Default format: JSON (`.json`), human-readable and interoperable
+- Binary format: `-AsBinary` switch (`.dat`), for full .NET type preservation via PSSerializer
+- JSON auto-depth: auto-increments from `-Depth` (default 20) up to 100 to avoid truncation; falls back to binary with `Write-Warning` if still truncated or on exception
+- `BinaryDepth` default: 5 (ValidateRange 1-100), only relevant for `-AsBinary` or binary fallback
 - Arrays stored as individual files
 - Key sanitization: `/`, `:`, `*`, `?`, `"`, `<`, `>`, `|`, `.`, `[`, `]` → `_`
 - Empty keys after sanitization are rejected
@@ -50,15 +50,15 @@ PowerShell module for file-based PSObject storage using directory-backed "bucket
 
 | Cmdlet | Key Params |
 |--------|-----------|
-| `New-BucketObject` | `-InputObject` (pipeline), `-Bucket` (default "default"), `-Key`, `-KeyProperty`, `-AsJson`, `-AsTimestamp`, `-Depth`, `-BinaryDepth`, `-Compress`, `-Quiet`, `-Overwrite`, `-Funnel` |
+| `New-BucketObject` | `-InputObject` (pipeline), `-Bucket` (default "default"), `-Key`, `-KeyProperty`, `-AsBinary`, `-AsTimestamp`, `-Depth`, `-BinaryDepth`, `-Compress`, `-Quiet`, `-Overwrite`, `-Funnel` |
 | `Get-BucketObject` | `-Bucket` (positional 0, wildcards ok, all if omitted), `-Key` (positional 1), `-Match` (hashtable, supports $null), `-Filter` (scriptblock with `$_`), `-Recurse` (now default, kept for compat), `-NoRecurse`, `-First`, `-Skip`, `-Funnel` |
-| `Set-BucketObject` | `-InputObject` (pipeline binds `_BucketName`/`_BucketKey` or partial update), `-Bucket`, `-Key`, `-AsJson`, `-Compress`, `-PassThru`, `-Quiet` |
+| `Set-BucketObject` | `-InputObject` (pipeline binds `_BucketName`/`_BucketKey` or partial update), `-Bucket`, `-Key`, `-AsBinary`, `-Compress`, `-PassThru`, `-Quiet` |
 | `Remove-BucketObject` | `-Bucket`, `-Key` or `-All` or `-Match`/`-Filter` (mutual param sets), `-PassThru`, `-Quiet`, `-WhatIf` (SupportsShouldProcess) |
 | `Copy-BucketObject` | `-Bucket`, `-Key`, `-DestinationBucket`, `-DestinationKey`, `-PassThru` |
 | `Move-BucketObject` | `-Bucket`, `-Key`, `-DestinationBucket`, `-DestinationKey`, `-PassThru` |
 | `Rename-BucketObject` | `-Bucket`, `-Key`, `-NewKey`, `-PassThru` |
-| `Export-Bucket` | `-Bucket`, `-OutputFile`, `-AsJson`, `-Quiet` |
-| `Import-Bucket` | `-Bucket`, `-InputFile`, `-AsJson`, `-Overwrite`, `-Quiet` |
+| `Export-Bucket` | `-Bucket`, `-OutputFile`, `-AsBinary`, `-Quiet` |
+| `Import-Bucket` | `-Bucket`, `-InputFile`, `-AsBinary`, `-Overwrite`, `-Quiet` |
 | `Get-Bucket` | `-Name` (positional 0, substring filter), `-Tree`, `-Raw` |
 | `Get-BucketStats` | `-Bucket` (returns count, size, timestamps, visible Path) |
 | `Get-BucketKeys` | `-Bucket` (positional 0, wildcards ok), `-Match` (returns Bucket + Key only) |
@@ -88,7 +88,7 @@ Uses `SupportsShouldProcess` for `-WhatIf` support. Parameter sets enforce `-Key
 
 ### Storage & Serialization
 - `-Key` is the literal filename (without extension). Use `-KeyProperty` to derive the filename from a property on the input object, or `-AsTimestamp` for auto-naming
-- `-AsJson` auto-increments depth up to 100; if still truncated or on exception, falls back to binary with `Write-Warning`
+- `-AsBinary` stores objects in binary `.dat` format; `-Compress` only applies to binary
 - Corrupted files emit a warning and return `$null` (don't break enumeration)
 
 ### PowerShell

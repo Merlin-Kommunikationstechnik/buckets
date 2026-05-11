@@ -134,18 +134,18 @@ function QuickSave {
 
     if ([string]::IsNullOrWhiteSpace($key)) {
         if ($json) {
-            $hash | New-BucketObject -Bucket $bucket -AsJson -Quiet
+            $hash | New-BucketObject -Bucket $bucket -Quiet
         }
         else {
-            $hash | New-BucketObject -Bucket $bucket -Quiet
+            $hash | New-BucketObject -Bucket $bucket -AsBinary -Quiet
         }
     }
     else {
         if ($json) {
-            $hash | New-BucketObject -Bucket $bucket -KeyProperty "_Id" -Key $key -AsJson -Quiet
+            $hash | New-BucketObject -Bucket $bucket -KeyProperty "_Id" -Key $key -Quiet
         }
         else {
-            $hash | New-BucketObject -Bucket $bucket -KeyProperty "_Id" -Key $key -Quiet
+            $hash | New-BucketObject -Bucket $bucket -KeyProperty "_Id" -Key $key -AsBinary -Quiet
         }
     }
     Write-Host "  Saved." -ForegroundColor Green

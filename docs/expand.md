@@ -73,7 +73,7 @@ $app | fill -Bucket "app" -Expand -KeyProperty Name
 | `-Key` | Literal key for array elements (overrides `-KeyProperty` if both set) |
 | `-AsTimestamp` | Used for auto-generated keys when path has only one component |
 | `-Overwrite` | Passed to each `Save-BucketFile` call |
-| `-AsJson` / `-Compress` | Passed to each leaf save |
+| `-AsBinary` / `-Compress` | Passed to each leaf save |
 | `-Quiet` | Suppresses summary output |
 | `-Depth` / `-BinaryDepth` | Passed to each `Save-BucketFile` call |
 

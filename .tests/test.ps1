@@ -137,7 +137,7 @@ Write-Host "  Saved $($logEntries.Count) log entries" -ForegroundColor DarkGray
 # ============================================================
 # 5. Config (JSON format)
 # ============================================================
-Write-Host "`n[5] Config (JSON format — explicit -AsJson switch)" -ForegroundColor Blue
+Write-Host "`n[5] Config (JSON format — default)" -ForegroundColor Blue
 
 $config = [PSCustomObject]@{
     _Id = "app-config"
@@ -147,7 +147,7 @@ $config = [PSCustomObject]@{
     Version = "2.1.0"
 }
 
-New-BucketObject -Bucket config -InputObject $config -KeyProperty _Id -AsJson -Quiet
+New-BucketObject -Bucket config -InputObject $config -KeyProperty _Id -Quiet
 Use-Bucket "config"
 Write-Host "  Saved config as JSON" -ForegroundColor DarkGray
 
@@ -174,9 +174,9 @@ Write-Host "  Saved 24 hourly records" -ForegroundColor DarkGray
 # ============================================================
 Write-Host "`n[7] Mixed formats (JSON + binary in same bucket)" -ForegroundColor Blue
 
-New-BucketObject -Bucket mixed -InputObject @{ _Id = "m1"; Type = "json"; Value = 1 } -KeyProperty _Id -AsJson -Quiet
-New-BucketObject -Bucket mixed -InputObject @{ _Id = "m2"; Type = "binary"; Value = 2 } -KeyProperty _Id -Quiet
-New-BucketObject -Bucket mixed -InputObject @{ _Id = "m3"; Type = "json-fallback" } -KeyProperty _Id -AsJson -Quiet
+New-BucketObject -Bucket mixed -InputObject @{ _Id = "m1"; Type = "json"; Value = 1 } -KeyProperty _Id -Quiet
+New-BucketObject -Bucket mixed -InputObject @{ _Id = "m2"; Type = "binary"; Value = 2 } -KeyProperty _Id -AsBinary -Quiet
+New-BucketObject -Bucket mixed -InputObject @{ _Id = "m3"; Type = "json-fallback" } -KeyProperty _Id -Quiet
 Use-Bucket "mixed"
 Write-Host "  Saved 3 objects (2 JSON, 1 binary)" -ForegroundColor DarkGray
 
@@ -254,10 +254,10 @@ Write-Host "  Renamed user: $($renamed.Name) (key: alice-admin)" -ForegroundColo
 Write-Host "`n[10] Export/Import bucket (archive to CLIXML/JSON, restore)" -ForegroundColor Blue
 $exportPath = Join-Path $PSScriptRoot "test-export.clixml"
 $exportJson = Join-Path $PSScriptRoot "test-export.json"
-Export-Bucket -Bucket users -OutputFile $exportPath
-Export-Bucket -Bucket logs -OutputFile $exportJson -AsJson
+Export-Bucket -Bucket users -OutputFile $exportPath -AsBinary
+Export-Bucket -Bucket logs -OutputFile $exportJson
 Remove-Bucket "import-test" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
-Import-Bucket -Bucket import-test -InputFile $exportPath
+Import-Bucket -Bucket import-test -InputFile $exportPath -AsBinary
 Use-Bucket "import-test"
 $imported = Get-BucketObject -Bucket import-test
 Write-Host "  Imported $($imported.Count) users from CLIXML archive" -ForegroundColor DarkGray
@@ -268,9 +268,9 @@ Remove-Item $exportPath, $exportJson -Force
 # ============================================================
 Write-Host "`n[11] Binary compression (-Compress — GZip reduces repetitive data)" -ForegroundColor Blue
 Remove-Bucket "compressed" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
-New-BucketObject -Bucket compressed -InputObject @{ _Id = "comp"; Data = "x" * 5000; Type = "compressed" } -KeyProperty "_Id" -Compress -Quiet
+New-BucketObject -Bucket compressed -InputObject @{ _Id = "comp"; Data = "x" * 5000; Type = "compressed" } -KeyProperty "_Id" -AsBinary -Compress -Quiet
 Use-Bucket "compressed"
-New-BucketObject -Bucket compressed -InputObject @{ _Id = "uncomp"; Data = "x" * 5000; Type = "uncompressed" } -KeyProperty "_Id" -Quiet
+New-BucketObject -Bucket compressed -InputObject @{ _Id = "uncomp"; Data = "x" * 5000; Type = "uncompressed" } -KeyProperty "_Id" -AsBinary -Quiet
 $basePath = $testRoot
 $compPath = Join-Path $basePath "compressed"
 $compSize = (Get-ChildItem $compPath -Filter "comp.dat").Length
@@ -901,13 +901,13 @@ Test-Edge "No-buckets root (nonexistent path returns empty)" {
 
 <#
   15. JSON depth auto-increment
-  Verifies: When -AsJson is used with a deep object, the module
-            auto-increments JSON depth to avoid truncation.
+  Verifies: With a deep object, the module auto-increments
+            JSON depth to avoid truncation.
 #>
-Test-Edge "JSON depth auto-increment (deep object with -AsJson)" {
+Test-Edge "JSON depth auto-increment (deep object)" {
     $deep = @{ L1 = "deep" }
     for ($i = 2; $i -le 25; $i++) { $deep = @{ "L$i" = $deep } }
-    New-BucketObject -Bucket edge -InputObject $deep -Key "json-deep" -AsJson -Depth 2 -Quiet
+    New-BucketObject -Bucket edge -InputObject $deep -Key "json-deep" -Depth 2 -Quiet
     $retrieved = Get-BucketObject -Bucket edge -Key "json-deep"
     Remove-BucketObject -Bucket edge -Key "json-deep" -Quiet
     $null -ne $retrieved
@@ -915,25 +915,25 @@ Test-Edge "JSON depth auto-increment (deep object with -AsJson)" {
 
 <#
   16. JSON format fallback to binary on exception
-  Verifies: When -AsJson encounters a circular reference, the module
+Verifies: When a circular reference prevents JSON serialization, the module
             falls back to binary and emits a warning.
 #>
-Test-Edge "JSON fallback to binary (circular ref with -AsJson)" {
-    $circ = [PSCustomObject]@{ _Id = "json-circ"; Name = "loop" }
+Test-Edge "JSON fallback to binary (circular ref)" {
+    $circ = [PSCustomObject]@{ _Id = "circ"; Name = "loop" }
     $circ | Add-Member -NotePropertyName "Self" -NotePropertyValue $circ
-    New-BucketObject -Bucket edge -InputObject $circ -KeyProperty _Id -AsJson -Quiet -WarningAction SilentlyContinue
-    $retrieved = Get-BucketObject -Bucket edge -Key "json-circ" -WarningAction SilentlyContinue
-    Remove-BucketObject -Bucket edge -Key "json-circ" -Quiet
+    New-BucketObject -Bucket edge -InputObject $circ -KeyProperty _Id -Quiet -WarningAction SilentlyContinue
+    $retrieved = Get-BucketObject -Bucket edge -Key "circ" -WarningAction SilentlyContinue
+    Remove-BucketObject -Bucket edge -Key "circ" -Quiet
     $null -ne $retrieved -and $retrieved.Name -eq "loop"
 }
 
 <#
   17. JSON shallow object stays as JSON
-  Verifies: A simple object stored with -AsJson remains as .json,
+  Verifies: A simple object stored without -AsBinary remains as .json,
             no unnecessary fallback to binary.
 #>
 Test-Edge "JSON shallow object stays as .json" {
-    New-BucketObject -Bucket edge -InputObject @{ _Id = "json-shallow"; Name = "test" } -KeyProperty _Id -AsJson -Quiet
+    New-BucketObject -Bucket edge -InputObject @{ _Id = "json-shallow"; Name = "test" } -KeyProperty _Id -Quiet
     $jsonPath = Join-Path (Get-BucketRoot) "edge/json-shallow.json"
     $datPath = Join-Path (Get-BucketRoot) "edge/json-shallow.dat"
     $isJson = Test-Path $jsonPath

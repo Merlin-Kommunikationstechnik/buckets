@@ -42,7 +42,7 @@ function New-DemoLog {
             Tag       = $tag
             Message   = $msg
         }
-    } | New-BucketObject -Bucket "logs/syslog/$Hostname/$day" -AsTimestamp -AsJson -Compress -Quiet
+    } | New-BucketObject -Bucket "logs/syslog/$Hostname/$day" -AsTimestamp -AsBinary -Compress -Quiet
 }
 
 function New-DemoEventLog {
@@ -70,7 +70,7 @@ function New-DemoEventLog {
             ProviderName = $src
             Message = $msgs[$id]
         }
-    } | New-BucketObject -Bucket "logs/eventlog/$LogName/$day" -AsTimestamp -AsJson -Compress -Quiet
+    } | New-BucketObject -Bucket "logs/eventlog/$LogName/$day" -AsTimestamp -AsBinary -Compress -Quiet
 }
 
 # Clean previous run

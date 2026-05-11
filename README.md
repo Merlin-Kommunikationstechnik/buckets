@@ -11,7 +11,7 @@ A PowerShell module for file-based PSObject storage. Store, retrieve, and manage
 ```powershell
 Import-Module ./Buckets
 
-# Save objects (binary by default) — alias: fill
+# Save objects (JSON by default) — alias: fill
 New-BucketObject -InputObject @{ Name = "Alice"; Age = 30 } -KeyProperty Name
 
 # Retrieve — alias: spill
@@ -25,10 +25,10 @@ Get-Bucket
 
 | Format | Default | Switch | Extension |
 |--------|---------|--------|-----------|
-| **Binary** (PSSerializer) | Yes | — | `.dat` |
-| **JSON** | No | `-AsJson` | `.json` |
+| **JSON** | Yes | — | `.json` |
+| **Binary** (PSSerializer) | No | `-AsBinary` | `.dat` |
 
-Objects that exceed JSON depth are automatically saved as binary with a warning. Use `-BinaryDepth` to control binary serialization detail (default: `5`).
+JSON is the default format. Objects that exceed JSON depth trigger auto-depth increment (up to 100); if still truncated, they fall back to binary with a warning. Use `-BinaryDepth` to control binary serialization detail (default: `5`).
 
 Binary files can be compressed via `-Compress` (GZip, ~95% reduction on repetitive data). Compression is auto-detected on read via magic bytes.
 
@@ -48,7 +48,7 @@ New-BucketObject
     [-Depth <int>]
     [-BinaryDepth <int>]
     [-AsTimestamp]
-    [-AsJson]
+    [-AsBinary]
     [-Compress]
     [-Overwrite]
     [-Quiet]
@@ -64,6 +64,7 @@ New-BucketObject
 | `-KeyProperty` | Property name whose value becomes the filename | — |
 | `-Depth` | JSON serialization depth (1–100) | `20` |
 | `-BinaryDepth` | Binary serialization depth (1–100) | `5` |
+| `-AsBinary` | Store in binary format (`.dat`) | `false` |
 | `-Compress` | GZip compress binary output | `false` |
 | `-Overwrite` | Overwrite existing objects with the same key | `false` |
 | `-Quiet` | Suppress output | `false` |
@@ -94,14 +95,14 @@ New-BucketObject -InputObject @{ Name = "test" } -Quiet
 # Named bucket, keyed by property
 New-BucketObject -Bucket users -InputObject $users -KeyProperty Email
 
-# JSON format
-New-BucketObject -Bucket users -InputObject $users -KeyProperty Name -AsJson
+# Binary format
+New-BucketObject -Bucket users -InputObject $users -KeyProperty Name -AsBinary
 
 # Timestamp-based filenames
 Get-Process | New-BucketObject -Bucket processes -AsTimestamp
 
 # Compressed binary
-New-BucketObject -Bucket logs -InputObject $logs -Compress
+New-BucketObject -Bucket logs -InputObject $logs -AsBinary -Compress
 
 # Custom storage location
 New-BucketObject -Path /tmp/buckets -InputObject $data -KeyProperty Name
@@ -203,7 +204,7 @@ Set-BucketObject
     [[-Path] <string>]
     [-Depth <int>]
     [-BinaryDepth <int>]
-    [-AsJson]
+    [-AsBinary]
     [-Compress]
     [-PassThru]
     [-Quiet]
@@ -218,7 +219,7 @@ Set-BucketObject
 | `-Path` | Storage root directory | `$HOME/.buckets` |
 | `-Depth` | JSON serialization depth | `20` |
 | `-BinaryDepth` | Binary serialization depth (1–100) | `5` |
-| `-AsJson` | Force JSON format | — |
+| `-AsBinary` | Force binary format | — |
 | `-Compress` | GZip compress binary output | `false` |
 | `-PassThru` | Emit PSCustomObject with Bucket and Key to pipeline | `false` |
 | `-Quiet` | Suppress all output | `false` |
@@ -632,7 +633,7 @@ Export-Bucket
     [-Bucket] <string[]>
     [-OutputFile] <string>
     [-Path <string>]
-    [-AsJson]
+    [-AsBinary]
     [-Compress]
     [-Quiet]
     [<CommonParameters>]
@@ -643,15 +644,15 @@ Export-Bucket
 | `-Bucket` | Bucket name(s) to export (supports wildcards) |
 | `-OutputFile` | Output archive file path |
 | `-Path` | Storage root directory |
-| `-AsJson` | Export as JSON archive (default: CLIXML/PSSerializer) |
-| `-Compress` | GZip compress CLIXML archives |
+| `-AsBinary` | Export as CLIXML binary archive (default: JSON) |
+| `-Compress` | GZip compress binary archives |
 | `-Quiet` | Suppress output |
 
 #### Examples
 
 ```powershell
-Export-Bucket -Bucket users -OutputFile users-backup.clixml
-Export-Bucket -Bucket "projects/*" -OutputFile projects.json -AsJson
+Export-Bucket -Bucket users -OutputFile users-backup.json
+Export-Bucket -Bucket "projects/*" -OutputFile projects-backup.clixml -AsBinary
 ```
 
 ---
@@ -664,7 +665,7 @@ Imports objects from an archive file into a bucket.
 Import-Bucket
     [-Bucket] <string>
     [-InputFile] <string>
-    [-AsJson]
+    [-AsBinary]
     [-Overwrite]
     [-Quiet]
     [<CommonParameters>]
@@ -674,15 +675,15 @@ Import-Bucket
 |-----------|-------------|
 | `-Bucket` | Destination bucket name |
 | `-InputFile` | Archive file to import |
-| `-AsJson` | Force JSON import (auto-detected by `.json` extension) |
+| `-AsBinary` | Force CLIXML/binary import (auto-detected by extension) |
 | `-Overwrite` | Overwrite existing objects |
 | `-Quiet` | Suppress output |
 
 #### Examples
 
 ```powershell
-Import-Bucket -Bucket users -InputFile users-backup.clixml
-Import-Bucket -Bucket projects -InputFile projects.json -Overwrite
+Import-Bucket -Bucket users -InputFile users-backup.json
+Import-Bucket -Bucket projects -InputFile projects-backup.clixml -Overwrite
 ```
 
 ---
@@ -756,15 +757,15 @@ Buckets support nesting via path separators in bucket names. Nested buckets are 
 ```
 .buckets/
 ├── users/
-│   ├── alice.dat          (binary)
-│   ├── bob.dat            (binary)
-│   └── charlie.json       (JSON, saved with -AsJson)
+│   ├── alice.json          (JSON)
+│   ├── bob.json            (JSON)
+│   └── charlie.dat         (binary, saved with -AsBinary)
 ├── orders/
 │   ├── 2024/
-│   │   ├── ORD-001.dat
-│   │   └── ORD-002.dat
+│   │   ├── ORD-001.json
+│   │   └── ORD-002.json
 │   └── 2025/
-│       └── ORD-003.dat
+│       └── ORD-003.json
 ├── ad/                    (nested hierarchy example)
 │   ├── eu/
 │   │   ├── de/
@@ -779,8 +780,8 @@ Buckets support nesting via path separators in bucket names. Nested buckets are 
 │   │           └── users/
 │   └── us/
 └── default/
-    ├── a1b2c3.dat
-    └── d4e5f6.dat
+    ├── a1b2c3.json
+    └── d4e5f6.json
 ```
 
 Use nested bucket paths like `Get-BucketObject -Bucket "ad/eu/de/berlin/users"` or wildcards like `Get-BucketObject -Bucket "ad/*/*/users"`.

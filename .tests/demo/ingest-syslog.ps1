@@ -56,7 +56,7 @@ function Ingest-Line {
             PID       = if ($m.Groups[5].Value) { [int]$m.Groups[5].Value } else { $null }
             Message   = $m.Groups[6].Value
             Raw       = $Line
-        } | New-BucketObject -Bucket "logs/syslog/$hostname/$day" -AsTimestamp -AsJson -Compress -Quiet
+        } | New-BucketObject -Bucket "logs/syslog/$hostname/$day" -AsTimestamp -AsBinary -Compress -Quiet
     } else {
         [PSCustomObject]@{
             Timestamp = (Get-Date -Format "MMM dd HH:mm:ss")
@@ -67,7 +67,7 @@ function Ingest-Line {
             PID       = $null
             Message   = $Line
             Raw       = $Line
-        } | New-BucketObject -Bucket "logs/syslog/$FallbackSource/$day" -AsTimestamp -AsJson -Compress -Quiet
+        } | New-BucketObject -Bucket "logs/syslog/$FallbackSource/$day" -AsTimestamp -AsBinary -Compress -Quiet
     }
 }
 

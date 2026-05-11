@@ -12,10 +12,10 @@ Every object is a file, every bucket is a folder. There is no
 database, no daemon, no config file — just the filesystem.
 
 Two storage formats:
-  Binary (.dat) — via PSSerializer. Fast, preserves full .NET type
-                  information. Handles complex objects, circular refs.
-  JSON    (.json) — via -AsJson. Human-readable, portable, editable
+  JSON    (.json) — default. Human-readable, portable, editable
                   in any text editor.
+  Binary (.dat) — via -AsBinary. Preserves full .NET type information.
+                  Handles complex objects, circular refs.
 
 ### 0.2 Why Buckets?
 ---
@@ -40,7 +40,7 @@ Get-BucketRoot
 
 
 
-Each object is one file — .dat (binary, default) or .json (opt-in).
+Each object is one file — .json (JSON, default) or .dat (binary, via -AsBinary).
 The filename (minus extension) is the object's key.
 
 Current buckets:
@@ -57,8 +57,8 @@ The six core cmdlets:
   dip    · Get-Bucket            list buckets
   drain  · Remove-Bucket         delete a bucket
 
-Defaults: Binary depth 5, JSON depth 20, path C:\Users\berfelde/.buckets
-Override any of them with -BinaryDepth, -Depth, or -Path.
+Defaults: JSON depth 20, Binary depth 5, path C:\Users\berfelde/.buckets
+Override any of them with -Depth, -BinaryDepth, or -Path.
 
 ## 1. Create
 ---
@@ -68,8 +68,8 @@ Override any of them with -BinaryDepth, -Depth, or -Path.
 
 Let's save your first object — a simple hashtable describing a user. We give it
 an explicit key "Alice" with -Key, which becomes its key. By default,
-Buckets uses a binary format that preserves the full .NET type information, so
-hashtables, custom objects, even FileInfo — all survive the round trip.
+Buckets stores objects as JSON — human-readable and portable.
+For complex objects that need full .NET type preservation, use -AsBinary.
 
 
 ```powershell
@@ -127,17 +127,17 @@ $data | fill -Bucket users -Key "external-ref"
 
 users · 1 objects
 
-### 1.5 JSON output with -AsJson
+### 1.5 Binary format with -AsBinary
 ---
 
-JSON mode is for when you want human-readable files — configs, settings, anything you
-might edit by hand. Add -AsJson and Buckets stores a .json file instead of .dat.
-You can open it in any text editor.
+JSON is the default — human-readable, portable, editable in any text editor.
+When you need full .NET type preservation (complex objects, circular refs, FileInfo),
+use -AsBinary to store as .dat instead.
 
 
 ```powershell
 $config = @{ Host = "localhost"; Port = 5432 }
-$config | fill -Bucket config -Key "app-config" -AsJson
+$config | fill -Bucket config -Key "app-config"
 ```
 
 config · 1 objects
@@ -227,7 +227,7 @@ types · 1 objects
 ### 1b.3 Deeply nested objects
 ---
 
-Buckets handles deeply nested objects with ease. The binary serializer preserves the
+Buckets handles deeply nested objects with ease. Use -AsBinary to preserve the
 full object graph — nested PSCustomObjects, arrays, and all. This is exactly where
 JSON would fall short.
 
@@ -646,7 +646,7 @@ scoop -Bucket team -Key "Bob" | Select _BucketName, _BucketKey, _BucketFile
 
 _BucketName _BucketKey _BucketFile
 ----------- ---------- -----------
-team        Bob        C:\Users\berfelde\.buckets\team\Bob.dat
+team        Bob        C:\Users\berfelde\.buckets\team\Bob.json
 ```
 
 ### 2.11 Piping to Select-Object
@@ -1329,7 +1329,7 @@ Set-BucketObject always writes back in the original format.
 
 ```powershell
 $config = @{ Host = "localhost"; Port = 5432 }
-$config | fill -Bucket config -Key "db-settings" -AsJson
+$config | fill -Bucket config -Key "db-settings"
 $patch = @{ UpdatedAt = Get-Date; Host = "prod-server" }
 $patch | Set-BucketObject -Bucket config -Key "db-settings" -Quiet
 ```
@@ -1558,7 +1558,7 @@ Remove-BucketObject -Bucket temp -Key "bye-bye" -PassThru -Quiet
 
 Bucket Key
 ------ ---
-temp   bye-bye.dat
+temp   bye-bye.json
 ```
 
 ## 5. Object Operations — Copy, Rename, Move
@@ -1651,7 +1651,7 @@ maintained — you never have to worry about it.
 
 ```powershell
 $tmp = @{ Format = "json" }
-$tmp | fill -Bucket tmp-json -Key "json-old" -AsJson -Quiet
+$tmp | fill -Bucket tmp-json -Key "json-old" -Quiet
 Rename-BucketObject -Bucket tmp-json -Key "json-old" -NewKey "json-new" -PassThru -Quiet
 ```
 
@@ -1757,7 +1757,7 @@ timestamps. It's the first command to run when you want an overview.
 
 
 ```powershell
-@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
+@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config"
 dip
 ```
 
@@ -1799,7 +1799,7 @@ other bucket with "team" in the name.
 
 
 ```powershell
-@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
+@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config"
 dip "team"
 ```
 
@@ -1869,7 +1869,7 @@ Get-BucketObjectStats -Bucket team
 
 Bucket        : team
 Key           : Alice-Backup
-Format        : Binary
+Format        : JSON
 Type          : Object
 Size          : 1166
 LastWriteTime : 10.05.2026 20:55:38
@@ -1877,7 +1877,7 @@ IsCompressed  : False
 
 Bucket        : team
 Key           : Alice
-Format        : Binary
+Format        : JSON
 Type          : Object
 Size          : 1166
 LastWriteTime : 10.05.2026 20:55:38
@@ -1885,7 +1885,7 @@ IsCompressed  : False
 
 Bucket        : team
 Key           : Bob
-Format        : Binary
+Format        : JSON
 Type          : Object
 Size          : 1159
 LastWriteTime : 10.05.2026 20:55:38
@@ -1893,7 +1893,7 @@ IsCompressed  : False
 
 Bucket        : team
 Key           : Carol
-Format        : Binary
+Format        : JSON
 Type          : Object
 Size          : 1162
 LastWriteTime : 10.05.2026 20:55:38
@@ -1901,7 +1901,7 @@ IsCompressed  : False
 
 Bucket        : team
 Key           : Frank
-Format        : Binary
+Format        : JSON
 Type          : Object
 Size          : 1166
 LastWriteTime : 10.05.2026 20:55:38
@@ -1934,7 +1934,7 @@ of every object stored.
 
 
 ```powershell
-@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
+@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config"
 Get-BucketKeys -Bucket "*"
 ```
 
@@ -2025,7 +2025,7 @@ limits how many objects are shown per bucket.
 
 
 ```powershell
-@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
+@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config"
 Get-Bucket -Tree -MaxFiles 10
 ```
 
@@ -2059,7 +2059,7 @@ individual objects cluttering the output.
 
 
 ```powershell
-@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
+@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config"
 Get-Bucket -Tree
 ```
 
@@ -2093,7 +2093,7 @@ visible.
 
 
 ```powershell
-@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
+@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config"
 Get-Bucket -Tree -Objects
 ```
 
@@ -2176,7 +2176,7 @@ Useful for further processing or custom display.
 
 
 ```powershell
-@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
+@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config"
 Get-Bucket -Tree -Raw | Select-Object -First 2
 ```
 
@@ -2201,7 +2201,7 @@ only top-level buckets.
 
 
 ```powershell
-@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
+@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config"
 Get-Bucket -Tree -Depth 1
 ```
 
@@ -2215,7 +2215,7 @@ your bucket hierarchy.
 
 
 ```powershell
-@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
+@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config"
 Get-Bucket -Tree -Raw | ConvertTo-Json -Depth 5 | Select-Object -First 5
 ```
 
@@ -2462,7 +2462,7 @@ object counts.
 
 
 ```powershell
-@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
+@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config"
 dip | Select-Object Name, ObjectCount
 ```
 
@@ -2570,27 +2570,27 @@ not-a-bucket · contains 1 non-bucket file(s): evil.exe
 ---
 
 
-### 7.1 Export to CLIXML
+### 7.1 Export to JSON
 ---
 
-Export saves an entire bucket to an archive file. CLIXML (the default) preserves
-.NET type information for perfect round-trip fidelity.
+Export saves an entire bucket to an archive file. JSON (the default) produces
+human-readable archives you can inspect in any text editor.
 
 
 ```powershell
-Export-Bucket -Bucket team -OutputFile (Join-Path $exportDir "team.clixml") -Quiet
+Export-Bucket -Bucket team -OutputFile (Join-Path $exportDir "team.json") -Quiet
 ```
 
 
-### 7.2 Export to JSON
+### 7.2 Export to CLIXML
 ---
 
-Export to JSON for human-readable archives. Same data, different format —
-useful when you need to inspect or share the data outside of PowerShell.
+Export to CLIXML with -AsBinary for archives that preserve full .NET type
+information. Use this when you need perfect round-trip fidelity for complex objects.
 
 
 ```powershell
-Export-Bucket -Bucket team -OutputFile (Join-Path $exportDir "team.json") -AsJson -Quiet
+Export-Bucket -Bucket team -OutputFile (Join-Path $exportDir "team.clixml") -AsBinary -Quiet
 ```
 
 
@@ -2602,32 +2602,32 @@ into a single archive file.
 
 
 ```powershell
-@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
+@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config"
 Export-Bucket -Bucket "t*","config" -OutputFile (Join-Path $exportDir "multi-export.clixml") -Quiet
 ```
 
 
-### 7.4 Import from CLIXML
+### 7.4 Import from JSON
 ---
 
-Import restores from a CLIXML archive into a new bucket. Objects are recreated
+Import restores from a JSON archive into a new bucket. Objects are recreated
 with their original keys and data.
 
 
 ```powershell
-Import-Bucket -Bucket restored -InputFile (Join-Path $exportDir "team.clixml") -Quiet
+Import-Bucket -Bucket restored -InputFile (Join-Path $exportDir "team.json") -Quiet
 ```
 
 
-### 7.5 Import from JSON
+### 7.5 Import from CLIXML
 ---
 
-Import from JSON works the same way. The JSON file is parsed and each object
-is stored in the specified bucket.
+Import from CLIXML works the same way. Use -AsBinary when importing a binary
+archive. Each object is stored in the specified bucket.
 
 
 ```powershell
-Import-Bucket -Bucket restored-json -InputFile (Join-Path $exportDir "team.json") -AsJson -Quiet
+Import-Bucket -Bucket restored-clixml -InputFile (Join-Path $exportDir "team.clixml") -AsBinary -Quiet
 ```
 
 
@@ -2639,8 +2639,8 @@ Import-Bucket -Bucket restored-json -InputFile (Join-Path $exportDir "team.json"
 
 
 ```powershell
-Import-Bucket -Bucket import-over -InputFile (Join-Path $exportDir "team.clixml") -Quiet
-Import-Bucket -Bucket import-over -InputFile (Join-Path $exportDir "team.clixml") -Overwrite -Quiet
+Import-Bucket -Bucket import-over -InputFile (Join-Path $exportDir "team.json") -Quiet
+Import-Bucket -Bucket import-over -InputFile (Join-Path $exportDir "team.json") -Overwrite -Quiet
 ```
 
 
@@ -2754,7 +2754,7 @@ a container (directory).
 
 
 ```powershell
-@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
+@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config"
 Get-ChildItem "buckets:\"
 ```
 
@@ -2799,7 +2799,7 @@ sizes, and timestamps.
 
 
 ```powershell
-@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
+@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config"
 Get-ChildItem "buckets:\" | Select-Object Name, Length, LastWriteTime | Format-Table -AutoSize
 ```
 
@@ -2865,7 +2865,7 @@ Filter by PSIsContainer to see only buckets (containers) or only leaf objects.
 
 
 ```powershell
-@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson
+@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config"
 Get-ChildItem "buckets:\" | Where-Object { $_.PSIsContainer }
 ```
 
@@ -3953,7 +3953,7 @@ cleaned up — your system is exactly as it was before we started.
                                — save, read, delete objects, list, delete buckets
   -Key / -KeyProperty          — naming objects
   -Overwrite / -AsTimestamp    — replacement and timestamp keys
-  -AsJson / -Compress          — storage formats
+  -AsBinary / -Compress        — storage formats
   -Match (exact)               — hashtable-based filtering
   -Filter (scriptblock)        — expression-based comparison (-gt, -like, -contains, -match)
   Nested property filtering    — .Settings.Enabled with -Filter

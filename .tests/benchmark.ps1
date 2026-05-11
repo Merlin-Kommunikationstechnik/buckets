@@ -62,9 +62,9 @@ function Write-InfoBlock {
 Write-InfoBlock -Mode top
 
 # ============================================================
-# 1. Performance benchmark (1,000 objects)
+# 1. Performance benchmark binary (1,000 objects)
 # ============================================================
-Write-Host "[1] Performance benchmark (1,000 objects — baseline throughput)" -ForegroundColor Blue
+Write-Host "[1] Performance benchmark binary (1,000 objects — baseline throughput)" -ForegroundColor Blue
 Use-Bucket "perf-test"
 $perfBench = [System.Diagnostics.Stopwatch]::StartNew()
 $perfObjects = 1..1000 | ForEach-Object {
@@ -75,7 +75,7 @@ $perfObjects = 1..1000 | ForEach-Object {
         Timestamp = [DateTimeOffset]::Now
     }
 }
-$perfObjects | New-BucketObject -Bucket perf-test -KeyProperty Id -Quiet
+$perfObjects | New-BucketObject -Bucket perf-test -KeyProperty Id -AsBinary -Quiet
 $writeTime = $perfBench.ElapsedMilliseconds
 
 $perfBench.Restart()
@@ -85,9 +85,9 @@ $readTime = $perfBench.ElapsedMilliseconds
 Write-Host "  Write: ${writeTime}ms, Read: ${readTime}ms, Objects: $($retrieved.Count)" -ForegroundColor DarkGray
 
 # ============================================================
-# 2. Performance benchmark (10,000 objects)
+# 2. Performance benchmark binary (10,000 objects)
 # ============================================================
-Write-Host "`n[2] Performance benchmark (10,000 objects — scale test)" -ForegroundColor Blue
+Write-Host "`n[2] Performance benchmark binary (10,000 objects — scale test)" -ForegroundColor Blue
 Use-Bucket "perf-10k"
 $perfBench10k = [System.Diagnostics.Stopwatch]::StartNew()
 $perf10kObjects = 1..10000 | ForEach-Object {
@@ -98,7 +98,7 @@ $perf10kObjects = 1..10000 | ForEach-Object {
         Tags = @("tag-$_", "group-$($_ % 100)")
     }
 }
-$perf10kObjects | New-BucketObject -Bucket perf-10k -KeyProperty Id -Quiet
+$perf10kObjects | New-BucketObject -Bucket perf-10k -KeyProperty Id -AsBinary -Quiet
 $writeTime10k = $perfBench10k.ElapsedMilliseconds
 
 $perfBench10k.Restart()
@@ -108,9 +108,9 @@ $readTime10k = $perfBench10k.ElapsedMilliseconds
 Write-Host "  Write: ${writeTime10k}ms, Read: ${readTime10k}ms, Objects: $($retrieved10k.Count)" -ForegroundColor DarkGray
 
 # ============================================================
-# 3. Performance benchmark (10,000 complex objects)
+# 3. Performance benchmark binary (10,000 complex objects)
 # ============================================================
-Write-Host "`n[3] Performance benchmark (10,000 complex objects — nested depth test)" -ForegroundColor Blue
+Write-Host "`n[3] Performance benchmark binary (10,000 complex objects — nested depth test)" -ForegroundColor Blue
 Use-Bucket "perf-10k-complex"
 $perfBench10kC = [System.Diagnostics.Stopwatch]::StartNew()
 $perf10kCObjects = 1..10000 | ForEach-Object {
@@ -136,7 +136,7 @@ $perf10kCObjects = 1..10000 | ForEach-Object {
         }
     }
 }
-$perf10kCObjects | New-BucketObject -Bucket perf-10k-complex -KeyProperty Id -Quiet
+$perf10kCObjects | New-BucketObject -Bucket perf-10k-complex -KeyProperty Id -AsBinary -Quiet
 $writeTime10kC = $perfBench10kC.ElapsedMilliseconds
 
 $perfBench10kC.Restart()
@@ -159,7 +159,7 @@ $perfJsonObjects = 1..1000 | ForEach-Object {
         Timestamp = [DateTimeOffset]::Now
     }
 }
-$perfJsonObjects | New-BucketObject -Bucket perf-json-1k -KeyProperty Id -AsJson -Quiet
+$perfJsonObjects | New-BucketObject -Bucket perf-json-1k -KeyProperty Id -Quiet
 $jsonWriteTime = $perfJsonBench.ElapsedMilliseconds
 
 $perfJsonBench.Restart()
@@ -182,7 +182,7 @@ $perfJson10kObjects = 1..10000 | ForEach-Object {
         Tags = @("tag-$_", "group-$($_ % 100)")
     }
 }
-$perfJson10kObjects | New-BucketObject -Bucket perf-json-10k -KeyProperty Id -AsJson -Quiet
+$perfJson10kObjects | New-BucketObject -Bucket perf-json-10k -KeyProperty Id -Quiet
 $jsonWriteTime10k = $perfJson10kBench.ElapsedMilliseconds
 
 $perfJson10kBench.Restart()
@@ -220,7 +220,7 @@ $perfJsonCObjects = 1..10000 | ForEach-Object {
         }
     }
 }
-$perfJsonCObjects | New-BucketObject -Bucket perf-json-complex -KeyProperty Id -AsJson -Quiet
+$perfJsonCObjects | New-BucketObject -Bucket perf-json-complex -KeyProperty Id -Quiet
 $jsonWriteTimeC = $perfJsonCBench.ElapsedMilliseconds
 
 $perfJsonCBench.Restart()

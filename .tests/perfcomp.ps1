@@ -111,18 +111,18 @@ foreach ($key in $dataKeys) { $totalObjects += $data[$key].Count }
 Write-Host "  $totalObjects objects across $($bucketMap.Count) buckets" -ForegroundColor DarkGray
 
 function Write-BucketsPhase {
-    param([bool]$AsJson, [string]$Label)
+    param([bool]$AsBinary, [string]$Label)
     Clear-PhaseBuckets
     $wt = [System.Diagnostics.Stopwatch]::StartNew()
-    $jsonFlag = if ($AsJson) { @{ AsJson = $true } } else { @{} }
+    $binFlag = if ($AsBinary) { @{ AsBinary = $true } } else { @{} }
     foreach ($key in $dataKeys) {
         $bucket = $bucketMap[$key]
         $objects = $data[$key]
         if ($key -eq "incidents") {
-            $objects | New-BucketObject -Bucket $bucket -AsTimestamp -Quiet @jsonFlag
+            $objects | New-BucketObject -Bucket $bucket -AsTimestamp -Quiet @binFlag
         }
         else {
-            $objects | New-BucketObject -Bucket $bucket -KeyProperty _Id -Quiet @jsonFlag
+            $objects | New-BucketObject -Bucket $bucket -KeyProperty _Id -Quiet @binFlag
         }
     }
     $writeMs = $wt.ElapsedMilliseconds
@@ -180,13 +180,13 @@ function Write-FilePhase {
 # 1. Buckets (Binary)
 # ============================================================
 Write-Host "`n[1] Buckets (Binary)" -ForegroundColor Blue
-$bin = Write-BucketsPhase -AsJson:$false -Label "Buckets Binary"
+$bin = Write-BucketsPhase -AsBinary -Label "Buckets Binary"
 
 # ============================================================
 # 2. Buckets (JSON)
 # ============================================================
 Write-Host "`n[2] Buckets (JSON)" -ForegroundColor Blue
-$json = Write-BucketsPhase -AsJson:$true -Label "Buckets JSON"
+$json = Write-BucketsPhase -AsBinary:$false -Label "Buckets JSON"
 
 # ============================================================
 # 3. Plain JSON

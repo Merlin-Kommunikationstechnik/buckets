@@ -31,7 +31,7 @@ $day = (Get-Date).ToString("yyyy/MM/dd")
 $bucketArgs = @{
     Bucket      = "logs/eventlog/$LogName/$day"
     AsTimestamp = $true
-    AsJson      = $true
+    AsBinary    = $true
     Compress    = $true
     Quiet       = $true
 }

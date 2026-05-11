@@ -18,9 +18,9 @@ $TutorialData = @{
   database, no daemon, no config file — just the filesystem.
 
   Two storage formats:
-    Binary (.dat) — via PSSerializer. Fast, preserves full .NET type
+    Binary (.dat) — via -AsBinary. Fast, preserves full .NET type
                     information. Handles complex objects, circular refs.
-    JSON    (.json) — via -AsJson. Human-readable, portable, editable
+    JSON    (.json) — default format. Human-readable, portable, editable
                     in any text editor.
 '@
                             }
@@ -113,20 +113,20 @@ $users | fill -Bucket team -KeyProperty Name
 '@
                             }
                             @{
-                                Key = "03-asjson"
-                                Title = "JSON format with -AsJson"
+                                Key = "03-json-default"
+                                Title = "JSON format (default)"
                                 Body = @'
-  -AsJson stores objects as .json files instead of binary .dat. JSON files are
-  human-readable and editable in any text editor. Great for config, logs, or any
-  data you want to inspect or diff.
+  By default, Buckets stores objects as human-readable .json files.
+  JSON files are editable in any text editor and great for config, logs, or any
+  data you want to inspect or diff. Use -AsBinary for full .NET type preservation.
 '@
                                 SetupCode = @'
 # Sample config object for JSON format demo
 $alice = @{ Name = "Alice"; Role = "admin"; Score = 95 }
 '@
                                 Code = @'
-# Store as human-readable JSON (.json) instead of binary (.dat)
-New-BucketObject -InputObject $alice -Bucket config -Key "app-config" -AsJson -Quiet
+# Store as human-readable JSON (.json) — this is the default format
+New-BucketObject -InputObject $alice -Bucket config -Key "app-config" -Quiet
 # List the .json file on disk to confirm the format
 Get-ChildItem (Join-Path (Get-BucketRoot) "config")
 '@
@@ -444,7 +444,7 @@ scoop -Bucket team -Key "Alice-Backup"
 '@
                                 SetupCode = @'
 # Seed a sample config bucket so there is something to list with dip
-@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson -Quiet
+@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -Quiet
 '@
                                 Code = @'
 # dip (Get-Bucket) shows all buckets with object counts and timestamps
@@ -842,9 +842,9 @@ scoop -Bucket team -Funnel { $_.Level -ge 3 }
   Datenbank, keinen Dienst, keine Konfigurationsdatei — nur das Dateisystem.
 
   Zwei Speicherformate:
-    Binary (.dat) — über PSSerializer. Schnell, bewahrt vollständige .NET-Typ-
+    Binary (.dat) — über -AsBinary. Schnell, bewahrt vollständige .NET-Typ-
                     informationen. Beherrscht komplexe Objekte, zirkuläre Referenzen.
-    JSON    (.json) — über -AsJson. Lesbar, portabel, in jedem Editor editierbar.
+    JSON    (.json) — Standardformat. Lesbar, portabel, in jedem Editor editierbar.
 '@
                             }
                             @{
@@ -938,20 +938,20 @@ $users | fill -Bucket team -KeyProperty Name
 '@
                             }
                             @{
-                                Key = "03-asjson"
-                                Title = "JSON-Format mit -AsJson"
+                                Key = "03-json-default"
+                                Title = "JSON-Format (Standard)"
                                 Body = @'
-  -AsJson speichert Objekte als .json-Dateien statt binärer .dat. JSON-Dateien
-  sind lesbar und in jedem Texteditor editierbar. Ideal für Konfigurationen,
-  Logs oder Daten, die du inspizieren oder diffen möchtest.
+  Standardmäßig speichert Buckets Objekte als lesbare .json-Dateien.
+  JSON-Dateien sind in jedem Texteditor editierbar. Ideal für Konfigurationen,
+  Logs oder Daten, die du inspizieren oder diffen möchtest. -AsBinary aktiviert das binäre Format.
 '@
                                 SetupCode = @'
 # Beispiel-Konfigurationsobjekt für die JSON-Format-Demo
 $alice = @{ Name = "Alice"; Role = "admin"; Score = 95 }
 '@
                                 Code = @'
-# Speichere als lesbares JSON (.json) statt binärem (.dat)
-New-BucketObject -InputObject $alice -Bucket config -Key "app-config" -AsJson -Quiet
+# Speichere als lesbares JSON (.json) — das Standardformat
+New-BucketObject -InputObject $alice -Bucket config -Key "app-config" -Quiet
 # Zeige die .json-Datei auf der Platte zur Bestätigung
 Get-ChildItem (Join-Path (Get-BucketRoot) "config")
 '@
@@ -1275,7 +1275,7 @@ scoop -Bucket team -Key "Alice-Backup"
 '@
                                 SetupCode = @'
 # Erzeuge einen Beispiel-Config-Bucket, damit es etwas aufzulisten gibt
-@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson -Quiet
+@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -Quiet
 '@
                                 Code = @'
 # dip (Get-Bucket) zeigt alle Buckets mit Objektanzahlen und Zeitstempeln

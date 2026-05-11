@@ -57,7 +57,7 @@ foreach ($lang in $languages) {
                     $props.Code = $lesson.Code
                 }
                 $obj = [PSCustomObject]$props
-                New-BucketObject -Bucket $bucketPath -InputObject $obj -Key $lesson.Key -AsJson -Overwrite -Quiet
+                New-BucketObject -Bucket $bucketPath -InputObject $obj -Key $lesson.Key -Overwrite -Quiet
                 $langLessons++
             }
         }
