@@ -899,6 +899,147 @@ Test-Edge "No-buckets root (nonexistent path returns empty)" {
     $null -eq $noB -or @($noB).Count -eq 0
 }
 
+# ============================================================
+# 20. Funnel operations
+# ============================================================
+Write-Host "`n[20] Funnels" -ForegroundColor Blue
+
+$funnelResults = [System.Collections.ArrayList]::new()
+
+function Test-Funnel {
+    param([string]$Name, [scriptblock]$Test)
+    try {
+        $ok = & $Test
+        if ($ok) {
+            Write-Host "  $Name " -NoNewline -ForegroundColor DarkGray
+            Write-Host "PASS" -ForegroundColor Green
+            $null = $funnelResults.Add([PSCustomObject]@{ Name = $Name; Status = "PASS"; Detail = "" })
+        } else {
+            Write-Host "  $Name " -NoNewline -ForegroundColor DarkGray
+            Write-Host "FAIL" -ForegroundColor Red
+            $null = $funnelResults.Add([PSCustomObject]@{ Name = $Name; Status = "FAIL"; Detail = "returned false" })
+        }
+    } catch {
+        Write-Host "  $Name " -NoNewline -ForegroundColor DarkGray
+        Write-Host "FAIL" -ForegroundColor Red
+        $null = $funnelResults.Add([PSCustomObject]@{ Name = $Name; Status = "FAIL"; Detail = $_.Exception.Message })
+    }
+}
+
+# Seed data for funnel tests
+New-BucketObject -Bucket edge -InputObject @{ _Id = "f1"; Role = "admin"; Level = 5 } -KeyProperty _Id -Quiet
+New-BucketObject -Bucket edge -InputObject @{ _Id = "f2"; Role = "user"; Level = 3 } -KeyProperty _Id -Quiet
+New-BucketObject -Bucket edge -InputObject @{ _Id = "f3"; Role = "user"; Level = 1 } -KeyProperty _Id -Quiet
+
+<#
+  1. Create a named funnel
+  Verifies: New-Funnel creates a funnel file and it appears in Get-Funnel.
+#>
+Test-Funnel "New-Funnel creates named funnel" {
+    New-Funnel -Name "test-funnel-1" -Filter { $_.Level -gt 2 } -Description "Level above 2"
+    $f = Get-Funnel -Name "test-funnel-1"
+    $null -ne $f -and $f.Filter -match 'Level' -and $f.Description -eq "Level above 2"
+}
+
+<#
+  2. List all funnels
+  Verifies: Get-Funnel with no name returns all funnels including the new one.
+#>
+Test-Funnel "Get-Funnel lists all funnels" {
+    $all = Get-Funnel
+    $null -ne $all -and @($all).Count -ge 1 -and ($all.Name -contains "test-funnel-1")
+}
+
+<#
+  3. Named funnel on scoop (filter)
+  Verifies: -Funnel with a named funnel filters scoop results correctly.
+#>
+Test-Funnel "Named funnel on scoop (filter)" {
+    $result = Get-BucketObject -Bucket edge -Funnel "test-funnel-1"
+    $levels = @($result | ForEach-Object Level)
+    @($result).Count -eq 2 -and $levels -contains 5 -and $levels -contains 3
+}
+
+<#
+  4. Ad-hoc scriptblock on scoop (filter)
+  Verifies: -Funnel accepts a raw scriptblock for ad-hoc filtering.
+#>
+Test-Funnel "Ad-hoc scriptblock on scoop (filter)" {
+    $result = Get-BucketObject -Bucket edge -Funnel { $_.Role -eq "admin" }
+    @($result).Count -eq 1 -and $result._Id -eq "f1"
+}
+
+<#
+  5. Named funnel on fill (transform)
+  Verifies: -Funnel transforms objects during fill. A transform funnel
+            should return $_ for items to keep and $null to skip.
+#>
+Test-Funnel "Named funnel on fill (transform)" {
+    New-Funnel -Name "test-funnel-fill" -Filter {
+        if ($_.Level -gt 2) { $_ } else { $null }
+    } -Description "Fill transform demo" -Force
+    $items = @(
+        @{ _Id = "tf1"; Val = "keep"; Level = 5 }
+        @{ _Id = "tf2"; Val = "skip"; Level = 1 }
+    )
+    New-BucketObject -Bucket edge -InputObject $items -KeyProperty _Id -Funnel "test-funnel-fill" -Quiet
+    $kept = Get-BucketObject -Bucket edge -Key "tf1"
+    $skipped = Get-BucketObject -Bucket edge -Key "tf2" -WarningAction SilentlyContinue
+    Remove-Funnel -Name "test-funnel-fill" -Quiet
+    $null -ne $kept -and $kept.Val -eq "keep" -and $null -eq $skipped
+}
+
+<#
+  6. Set-Funnel updates a funnel
+  Verifies: Set-Funnel changes filter and/or description of an existing funnel.
+#>
+Test-Funnel "Set-Funnel updates funnel" {
+    Set-Funnel -Name "test-funnel-1" -Description "Updated description"
+    $f = Get-Funnel -Name "test-funnel-1"
+    $f.Description -eq "Updated description"
+}
+
+<#
+  7. Remove-Funnel -WhatIf preview
+  Verifies: -WhatIf does not delete the funnel — file still exists after preview.
+#>
+Test-Funnel "Remove-Funnel -WhatIf preview" {
+    Remove-Funnel -Name "test-funnel-1" -WhatIf
+    $funnelDir = Join-Path $HOME ".buckets-system/funnels"
+    $funnelFile = Join-Path $funnelDir "test-funnel-1.json"
+    Test-Path $funnelFile
+}
+
+<#
+  8. Remove-Funnel deletes a funnel
+  Verifies: Remove-Funnel actually deletes the funnel file and cache entry.
+#>
+Test-Funnel "Remove-Funnel deletes funnel" {
+    New-Funnel -Name "test-funnel-del" -Filter { $true } -Force
+    Remove-Funnel -Name "test-funnel-del" -Quiet
+    $funnelDir = Join-Path $HOME ".buckets-system/funnels"
+    $funnelFile = Join-Path $funnelDir "test-funnel-del.json"
+    -not (Test-Path $funnelFile)
+}
+
+$funnelPass = ($funnelResults | Where-Object { $_.Status -eq "PASS" }).Count
+$funnelFail = ($funnelResults | Where-Object { $_.Status -eq "FAIL" }).Count
+
+if ($funnelFail -eq 0) {
+    Write-Host "  All $funnelPass/$($funnelResults.Count) funnel checks passed" -ForegroundColor Magenta
+} else {
+    Write-Host "  $($funnelFail)/$($funnelResults.Count) FAILED:" -ForegroundColor Red
+    $funnelResults | Where-Object { $_.Status -eq "FAIL" } | ForEach-Object {
+        Write-Host "    $($_.Name)" -ForegroundColor Red
+        if ($_.Detail) { Write-Host "      $($_.Detail)" -ForegroundColor DarkGray }
+    }
+}
+
+# Cleanup — remove any leftover test funnels
+Get-Funnel | Where-Object Name -like "test-funnel*" | ForEach-Object {
+    Remove-Funnel -Name $_.Name -Quiet -ErrorAction SilentlyContinue
+}
+
 # Cleanup edge bucket
 Remove-Bucket "edge" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
 Remove-Bucket "a" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet

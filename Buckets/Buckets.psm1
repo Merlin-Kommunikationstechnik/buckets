@@ -31,6 +31,7 @@ Update-TypeData -TypeName Buckets.Provider.BucketItemInfo `
 $script:BucketPathCache = @{}
 $script:LastPWD = $PWD.Path
 $script:BucketRoot = $null
+$script:FunnelCache = @{}
 $script:ClearCache = { $script:BucketPathCache.Clear(); $script:LastPWD = $PWD.Path }
 
 # --- Output colors ---
@@ -106,6 +107,25 @@ function Resolve-SafePath {
     param([Parameter(Mandatory = $true)][string]$Path)
     try { return [System.IO.Path]::GetFullPath($Path) }
     catch { throw "Invalid path '$Path': $_" }
+}
+
+function Get-BucketsSystemPath {
+    [CmdletBinding()]
+    param()
+    $systemRoot = Join-Path $HOME ".buckets-system"
+    if (-not (Test-Path $systemRoot)) { New-Item -ItemType Directory -Path $systemRoot -Force | Out-Null }
+    return $systemRoot
+}
+
+function Get-FunnelDefinition {
+    param([Parameter(Mandatory = $true)][string]$Name)
+    if ($script:FunnelCache.ContainsKey($Name)) { return $script:FunnelCache[$Name] }
+    $funnelDir = Join-Path (Get-BucketsSystemPath) "funnels"
+    $funnelFile = Join-Path $funnelDir "$Name.json"
+    if (-not (Test-Path $funnelFile)) { throw "Funnel '$Name' not found at '$funnelFile'" }
+    $def = Get-Content -Path $funnelFile -Raw -Encoding UTF8 | ConvertFrom-Json
+    $script:FunnelCache[$Name] = $def
+    return $def
 }
 
 function Get-BucketPath {
@@ -640,7 +660,8 @@ function Get-Bucket {
         [switch]$Raw,
         [switch]$Recurse,
         [int]$MaxFiles = 5,
-        [int]$Depth = [int]::MaxValue
+        [int]$Depth = [int]::MaxValue,
+        [object]$Funnel
     )
 
     if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
@@ -648,6 +669,11 @@ function Get-Bucket {
     if (-not [System.IO.Directory]::Exists($Path)) {
         if ($Tree) { Write-Host "No bucket storage found at '$Path'" -ForegroundColor DarkGray }
         return
+    }
+
+    $funnelDef = $null
+    if ($Funnel) {
+        $funnelDef = if ($Funnel -is [scriptblock]) { $Funnel } else { [scriptblock]::Create((Get-FunnelDefinition -Name $Funnel).Filter) }
     }
 
     if ($Tree) {
@@ -908,6 +934,10 @@ function Get-Bucket {
         $results = $results | Where-Object { $_.Name -like "*$Name*" }
     }
 
+    if ($funnelDef) {
+        $results = $results | Where-Object $funnelDef
+    }
+
     $results
 }
 
@@ -1146,7 +1176,8 @@ function Get-BucketObject {
         [switch]$Recurse,
         [switch]$NoRecurse,
         [int]$First,
-        [int]$Skip
+        [int]$Skip,
+        [object]$Funnel
     )
 
     if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
@@ -1175,6 +1206,11 @@ function Get-BucketObject {
         $bucketPaths += Get-Bucket -Path $Path -Recurse | ForEach-Object { $_.Path }
     }
 
+    $funnelDef = $null
+    if ($Funnel) {
+        $funnelDef = if ($Funnel -is [scriptblock]) { $Funnel } else { [scriptblock]::Create((Get-FunnelDefinition -Name $Funnel).Filter) }
+    }
+
     $allObjects = [System.Collections.ArrayList]::new()
 
     foreach ($bucketPath in $bucketPaths) {
@@ -1192,6 +1228,8 @@ function Get-BucketObject {
             if ($Filter) {
                 if ($null -eq ($obj | Where-Object $Filter)) { continue }
             }
+
+            if ($funnelDef) { if ($null -eq ($obj | Where-Object $funnelDef)) { continue } }
 
             $relativePath = $file.FullName.Substring($bucketPath.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar)
             $keyWithoutExt = [System.IO.Path]::ChangeExtension($relativePath, $null).TrimEnd('.')
@@ -1531,7 +1569,8 @@ function New-BucketObject {
         [switch]$AsJson,
         [switch]$Compress,
         [switch]$Overwrite,
-        [switch]$Quiet
+        [switch]$Quiet,
+        [object]$Funnel
     )
 
     begin {
@@ -1542,6 +1581,11 @@ function New-BucketObject {
         $useQuiet = $Quiet.IsPresent
         $showProgress = -not $useVerbose -and -not $useQuiet
         $pipeline = [System.Collections.ArrayList]::new()
+
+        $funnelDef = $null
+        if ($Funnel) {
+            $funnelDef = if ($Funnel -is [scriptblock]) { $Funnel } else { [scriptblock]::Create((Get-FunnelDefinition -Name $Funnel).Filter) }
+        }
 
         if ($AsTimestamp -and (-not [string]::IsNullOrWhiteSpace($Key) -or -not [string]::IsNullOrWhiteSpace($KeyProperty))) {
             Write-Verbose "Both -Key/-KeyProperty and -AsTimestamp specified. -Key/-KeyProperty takes precedence, -AsTimestamp ignored."
@@ -1556,7 +1600,9 @@ function New-BucketObject {
         if ($isCollection) {
             $totalForItems = $InputObject.Count
             $index = 0
-            foreach ($item in $InputObject) {
+            foreach ($raw in $InputObject) {
+                $item = $raw
+                if ($funnelDef) { $item = $item | ForEach-Object $funnelDef; if ($null -eq $item) { $skippedCount++; $index++; continue } }
                 $itemFilename = Get-BucketFilename -Item $item -Key $Key -KeyProperty $KeyProperty -AsTimestamp:$AsTimestamp.IsPresent -Index $index -Extension $extension
                 if ($null -eq $itemFilename) { $skippedCount++; $index++; continue }
                 $itemFilePath = Join-Path $bucketPath $itemFilename
@@ -1583,7 +1629,9 @@ function New-BucketObject {
         if ($pipeline.Count -gt 0) {
             $totalForItems = $pipeline.Count
             $index = 0
-            foreach ($item in $pipeline) {
+            foreach ($raw in $pipeline) {
+                $item = $raw
+                if ($funnelDef) { $item = $item | ForEach-Object $funnelDef; if ($null -eq $item) { $skippedCount++; $index++; continue } }
                 $itemFilename = Get-BucketFilename -Item $item -Key $Key -KeyProperty $KeyProperty -AsTimestamp:$AsTimestamp.IsPresent -Index $index -Extension $extension
                 if ($null -eq $itemFilename) { $skippedCount++; $index++; continue }
                 $itemFilePath = Join-Path $bucketPath $itemFilename
@@ -2410,6 +2458,172 @@ function Set-BucketObject {
     }
 }
 
+# --- Funnel management ---
+
+function New-Funnel {
+    <#
+    .SYNOPSIS
+    Creates a named funnel (reusable filter/transform scriptblock).
+    .DESCRIPTION
+    Saves a named funnel definition to $HOME/.buckets-system/funnels/. Funnels can be
+    referenced by name with the -Funnel parameter on fill, scoop, and dip.
+    A funnel is a scriptblock operating on $_ that returns a transformed object (for fill)
+    or a truthy/falsy value (for scoop/dip).
+    .PARAMETER Name
+    Name for the funnel. Used to reference it later via -Funnel.
+    .PARAMETER Filter
+    ScriptBlock defining the funnel logic. Use $_ for the pipeline object.
+    .PARAMETER Description
+    Optional human-readable description of what the funnel does.
+    .PARAMETER Force
+    Overwrite an existing funnel with the same name.
+    .PARAMETER Quiet
+    Suppress success output.
+    .EXAMPLE
+    New-Funnel -Name admins -Filter { $_.Role -eq "admin" }
+    .EXAMPLE
+    New-Funnel -Name add-source -Filter { $_ | Add-Member -NotePropertyName "Source" -NotePropertyValue "import" -PassThru } -Description "Adds Source property"
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)][string]$Name,
+        [Parameter(Mandatory = $true)][scriptblock]$Filter,
+        [string]$Description = "",
+        [switch]$Force,
+        [switch]$Quiet
+    )
+
+    $funnelDir = Join-Path (Get-BucketsSystemPath) "funnels"
+    if (-not (Test-Path $funnelDir)) { New-Item -ItemType Directory -Path $funnelDir -Force | Out-Null }
+    $funnelFile = Join-Path $funnelDir "$Name.json"
+    if ((Test-Path $funnelFile) -and -not $Force) { throw "Funnel '$Name' already exists. Use -Force to overwrite." }
+
+    $text = @{ Filter = "$Filter"; Description = $Description } | ConvertTo-Json
+    [System.IO.File]::WriteAllText($funnelFile, $text, [System.Text.Encoding]::UTF8)
+    $script:FunnelCache[$Name] = @{ Filter = "$Filter"; Description = $Description }
+    if (-not $Quiet) {
+        Write-Host "$Name" -NoNewline -ForegroundColor $script:CPath
+        Write-Host " · " -NoNewline -ForegroundColor $script:CMuted
+        Write-Host "funnel saved" -ForegroundColor $script:CNum
+    }
+}
+
+function Get-Funnel {
+    <#
+    .SYNOPSIS
+    Lists named funnels or retrieves a specific funnel definition.
+    .DESCRIPTION
+    Returns funnel definitions from $HOME/.buckets-system/funnels/. When no name is
+    given, lists all funnels with their name, filter script, and description.
+    .PARAMETER Name
+    Optional funnel name to retrieve. Returns all funnels if omitted.
+    .EXAMPLE
+    Get-Funnel
+    .EXAMPLE
+    Get-Funnel -Name admins
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Position = 0)][string]$Name
+    )
+
+    $funnelDir = Join-Path (Get-BucketsSystemPath) "funnels"
+    if (-not (Test-Path $funnelDir)) { return }
+
+    if ($Name) {
+        $def = Get-FunnelDefinition -Name $Name
+        [PSCustomObject]@{ Name = $Name; Filter = $def.Filter; Description = $def.Description }
+        return
+    }
+
+    foreach ($f in [System.IO.DirectoryInfo]::new($funnelDir).GetFiles("*.json")) {
+        $fName = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
+        $def = Get-FunnelDefinition -Name $fName
+        [PSCustomObject]@{ Name = $fName; Filter = $def.Filter; Description = $def.Description }
+    }
+}
+
+function Set-Funnel {
+    <#
+    .SYNOPSIS
+    Updates an existing named funnel's filter scriptblock or description.
+    .DESCRIPTION
+    Modifies a funnel definition in $HOME/.buckets-system/funnels/. The funnel must
+    already exist. Omitting -Filter or -Description keeps the current value.
+    .PARAMETER Name
+    Name of the funnel to update.
+    .PARAMETER Filter
+    New scriptblock for the funnel. Uses $_ for the pipeline object.
+    .PARAMETER Description
+    New description for the funnel.
+    .PARAMETER Quiet
+    Suppress success output.
+    .EXAMPLE
+    Set-Funnel -Name admins -Filter { $_.Role -eq "admin" -and $_.Active -eq $true }
+    .EXAMPLE
+    Set-Funnel -Name admins -Description "Filters active admin users"
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)][string]$Name,
+        [scriptblock]$Filter,
+        [string]$Description,
+        [switch]$Quiet
+    )
+
+    $funnelDir = Join-Path (Get-BucketsSystemPath) "funnels"
+    $funnelFile = Join-Path $funnelDir "$Name.json"
+    if (-not (Test-Path $funnelFile)) { throw "Funnel '$Name' not found. Use New-Funnel to create it." }
+
+    $existing = Get-Content -Path $funnelFile -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($Filter) { $existing.Filter = "$Filter" }
+    if ($PSBoundParameters.ContainsKey('Description')) { $existing.Description = $Description }
+
+    $text = @{ Filter = $existing.Filter; Description = $existing.Description } | ConvertTo-Json
+    [System.IO.File]::WriteAllText($funnelFile, $text, [System.Text.Encoding]::UTF8)
+    $script:FunnelCache[$Name] = @{ Filter = $existing.Filter; Description = $existing.Description }
+    if (-not $Quiet) {
+        Write-Host "$Name" -NoNewline -ForegroundColor $script:CPath
+        Write-Host " · " -NoNewline -ForegroundColor $script:CMuted
+        Write-Host "funnel updated" -ForegroundColor $script:CNum
+    }
+}
+
+function Remove-Funnel {
+    <#
+    .SYNOPSIS
+    Deletes a named funnel definition.
+    .DESCRIPTION
+    Removes a funnel JSON file from $HOME/.buckets-system/funnels/ and clears it from
+    the session cache.
+    .PARAMETER Name
+    Name of the funnel to remove.
+    .PARAMETER Quiet
+    Suppress success output.
+    .EXAMPLE
+    Remove-Funnel -Name admins
+    #>
+    [CmdletBinding(SupportsShouldProcess = $true)]
+    param(
+        [Parameter(Mandatory = $true)][string]$Name,
+        [switch]$Quiet
+    )
+
+    $funnelDir = Join-Path (Get-BucketsSystemPath) "funnels"
+    $funnelFile = Join-Path $funnelDir "$Name.json"
+    if (-not (Test-Path $funnelFile)) { throw "Funnel '$Name' not found." }
+
+    if ($PSCmdlet.ShouldProcess("funnel '$Name'", "Remove-Funnel")) {
+        [System.IO.File]::Delete($funnelFile)
+        $script:FunnelCache.Remove($Name)
+        if (-not $Quiet) {
+            Write-Host "$Name" -NoNewline -ForegroundColor $script:CPath
+            Write-Host " · " -NoNewline -ForegroundColor $script:CMuted
+            Write-Host "funnel removed" -ForegroundColor $script:CNum
+        }
+    }
+}
+
 # --- Root management ---
 
 function Set-BucketRoot {
@@ -2594,6 +2808,20 @@ $BucketsPathCompleter = {
     } catch {}
 }
 
+$script:FunnelCompleterBlock = {
+    param($commandName, $parameterName, $wordToComplete, $commandAst, $fakeBoundParameters)
+    $funnelDir = Join-Path (Get-BucketsSystemPath) "funnels"
+    if (-not (Test-Path $funnelDir)) { return }
+    [System.IO.DirectoryInfo]::new($funnelDir).GetFiles("$wordToComplete*.json") | ForEach-Object {
+        $fName = [System.IO.Path]::GetFileNameWithoutExtension($_.Name)
+        [System.Management.Automation.CompletionResult]::new($fName, $fName, 'ParameterValue', "funnel: $fName")
+    }
+}
+
+@('New-BucketObject', 'Get-BucketObject', 'Get-Bucket', 'fill', 'scoop', 'dip') | ForEach-Object {
+    Register-ArgumentCompleter -CommandName $_ -ParameterName Funnel -ScriptBlock $script:FunnelCompleterBlock
+}
+
 $nativeCommands = @(
     'Get-ChildItem', 'Get-Item', 'Remove-Item', 'Copy-Item', 'Move-Item',
     'Resolve-Path', 'Test-Path', 'Set-Location'
@@ -2610,5 +2838,6 @@ Export-ModuleMember -Function @(
     'Remove-BucketObject', 'Get-Bucket', 'Get-BucketStats',
     'Get-BucketKeys', 'Get-BucketObjectStats', 'Remove-Bucket', 'Copy-BucketObject',
     'Rename-BucketObject', 'Move-BucketObject', 'Export-Bucket',
-    'Import-Bucket', 'Set-BucketRoot', 'Get-BucketRoot', 'Sync-BucketDrive'
+    'Import-Bucket', 'Set-BucketRoot', 'Get-BucketRoot', 'Sync-BucketDrive',
+    'New-Funnel', 'Get-Funnel', 'Set-Funnel', 'Remove-Funnel'
 ) -Alias 'fill', 'scoop', 'spill', 'dip', 'drain'

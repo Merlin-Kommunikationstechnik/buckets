@@ -636,7 +636,164 @@ $servers | fill -Bucket servers -KeyProperty Hostname -Quiet
                 )
             }
             @{
-                Name = "05-full-course"
+                Name = "05-funnels"
+                Title = "Funnels"
+                Sections = @(
+                    @{
+                        Name = "01-using-funnels"
+                        Title = "Using Funnels"
+                        Lessons = @(
+                            @{
+                                Key = "01-what-is-a-funnel"
+                                Title = "What is a Funnel?"
+                                Body = @'
+  A Funnel is a named, reusable filter or transform scriptblock stored
+  outside your bucket data. Think of it as a saved query or mapping that
+  you can apply on-the-fly.
+
+  On fill (New-BucketObject):  Funnels transform objects before storage.
+                               Return the modified object, or $null to skip.
+  On scoop (Get-BucketObject): Funnels filter results.
+                               Return $true to keep, $false to drop.
+  On dip (Get-Bucket):         Funnels filter the bucket list.
+                               Return $true to keep, $false to drop.
+
+  Funnels are stored as JSON files in $HOME/.buckets-system/funnels/,
+  keeping them separate from your data. They are cached in memory for
+  the duration of your session.
+'@
+                            }
+                            @{
+                                Key = "02-creating-a-funnel"
+                                Title = "Creating a Funnel"
+                                Body = @'
+  Use New-Funnel to create a named funnel. The -Filter parameter takes
+  a scriptblock that uses $_ for the pipeline object. For scoop/dip,
+  return a truthy value to keep the item. For fill, return the modified
+  object (or $null to skip).
+
+  Adding -Description lets you document what the funnel does.
+'@
+                                SetupCode = @'
+$team = @(
+    @{ Name="Alice";   Role="Developer"; Level=3; Score=95 }
+    @{ Name="Bob";     Role="Designer";  Level=2; Score=72 }
+    @{ Name="Carol";   Role="PM";        Level=3; Score=88 }
+    @{ Name="Frank";   Role="Developer"; Level=4; Score=91 }
+)
+$team | fill -Bucket team -KeyProperty Name -Quiet
+'@
+                                Code = @'
+# Create a funnel that filters for senior members (Level > 2)
+New-Funnel -Name "seniors" -Filter { $_.Level -gt 2 } -Description "Team members above level 2"
+
+# List all funnels to confirm
+Get-Funnel
+'@
+                            }
+                            @{
+                                Key = "03-funnel-on-scoop"
+                                Title = "Funnels on scoop (filter)"
+                                Body = @'
+  Pass a funnel name to scoop's -Funnel parameter to filter results.
+  Funnels combine with -Match and -Filter — all conditions apply.
+'@
+                                Code = @'
+# Use the "seniors" funnel to get only senior team members
+scoop -Bucket team -Funnel "seniors"
+'@
+                            }
+                            @{
+                                Key = "04-funnel-on-fill"
+                                Title = "Funnels on fill (transform)"
+                                Body = @'
+  On fill, a funnel transforms each object before storage. Return the
+  modified object from the scriptblock, or $null to skip that object.
+
+  Here we add a "Seniority" property based on Level before storing.
+'@
+                                SetupCode = @'
+$newTeam = @(
+    @{ Name="Grace";  Role="Developer"; Level=5 }
+    @{ Name="Heidi";  Role="Designer";  Level=1 }
+    @{ Name="Ivan";   Role="PM";        Level=3 }
+)
+'@
+                                Code = @'
+# Create a transform funnel that adds a Seniority label
+New-Funnel -Name "add-seniority" -Filter {
+    if ($_.Level -ge 4) { $_.Seniority = "Senior"; $_ }
+    elseif ($_.Level -ge 2) { $_.Seniority = "Mid"; $_ }
+    else { $null }
+}
+
+# Apply the funnel during fill
+$newTeam | fill -Bucket team -KeyProperty Name -Funnel "add-seniority" -Quiet
+
+# Check the results — Heidi (Level 1) was skipped
+scoop -Bucket team -Key "Grace", "Heidi", "Ivan"
+'@
+                            }
+                            @{
+                                Key = "05-managing-funnels"
+                                Title = "Managing Funnels"
+                                Body = @'
+  Funnels are fully manageable with dedicated cmdlets:
+
+    Get-Funnel      — list all funnels or retrieve a specific one
+    Set-Funnel      — update a funnel's filter or description
+    Remove-Funnel   — delete a funnel (supports -WhatIf)
+
+  Funnels persist between sessions — they live on disk in
+  $HOME/.buckets-system/funnels/. Each funnel is a single JSON file.
+'@
+                                SetupCode = @'
+New-Funnel -Name "demo-funnel" -Filter { $_.Active -eq $true } -Description "Active items only" -Force
+'@
+                                Code = @'
+# List all funnels (should include "demo-funnel")
+Get-Funnel
+
+# Update an existing funnel
+Set-Funnel -Name "demo-funnel" -Description "Only active items please"
+
+# Preview removal
+Remove-Funnel -Name "demo-funnel" -WhatIf
+
+# Actually remove it
+Remove-Funnel -Name "demo-funnel" -Quiet
+
+# Confirm it's gone
+Get-Funnel -Name "demo-funnel"
+'@
+                            }
+                            @{
+                                Key = "06-adhoc-scriptblock"
+                                Title = "Ad-hoc scriptblock funnels"
+                                Body = @'
+  -Funnel also accepts a scriptblock directly (without creating a named
+  funnel). Use this for one-off filters or transforms that don't need
+  to be saved.
+'@
+                                SetupCode = @'
+$items = @(
+    @{ Name="Jack";  Role="Developer"; Level=3 }
+    @{ Name="Kate";  Role="Designer";  Level=4 }
+    @{ Name="Leo";   Role="PM";        Level=2 }
+)
+$items | fill -Bucket team -KeyProperty Name -Quiet
+'@
+                                Code = @'
+# Ad-hoc filter — no named funnel needed
+scoop -Bucket team -Funnel { $_.Level -ge 3 }
+'@
+                            }
+                        )
+                    }
+                )
+            }
+            @{
+                Name = "06-full-course"
                 Title = "Full Course"
                 Sections = @(
                     @{
@@ -655,7 +812,8 @@ $servers | fill -Bucket servers -KeyProperty Hostname -Quiet
     02 · Beginner — CRUD operations (create, read, update, delete)
     03 · Advanced — copy, rename, PSDrive, nested buckets, pipelines
     04 · Sysadmin — real-world scenarios: inventory, logs, incidents
-    05 · Full Course — complete walkthrough of all features
+    05 · Funnels — named reusable filters and transforms
+    06 · Full Course — complete walkthrough of all features
 
   Each chapter is divided into sections, and each section contains
   focused lessons with explanations and code examples you can run.
@@ -1314,7 +1472,173 @@ $servers | fill -Bucket servers -KeyProperty Hostname -Quiet
                 )
             }
             @{
-                Name = "05-full-course"
+                Name = "05-funnels"
+                Title = "Funnels"
+                Sections = @(
+                    @{
+                        Name = "01-using-funnels"
+                        Title = "Funnels verwenden"
+                        Lessons = @(
+                            @{
+                                Key = "01-what-is-a-funnel"
+                                Title = "Was ist ein Funnel?"
+                                Body = @'
+  Ein Funnel ist ein benannter, wiederverwendbarer Filter- oder
+  Transformations-Skriptblock, der außerhalb deiner Bucket-Daten
+  gespeichert ist. Stell dir einen Funnel wie eine gespeicherte
+  Abfrage oder Abbildung vor, die du spontan anwenden kannst.
+
+  Bei fill (New-BucketObject): Funnels transformieren Objekte vor
+                               dem Speichern. Gib das modifizierte
+                               Objekt zurück oder $null zum Überspringen.
+  Bei scoop (Get-BucketObject): Funnels filtern Ergebnisse.
+                                Gib $true zurück zum Behalten, $false
+                                zum Verwerfen.
+  Bei dip (Get-Bucket):         Funnels filtern die Bucket-Liste.
+                                Gib $true zurück zum Behalten, $false
+                                zum Verwerfen.
+
+  Funnels werden als JSON-Dateien in $HOME/.buckets-system/funnels/
+  gespeichert, getrennt von deinen Daten. Sie werden für die Dauer
+  deiner Sitzung im Arbeitsspeicher zwischengespeichert.
+'@
+                            }
+                            @{
+                                Key = "02-creating-a-funnel"
+                                Title = "Einen Funnel erstellen"
+                                Body = @'
+  Verwende New-Funnel, um einen benannten Funnel zu erstellen. Der
+  Parameter -Filter erwartet einen Skriptblock, der $_ für das
+  Pipeline-Objekt verwendet. Für scoop/dip gib einen truthy-Wert
+  zurück, um das Objekt zu behalten. Für fill gib das modifizierte
+  Objekt zurück (oder $null zum Überspringen).
+
+  Mit -Description kannst du dokumentieren, was der Funnel tut.
+'@
+                                SetupCode = @'
+$team = @(
+    @{ Name="Alice";   Role="Developer"; Level=3; Score=95 }
+    @{ Name="Bob";     Role="Designer";  Level=2; Score=72 }
+    @{ Name="Carol";   Role="PM";        Level=3; Score=88 }
+    @{ Name="Frank";   Role="Developer"; Level=4; Score=91 }
+)
+$team | fill -Bucket team -KeyProperty Name -Quiet
+'@
+                                Code = @'
+# Erstelle einen Funnel, der nach Senior-Mitgliedern filtert (Level > 2)
+New-Funnel -Name "seniors" -Filter { $_.Level -gt 2 } -Description "Teammitglieder über Level 2"
+
+# Liste alle Funnels zur Bestätigung auf
+Get-Funnel
+'@
+                            }
+                            @{
+                                Key = "03-funnel-on-scoop"
+                                Title = "Funnels bei scoop (Filter)"
+                                Body = @'
+  Übergib einen Funnel-Namen an scoops -Funnel-Parameter, um
+  Ergebnisse zu filtern. Funnels kombinieren sich mit -Match und
+  -Filter — alle Bedingungen werden angewendet.
+'@
+                                Code = @'
+# Verwende den "seniors"-Funnel, um nur Senior-Teammitglieder zu erhalten
+scoop -Bucket team -Funnel "seniors"
+'@
+                            }
+                            @{
+                                Key = "04-funnel-on-fill"
+                                Title = "Funnels bei fill (Transformation)"
+                                Body = @'
+  Bei fill transformiert ein Funnel jedes Objekt vor dem Speichern.
+  Gib das modifizierte Objekt aus dem Skriptblock zurück oder $null,
+  um das Objekt zu überspringen.
+
+  Hier fügen wir eine "Seniority"-Eigenschaft basierend auf Level
+  hinzu, bevor wir speichern.
+'@
+                                SetupCode = @'
+$newTeam = @(
+    @{ Name="Grace";  Role="Developer"; Level=5 }
+    @{ Name="Heidi";  Role="Designer";  Level=1 }
+    @{ Name="Ivan";   Role="PM";        Level=3 }
+)
+'@
+                                Code = @'
+# Erstelle einen Transformations-Funnel, der ein Seniority-Label hinzufügt
+New-Funnel -Name "add-seniority" -Filter {
+    if ($_.Level -ge 4) { $_.Seniority = "Senior"; $_ }
+    elseif ($_.Level -ge 2) { $_.Seniority = "Mid"; $_ }
+    else { $null }
+}
+
+# Wende den Funnel während fill an
+$newTeam | fill -Bucket team -KeyProperty Name -Funnel "add-seniority" -Quiet
+
+# Überprüfe die Ergebnisse — Heidi (Level 1) wurde übersprungen
+scoop -Bucket team -Key "Grace", "Heidi", "Ivan"
+'@
+                            }
+                            @{
+                                Key = "05-managing-funnels"
+                                Title = "Funnels verwalten"
+                                Body = @'
+  Funnels können mit eigenen Cmdlets verwaltet werden:
+
+    Get-Funnel      — alle Funnels auflisten oder einen bestimmten abrufen
+    Set-Funnel      — einen Funnel-Ausdruck oder Beschreibung aktualisieren
+    Remove-Funnel   — einen Funnel löschen (unterstützt -WhatIf)
+
+  Funnels bleiben zwischen Sitzungen erhalten — sie leben auf der
+  Platte in $HOME/.buckets-system/funnels/. Jeder Funnel ist eine
+  einzelne JSON-Datei.
+'@
+                                SetupCode = @'
+New-Funnel -Name "demo-funnel" -Filter { $_.Active -eq $true } -Description "Nur aktive Elemente" -Force
+'@
+                                Code = @'
+# Liste alle Funnels auf (sollte "demo-funnel" enthalten)
+Get-Funnel
+
+# Aktualisiere einen vorhandenen Funnel
+Set-Funnel -Name "demo-funnel" -Description "Nur aktive Elemente bitte"
+
+# Vorschau der Löschung
+Remove-Funnel -Name "demo-funnel" -WhatIf
+
+# Entferne den Funnel tatsächlich
+Remove-Funnel -Name "demo-funnel" -Quiet
+
+# Bestätige, dass er weg ist
+Get-Funnel -Name "demo-funnel"
+'@
+                            }
+                            @{
+                                Key = "06-adhoc-scriptblock"
+                                Title = "Ad-hoc-Skriptblock-Funnels"
+                                Body = @'
+  -Funnel akzeptiert auch direkt einen Skriptblock (ohne einen
+  benannten Funnel zu erstellen). Verwende dies für einmalige
+  Filter oder Transformationen, die nicht gespeichert werden müssen.
+'@
+                                SetupCode = @'
+$items = @(
+    @{ Name="Jack";  Role="Developer"; Level=3 }
+    @{ Name="Kate";  Role="Designer";  Level=4 }
+    @{ Name="Leo";   Role="PM";        Level=2 }
+)
+$items | fill -Bucket team -KeyProperty Name -Quiet
+'@
+                                Code = @'
+# Ad-hoc-Filter — kein benannter Funnel nötig
+scoop -Bucket team -Funnel { $_.Level -ge 3 }
+'@
+                            }
+                        )
+                    }
+                )
+            }
+            @{
+                Name = "06-full-course"
                 Title = "Vollständiger Kurs"
                 Sections = @(
                     @{
@@ -1333,7 +1657,8 @@ $servers | fill -Bucket servers -KeyProperty Hostname -Quiet
     02 · Anfänger — CRUD-Operationen (erstellen, lesen, aktualisieren, löschen)
     03 · Fortgeschritten — kopieren, umbenennen, PSDrive, verschachtelte Buckets, Pipelines
     04 · Systemadministration — reale Szenarien: Inventar, Logs, Vorfälle
-    05 · Vollständiger Kurs — komplette Durchlauf aller Funktionen
+    05 · Funnels — benannte wiederverwendbare Filter und Transformationen
+    06 · Vollständiger Kurs — komplette Durchlauf aller Funktionen
 
   Jedes Kapitel ist in Abschnitte unterteilt, und jeder Abschnitt enthält
   fokussierte Lektionen mit Erklärungen und Codebeispielen zum Ausführen.

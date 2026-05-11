@@ -50,8 +50,8 @@ PowerShell module for file-based PSObject storage using directory-backed "bucket
 
 | Cmdlet | Key Params |
 |--------|-----------|
-| `New-BucketObject` | `-InputObject` (pipeline), `-Bucket` (default "default"), `-Key`, `-KeyProperty`, `-AsJson`, `-AsTimestamp`, `-Depth`, `-BinaryDepth`, `-Compress`, `-Quiet`, `-Overwrite` |
-| `Get-BucketObject` | `-Bucket` (positional 0, wildcards ok, all if omitted), `-Key` (positional 1), `-Match` (hashtable, supports $null), `-Filter` (scriptblock with `$_`), `-Recurse` (now default, kept for compat), `-NoRecurse`, `-First`, `-Skip` |
+| `New-BucketObject` | `-InputObject` (pipeline), `-Bucket` (default "default"), `-Key`, `-KeyProperty`, `-AsJson`, `-AsTimestamp`, `-Depth`, `-BinaryDepth`, `-Compress`, `-Quiet`, `-Overwrite`, `-Funnel` |
+| `Get-BucketObject` | `-Bucket` (positional 0, wildcards ok, all if omitted), `-Key` (positional 1), `-Match` (hashtable, supports $null), `-Filter` (scriptblock with `$_`), `-Recurse` (now default, kept for compat), `-NoRecurse`, `-First`, `-Skip`, `-Funnel` |
 | `Set-BucketObject` | `-InputObject` (pipeline binds `_BucketName`/`_BucketKey` or partial update), `-Bucket`, `-Key`, `-AsJson`, `-Compress`, `-PassThru`, `-Quiet` |
 | `Remove-BucketObject` | `-Bucket`, `-Key` or `-All` or `-Match`/`-Filter` (mutual param sets), `-PassThru`, `-Quiet`, `-WhatIf` (SupportsShouldProcess) |
 | `Copy-BucketObject` | `-Bucket`, `-Key`, `-DestinationBucket`, `-DestinationKey`, `-PassThru` |
@@ -59,7 +59,7 @@ PowerShell module for file-based PSObject storage using directory-backed "bucket
 | `Rename-BucketObject` | `-Bucket`, `-Key`, `-NewKey`, `-PassThru` |
 | `Export-Bucket` | `-Bucket`, `-OutputFile`, `-AsJson`, `-Quiet` |
 | `Import-Bucket` | `-Bucket`, `-InputFile`, `-AsJson`, `-Overwrite`, `-Quiet` |
-| `Get-Bucket` | `-Name` (positional 0, substring filter), `-Tree`, `-Raw` |
+| `Get-Bucket` | `-Name` (positional 0, substring filter), `-Tree`, `-Raw`, `-Funnel` |
 | `Get-BucketStats` | `-Bucket` (returns count, size, timestamps, visible Path) |
 | `Get-BucketKeys` | `-Bucket` (positional 0, wildcards ok), `-Match` (returns Bucket + Key only) |
 | `Get-BucketObjectStats` | `-Bucket` (positional 0, wildcards ok), `-Key` (positional 1), `-Match` (returns Format, Type, Size, LastWriteTime, IsCompressed) |
@@ -67,6 +67,13 @@ PowerShell module for file-based PSObject storage using directory-backed "bucket
 | `Set-BucketRoot` | `-Path` (mandatory, positional) |
 | `Get-BucketRoot` | (no parameters) |
 | `Sync-BucketDrive` | (no parameters) |
+| `New-Funnel` | `-Name`, `-Filter` (mandatory scriptblock with `$_`), `-Description`, `-Force`, `-Quiet` |
+| `Get-Funnel` | `-Name` (positional 0, all if omitted) |
+| `Set-Funnel` | `-Name`, `-Filter`, `-Description`, `-Quiet` |
+| `Remove-Funnel` | `-Name`, `-Quiet` (SupportsShouldProcess) |
+
+### Funnels
+Named reusable filter/transform scriptblocks stored in `$HOME/.buckets-system/funnels/` as JSON. Referenced by `-Funnel` on `fill`, `scoop`, and `dip`. Funnel definitions cached per session in `$script:FunnelCache`. Scriptblocks use `$_` for the pipeline object. Transforms on `fill` should return the modified object (or `$null` to skip). Filters on `scoop`/`dip` should return a truthy value for items to keep. `-Funnel` also accepts ad-hoc scriptblocks directly.
 
 ### Remove-Bucket Safety
 Only removes buckets containing exclusively `.dat`/`.json` files (or empty directories). Skips buckets with other file types with a warning. Uses standard `-Confirm` support (SupportsShouldProcess). `-Force` skips confirmation entirely. Shows a colored pre-confirmation summary listing bucket names, object counts, and sizes before the standard confirmation prompt.
