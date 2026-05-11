@@ -146,12 +146,11 @@ function Show-LanguageMenu {
         Write-Host "    [$($i+1)] $name" -ForegroundColor Yellow
     }
     Write-Host ""
+    Write-Host "  Press a number key to select" -ForegroundColor DarkGray
     do {
-        $raw = Read-Host "  Enter choice [1-$($script:AvailableLanguages.Count)]"
-        if ($null -eq $raw) { return $null }
-        $r = $raw.Trim()
+        $key = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
         $n = 0
-        $valid = [int]::TryParse($r, [ref]$n) -and $n -ge 1 -and $n -le $script:AvailableLanguages.Count
+        $valid = [int]::TryParse($key.Character, [ref]$n) -and $n -ge 1 -and $n -le $script:AvailableLanguages.Count
     } while (-not $valid)
     return $script:AvailableLanguages[$n - 1]
 }
@@ -172,15 +171,13 @@ function Show-ChapterMenu {
         Write-Host "    [$($i+1)] $(Get-DisplayTitle $script:Chapters[$i].Name)" -ForegroundColor Yellow
     }
     Write-Host ""
-    Write-Host "  Type 'q' at any pause to quit" -ForegroundColor DarkGray
+    Write-Host "  Press a number key, or [q] to quit" -ForegroundColor DarkGray
     Write-Host ""
     do {
-        $raw = Read-Host "  Enter choice [1-$($script:Chapters.Count)]"
-        if ($null -eq $raw) { return "q" }
-        $r = $raw.Trim()
-        if ($r -eq "q") { return "q" }
+        $key = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
+        if ($key.Character -eq "q") { return "q" }
         $n = 0
-        $valid = [int]::TryParse($r, [ref]$n) -and $n -ge 1 -and $n -le $script:Chapters.Count
+        $valid = [int]::TryParse($key.Character, [ref]$n) -and $n -ge 1 -and $n -le $script:Chapters.Count
     } while (-not $valid)
     return $n - 1
 }
