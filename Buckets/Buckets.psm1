@@ -4,8 +4,8 @@
 .DESCRIPTION
     Buckets provides a simple way to store, retrieve, and manage PowerShell objects
     in directory-based collections called "buckets". Objects are automatically serialized
-    to binary (default) or JSON format, with auto-fallback to binary when JSON depth
-    limits are exceeded.
+    to binary (default) or JSON format, with auto-depth adjustment for JSON (up to depth
+    100) and automatic fallback to binary when JSON cannot faithfully represent the object.
 #>
 
 # --- Provider compilation ---
@@ -229,7 +229,7 @@ function Save-BucketFile {
         [string]$BucketPath, [string]$Bucket
     )
 
-    $result = @{ Success = $false; Skipped = $false; Fallback = $false }
+    $result = @{ Success = $false; Skipped = $false; Fallback = $false; FormatFallback = $false }
 
     if ([System.IO.File]::Exists($Path) -and -not $Overwrite) {
         Write-Verbose "Object with key '$([System.IO.Path]::GetFileNameWithoutExtension($Path))' already exists in bucket '$Bucket'. Use -Overwrite to replace."
@@ -239,12 +239,24 @@ function Save-BucketFile {
 
     $writeSuccess = $false
     if ($AsJson) {
-        try {
-            $json = ConvertTo-Json -InputObject $Item -Depth $Depth -Compress -WarningAction SilentlyContinue
-            [System.IO.File]::WriteAllText($Path, $json, [System.Text.Encoding]::UTF8)
-            $writeSuccess = $true
+        $currentJsonDepth = $Depth
+        while ($currentJsonDepth -le 100) {
+            $jsonWarning = $null
+            try {
+                $json = ConvertTo-Json -InputObject $Item -Depth $currentJsonDepth -Compress -WarningVariable jsonWarning -WarningAction SilentlyContinue
+                if ($jsonWarning -and ($jsonWarning -match 'truncat')) {
+                    $currentJsonDepth++
+                    $jsonWarning = $null
+                    continue
+                }
+                [System.IO.File]::WriteAllText($Path, $json, [System.Text.Encoding]::UTF8)
+                if ($currentJsonDepth -gt $Depth) { $result.Fallback = $true }
+                $writeSuccess = $true
+                break
+            }
+            catch { break }
         }
-        catch {
+        if (-not $writeSuccess) {
             try {
                 $xml = [System.Management.Automation.PSSerializer]::Serialize($Item, $BinaryDepth)
                 $rawBytes = [System.Text.Encoding]::UTF8.GetBytes($xml)
@@ -260,7 +272,9 @@ function Save-BucketFile {
                     [System.IO.File]::WriteAllBytes($finalPath, $rawBytes)
                 }
                 $result.Fallback = $true
+                $result.FormatFallback = $true
                 $writeSuccess = $true
+                Write-Warning "Object '$([System.IO.Path]::GetFileNameWithoutExtension($Path))' too complex for JSON, saved as binary instead"
             }
             catch {
                 Write-Verbose "Failed to serialize object '$([System.IO.Path]::GetFileNameWithoutExtension($Path))' as binary: $_"
@@ -1537,8 +1551,9 @@ function New-BucketObject {
     Serializes one or more PowerShell objects and stores them in a bucket directory.
     Arrays are stored as individual files. By default objects are serialized to binary
     format using PSSerializer for full .NET type preservation. Use -AsJson for
-    human-readable JSON format. If JSON serialization fails on complex types,
-    the object automatically falls back to binary format.
+    human-readable JSON format. When -AsJson is used, depth is auto-incremented up to
+    100 to avoid truncation. If JSON still cannot faithfully represent the object,
+    it falls back to binary format and emits a warning.
     .PARAMETER InputObject
     The object(s) to store. Accepts pipeline input. Arrays are stored as individual files.
     .PARAMETER Bucket
@@ -1593,7 +1608,7 @@ function New-BucketObject {
     begin {
         $bucketPath = Ensure-BucketExists -Name $Bucket -Path $Path
         $extension = if ($AsJson) { ".json" } else { ".dat" }
-        $savedCount = 0; $skippedCount = 0; $fallbackCount = 0; $failedCount = 0; $totalCount = 0
+        $savedCount = 0; $skippedCount = 0; $fallbackCount = 0; $formatFallbackCount = 0; $failedCount = 0; $totalCount = 0
         $useVerbose = $VerbosePreference -eq 'Continue'
         $useQuiet = $Quiet.IsPresent
         $showProgress = -not $useVerbose -and -not $useQuiet
@@ -1637,6 +1652,7 @@ function New-BucketObject {
                 elseif ($writeResult.Skipped) { $skippedCount++ }
                 else { $failedCount++ }
                 if ($writeResult.Fallback) { $fallbackCount++ }
+                if ($writeResult.FormatFallback) { $formatFallbackCount++ }
                 $index++
             }
         }
@@ -1672,6 +1688,7 @@ function New-BucketObject {
                 elseif ($writeResult.Skipped) { $skippedCount++ }
                 else { $failedCount++ }
                 if ($writeResult.Fallback) { $fallbackCount++ }
+                if ($writeResult.FormatFallback) { $formatFallbackCount++ }
                 $index++
             }
         }
@@ -1694,6 +1711,9 @@ function New-BucketObject {
                 Write-Host "  " -NoNewline
                 Write-Host $fallbackCount -NoNewline -ForegroundColor $script:CNum
                 Write-Host " depth fallback" -ForegroundColor $script:CSkip
+            }
+            if ($formatFallbackCount -gt 0) {
+                Write-Warning "$formatFallbackCount object(s) too complex for JSON, saved as binary instead"
             }
             if ($failedCount -gt 0) {
                 Write-Host "  " -NoNewline
@@ -2415,12 +2435,24 @@ function Set-BucketObject {
 
         $writeSuccess = $false
         if ($useJson) {
-            try {
-                $json = ConvertTo-Json -InputObject $InputObject -Depth $Depth -Compress -WarningAction SilentlyContinue
-                [System.IO.File]::WriteAllText($filePath, $json, [System.Text.Encoding]::UTF8)
-                $writeSuccess = $true
+            $currentJsonDepth = $Depth
+            $formatFallback = $false
+            while ($currentJsonDepth -le 100) {
+                $jsonWarning = $null
+                try {
+                    $json = ConvertTo-Json -InputObject $InputObject -Depth $currentJsonDepth -Compress -WarningVariable jsonWarning -WarningAction SilentlyContinue
+                    if ($jsonWarning -and ($jsonWarning -match 'truncat')) {
+                        $currentJsonDepth++
+                        $jsonWarning = $null
+                        continue
+                    }
+                    [System.IO.File]::WriteAllText($filePath, $json, [System.Text.Encoding]::UTF8)
+                    $writeSuccess = $true
+                    break
+                }
+                catch { break }
             }
-            catch {
+            if (-not $writeSuccess) {
                 try {
                     $xml = [System.Management.Automation.PSSerializer]::Serialize($InputObject, $BinaryDepth)
                     $rawBytes = [System.Text.Encoding]::UTF8.GetBytes($xml)
@@ -2434,7 +2466,7 @@ function Set-BucketObject {
                         [System.IO.File]::WriteAllBytes($filePath, $ms.ToArray())
                     }
                     else { [System.IO.File]::WriteAllBytes($filePath, $rawBytes) }
-                    Write-Verbose "Object '$Key' incompatible with JSON, saved as binary format"
+                    Write-Warning "Object '$Key' too complex for JSON, saved as binary instead"
                     $writeSuccess = $true
                 }
                 catch { throw "Failed to serialize object '$Key' as binary: $_" }

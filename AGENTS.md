@@ -40,7 +40,7 @@ PowerShell module for file-based PSObject storage using directory-backed "bucket
 - Default path: `$HOME/.buckets` (overridable via `-Path`)
 - Default format: Binary via `PSSerializer` (`.dat`)
 - JSON format: `-AsJson` switch (`.json`)
-- Auto-fallback: JSON depth overflow → binary with warning
+- JSON auto-depth: `-AsJson` auto-increments depth from `-Depth` (default 20) up to 100 to avoid truncation; falls back to binary with `Write-Warning` if still truncated or on exception
 - `BinaryDepth` default: 5 (ValidateRange 1-100), `Depth` default: 20
 - Arrays stored as individual files
 - Key sanitization: `/`, `:`, `*`, `?`, `"`, `<`, `>`, `|`, `.`, `[`, `]` → `_`
@@ -88,7 +88,7 @@ Uses `SupportsShouldProcess` for `-WhatIf` support. Parameter sets enforce `-Key
 
 ### Storage & Serialization
 - `-Key` is the literal filename (without extension). Use `-KeyProperty` to derive the filename from a property on the input object, or `-AsTimestamp` for auto-naming
-- `ConvertTo-Json -WarningVariable` captures truncation warnings to trigger binary fallback
+- `-AsJson` auto-increments depth up to 100; if still truncated or on exception, falls back to binary with `Write-Warning`
 - Corrupted files emit a warning and return `$null` (don't break enumeration)
 
 ### PowerShell

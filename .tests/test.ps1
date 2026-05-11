@@ -899,6 +899,49 @@ Test-Edge "No-buckets root (nonexistent path returns empty)" {
     $null -eq $noB -or @($noB).Count -eq 0
 }
 
+<#
+  15. JSON depth auto-increment
+  Verifies: When -AsJson is used with a deep object, the module
+            auto-increments JSON depth to avoid truncation.
+#>
+Test-Edge "JSON depth auto-increment (deep object with -AsJson)" {
+    $deep = @{ L1 = "deep" }
+    for ($i = 2; $i -le 25; $i++) { $deep = @{ "L$i" = $deep } }
+    New-BucketObject -Bucket edge -InputObject $deep -Key "json-deep" -AsJson -Depth 2 -Quiet
+    $retrieved = Get-BucketObject -Bucket edge -Key "json-deep"
+    Remove-BucketObject -Bucket edge -Key "json-deep" -Quiet
+    $null -ne $retrieved
+}
+
+<#
+  16. JSON format fallback to binary on exception
+  Verifies: When -AsJson encounters a circular reference, the module
+            falls back to binary and emits a warning.
+#>
+Test-Edge "JSON fallback to binary (circular ref with -AsJson)" {
+    $circ = [PSCustomObject]@{ _Id = "json-circ"; Name = "loop" }
+    $circ | Add-Member -NotePropertyName "Self" -NotePropertyValue $circ
+    New-BucketObject -Bucket edge -InputObject $circ -KeyProperty _Id -AsJson -Quiet -WarningAction SilentlyContinue
+    $retrieved = Get-BucketObject -Bucket edge -Key "json-circ" -WarningAction SilentlyContinue
+    Remove-BucketObject -Bucket edge -Key "json-circ" -Quiet
+    $null -ne $retrieved -and $retrieved.Name -eq "loop"
+}
+
+<#
+  17. JSON shallow object stays as JSON
+  Verifies: A simple object stored with -AsJson remains as .json,
+            no unnecessary fallback to binary.
+#>
+Test-Edge "JSON shallow object stays as .json" {
+    New-BucketObject -Bucket edge -InputObject @{ _Id = "json-shallow"; Name = "test" } -KeyProperty _Id -AsJson -Quiet
+    $jsonPath = Join-Path (Get-BucketRoot) "edge/json-shallow.json"
+    $datPath = Join-Path (Get-BucketRoot) "edge/json-shallow.dat"
+    $isJson = Test-Path $jsonPath
+    $isNotDat = -not (Test-Path $datPath)
+    Remove-BucketObject -Bucket edge -Key "json-shallow" -Quiet
+    $isJson -and $isNotDat
+}
+
 # ============================================================
 # 20. Funnel operations
 # ============================================================

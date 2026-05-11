@@ -91,6 +91,35 @@ Test-Feature "Ad-hoc scriptblock funnel on scoop" {
     @($result).Count -eq 1 -and @($result)[0]._Id -eq "u1"
 }
 
+# Feature: JSON depth auto-increment
+Test-Feature "JSON auto-depth (deep object round-trips)" {
+    $inner = "leaf"
+    for ($i = 1; $i -le 25; $i++) { $inner = @{ "L$i" = $inner } }
+    New-BucketObject -Bucket "smoke/deep" -InputObject $inner -Key "deep" -AsJson -Depth 2 -Quiet
+    Use-Bucket "smoke/deep"
+    $obj = Get-BucketObject -Bucket "smoke/deep" -Key "deep"
+    $null -ne $obj
+}
+
+# Feature: JSON format fallback to binary
+Test-Feature "JSON fallback to binary (circular ref)" {
+    $circ = [PSCustomObject]@{ _Id = "circ"; Name = "loop" }
+    $circ | Add-Member -NotePropertyName "Self" -NotePropertyValue $circ
+    New-BucketObject -Bucket "smoke/deep" -InputObject $circ -KeyProperty _Id -AsJson -Quiet -WarningAction SilentlyContinue
+    Use-Bucket "smoke/deep"
+    $retrieved = Get-BucketObject -Bucket "smoke/deep" -Key "circ" -WarningAction SilentlyContinue
+    $null -ne $retrieved -and $retrieved.Name -eq "loop"
+}
+
+# Feature: JSON shallow object stays as .json
+Test-Feature "JSON shallow stays .json" {
+    New-BucketObject -Bucket "smoke/jsonshallow" -InputObject @{ _Id = "js"; Val = 1 } -KeyProperty _Id -AsJson -Quiet
+    Use-Bucket "smoke/jsonshallow"
+    $jsonPath = Join-Path (Get-BucketRoot) "smoke/jsonshallow/js.json"
+    $datPath = Join-Path (Get-BucketRoot) "smoke/jsonshallow/js.dat"
+    (Test-Path $jsonPath) -and -not (Test-Path $datPath)
+}
+
 # === 3. Cleanup ===
 foreach ($b in $createdBuckets) {
     Remove-Bucket -Bucket $b -Force -Confirm:$false -Recurse -WarningAction SilentlyContinue
