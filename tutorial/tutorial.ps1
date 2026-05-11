@@ -6,8 +6,7 @@
     PSDrive, nested buckets, export/import, and bucket management.
 #>
 
-Remove-Item Alias:cls -Force -ErrorAction SilentlyContinue
-function cls {
+function tut-cls {
     try {
         if (-not [Console]::IsInputRedirected) { Clear-Host }
     } catch {}
@@ -141,7 +140,7 @@ $script:LangNames = @{
 # ---------- language menu ----------
 
 function Show-LanguageMenu {
-    cls
+        tut-cls
     Write-Host ""
     Write-Host "  $Sep" -ForegroundColor DarkGray
     Write-Host "  Buckets Tutorial  v$ver" -ForegroundColor White
@@ -166,7 +165,7 @@ function Show-LanguageMenu {
 # ---------- chapter menu ----------
 
 function Show-ChapterMenu {
-    cls
+        tut-cls
     Write-Host ""
     Write-Host "  $Sep" -ForegroundColor DarkGray
     Write-Host "  Buckets Tutorial  v$ver" -ForegroundColor White
@@ -192,7 +191,7 @@ function Show-ChapterMenu {
 
 # ---------- setup ----------
 
-cls
+tut-cls
 $mod = Join-Path $PSScriptRoot "../Buckets"
 if (-not (Test-Path $mod)) { throw "Module not found at '$mod'" }
 Remove-Module Buckets -ErrorAction SilentlyContinue
@@ -246,7 +245,7 @@ if ($script:AvailableLanguages.Count -eq 1) {
 } else {
     $script:Language = Show-LanguageMenu
     if ($null -eq $script:Language) { exit }
-    cls
+        tut-cls
 }
 
 # Load chapters for the selected language
@@ -347,7 +346,7 @@ while ($true) {
         $sectionTitle = $sectionTitles[$idx]
         $displayChapter = $lessonChapterNames[$idx]
 
-        cls
+            tut-cls
         Write-Host ""
         Write-Host "── Chapter: $displayChapter ──" -ForegroundColor DarkGray
         Write-Host "── Section: $sectionTitle ──" -ForegroundColor DarkGray
@@ -408,7 +407,7 @@ while ($true) {
         if ($r -eq "quit") { tut-cleanup; Write-Host ""; exit }
 
         tut-wipe
-        cls
+            tut-cls
 
         switch ($r) {
             "next" { $idx++ }
@@ -418,7 +417,7 @@ while ($true) {
     }
 
     if ($isFullCourse) {
-        cls
+            tut-cls
         Write-Host ""
         Write-Host "  ╔══════════════════════════════════════════╗" -ForegroundColor Green
         Write-Host "  ║         Course Complete!                 ║" -ForegroundColor Green
