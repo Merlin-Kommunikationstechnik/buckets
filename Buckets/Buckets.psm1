@@ -263,24 +263,12 @@ function Save-BucketFile {
         }
     }
     else {
-        $currentJsonDepth = $Depth
-        while ($currentJsonDepth -le 100) {
-            $jsonWarning = $null
-            try {
-                $json = ConvertTo-Json -InputObject $Item -Depth $currentJsonDepth -Compress -WarningVariable jsonWarning -WarningAction SilentlyContinue
-                if ($jsonWarning -and ($jsonWarning -match 'truncat')) {
-                    $currentJsonDepth++
-                    $jsonWarning = $null
-                    continue
-                }
-                [System.IO.File]::WriteAllText($Path, $json, [System.Text.Encoding]::UTF8)
-                if ($currentJsonDepth -gt $Depth) { $result.Fallback = $true }
-                $writeSuccess = $true
-                break
-            }
-            catch { break }
+        try {
+            $json = ConvertTo-Json -InputObject $Item -Depth $Depth -Compress -WarningAction SilentlyContinue
+            [System.IO.File]::WriteAllText($Path, $json, [System.Text.Encoding]::UTF8)
+            $writeSuccess = $true
         }
-        if (-not $writeSuccess) {
+        catch {
             try {
                 $xml = [System.Management.Automation.PSSerializer]::Serialize($Item, $BinaryDepth)
                 $rawBytes = [System.Text.Encoding]::UTF8.GetBytes($xml)
@@ -2438,24 +2426,12 @@ function Set-BucketObject {
 
         $writeSuccess = $false
         if ($useJson) {
-            $currentJsonDepth = $Depth
-            $formatFallback = $false
-            while ($currentJsonDepth -le 100) {
-                $jsonWarning = $null
-                try {
-                    $json = ConvertTo-Json -InputObject $InputObject -Depth $currentJsonDepth -Compress -WarningVariable jsonWarning -WarningAction SilentlyContinue
-                    if ($jsonWarning -and ($jsonWarning -match 'truncat')) {
-                        $currentJsonDepth++
-                        $jsonWarning = $null
-                        continue
-                    }
-                    [System.IO.File]::WriteAllText($filePath, $json, [System.Text.Encoding]::UTF8)
-                    $writeSuccess = $true
-                    break
-                }
-                catch { break }
+            try {
+                $json = ConvertTo-Json -InputObject $InputObject -Depth $Depth -Compress -WarningAction SilentlyContinue
+                [System.IO.File]::WriteAllText($filePath, $json, [System.Text.Encoding]::UTF8)
+                $writeSuccess = $true
             }
-            if (-not $writeSuccess) {
+            catch {
                 try {
                     $xml = [System.Management.Automation.PSSerializer]::Serialize($InputObject, $BinaryDepth)
                     $rawBytes = [System.Text.Encoding]::UTF8.GetBytes($xml)
