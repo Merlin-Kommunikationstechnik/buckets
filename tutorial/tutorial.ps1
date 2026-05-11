@@ -31,6 +31,11 @@ function tut-wipe {
     }
 }
 
+function tut-cleanup {
+    tut-wipe
+    Remove-Bucket -Bucket "tutorials" -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue -WarningAction SilentlyContinue -Quiet
+}
+
 # ---------- input ----------
 
 function tut-pause {
@@ -297,7 +302,7 @@ $script:Staff = @(
 
 while ($true) {
     $choice = Show-ChapterMenu
-    if ($choice -eq "q") { tut-wipe; Write-Host ""; exit }
+    if ($choice -eq "q") { tut-cleanup; Write-Host ""; exit }
 
     $chapter = $script:Chapters[$choice]
     $isFullCourse = ($choice -eq $script:Chapters.Count - 1)
@@ -400,7 +405,7 @@ while ($true) {
         }
 
         $r = tut-pause
-        if ($r -eq "quit") { tut-wipe; Write-Host ""; exit }
+        if ($r -eq "quit") { tut-cleanup; Write-Host ""; exit }
 
         tut-wipe
         cls
