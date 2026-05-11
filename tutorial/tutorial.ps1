@@ -122,6 +122,37 @@ function Get-DisplayTitle($Name) {
     ($Name -replace '^\d+-', '') -replace '-', ' '
 }
 
+$script:LangNames = @{
+    "en" = "English"
+    "de" = "Deutsch"
+}
+
+# ---------- language menu ----------
+
+function Show-LanguageMenu {
+    cls
+    Write-Host ""
+    Write-Host "  $Sep" -ForegroundColor DarkGray
+    Write-Host "  Buckets Tutorial  v$ver" -ForegroundColor White
+    Write-Host "  $Sep" -ForegroundColor DarkGray
+    Write-Host ""
+    Write-Host "  Choose your language:" -ForegroundColor White
+    for ($i = 0; $i -lt $script:AvailableLanguages.Count; $i++) {
+        $lang = $script:AvailableLanguages[$i]
+        $name = if ($script:LangNames.ContainsKey($lang)) { $script:LangNames[$lang] } else { $lang }
+        Write-Host "    [$($i+1)] $name" -ForegroundColor Yellow
+    }
+    Write-Host ""
+    do {
+        $raw = Read-Host "  Enter choice [1-$($script:AvailableLanguages.Count)]"
+        if ($null -eq $raw) { return $null }
+        $r = $raw.Trim()
+        $n = 0
+        $valid = [int]::TryParse($r, [ref]$n) -and $n -ge 1 -and $n -le $script:AvailableLanguages.Count
+    } while (-not $valid)
+    return $script:AvailableLanguages[$n - 1]
+}
+
 # ---------- chapter menu ----------
 
 function Show-ChapterMenu {
@@ -129,7 +160,8 @@ function Show-ChapterMenu {
     Write-Host ""
     Write-Host "  $Sep" -ForegroundColor DarkGray
     Write-Host "  Buckets Tutorial  v$ver" -ForegroundColor White
-    Write-Host "  file-based PSObject storage for PowerShell" -ForegroundColor DarkGray
+    $langName = if ($script:LangNames.ContainsKey($script:Language)) { $script:LangNames[$script:Language] } else { $script:Language }
+    Write-Host "  Language: $langName" -ForegroundColor DarkGray
     Write-Host "  $Sep" -ForegroundColor DarkGray
     Write-Host ""
     Write-Host "  Choose a chapter:" -ForegroundColor White
@@ -172,20 +204,47 @@ $script:userBuckets = Get-ChildItem $root -Directory -ErrorAction SilentlyContin
 tut-wipe
 
 # Load chapters from the tutorial bucket tree
-$script:Chapters = @()
-$script:EnNode = $null
+$script:Language = ""
+$script:AvailableLanguages = @()
+$script:LangNode = $null
 $rootTree = Get-Bucket -Tree -Raw -ErrorAction SilentlyContinue
 if ($rootTree -and $rootTree.Children) {
-    $script:EnNode = $rootTree.Children | Where-Object Name -eq "tutorials" |
-        ForEach-Object Children | Where-Object Name -eq "en"
-    if ($script:EnNode -and $script:EnNode.Children) {
-        $script:Chapters = $script:EnNode.Children | Sort-Object Name
+    $tutNode = $rootTree.Children | Where-Object Name -eq "tutorials"
+    if ($tutNode -and $tutNode.Children) {
+        $script:AvailableLanguages = $tutNode.Children | Sort-Object Name | ForEach-Object Name
+    }
+}
+if ($script:AvailableLanguages.Count -eq 0) {
+    Write-Host ""
+    Write-Host "  No tutorial data found." -ForegroundColor Red
+    Write-Host "  Run populate-tutorial.ps1 first." -ForegroundColor Yellow
+    Write-Host ""
+    exit 1
+}
+if ($script:AvailableLanguages.Count -eq 1) {
+    $script:Language = $script:AvailableLanguages[0]
+} else {
+    $script:Language = Show-LanguageMenu
+    if ($null -eq $script:Language) { exit }
+    cls
+}
+
+# Load chapters for the selected language
+$script:Chapters = @()
+$rootTree = Get-Bucket -Tree -Raw -ErrorAction SilentlyContinue
+if ($rootTree -and $rootTree.Children) {
+    $tutNode = $rootTree.Children | Where-Object Name -eq "tutorials"
+    if ($tutNode -and $tutNode.Children) {
+        $script:LangNode = $tutNode.Children | Where-Object Name -eq $script:Language
+        if ($script:LangNode -and $script:LangNode.Children) {
+            $script:Chapters = $script:LangNode.Children | Sort-Object Name
+        }
     }
 }
 if ($script:Chapters.Count -eq 0) {
     Write-Host ""
-    Write-Host "  No tutorial chapters found." -ForegroundColor Red
-    Write-Host "  Run populate-tutorial.ps1 first." -ForegroundColor Yellow
+    Write-Host "  No chapters found for language '$($script:Language)'." -ForegroundColor Red
+    Write-Host "  Run populate-tutorial.ps1 to install tutorial data." -ForegroundColor Yellow
     Write-Host ""
     exit 1
 }
@@ -217,7 +276,7 @@ while ($true) {
     $sectionTitles = [System.Collections.ArrayList]@()
 
     $sections = @()
-    $chapterNode = $script:EnNode.Children | Where-Object Name -eq $chapter.Name
+    $chapterNode = $script:LangNode.Children | Where-Object Name -eq $chapter.Name
     if ($chapterNode -and $chapterNode.Children) {
         $sections = $chapterNode.Children | Sort-Object Name
     }
@@ -228,7 +287,7 @@ while ($true) {
     }
 
     foreach ($section in $sections) {
-        $bucketPath = "tutorials/en/$($chapter.Name)/$($section.Name)"
+        $bucketPath = "tutorials/$($script:Language)/$($chapter.Name)/$($section.Name)"
         $lessons = @(Get-BucketObject -Bucket $bucketPath -NoRecurse -ErrorAction SilentlyContinue)
         if ($lessons.Count -eq 0) { continue }
         $lessons = $lessons | Sort-Object { $_.PSObject.Properties['_BucketKey'].Value }

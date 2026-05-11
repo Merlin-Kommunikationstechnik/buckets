@@ -669,7 +669,681 @@ $servers | fill -Bucket servers -KeyProperty Hostname -Quiet
     }
     de = @{
         Chapters = @(
-            # TODO: German translation
+            @{
+                Name = "01-intro"
+                Title = "Einführung"
+                Sections = @(
+                    @{
+                        Name = "01-what-why-how"
+                        Title = "Was, Warum, Wie"
+                        Lessons = @(
+                            @{
+                                Key = "01-what-is-buckets"
+                                Title = "Was ist Buckets?"
+                                Body = @'
+  Buckets ist ein PowerShell-Modul zur dateibasierten PSObject-Speicherung.
+  Jedes Objekt ist eine Datei, jeder Bucket ist ein Ordner. Es gibt keine
+  Datenbank, keinen Dienst, keine Konfigurationsdatei — nur das Dateisystem.
+
+  Zwei Speicherformate:
+    Binary (.dat) — über PSSerializer. Schnell, bewahrt vollständige .NET-Typ-
+                    informationen. Beherrscht komplexe Objekte, zirkuläre Referenzen.
+    JSON    (.json) — über -AsJson. Lesbar, portabel, in jedem Editor editierbar.
+'@
+                            }
+                            @{
+                                Key = "02-why-buckets"
+                                Title = "Warum Buckets?"
+                                Body = @'
+  Dauerhaft       — Objekte überleben die PowerShell-Sitzung
+  Teilbar         — Buckets sind Ordner auf der Platte; kopieren, syncen, committen
+  Kombinierbar    — Pipeline rein, Pipeline raus; einfach weiterleiten
+  Durchsuchbar    — Get-Bucket -Tree zeigt die gesamte Hierarchie
+  Selbstbeschreibend — Dateinamen sind Schlüssel, JSON-Dateien sind lesbar
+  Auf-/Zuklappen  — verschachtelte Strukturen als durchsuchbare Verzeichnisbäume
+  Plattformunabhängig — PowerShell 7+ auf Windows, macOS, Linux
+'@
+                            }
+                            @{
+                                Key = "03-how-it-works"
+                                Title = "Wie funktioniert es?"
+                                Body = @'
+  Jeder Bucket ist ein Verzeichnis unter einem Wurzelpfad. Der Standardpfad ist:
+
+  Jedes Objekt ist eine Datei — .dat (binär, Standard) oder .json (optional).
+  Der Dateiname (ohne Erweiterung) ist der Schlüssel des Objekts.
+
+  Die sechs Kern-Cmdlets:
+    fill   · New-BucketObject      Objekte schreiben
+    scoop  · Get-BucketObject      Objekte lesen
+    spill  · Remove-BucketObject   Objekt löschen
+    dip    · Get-Bucket            Buckets auflisten
+    drain  · Remove-Bucket         Bucket löschen
+
+  Standardeinstellungen: Binary-Tiefe 5, JSON-Tiefe 20, Pfad $HOME/.buckets
+  Überschreibbar mit -BinaryDepth, -Depth oder -Path.
+'@
+                                Code = @'
+# Zeige das Wurzelverzeichnis, in dem alle Bucket-Daten gespeichert sind
+Get-BucketRoot
+'@
+                            }
+                        )
+                    }
+                )
+            }
+            @{
+                Name = "02-beginner"
+                Title = "Anfänger"
+                Sections = @(
+                    @{
+                        Name = "01-create"
+                        Title = "Erstellen"
+                        Lessons = @(
+                            @{
+                                Key = "01-first-object"
+                                Title = "Dein erstes Objekt speichern"
+                                Body = @'
+  Speichern wir dein erstes Objekt — eine einfache Hashtable, die einen Benutzer
+  beschreibt. Mit -Key geben wir den expliziten Schlüssel "Alice" an, der zum
+  Dateinamen wird. Standardmäßig verwendet Buckets das Binärformat, das die
+  vollständigen .NET-Typinformationen bewahrt — Hashtables, benutzerdefinierte
+  Objekte, selbst FileInfo überstehen den Rundlauf.
+'@
+                                SetupCode = @'
+# Erstelle eine Beispiel-Hashtable für einen Benutzer
+$alice = @{ Name = "Alice"; Role = "admin"; Score = 95 }
+'@
+                                Code = @'
+# Speichere die Hashtable als Objekt im Bucket "users" mit dem Schlüssel "Alice"
+New-BucketObject -InputObject $alice -Bucket users -Key "Alice"
+'@
+                            }
+                            @{
+                                Key = "02-keyproperty"
+                                Title = "Automatische Schlüssel mit -KeyProperty"
+                                Body = @'
+  -KeyProperty verwendet einen Eigenschaftswert als Schlüssel, anstatt -Key manuell
+  anzugeben. Übergib den Eigenschaftsnamen, und der Wert jedes Objekts für diese
+  Eigenschaft wird zum Dateinamen. Nützlich, wenn deine Daten bereits eine
+  natürliche ID haben.
+'@
+                                SetupCode = @'
+# Drei Benutzerdatensätze — der Wert von "Name" dient als Objektschlüssel
+$users = @(
+    @{ Name = "Alice"; Role = "Developer" }
+    @{ Name = "Bob";   Role = "Designer" }
+    @{ Name = "Carol"; Role = "PM" }
+)
+'@
+                                Code = @'
+# Leite das Array an fill weiter; -KeyProperty "Name" extrahiert den Schlüssel
+$users | fill -Bucket team -KeyProperty Name
+'@
+                            }
+                            @{
+                                Key = "03-asjson"
+                                Title = "JSON-Format mit -AsJson"
+                                Body = @'
+  -AsJson speichert Objekte als .json-Dateien statt binärer .dat. JSON-Dateien
+  sind lesbar und in jedem Texteditor editierbar. Ideal für Konfigurationen,
+  Logs oder Daten, die du inspizieren oder diffen möchtest.
+'@
+                                SetupCode = @'
+# Beispiel-Konfigurationsobjekt für die JSON-Format-Demo
+$alice = @{ Name = "Alice"; Role = "admin"; Score = 95 }
+'@
+                                Code = @'
+# Speichere als lesbares JSON (.json) statt binärem (.dat)
+New-BucketObject -InputObject $alice -Bucket config -Key "app-config" -AsJson -Quiet
+# Zeige die .json-Datei auf der Platte zur Bestätigung
+Get-ChildItem (Join-Path (Get-BucketRoot) "config")
+'@
+                            }
+                            @{
+                                Key = "04-overwrite"
+                                Title = "Vorhandene Objekte überschreiben"
+                                Body = @'
+  Standardmäßig überspringt fill vorhandene Schlüssel, um versehentliches
+  Überschreiben zu verhindern. Mit -Overwrite kannst du ein vorhandenes Objekt
+  ersetzen. Versuche zweimal zu speichern — beim zweiten Mal ohne -Overwrite
+  wird übersprungen, mit -Overwrite wird ersetzt.
+'@
+                                SetupCode = @'
+# Zwei Versionen von "Alice" — gleicher Schlüsselname, unterschiedliche Werte
+$alice  = @{ Name = "Alice"; Role = "admin";  Score = 95 }
+$alice2 = @{ Name = "Alice"; Role = "manager"; Score = 99 }
+'@
+                                Code = @'
+# Erster Speichervorgang erfolgreich — Schlüssel "Alice" existiert noch nicht
+New-BucketObject -InputObject $alice  -Bucket users -Key "Alice" -Quiet
+# Zweiter Speichervorgang OHNE -Overwrite wird still übersprungen (existiert bereits)
+New-BucketObject -InputObject $alice2 -Bucket users -Key "Alice" -Quiet
+# Dritter Speichervorgang MIT -Overwrite ersetzt das vorhandene Objekt
+New-BucketObject -InputObject $alice2 -Bucket users -Key "Alice" -Overwrite -Quiet
+# Überprüfe die überschriebenen Daten: Role=manager, Score=99
+scoop -Bucket users -Key "Alice" | Select-Object Name, Role, Score
+'@
+                            }
+                        )
+                    }
+                    @{
+                        Name = "02-read"
+                        Title = "Lesen"
+                        Lessons = @(
+                            @{
+                                Key = "01-scoop-all"
+                                Title = "Alle Objekte abrufen"
+                                Body = @'
+  Das Gegenstück zu fill ist scoop (Kurzform für Get-BucketObject). Ohne
+  Argumente gibt es jedes Objekt aus jedem Bucket zurück — nützlich für
+  einen ersten Überblick.
+'@
+                                SetupCode = @'
+# Teammitglieder für eine Abteilung
+$teamData = @(
+    @{ Name="Alice";   Role="Developer";  Level=3 }
+    @{ Name="Bob";     Role="Designer";   Level=2 }
+    @{ Name="Carol";   Role="PM";         Level=3 }
+    @{ Name="Frank";   Role="Developer";  Level=4 }
+)
+# Mitarbeiter für eine andere Abteilung
+$staffData = @(
+    @{ Name="Dana";  Role="HR";        Level=2 }
+    @{ Name="Eric";  Role="Finance";   Level=3 }
+    @{ Name="Gina";  Role="Marketing"; Level=1 }
+)
+# Speichere jeden Datensatz in seinem eigenen Bucket, keyed by "Name"
+$teamData | fill -Bucket team -KeyProperty Name -Quiet
+$staffData | fill -Bucket staff -KeyProperty Name -Quiet
+'@
+                                Code = @'
+# Ohne Argumente gibt scoop jedes Objekt aus jedem Bucket zurück
+scoop
+'@
+                            }
+                            @{
+                                Key = "02-by-key"
+                                Title = "Einzelnes Objekt abrufen"
+                                Body = @'
+  scoop mit -Key gibt ein bestimmtes Objekt zurück. Verwende dies, wenn du
+  den genauen Schlüssel kennst — viel schneller als Filtern.
+'@
+                                SetupCode = @'
+# Teamdaten mit Bewertungen — für Schlüsselabruf- und Filterübungen
+$teamData = @(
+    @{ Name="Alice";   Role="Developer";  Level=3; Score=95 }
+    @{ Name="Bob";     Role="Designer";   Level=2; Score=72 }
+    @{ Name="Carol";   Role="PM";         Level=3; Score=88 }
+    @{ Name="Frank";   Role="Developer";  Level=4; Score=91 }
+)
+$teamData | fill -Bucket team -KeyProperty Name -Quiet
+'@
+                                Code = @'
+# Ein Objekt genau über seinen Schlüssel abrufen — viel schneller als Filtern
+scoop -Bucket team -Key "Alice"
+'@
+                            }
+                            @{
+                                Key = "03-match"
+                                Title = "Filtern mit -Match"
+                                Body = @'
+  -Match erwartet eine Hashtable und gibt Objekte zurück, bei denen alle
+  angegebenen Eigenschaften übereinstimmen (UND-Logik). Ideal für schnelle
+  Nachschlagen.
+'@
+                                SetupCode = @'
+# Beispieldaten mit verschiedenen Rollen und Stufen für -Match-Demos
+$teamData = @(
+    @{ Name="Alice";   Role="Developer";  Level=3; Score=95 }
+    @{ Name="Bob";     Role="Designer";   Level=2; Score=72 }
+    @{ Name="Carol";   Role="PM";         Level=3; Score=88 }
+    @{ Name="Frank";   Role="Developer";  Level=4; Score=91 }
+)
+$teamData | fill -Bucket team -KeyProperty Name -Quiet
+'@
+                                Code = @'
+# Alle Entwickler (2 Ergebnisse)
+scoop -Bucket team -Match @{ Role = "Developer" }
+# Alle Mitglieder der Stufe 3 (2 Ergebnisse)
+scoop -Bucket team -Match @{ Level = 3 }
+# UND-Logik: Entwickler UND Stufe 3 (1 Ergebnis)
+scoop -Bucket team -Match @{ Role = "Developer"; Level = 3 }
+'@
+                            }
+                            @{
+                                Key = "04-filter"
+                                Title = "Filtern mit -Filter"
+                                Body = @'
+  -Filter verwendet einen PowerShell-Skriptblock mit $_ für das aktuelle
+  Objekt. Flexibler als -Match — unterstützt Vergleiche, Operatoren,
+  beliebige Logik.
+'@
+                                SetupCode = @'
+# Gleiche Teamdaten wie bei -Match, jetzt für -Filter-Vergleiche
+$teamData = @(
+    @{ Name="Alice";   Role="Developer";  Level=3; Score=95 }
+    @{ Name="Bob";     Role="Designer";   Level=2; Score=72 }
+    @{ Name="Carol";   Role="PM";         Level=3; Score=88 }
+    @{ Name="Frank";   Role="Developer";  Level=4; Score=91 }
+)
+$teamData | fill -Bucket team -KeyProperty Name -Quiet
+'@
+                                Code = @'
+# Skriptblock-Filter: Mitglieder mit Level größer als 2
+scoop -Bucket team -Filter { $_.Level -gt 2 }
+# Mitglieder mit Score größer oder gleich 90
+scoop -Bucket team -Filter { $_.Score -ge 90 }
+'@
+                            }
+                        )
+                    }
+                    @{
+                        Name = "03-update"
+                        Title = "Aktualisieren"
+                        Lessons = @(
+                            @{
+                                Key = "01-pipeline-update"
+                                Title = "Pipeline-Update mit Set-BucketObject"
+                                Body = @'
+  Set-BucketObject aktualisiert ein vorhandenes Objekt direkt. Wenn es aus
+  der Pipeline von scoop kommt, erkennt es automatisch Bucket und Schlüssel
+  aus den _BucketName- und _BucketKey-Metadaten — keine erneute Angabe nötig.
+'@
+                                SetupCode = @'
+# Teamdaten für die Pipeline-Update-Übung
+$teamData = @(
+    @{ Name="Alice";   Role="Developer";  Level=3; Score=95 }
+    @{ Name="Bob";     Role="Designer";   Level=2; Score=72 }
+    @{ Name="Carol";   Role="PM";         Level=3; Score=88 }
+    @{ Name="Frank";   Role="Developer";  Level=4; Score=91 }
+)
+$teamData | fill -Bucket team -KeyProperty Name -Quiet
+'@
+                                Code = @'
+# Rufe Bob ab, ändere Eigenschaften, leite zurück an Set-BucketObject
+scoop -Bucket team -Key "Bob" | ForEach-Object {
+    $_.Score = 99       # Aktualisiere Score direkt
+    $_.Role = "Lead"    # Befördere Bob zum Lead
+    $_                  # Gib das geänderte Objekt weiter
+} | Set-BucketObject -PassThru
+'@
+                            }
+                            @{
+                                Key = "02-patch"
+                                Title = "Teilaktualisierung mit -InputObject"
+                                Body = @'
+  Übergib eine Hashtable an -InputObject, um nur bestimmte Eigenschaften
+  zu aktualisieren. Andere Eigenschaften bleiben unberührt — wie ein
+  partielles PATCH in REST-APIs.
+'@
+                                SetupCode = @'
+# Kleinere Datenmenge für die Teilaktualisierungs-Demo
+$teamData = @(
+    @{ Name="Alice";   Role="Developer";  Level=3; Score=95 }
+    @{ Name="Bob";     Role="Designer";   Level=2; Score=72 }
+)
+$teamData | fill -Bucket team -KeyProperty Name -Quiet
+'@
+                                Code = @'
+# Teilaktualisierung: nur Role ändert sich; Level, Score bleiben erhalten
+Set-BucketObject -Bucket team -Key "Bob" -InputObject @{ Role = "Lead" } -PassThru
+# Bestätige: Bob hat jetzt Role=Lead, andere Eigenschaften unverändert
+scoop -Bucket team -Key "Bob"
+'@
+                            }
+                        )
+                    }
+                    @{
+                        Name = "04-delete"
+                        Title = "Löschen"
+                        Lessons = @(
+                            @{
+                                Key = "01-preview-whatif"
+                                Title = "Vorschau mit -WhatIf"
+                                Body = @'
+  -WhatIf zeigt eine Vorschau, was gelöscht würde, ohne tatsächlich etwas
+  zu entfernen. Immer sicher, vor dem Löschen auszuprobieren.
+'@
+                                SetupCode = @'
+# Beispieldaten für die sichere Löschvorschau mit -WhatIf
+$teamData = @(
+    @{ Name="Alice";   Role="Developer";  Level=3 }
+    @{ Name="Bob";     Role="Designer";   Level=2 }
+    @{ Name="Carol";   Role="PM";         Level=3 }
+    @{ Name="Frank";   Role="Developer";  Level=4 }
+)
+$teamData | fill -Bucket team -KeyProperty Name -Quiet
+'@
+                                Code = @'
+# Zeige Vorschau, was gelöscht würde — keine tatsächliche Löschung, völlig sicher
+Remove-BucketObject -Bucket team -Key "Bob" -WhatIf
+'@
+                            }
+                            @{
+                                Key = "02-all"
+                                Title = "Alle Objekte mit -All entfernen"
+                                Body = @'
+  -All entfernt alle Objekte aus einem Bucket auf einmal. Das Bucket-Verzeichnis
+  bleibt erhalten. Immer sicher, zuerst mit -WhatIf eine Vorschau anzuzeigen.
+'@
+                                SetupCode = @'
+# Drei Objekte für die Demo der Massenlöschung mit -All
+$teamData = @(
+    @{ Name="Alice"; Role="Developer"; Level=3 }
+    @{ Name="Bob";   Role="Designer";  Level=2 }
+    @{ Name="Carol"; Role="PM";        Level=3 }
+)
+$teamData | fill -Bucket team -KeyProperty Name -Quiet
+'@
+                                Code = @'
+# Vorschau: zeigt, was -All löschen würde (Probelauf, nichts wird entfernt)
+Remove-BucketObject -Bucket team -All -WhatIf
+# Lösche tatsächlich alles im Bucket (das Bucket-Verzeichnis bleibt erhalten)
+Remove-BucketObject -Bucket team -All -Quiet
+'@
+                            }
+                            @{
+                                Key = "03-match"
+                                Title = "Gezieltes Löschen mit -Match"
+                                Body = @'
+  -Match funktioniert auch bei Remove-BucketObject. Es löscht nur Objekte,
+  deren Eigenschaften mit der Hashtable übereinstimmen. Nützlich für
+  gezielte Bereinigung.
+'@
+                                SetupCode = @'
+# Mischung aus aktiven und archivierten Datensätzen für gezieltes Löschen
+$teamData = @(
+    @{ Name="Alice"; Role="Developer"; Level=3; Status="active" }
+    @{ Name="Bob";   Role="Designer";  Level=2; Status="archived" }
+    @{ Name="Carol"; Role="PM";        Level=3; Status="active" }
+    @{ Name="Frank"; Role="Developer"; Level=4; Status="archived" }
+)
+$teamData | fill -Bucket team -KeyProperty Name -Quiet
+'@
+                                Code = @'
+# Vorschau: nur archivierte Objekte würden entfernt, aktive bleiben
+Remove-BucketObject -Bucket team -Match @{ Status = "archived" } -WhatIf
+# Entferne tatsächlich archivierte Objekte, zeige welche gelöscht wurden
+Remove-BucketObject -Bucket team -Match @{ Status = "archived" } -PassThru
+'@
+                            }
+                        )
+                    }
+                )
+            }
+            @{
+                Name = "03-advanced"
+                Title = "Fortgeschritten"
+                Sections = @(
+                    @{
+                        Name = "01-copy-rename"
+                        Title = "Kopieren, Umbenennen, Verschieben"
+                        Lessons = @(
+                            @{
+                                Key = "01-copy-within-bucket"
+                                Title = "Innerhalb eines Buckets kopieren"
+                                Body = @'
+  Kopiere ein Objekt innerhalb desselben Buckets mit einem anderen Schlüssel.
+  Das Original bleibt unberührt — dies ist eine echte Kopie, kein Verschieben.
+'@
+                                SetupCode = @'
+# Teamdaten für die Kopieroperationen innerhalb eines Buckets
+$teamData = @(
+    @{ Name="Alice";   Role="Developer";  Level=3 }
+    @{ Name="Bob";     Role="Designer";   Level=2 }
+    @{ Name="Carol";   Role="PM";         Level=3 }
+    @{ Name="Frank";   Role="Developer";  Level=4 }
+)
+$teamData | fill -Bucket team -KeyProperty Name -Quiet
+'@
+                                Code = @'
+# Kopiere Alices Objekt unter neuem Schlüssel "Alice-Backup" — Original bleibt
+Copy-BucketObject -Bucket team -Key "Alice" -DestinationKey "Alice-Backup" -Quiet
+# Rufe die Kopie ab, um zu bestätigen, dass sie die gleichen Daten enthält
+scoop -Bucket team -Key "Alice-Backup"
+'@
+                            }
+                        )
+                    }
+                    @{
+                        Name = "02-management"
+                        Title = "Verwaltung"
+                        Lessons = @(
+                            @{
+                                Key = "01-list-buckets"
+                                Title = "Buckets auflisten mit dip"
+                                Body = @'
+  dip (Kurzform für Get-Bucket) listet alle deine Buckets mit Objektanzahl
+  und Zeitstempeln auf. Es ist der erste Befehl, wenn du einen Überblick
+  haben möchtest.
+'@
+                                SetupCode = @'
+# Erzeuge einen Beispiel-Config-Bucket, damit es etwas aufzulisten gibt
+@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -AsJson -Quiet
+'@
+                                Code = @'
+# dip (Get-Bucket) zeigt alle Buckets mit Objektanzahlen und Zeitstempeln
+dip
+'@
+                            }
+                        )
+                    }
+                    @{
+                        Name = "03-export-import"
+                        Title = "Export / Import"
+                        Lessons = @(
+                            @{
+                                Key = "01-export-clixml"
+                                Title = "Nach CLIXML exportieren"
+                                Body = @'
+  Export speichert einen gesamten Bucket in einer Archivdatei. CLIXML (der
+  Standard) bewahrt .NET-Typinformationen für perfekte Rundlauftreue.
+'@
+                                SetupCode = @'
+# Zwei Datensätze für den Export in ein CLIXML-Archiv
+$teamData = @(
+    @{ Name="Alice";   Role="Developer";  Level=3 }
+    @{ Name="Bob";     Role="Designer";   Level=2 }
+)
+$teamData | fill -Bucket team -KeyProperty Name -Quiet
+# Erstelle ein temporäres Verzeichnis für die Exportdatei
+$exportDir = Join-Path ([System.IO.Path]::GetTempPath()) "buckets-tutorial-export"
+$null = New-Item -ItemType Directory -Path $exportDir -Force -ErrorAction SilentlyContinue
+'@
+                                Code = @'
+# Exportiere den gesamten "team"-Bucket in eine CLIXML-Archivdatei
+Export-Bucket -Bucket team -OutputFile (Join-Path $exportDir "team.clixml") -Quiet
+# Zeige die exportierte Datei auf der Platte
+Get-ChildItem $exportDir
+'@
+                            }
+                        )
+                    }
+                    @{
+                        Name = "04-psdrive"
+                        Title = "PSDrive"
+                        Lessons = @(
+                            @{
+                                Key = "01-buckets-drive"
+                                Title = "Das buckets:-Laufwerk"
+                                Body = @'
+  Buckets registriert ein eigenes PSDrive namens "buckets:". Du kannst es
+  mit cd, Get-ChildItem, Get-Content navigieren — genau wie jedes andere
+  Laufwerk.
+'@
+                                Code = @'
+# Das Modul registriert "buckets:" als PSDrive für dateisystemähnliche Navigation
+Get-PSDrive -Name buckets
+'@
+                            }
+                        )
+                    }
+                    @{
+                        Name = "05-nested"
+                        Title = "Verschachtelte Buckets"
+                        Lessons = @(
+                            @{
+                                Key = "01-create-nested"
+                                Title = "Verschachtelte Buckets erstellen"
+                                Body = @'
+  Bucket-Namen mit Schrägstrichen erzeugen verschachtelte Verzeichnisstrukturen
+  auf der Platte. So organisierst du Daten hierarchisch — wie Ordner in
+  Ordnern, jede Ebene ein echtes Unterverzeichnis.
+'@
+                                Code = @'
+# Deutsche Städte in einem verschachtelten Pfad: org > eu > de > cities
+$deCities = @(
+    @{ Name = "Berlin"; Population = 3600000; Country = "DE" }
+    @{ Name = "Munich"; Population = 1500000; Country = "DE" }
+)
+New-BucketObject -InputObject $deCities -Bucket "org/eu/de/cities" -KeyProperty Name -Quiet
+
+# Britische Städte in org/eu/uk/cities
+$ukCities = @(
+    @{ Name = "London"; Population = 8900000; Country = "UK" }
+    @{ Name = "Manchester"; Population = 550000; Country = "UK" }
+)
+$ukCities | fill -Bucket "org/eu/uk/cities" -KeyProperty Name -Quiet
+
+# US-Städte in org/us/cities
+$usCities = @(
+    @{ Name = "New York"; Population = 8300000; Country = "US" }
+)
+$usCities | fill -Bucket "org/us/cities" -KeyProperty Name -Quiet
+
+# Abteilungen unter org/eu/de/depts — anderer Entitätstyp in gleicher Hierarchie
+$deDepts = @(
+    @{ Dept = "Engineering"; Lead = "Alice" }
+    @{ Dept = "Marketing"; Lead = "Bob" }
+)
+$deDepts | fill -Bucket "org/eu/de/depts" -KeyProperty Dept -Quiet
+# Zeige die vollständige Hierarchie als Baum an
+Get-Bucket -Tree -Name "org" -Objects
+'@
+                            }
+                        )
+                    }
+                    @{
+                        Name = "06-pipelines"
+                        Title = "Pipelines"
+                        Lessons = @(
+                            @{
+                                Key = "01-generate-fill"
+                                Title = "Erzeugen und füllen"
+                                Body = @'
+  Buckets ist für die Pipeline-Nutzung konzipiert. Die meisten Cmdlets
+  akzeptieren Pipeline-Eingaben und geben Objekte mit Metadaten aus.
+  Hier siehst du, wie sie zusammenwirken.
+'@
+                                Code = @'
+# Erzeuge 5 Objekte direkt und leite jedes in einen Bucket weiter
+1..5 | ForEach-Object { @{ Name = "item-$_"; Value = $_ * 10 } } |
+    fill -Bucket "dir-listing" -KeyProperty Name -Quiet
+# Rufe alle Objekte aus dem neuen Bucket ab
+scoop -Bucket "dir-listing"
+'@
+                            }
+                        )
+                    }
+                    @{
+                        Name = "07-tips"
+                        Title = "Tipps & Abkürzungen"
+                        Lessons = @(
+                            @{
+                                Key = "01-aliases-reference"
+                                Title = "Alias-Referenz"
+                                Body = @'
+  Drei Aliase werden vom Modul exportiert:
+
+    fill   = New-BucketObject     — Objekte speichern
+    scoop  = Get-BucketObject     — Objekte abrufen
+    dip    = Get-Bucket            — Buckets auflisten
+
+  Pipeline-Parameterbindung über Metadaten:
+
+    _BucketName   → -Bucket   (bei Set-BucketObject)
+    _BucketKey    → -Key      (bei Set-BucketObject)
+    _BucketFile   → vollständiger Pfad zur gespeicherten Datei
+'@
+                            }
+                        )
+                    }
+                )
+            }
+            @{
+                Name = "04-sysadmin"
+                Title = "Systemadministration"
+                Sections = @(
+                    @{
+                        Name = "01-server-inventory"
+                        Title = "Serverinventar"
+                        Lessons = @(
+                            @{
+                                Key = "01-storing-inventory"
+                                Title = "Serverinventar speichern"
+                                Body = @'
+  Dieser Abschnitt lehrt Buckets von Grund auf mit realen Daten:
+  Serverinventar, Vorfallprotokolle, Gesundheitsberichte und
+  bucketübergreifende Korrelation. Jede Lektion baut auf der vorherigen
+  auf, beginnt einfach und wächst an Komplexität.
+
+  Der Alias fill (Kurzform für New-BucketObject) speichert Objekte in
+  benannten Speicherbereichen (Buckets). Hier speichern wir unser
+  Serverinventar — jeder Serverdatensatz wird ein Objekt, keyed by
+  Hostname über -KeyProperty. Der Schalter -Quiet unterdrückt die
+  Zusammenfassungsausgabe.
+'@
+                                Code = @'
+# Definiere ein realistisches Serverinventar als Array von Hashtables
+$servers = @(
+    @{ Hostname="web-01";   IP="10.0.1.10"; OS="Ubuntu 22.04";  Role="web";        CPU=4;  RAM=8;  Disk=120; Status="online";   Location="DC1" }
+    @{ Hostname="web-02";   IP="10.0.1.11"; OS="Ubuntu 22.04";  Role="web";        CPU=4;  RAM=8;  Disk=120; Status="online";   Location="DC1" }
+    @{ Hostname="db-01";    IP="10.0.1.20"; OS="Debian 12";     Role="database";   CPU=8;  RAM=32; Disk=500; Status="online";   Location="DC1" }
+    @{ Hostname="db-02";    IP="10.0.2.20"; OS="Debian 12";     Role="database";   CPU=8;  RAM=32; Disk=500; Status="degraded"; Location="DC2" }
+    @{ Hostname="cache-01"; IP="10.0.1.30"; OS="Alpine 3.18";   Role="cache";      CPU=2;  RAM=16; Disk=60;  Status="online";   Location="DC1" }
+    @{ Hostname="mon-01";   IP="10.0.1.40"; OS="Ubuntu 22.04";  Role="monitoring"; CPU=2;  RAM=4;  Disk=250; Status="online";   Location="DC2" }
+    @{ Hostname="app-01";   IP="10.0.2.50"; OS="Rocky 9";       Role="app";        CPU=8;  RAM=16; Disk=200; Status="offline";  Location="DC2" }
+    @{ Hostname="backup-01";IP="10.0.1.1";  OS="FreeBSD 14";    Role="backup";     CPU=4;  RAM=8;  Disk=2000;Status="online";   Location="DC1" }
+)
+# Speichere das Inventar im Bucket "servers", keyed by Hostname
+$servers | fill -Bucket servers -KeyProperty Hostname -Quiet
+'@
+                            }
+                        )
+                    }
+                )
+            }
+            @{
+                Name = "05-full-course"
+                Title = "Vollständiger Kurs"
+                Sections = @(
+                    @{
+                        Name = "01-course-overview"
+                        Title = "Kursübersicht"
+                        Lessons = @(
+                            @{
+                                Key = "01-what-you-will-learn"
+                                Title = "Was du lernen wirst"
+                                Body = @'
+  Dieser Kurs führt dich durch alle Funktionen von Buckets — von deinem
+  ersten Objekt bis zu fortgeschrittenen Pipelines und Sysadmin-Szenarien.
+
+  Kapitel:
+    01 · Einführung — Kernkonzepte und das Dateisystemmodell
+    02 · Anfänger — CRUD-Operationen (erstellen, lesen, aktualisieren, löschen)
+    03 · Fortgeschritten — kopieren, umbenennen, PSDrive, verschachtelte Buckets, Pipelines
+    04 · Systemadministration — reale Szenarien: Inventar, Logs, Vorfälle
+    05 · Vollständiger Kurs — komplette Durchlauf aller Funktionen
+
+  Jedes Kapitel ist in Abschnitte unterteilt, und jeder Abschnitt enthält
+  fokussierte Lektionen mit Erklärungen und Codebeispielen zum Ausführen.
+'@
+                            }
+                        )
+                    }
+                )
+            }
         )
     }
 }

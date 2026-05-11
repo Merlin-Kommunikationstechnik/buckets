@@ -91,7 +91,9 @@ Benchmarks measure write/read throughput for 1k and 10k objects (simple + comple
 - `.tests/new.ps1` — smoke test for latest committed features (overwrite per commit)
 - `.tests/demo/` — demo/showcase scripts
 - `.tests/tools/` — utility/debug scripts (explorer, REPL, diag)
-- `tutorial/` — interactive tutorial system (data, populate, frontend)
+- `tutorial/populate-tutorial.ps1` — populate tutorial data (all languages). Use `-Language de` for a single language.
+- `tutorial/tutorial.ps1` — interactive frontend with language selection at startup
+- `tutorial/tutorial-data.ps1` — lesson content in all languages (`en`, `de`, ...)
 
 ## Release Workflow
 1. **Confirm with the user before releasing** — do not run the workflow without explicit confirmation
