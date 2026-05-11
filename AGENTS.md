@@ -14,7 +14,14 @@ PowerShell module for file-based PSObject storage using directory-backed "bucket
 ## Structure
 - `Buckets/Buckets.psm1` — module code (all cmdlets)
 - `Buckets/Buckets.psd1` — module manifest
-- `.tests/test.ps1` — test suite
+- `.tests/test.ps1` — functional test suite
+- `.tests/benchmark.ps1` — performance benchmarks
+- `.tests/new.ps1` — smoke test for latest features
+- `.tests/demo/` — demo/showcase scripts
+- `.tests/tools/` — utility/debug scripts (explorer, REPL, diag)
+- `tutorial/tutorial.ps1` — interactive tutorial frontend
+- `tutorial/populate-tutorial.ps1` — tutorial data bulk importer
+- `tutorial/tutorial-data.ps1` — lesson content (en/de)
 - `README.md` — documentation
 
 ## AI Agent Conventions
@@ -43,19 +50,23 @@ PowerShell module for file-based PSObject storage using directory-backed "bucket
 
 | Cmdlet | Key Params |
 |--------|-----------|
-| `New-BucketObject` | `-InputObject` (pipeline), `-Bucket` (default "default"), `-Key`, `-AsJson`, `-AsTimestamp`, `-Depth`, `-BinaryDepth`, `-Compress`, `-Quiet`, `-Overwrite` |
+| `New-BucketObject` | `-InputObject` (pipeline), `-Bucket` (default "default"), `-Key`, `-KeyProperty`, `-AsJson`, `-AsTimestamp`, `-Depth`, `-BinaryDepth`, `-Compress`, `-Quiet`, `-Overwrite` |
 | `Get-BucketObject` | `-Bucket` (positional 0, wildcards ok, all if omitted), `-Key` (positional 1), `-Match` (hashtable, supports $null), `-Filter` (scriptblock with `$_`), `-Recurse` (now default, kept for compat), `-NoRecurse`, `-First`, `-Skip` |
 | `Set-BucketObject` | `-InputObject` (pipeline binds `_BucketName`/`_BucketKey` or partial update), `-Bucket`, `-Key`, `-AsJson`, `-Compress`, `-PassThru`, `-Quiet` |
-| `Remove-BucketObject` | `-Bucket`, `-Key` or `-All` (param sets), `-PassThru`, `-WhatIf` (SupportsShouldProcess) |
+| `Remove-BucketObject` | `-Bucket`, `-Key` or `-All` or `-Match`/`-Filter` (mutual param sets), `-PassThru`, `-Quiet`, `-WhatIf` (SupportsShouldProcess) |
 | `Copy-BucketObject` | `-Bucket`, `-Key`, `-DestinationBucket`, `-DestinationKey`, `-PassThru` |
+| `Move-BucketObject` | `-Bucket`, `-Key`, `-DestinationBucket`, `-DestinationKey`, `-PassThru` |
 | `Rename-BucketObject` | `-Bucket`, `-Key`, `-NewKey`, `-PassThru` |
 | `Export-Bucket` | `-Bucket`, `-OutputFile`, `-AsJson`, `-Quiet` |
 | `Import-Bucket` | `-Bucket`, `-InputFile`, `-AsJson`, `-Overwrite`, `-Quiet` |
-| `Get-Bucket` | `-Name` (positional 0, substring filter) |
+| `Get-Bucket` | `-Name` (positional 0, substring filter), `-Tree`, `-Raw` |
 | `Get-BucketStats` | `-Bucket` (returns count, size, timestamps, visible Path) |
 | `Get-BucketKeys` | `-Bucket` (positional 0, wildcards ok), `-Match` (returns Bucket + Key only) |
 | `Get-BucketObjectStats` | `-Bucket` (positional 0, wildcards ok), `-Key` (positional 1), `-Match` (returns Format, Type, Size, LastWriteTime, IsCompressed) |
-| `Remove-Bucket` | `-Bucket` (positional, wildcards ok), `-Force`, `-Confirm` (SupportsShouldProcess), `-Quiet`, `-Recurse` |
+| `Remove-Bucket` | `-Bucket` (positional, wildcards ok), `-Recurse`, `-Force`, `-Confirm` (SupportsShouldProcess), `-Quiet` |
+| `Set-BucketRoot` | `-Path` (mandatory, positional) |
+| `Get-BucketRoot` | (no parameters) |
+| `Sync-BucketDrive` | (no parameters) |
 
 ### Remove-Bucket Safety
 Only removes buckets containing exclusively `.dat`/`.json` files (or empty directories). Skips buckets with other file types with a warning. Uses standard `-Confirm` support (SupportsShouldProcess). `-Force` skips confirmation entirely. Shows a colored pre-confirmation summary listing bucket names, object counts, and sizes before the standard confirmation prompt.
@@ -69,7 +80,7 @@ Uses `SupportsShouldProcess` for `-WhatIf` support. Parameter sets enforce `-Key
 ## Gotchas
 
 ### Storage & Serialization
-- `-Key` is a PROPERTY NAME on the input object, not the literal filename — use `-Key "_Id"` with an `_Id` property, or use `-AsTimestamp`
+- `-Key` is the literal filename (without extension). Use `-KeyProperty` to derive the filename from a property on the input object, or `-AsTimestamp` for auto-naming
 - `ConvertTo-Json -WarningVariable` captures truncation warnings to trigger binary fallback
 - Corrupted files emit a warning and return `$null` (don't break enumeration)
 
