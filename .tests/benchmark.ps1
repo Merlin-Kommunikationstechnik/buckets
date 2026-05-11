@@ -191,7 +191,7 @@ Write-BenchResult "Binary + -Compress (GZip)" $gzW $wt.ElapsedMilliseconds $gzR.
 # ============================================================
 Write-Host "`n[7] FileInfo — truncated JSON vs binary strength" -ForegroundColor Blue
 
-$fiItems = @(Get-ChildItem $HOME -File -Force -ErrorAction SilentlyContinue | Select-Object -First 100)
+$fiItems = @(Get-ChildItem $HOME -File -Force -ErrorAction SilentlyContinue | Select-Object -First 10)
 
 function Measure-FiBench {
     param([string]$Label, [string]$Bucket, [int]$Depth = 20, [switch]$AsBinary, [switch]$Compress)
