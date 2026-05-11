@@ -37,15 +37,17 @@ function tut-pause {
     Write-Host "  $Sep" -ForegroundColor DarkGray
     $hasCode = $null -ne $script:lastCode -and $script:lastCode -ne ""
     if ($hasCode) {
-        Write-Host "  [Enter] next · [b] back · [c] copy · [m] menu · [q] quit > " -NoNewline -ForegroundColor DarkGray
+        Write-Host "  [←] back · [→] next · [c] copy · [m] menu · [q] quit > " -NoNewline -ForegroundColor DarkGray
     } else {
-        Write-Host "  [Enter] next · [b] back · [m] menu · [q] quit > " -NoNewline -ForegroundColor DarkGray
+        Write-Host "  [←] back · [→] next · [m] menu · [q] quit > " -NoNewline -ForegroundColor DarkGray
     }
     do {
         $key = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
-    } while ($key.Character -notin @("b", "c", "m", "q") -and $key.VirtualKeyCode -ne 13)
-    if ($key.VirtualKeyCode -eq 13) { return "next" }
-    if ($key.Character -eq "b") { return "back" }
+        $validChar = $key.Character -in @("c", "m", "q")
+        $validVk = $key.VirtualKeyCode -in @(13, 37, 39)
+    } while (-not $validChar -and -not $validVk)
+    if ($key.VirtualKeyCode -in @(13, 39)) { return "next" }
+    if ($key.VirtualKeyCode -eq 37) { return "back" }
     if ($key.Character -eq "c" -and $hasCode) {
         $script:lastCode | Set-Clipboard
         Write-Host ""
