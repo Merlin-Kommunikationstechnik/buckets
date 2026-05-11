@@ -216,10 +216,22 @@ if ($rootTree -and $rootTree.Children) {
 }
 if ($script:AvailableLanguages.Count -eq 0) {
     Write-Host ""
-    Write-Host "  No tutorial data found." -ForegroundColor Red
-    Write-Host "  Run populate-tutorial.ps1 first." -ForegroundColor Yellow
+    Write-Host "  No tutorial data found. Populating now..." -ForegroundColor Yellow
     Write-Host ""
-    exit 1
+    & "$PSScriptRoot\populate-tutorial.ps1"
+    Write-Host ""
+    # Reload languages after populate
+    $rootTree = Get-Bucket -Tree -Raw -ErrorAction SilentlyContinue
+    if ($rootTree -and $rootTree.Children) {
+        $tutNode = $rootTree.Children | Where-Object Name -eq "tutorials"
+        if ($tutNode -and $tutNode.Children) {
+            $script:AvailableLanguages = $tutNode.Children | Sort-Object Name | ForEach-Object Name
+        }
+    }
+    if ($script:AvailableLanguages.Count -eq 0) {
+        Write-Host "  Populate failed. No languages found." -ForegroundColor Red
+        exit 1
+    }
 }
 if ($script:AvailableLanguages.Count -eq 1) {
     $script:Language = $script:AvailableLanguages[0]
@@ -243,10 +255,25 @@ if ($rootTree -and $rootTree.Children) {
 }
 if ($script:Chapters.Count -eq 0) {
     Write-Host ""
-    Write-Host "  No chapters found for language '$($script:Language)'." -ForegroundColor Red
-    Write-Host "  Run populate-tutorial.ps1 to install tutorial data." -ForegroundColor Yellow
+    Write-Host "  No chapters found for language '$($script:Language)'. Populating now..." -ForegroundColor Yellow
     Write-Host ""
-    exit 1
+    & "$PSScriptRoot\populate-tutorial.ps1"
+    Write-Host ""
+    # Reload chapters after populate
+    $rootTree = Get-Bucket -Tree -Raw -ErrorAction SilentlyContinue
+    if ($rootTree -and $rootTree.Children) {
+        $tutNode = $rootTree.Children | Where-Object Name -eq "tutorials"
+        if ($tutNode -and $tutNode.Children) {
+            $script:LangNode = $tutNode.Children | Where-Object Name -eq $script:Language
+            if ($script:LangNode -and $script:LangNode.Children) {
+                $script:Chapters = $script:LangNode.Children | Sort-Object Name
+            }
+        }
+    }
+    if ($script:Chapters.Count -eq 0) {
+        Write-Host "  Populate failed. No chapters found." -ForegroundColor Red
+        exit 1
+    }
 }
 
 # Demo data available to all lesson code
