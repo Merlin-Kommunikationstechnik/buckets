@@ -4,15 +4,14 @@
     Smoke test for latest committed features.
 .DESCRIPTION
     OVERWRITE this file when committing new features.
-    Tests: hidden Path property, -Tree rename, -Objects inversion,
-    extension-free tree output, JSON/Binary format labels, empty bucket removal,
-    -AsTimestamp pipe dedup.
+    Tests: funnel transform semantics on scoop, funnel filter via $null,
+    Get-Bucket no longer accepts -Funnel, Resolve-Funnel helper.
 #>
 
 Remove-Module Buckets -ErrorAction SilentlyContinue
 Import-Module "$PSScriptRoot/../Buckets" -Force
 
-$testRoot = Join-Path $env:TEMP "buckets-new-$(Get-Random)"
+$testRoot = Join-Path ([System.IO.Path]::GetTempPath()) "buckets-new-$(Get-Random)"
 Set-BucketRoot $testRoot
 
 $createdBuckets = [System.Collections.ArrayList]::new()
@@ -23,21 +22,11 @@ function Use-Bucket {
 
 # === 1. Create test data ===
 New-BucketObject -Bucket "smoke/users" -InputObject @(
-    @{ _Id = "u1"; Name = "Alice" }, @{ _Id = "u2"; Name = "Bob" }
+    @{ _Id = "u1"; Name = "Alice"; Role = "admin" },
+    @{ _Id = "u2"; Name = "Bob"; Role = "user" },
+    @{ _Id = "u3"; Name = "Carol"; Role = "user" }
 ) -KeyProperty _Id -Quiet
 Use-Bucket "smoke"
-
-New-BucketObject -Bucket "smoke/config" -InputObject @{ _Id = "cfg"; Theme = "dark" } -KeyProperty _Id -AsJson -Quiet
-
-New-BucketObject -Bucket "smoke/servers/web-01/logs" -InputObject @{ _Id = "log-001"; Msg = "OK" } -KeyProperty _Id -Quiet
-Use-Bucket "smoke/servers"
-
-$tsItems = 1..3 | ForEach-Object { @{ _Id = "ts$_"; Seq = $_ } }
-$tsItems | New-BucketObject -Bucket "smoke/timestamps" -AsTimestamp -Quiet
-Use-Bucket "smoke/timestamps"
-
-New-BucketObject -Bucket "smoke/empty" -InputObject @() -Quiet
-Use-Bucket "smoke/empty"
 
 # === 2. Run smoke tests ===
 $pass = 0; $fail = 0
@@ -58,71 +47,48 @@ function Test-Feature {
     }
 }
 
-Write-Host "`n[Smoke Test] Latest Features" -ForegroundColor Blue
+Write-Host "`n[Smoke Test] Funnel Consistency" -ForegroundColor Blue
 
-# Feature: Default dip shows top-level buckets, no Path column
-Test-Feature "dip default (top-level, aggregated, no Path)" {
-    $b = Get-Bucket -Name "smoke"
-    $b.Name -eq "smoke" -and $b.ObjectCount -ge 4 -and -not ($b | Format-List | Out-String).Contains("/.buckets/")
+# Feature: Scoop funnel filters with $null return (transform semantics)
+Test-Feature "Scoop funnel filters via if/$null pattern" {
+    $result = Get-BucketObject -Bucket "smoke/users" -Funnel { if ($_.Role -eq "admin") { $_ } }
+    @($result).Count -eq 1 -and @($result)[0].Name -eq "Alice"
 }
 
-# Feature: dip -Recurse shows all levels
-Test-Feature "dip -Recurse (all levels)" {
-    $r = Get-Bucket -Recurse -Name "smoke/servers"
-    $r | Where-Object { $_.Name -eq "smoke/servers/web-01/logs" } | ForEach-Object { $_.ObjectCount -eq 1 }
+# Feature: Scoop funnel transforms (add property)
+Test-Feature "Scoop funnel transforms (adds property)" {
+    $result = Get-BucketObject -Bucket "smoke/users" -Funnel { $_ | Add-Member -NotePropertyName "Seen" -NotePropertyValue $true -PassThru }
+    @($result).Count -eq 3 -and @($result | Where-Object { $_.Seen -eq $true }).Count -eq 3
 }
 
-# Feature: dip -Tree shows directories only
-Test-Feature "dip -Tree (directories only)" {
-    $t = Get-Bucket -Tree -Name "smoke" -Raw
-    $objs = $t.Children | Where-Object { $_.Type -eq "Object" }
-    $objs.Count -eq 0
+# Feature: Named funnel on scoop with transform semantics
+Test-Feature "Named funnel on scoop (transform filter)" {
+    New-Funnel -Name "smoke-admins" -Filter { if ($_.Role -eq "admin") { $_ } } -Force -Quiet
+    $result = Get-BucketObject -Bucket "smoke/users" -Funnel "smoke-admins"
+    Remove-Funnel -Name "smoke-admins" -Quiet -Confirm:$false
+    @($result).Count -eq 1 -and @($result)[0].Name -eq "Alice"
 }
 
-# Feature: dip -Tree -Objects shows keys without extensions
-Test-Feature "dip -Tree -Objects (keys, no extensions)" {
-    $t = Get-Bucket -Tree -Objects -Name "smoke" -Raw
-    $u = $t.Children | Where-Object { $_.Name -eq "users" }
-    $keys = $u.Children | Where-Object { $_.Type -eq "Object" } | ForEach-Object { $_.Name }
-    ($keys -join ",") -notmatch "\.(dat|json)"
+# Feature: Fill funnel still works (transform before store)
+Test-Feature "Fill funnel transforms before store" {
+    New-Funnel -Name "smoke-xform" -Filter { $_ | Add-Member -NotePropertyName "Source" -NotePropertyValue "test" -PassThru } -Force -Quiet
+    New-BucketObject -Bucket "smoke/transformed" -InputObject ([PSCustomObject]@{ _Id = "tx1"; Val = 42 }) -KeyProperty _Id -Funnel "smoke-xform" -Quiet
+    Use-Bucket "smoke/transformed"
+    $obj = Get-BucketObject -Bucket "smoke/transformed" -Key "tx1"
+    Remove-Funnel -Name "smoke-xform" -Quiet -Confirm:$false
+    $null -ne $obj -and $obj.Source -eq "test"
 }
 
-# Feature: Get-BucketKeys returns only Bucket + Key
-Test-Feature "Get-BucketKeys (Bucket + Key only)" {
-    $keys = Get-BucketKeys -Bucket "smoke/config"
-    $keys[0].Bucket -and $keys[0].Key -and -not ($keys[0].PSObject.Properties.Match('Format').Count -gt 0)
+# Feature: Get-Bucket has no -Funnel parameter
+Test-Feature "Get-Bucket has no -Funnel parameter" {
+    $cmd = Get-Command Get-Bucket
+    -not ($cmd.Parameters.ContainsKey('Funnel'))
 }
 
-# Feature: Get-BucketObjectStats returns format, type, size
-Test-Feature "Get-BucketObjectStats (Format, Type, Size)" {
-    $stats = Get-BucketObjectStats -Bucket "smoke/config"
-    $stats[0].Format -in @("JSON","Binary") -and $stats[0].Type -in @("Object","Array","Value") -and $stats[0].Size -gt 0
-}
-
-# Feature: Get-BucketObjectStats IsCompressed detection
-Test-Feature "Get-BucketObjectStats (IsCompressed on normal data)" {
-    $stats = Get-BucketObjectStats -Bucket "smoke/config"
-    -not $stats[0].IsCompressed
-}
-
-# Feature: Get-BucketStats has visible Path and hidden TotalSizeBytes
-Test-Feature "Get-BucketStats (Path visible, TotalSizeBytes hidden)" {
-    $s = Get-BucketStats -Bucket "smoke/users"
-    $pathVisible = -not [string]::IsNullOrEmpty($s.Path)
-    $bytesHidden = -not ($s | Format-List | Out-String).Contains("TotalSizeBytes")
-    $pathVisible -and $bytesHidden -and $s.TotalSizeBytes -gt 0
-}
-
-# Feature: Empty bucket removal
-Test-Feature "Remove-Bucket on empty bucket" {
-    Remove-Bucket "smoke/empty" -Force -Confirm:$false -Recurse
-    -not (Test-Path (Join-Path (Get-BucketRoot) "smoke/empty"))
-}
-
-# Feature: AsTimestamp pipe dedup
-Test-Feature "-AsTimestamp pipe (3 unique keys)" {
-    $count = (Get-BucketObject -Bucket "smoke/timestamps").Count
-    $count -ge 3
+# Feature: Ad-hoc scriptblock funnel on scoop
+Test-Feature "Ad-hoc scriptblock funnel on scoop" {
+    $result = Get-BucketObject -Bucket "smoke/users" -Funnel { if ($_.Name -like "A*") { $_ } }
+    @($result).Count -eq 1 -and @($result)[0]._Id -eq "u1"
 }
 
 # === 3. Cleanup ===

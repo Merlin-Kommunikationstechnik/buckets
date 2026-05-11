@@ -136,6 +136,22 @@ function Get-FunnelDefinition {
     throw "Funnel '$Name' not found"
 }
 
+function Resolve-Funnel {
+    param([object]$Funnel)
+    if (-not $Funnel) { return $null }
+    if ($Funnel -is [scriptblock]) {
+        return @{ Filter = $Funnel }
+    }
+    $def = Get-FunnelDefinition -Name $Funnel
+    $result = @{ Filter = [scriptblock]::Create($def.Filter) }
+    if ($def.AppliesTo) {
+        $at = $def.AppliesTo.Trim()
+        if ($at -match '^\[.+\]$') { $result.AppliesTo = [scriptblock]::Create("`$_ -is $at") }
+        else { $result.AppliesTo = [scriptblock]::Create($at) }
+    }
+    return $result
+}
+
 function Get-BucketPath {
     param(
         [Parameter(Mandatory = $true)][string]$Name,
@@ -668,8 +684,7 @@ function Get-Bucket {
         [switch]$Raw,
         [switch]$Recurse,
         [int]$MaxFiles = 5,
-        [int]$Depth = [int]::MaxValue,
-        [object]$Funnel
+        [int]$Depth = [int]::MaxValue
     )
 
     if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
@@ -677,21 +692,6 @@ function Get-Bucket {
     if (-not [System.IO.Directory]::Exists($Path)) {
         if ($Tree) { Write-Host "No bucket storage found at '$Path'" -ForegroundColor DarkGray }
         return
-    }
-
-    $funnelDef = $null
-    if ($Funnel) {
-        if ($Funnel -is [scriptblock]) {
-            $funnelDef = @{ Filter = $Funnel }
-        } else {
-            $def = Get-FunnelDefinition -Name $Funnel
-            $funnelDef = @{ Filter = [scriptblock]::Create($def.Filter) }
-            if ($def.AppliesTo) {
-                $at = $def.AppliesTo.Trim()
-                if ($at -match '^\[.+\]$') { $funnelDef.AppliesTo = [scriptblock]::Create("`$_ -is $at") }
-                else { $funnelDef.AppliesTo = [scriptblock]::Create($at) }
-            }
-        }
     }
 
     if ($Tree) {
@@ -950,16 +950,6 @@ function Get-Bucket {
 
     if (-not [string]::IsNullOrWhiteSpace($Name)) {
         $results = $results | Where-Object { $_.Name -like "*$Name*" }
-    }
-
-    if ($funnelDef) {
-        if ($funnelDef.ContainsKey('AppliesTo')) {
-            $results = $results | Where-Object {
-                ($null -eq ($_ | Where-Object $funnelDef.AppliesTo)) -or ($_ | Where-Object $funnelDef.Filter)
-            }
-        } else {
-            $results = $results | Where-Object $funnelDef.Filter
-        }
     }
 
     $results
@@ -1230,20 +1220,7 @@ function Get-BucketObject {
         $bucketPaths += Get-Bucket -Path $Path -Recurse | ForEach-Object { $_.Path }
     }
 
-    $funnelDef = $null
-    if ($Funnel) {
-        if ($Funnel -is [scriptblock]) {
-            $funnelDef = @{ Filter = $Funnel }
-        } else {
-            $def = Get-FunnelDefinition -Name $Funnel
-            $funnelDef = @{ Filter = [scriptblock]::Create($def.Filter) }
-            if ($def.AppliesTo) {
-                $at = $def.AppliesTo.Trim()
-                if ($at -match '^\[.+\]$') { $funnelDef.AppliesTo = [scriptblock]::Create("`$_ -is $at") }
-                else { $funnelDef.AppliesTo = [scriptblock]::Create($at) }
-            }
-        }
-    }
+    $funnelDef = Resolve-Funnel $Funnel
 
     $allObjects = [System.Collections.ArrayList]::new()
 
@@ -1265,7 +1242,10 @@ function Get-BucketObject {
 
             if ($funnelDef) {
                 $matchesAppliesTo = -not $funnelDef.ContainsKey('AppliesTo') -or ($null -ne ($obj | Where-Object $funnelDef.AppliesTo))
-                if ($matchesAppliesTo -and $null -eq ($obj | Where-Object $funnelDef.Filter)) { continue }
+                if ($matchesAppliesTo) {
+                    $obj = $obj | ForEach-Object $funnelDef.Filter
+                    if ($null -eq $obj) { continue }
+                }
             }
 
             $relativePath = $file.FullName.Substring($bucketPath.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar)
@@ -1619,20 +1599,7 @@ function New-BucketObject {
         $showProgress = -not $useVerbose -and -not $useQuiet
         $pipeline = [System.Collections.ArrayList]::new()
 
-        $funnelDef = $null
-        if ($Funnel) {
-            if ($Funnel -is [scriptblock]) {
-                $funnelDef = @{ Filter = $Funnel }
-            } else {
-                $def = Get-FunnelDefinition -Name $Funnel
-                $funnelDef = @{ Filter = [scriptblock]::Create($def.Filter) }
-                if ($def.AppliesTo) {
-                    $at = $def.AppliesTo.Trim()
-                    if ($at -match '^\[.+\]$') { $funnelDef.AppliesTo = [scriptblock]::Create("`$_ -is $at") }
-                    else { $funnelDef.AppliesTo = [scriptblock]::Create($at) }
-                }
-            }
-        }
+        $funnelDef = Resolve-Funnel $Funnel
 
         if ($AsTimestamp -and (-not [string]::IsNullOrWhiteSpace($Key) -or -not [string]::IsNullOrWhiteSpace($KeyProperty))) {
             Write-Verbose "Both -Key/-KeyProperty and -AsTimestamp specified. -Key/-KeyProperty takes precedence, -AsTimestamp ignored."
@@ -2525,9 +2492,9 @@ function New-Funnel {
     Creates a named funnel (reusable filter/transform scriptblock).
     .DESCRIPTION
     Saves a named funnel definition to $HOME/.buckets-system/funnels/. Funnels can be
-    referenced by name with the -Funnel parameter on fill, scoop, and dip.
-    A funnel is a scriptblock operating on $_ that returns a transformed object (for fill)
-    or a truthy/falsy value (for scoop/dip).
+    referenced by name with the -Funnel parameter on fill and scoop.
+    A funnel is a scriptblock operating on $_ that returns the object to keep it
+    (optionally modified), or $null to drop it. This works identically on fill and scoop.
     .PARAMETER Name
     Name for the funnel. Used to reference it later via -Funnel.
     .PARAMETER Filter
@@ -2539,7 +2506,7 @@ function New-Funnel {
     .PARAMETER Quiet
     Suppress success output.
     .EXAMPLE
-    New-Funnel -Name admins -Filter { $_.Role -eq "admin" }
+    New-Funnel -Name admins -Filter { if ($_.Role -eq "admin") { $_ } }
     .EXAMPLE
     New-Funnel -Name add-source -Filter { $_ | Add-Member -NotePropertyName "Source" -NotePropertyValue "import" -PassThru } -Description "Adds Source property"
     #>
@@ -2926,7 +2893,7 @@ $script:FunnelCompleterBlock = {
     }
 }
 
-@('New-BucketObject', 'Get-BucketObject', 'Get-Bucket', 'fill', 'scoop', 'dip') | ForEach-Object {
+@('New-BucketObject', 'Get-BucketObject', 'fill', 'scoop') | ForEach-Object {
     Register-ArgumentCompleter -CommandName $_ -ParameterName Funnel -ScriptBlock $script:FunnelCompleterBlock
 }
 

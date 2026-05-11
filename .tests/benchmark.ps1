@@ -10,7 +10,7 @@
 #Remove-Module Buckets -ErrorAction SilentlyContinue
 #Import-Module "$PSScriptRoot/../Buckets" -Force
 
-$testRoot = Join-Path $env:TEMP "buckets-bench-$(Get-Random)"
+$testRoot = Join-Path ([System.IO.Path]::GetTempPath()) "buckets-bench-$(Get-Random)"
 Set-BucketRoot $testRoot
 
 $sw = [System.Diagnostics.Stopwatch]::StartNew()

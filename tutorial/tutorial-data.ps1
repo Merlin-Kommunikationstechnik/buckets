@@ -653,10 +653,8 @@ $servers | fill -Bucket servers -KeyProperty Hostname -Quiet
 
   On fill (New-BucketObject):  Funnels transform objects before storage.
                                Return the modified object, or $null to skip.
-  On scoop (Get-BucketObject): Funnels filter results.
-                               Return $true to keep, $false to drop.
-  On dip (Get-Bucket):         Funnels filter the bucket list.
-                               Return $true to keep, $false to drop.
+  On scoop (Get-BucketObject): Funnels transform or filter results.
+                               Return the object to keep it, $null to drop it.
 
   Funnels are stored as JSON files in $HOME/.buckets-system/funnels/,
   keeping them separate from your data. They are cached in memory for
@@ -668,9 +666,9 @@ $servers | fill -Bucket servers -KeyProperty Hostname -Quiet
                                 Title = "Creating a Funnel"
                                 Body = @'
   Use New-Funnel to create a named funnel. The -Filter parameter takes
-  a scriptblock that uses $_ for the pipeline object. For scoop/dip,
-  return a truthy value to keep the item. For fill, return the modified
-  object (or $null to skip).
+  a scriptblock that uses $_ for the pipeline object. Return the object
+  to keep it, or $null to drop it. For fill, return a modified object
+  to transform it before storage.
 
   Adding -Description lets you document what the funnel does.
 '@
@@ -1488,15 +1486,12 @@ $servers | fill -Bucket servers -KeyProperty Hostname -Quiet
   gespeichert ist. Stell dir einen Funnel wie eine gespeicherte
   Abfrage oder Abbildung vor, die du spontan anwenden kannst.
 
-  Bei fill (New-BucketObject): Funnels transformieren Objekte vor
+Bei fill (New-BucketObject): Funnels transformieren Objekte vor
                                dem Speichern. Gib das modifizierte
                                Objekt zurück oder $null zum Überspringen.
-  Bei scoop (Get-BucketObject): Funnels filtern Ergebnisse.
-                                Gib $true zurück zum Behalten, $false
-                                zum Verwerfen.
-  Bei dip (Get-Bucket):         Funnels filtern die Bucket-Liste.
-                                Gib $true zurück zum Behalten, $false
-                                zum Verwerfen.
+  Bei scoop (Get-BucketObject): Funnels transformieren oder filtern
+                                Ergebnisse. Gib das Objekt zurück zum
+                                Behalten, $null zum Verwerfen.
 
   Funnels werden als JSON-Dateien in $HOME/.buckets-system/funnels/
   gespeichert, getrennt von deinen Daten. Sie werden für die Dauer
@@ -1509,9 +1504,9 @@ $servers | fill -Bucket servers -KeyProperty Hostname -Quiet
                                 Body = @'
   Verwende New-Funnel, um einen benannten Funnel zu erstellen. Der
   Parameter -Filter erwartet einen Skriptblock, der $_ für das
-  Pipeline-Objekt verwendet. Für scoop/dip gib einen truthy-Wert
-  zurück, um das Objekt zu behalten. Für fill gib das modifizierte
-  Objekt zurück (oder $null zum Überspringen).
+  Pipeline-Objekt verwendet. Gib das Objekt zurück zum Behalten,
+  oder $null zum Verwerfen. Für fill gib ein modifiziertes Objekt
+  zurück, um es vor dem Speichern zu transformieren.
 
   Mit -Description kannst du dokumentieren, was der Funnel tut.
 '@

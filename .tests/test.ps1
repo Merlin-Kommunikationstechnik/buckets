@@ -7,7 +7,7 @@
 Remove-Module Buckets -ErrorAction SilentlyContinue
 Import-Module "$PSScriptRoot/../Buckets" -Force
 
-$testRoot = Join-Path $env:TEMP "buckets-test-$(Get-Random)"
+$testRoot = Join-Path ([System.IO.Path]::GetTempPath()) "buckets-test-$(Get-Random)"
 Set-BucketRoot $testRoot
 
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
@@ -936,7 +936,7 @@ New-BucketObject -Bucket edge -InputObject @{ _Id = "f3"; Role = "user"; Level =
   Verifies: New-Funnel creates a funnel file and it appears in Get-Funnel.
 #>
 Test-Funnel "New-Funnel creates named funnel" {
-    New-Funnel -Name "test-funnel-1" -Filter { $_.Level -gt 2 } -Description "Level above 2"
+    New-Funnel -Name "test-funnel-1" -Filter { if ($_.Level -gt 2) { $_ } } -Description "Level above 2"
     $f = Get-Funnel -Name "test-funnel-1"
     $null -ne $f -and $f.Filter -match 'Level' -and $f.Description -eq "Level above 2"
 }
@@ -965,7 +965,7 @@ Test-Funnel "Named funnel on scoop (filter)" {
   Verifies: -Funnel accepts a raw scriptblock for ad-hoc filtering.
 #>
 Test-Funnel "Ad-hoc scriptblock on scoop (filter)" {
-    $result = Get-BucketObject -Bucket edge -Funnel { $_.Role -eq "admin" }
+    $result = Get-BucketObject -Bucket edge -Funnel { if ($_.Role -eq "admin") { $_ } }
     @($result).Count -eq 1 -and $result._Id -eq "f1"
 }
 
@@ -1058,7 +1058,7 @@ Test-Funnel "Get-Funnel lists built-in funnels" {
   Verifies: file-light strips a FileInfo to essential properties when used on fill.
 #>
 Test-Funnel "Built-in file-light on fill strips FileInfo" {
-    $tmpFile = Join-Path $env:TEMP "buckets-test-filelight.txt"
+    $tmpFile = Join-Path ([System.IO.Path]::GetTempPath()) "buckets-test-filelight.txt"
     Set-Content -Path $tmpFile -Value "hello world" -NoNewline
     $fi = Get-Item $tmpFile
     New-BucketObject -Bucket edge -InputObject $fi -Key "filelight-test" -Funnel "file-light" -Quiet
@@ -1127,7 +1127,7 @@ Test-Funnel "AppliesTo on fill, type mismatch passes through" {
 #>
 Test-Funnel "AppliesTo on scoop filters correctly" {
     $bucket = "at-scoop"
-    New-Funnel -Name "test-scoop" -Filter { $_.ToUpper().StartsWith("A") } -AppliesTo { $_ -is [string] } -Force -Quiet
+    New-Funnel -Name "test-scoop" -Filter { if ($_.ToUpper().StartsWith("A")) { $_ } } -AppliesTo { $_ -is [string] } -Force -Quiet
     $null = "Alice" | New-BucketObject -Bucket $bucket -Key "a" -Quiet
     $null = "Bob" | New-BucketObject -Bucket $bucket -Key "b" -Quiet
     $null = 99 | New-BucketObject -Bucket $bucket -Key "n" -Quiet
@@ -1143,7 +1143,7 @@ Test-Funnel "AppliesTo on scoop filters correctly" {
 #>
 Test-Funnel "AppliesTo absent = legacy behavior" {
     $bucket = "at-legacy"
-    New-Funnel -Name "test-legacy" -Filter { $_ -gt 10 } -Force -Quiet
+    New-Funnel -Name "test-legacy" -Filter { if ($_ -gt 10) { $_ } } -Force -Quiet
     $null = 5 | New-BucketObject -Bucket $bucket -Key "low" -Quiet
     $null = 15 | New-BucketObject -Bucket $bucket -Key "high" -Quiet
     $results = Get-BucketObject -Bucket $bucket -Funnel "test-legacy"
@@ -1161,6 +1161,31 @@ Test-Funnel "New-Funnel -AppliesTo persists and shows in Get-Funnel" {
     $f = Get-Funnel -Name "test-show-at"
     Remove-Funnel -Name "test-show-at" -Quiet -Confirm:$false
     $null -ne $f.AppliesTo -and $f.AppliesTo -match 'is \[int\]'
+}
+
+<#
+  19. Transform on scoop (add property)
+  Verifies: A funnel on scoop that transforms the object by adding a property.
+#>
+Test-Funnel "Transform on scoop adds property" {
+    New-Funnel -Name "test-transform-scoop" -Filter { $_ | Add-Member -NotePropertyName "Scooped" -NotePropertyValue $true -PassThru } -Force -Quiet
+    $bucket = "funnel-transform"
+    New-BucketObject -Bucket $bucket -InputObject @{ _Id = "ft1"; Name = "Alice"; Role = "admin" } -KeyProperty _Id -Quiet
+    New-BucketObject -Bucket $bucket -InputObject @{ _Id = "ft2"; Name = "Bob"; Role = "user" } -KeyProperty _Id -Quiet
+    New-BucketObject -Bucket $bucket -InputObject @{ _Id = "ft3"; Name = "Carol"; Role = "user" } -KeyProperty _Id -Quiet
+    $result = Get-BucketObject -Bucket $bucket -Funnel "test-transform-scoop"
+    Remove-Funnel -Name "test-transform-scoop" -Quiet -Confirm:$false
+    Remove-Bucket $bucket -Force -Confirm:$false -Recurse -Quiet
+    @($result).Count -eq 3 -and @($result | Where-Object { $_.Scooped -eq $true }).Count -eq 3
+}
+
+<#
+  20. Get-Bucket does not accept -Funnel
+  Verifies: Get-Bucket has no -Funnel parameter.
+#>
+Test-Funnel "Get-Bucket has no -Funnel parameter" {
+    $cmd = Get-Command Get-Bucket
+    -not ($cmd.Parameters.ContainsKey('Funnel'))
 }
 
 
