@@ -163,7 +163,7 @@ scoop -Bucket users -Key "Alice" | Select-Object Name, Role, Score
                         Lessons = @(
                             @{
                                 Key = "01-scoop-all"
-                                Title = "Spilling all objects"
+                                Title = "Querying multiple objects"
                                 Body = @'
   The counterpart to fill is scoop (short for Get-BucketObject). With -Bucket you
   can target specific buckets and their objects.
@@ -833,7 +833,7 @@ scoop -Bucket users -Key "Alice" | Select-Object Name, Role, Score
                         Lessons = @(
                             @{
                                 Key = "01-scoop-all"
-                                Title = "Alle Objekte abrufen"
+                                Title = "Mehrere Objekte abfragen"
                                 Body = @'
   Das Gegenstück zu fill ist scoop (Kurzform für Get-BucketObject). Mit -Bucket
   kannst du gezielt Buckets und ihre Objekte abfragen.
