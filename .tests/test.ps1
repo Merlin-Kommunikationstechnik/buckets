@@ -1041,7 +1041,7 @@ if ($funnelFail -eq 0) {
 #>
 Test-Funnel "Built-in file-light funnel is available" {
     $f = Get-Funnel -Name "file-light"
-    $null -ne $f -and $f.Filter -match 'PSCustomObject' -and $f.Description -match "FileInfo"
+    $null -ne $f -and $f.Filter -match 'PSCustomObject' -and $f.Description -match "FileInfo" -and $f.AppliesTo -match 'FileSystemInfo'
 }
 
 <#
@@ -1093,6 +1093,74 @@ Test-Funnel "User override of built-in funnel and removal" {
     Remove-Funnel -Name "file-light" -Quiet
     $after = Get-Funnel -Name "file-light"
     $null -ne $after -and $f.Filter.Trim() -eq '$true' -and $after.Filter -match 'PSCustomObject'
+}
+
+<#
+  14. AppliesTo on fill (transform, type matches)
+  Verifies: Funnel with AppliesTo matching the input object type applies the transform.
+#>
+Test-Funnel "AppliesTo on fill, type matches" {
+    New-Funnel -Name "test-appliesto" -Filter { $_.ToUpper() } -AppliesTo { $_ -is [string] } -Force -Quiet
+    $null = "hello" | New-BucketObject -Bucket edge -Key "appliesto-match" -Funnel "test-appliesto" -Quiet
+    $saved = Get-BucketObject -Bucket edge -Key "appliesto-match"
+    Remove-Funnel -Name "test-appliesto" -Quiet -Confirm:$false
+    Remove-BucketObject -Bucket edge -Key "appliesto-match" -Quiet
+    $null -ne $saved -and $saved -eq "HELLO"
+}
+
+<#
+  15. AppliesTo on fill (transform, type mismatch)
+  Verifies: Funnel with AppliesTo NOT matching the input object passes through unchanged.
+#>
+Test-Funnel "AppliesTo on fill, type mismatch passes through" {
+    New-Funnel -Name "test-appliesto2" -Filter { $_.ToUpper() } -AppliesTo { $_ -is [string] } -Force -Quiet
+    $null = 42 | New-BucketObject -Bucket edge -Key "appliesto-nomatch" -Funnel "test-appliesto2" -Quiet
+    $saved = Get-BucketObject -Bucket edge -Key "appliesto-nomatch"
+    Remove-Funnel -Name "test-appliesto2" -Quiet -Confirm:$false
+    Remove-BucketObject -Bucket edge -Key "appliesto-nomatch" -Quiet
+    $null -ne $saved -and $saved -eq 42
+}
+
+<#
+  16. AppliesTo on scoop (filter, type matches)
+  Verifies: Funnel with AppliesTo matching filters matching objects, drops non-matching.
+#>
+Test-Funnel "AppliesTo on scoop filters correctly" {
+    $bucket = "at-scoop"
+    New-Funnel -Name "test-scoop" -Filter { $_.ToUpper().StartsWith("A") } -AppliesTo { $_ -is [string] } -Force -Quiet
+    $null = "Alice" | New-BucketObject -Bucket $bucket -Key "a" -Quiet
+    $null = "Bob" | New-BucketObject -Bucket $bucket -Key "b" -Quiet
+    $null = 99 | New-BucketObject -Bucket $bucket -Key "n" -Quiet
+    $results = Get-BucketObject -Bucket $bucket -Funnel "test-scoop"
+    Remove-Funnel -Name "test-scoop" -Quiet -Confirm:$false
+    Remove-Bucket $bucket -Force -Confirm:$false -Recurse -Quiet
+    $results.Count -eq 2 -and ($results -contains "Alice") -and ($results -contains 99)
+}
+
+<#
+  17. AppliesTo on scoop (no AppliesTo = backward compat)
+  Verifies: Funnel without AppliesTo works as before (all objects filtered).
+#>
+Test-Funnel "AppliesTo absent = legacy behavior" {
+    $bucket = "at-legacy"
+    New-Funnel -Name "test-legacy" -Filter { $_ -gt 10 } -Force -Quiet
+    $null = 5 | New-BucketObject -Bucket $bucket -Key "low" -Quiet
+    $null = 15 | New-BucketObject -Bucket $bucket -Key "high" -Quiet
+    $results = Get-BucketObject -Bucket $bucket -Funnel "test-legacy"
+    Remove-Funnel -Name "test-legacy" -Quiet -Confirm:$false
+    Remove-Bucket $bucket -Force -Confirm:$false -Recurse -Quiet
+    $results.Count -eq 1 -and $results -eq 15
+}
+
+<#
+  18. New-Funnel with -AppliesTo and Get-Funnel showing AppliesTo
+  Verifies: AppliesTo is saved and visible via Get-Funnel output.
+#>
+Test-Funnel "New-Funnel -AppliesTo persists and shows in Get-Funnel" {
+    New-Funnel -Name "test-show-at" -Filter { $true } -AppliesTo { $_ -is [int] } -Force -Quiet
+    $f = Get-Funnel -Name "test-show-at"
+    Remove-Funnel -Name "test-show-at" -Quiet -Confirm:$false
+    $null -ne $f.AppliesTo -and $f.AppliesTo -match 'is \[int\]'
 }
 
 

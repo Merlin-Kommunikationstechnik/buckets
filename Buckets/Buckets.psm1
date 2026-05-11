@@ -681,7 +681,17 @@ function Get-Bucket {
 
     $funnelDef = $null
     if ($Funnel) {
-        $funnelDef = if ($Funnel -is [scriptblock]) { $Funnel } else { [scriptblock]::Create((Get-FunnelDefinition -Name $Funnel).Filter) }
+        if ($Funnel -is [scriptblock]) {
+            $funnelDef = @{ Filter = $Funnel }
+        } else {
+            $def = Get-FunnelDefinition -Name $Funnel
+            $funnelDef = @{ Filter = [scriptblock]::Create($def.Filter) }
+            if ($def.AppliesTo) {
+                $at = $def.AppliesTo.Trim()
+                if ($at -match '^\[.+\]$') { $funnelDef.AppliesTo = [scriptblock]::Create("`$_ -is $at") }
+                else { $funnelDef.AppliesTo = [scriptblock]::Create($at) }
+            }
+        }
     }
 
     if ($Tree) {
@@ -943,7 +953,13 @@ function Get-Bucket {
     }
 
     if ($funnelDef) {
-        $results = $results | Where-Object $funnelDef
+        if ($funnelDef.ContainsKey('AppliesTo')) {
+            $results = $results | Where-Object {
+                ($null -eq ($_ | Where-Object $funnelDef.AppliesTo)) -or ($_ | Where-Object $funnelDef.Filter)
+            }
+        } else {
+            $results = $results | Where-Object $funnelDef.Filter
+        }
     }
 
     $results
@@ -1216,7 +1232,17 @@ function Get-BucketObject {
 
     $funnelDef = $null
     if ($Funnel) {
-        $funnelDef = if ($Funnel -is [scriptblock]) { $Funnel } else { [scriptblock]::Create((Get-FunnelDefinition -Name $Funnel).Filter) }
+        if ($Funnel -is [scriptblock]) {
+            $funnelDef = @{ Filter = $Funnel }
+        } else {
+            $def = Get-FunnelDefinition -Name $Funnel
+            $funnelDef = @{ Filter = [scriptblock]::Create($def.Filter) }
+            if ($def.AppliesTo) {
+                $at = $def.AppliesTo.Trim()
+                if ($at -match '^\[.+\]$') { $funnelDef.AppliesTo = [scriptblock]::Create("`$_ -is $at") }
+                else { $funnelDef.AppliesTo = [scriptblock]::Create($at) }
+            }
+        }
     }
 
     $allObjects = [System.Collections.ArrayList]::new()
@@ -1237,7 +1263,10 @@ function Get-BucketObject {
                 if ($null -eq ($obj | Where-Object $Filter)) { continue }
             }
 
-            if ($funnelDef) { if ($null -eq ($obj | Where-Object $funnelDef)) { continue } }
+            if ($funnelDef) {
+                $matchesAppliesTo = -not $funnelDef.ContainsKey('AppliesTo') -or ($null -ne ($obj | Where-Object $funnelDef.AppliesTo))
+                if ($matchesAppliesTo -and $null -eq ($obj | Where-Object $funnelDef.Filter)) { continue }
+            }
 
             $relativePath = $file.FullName.Substring($bucketPath.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar)
             $keyWithoutExt = [System.IO.Path]::ChangeExtension($relativePath, $null).TrimEnd('.')
@@ -1592,7 +1621,17 @@ function New-BucketObject {
 
         $funnelDef = $null
         if ($Funnel) {
-            $funnelDef = if ($Funnel -is [scriptblock]) { $Funnel } else { [scriptblock]::Create((Get-FunnelDefinition -Name $Funnel).Filter) }
+            if ($Funnel -is [scriptblock]) {
+                $funnelDef = @{ Filter = $Funnel }
+            } else {
+                $def = Get-FunnelDefinition -Name $Funnel
+                $funnelDef = @{ Filter = [scriptblock]::Create($def.Filter) }
+                if ($def.AppliesTo) {
+                    $at = $def.AppliesTo.Trim()
+                    if ($at -match '^\[.+\]$') { $funnelDef.AppliesTo = [scriptblock]::Create("`$_ -is $at") }
+                    else { $funnelDef.AppliesTo = [scriptblock]::Create($at) }
+                }
+            }
         }
 
         if ($AsTimestamp -and (-not [string]::IsNullOrWhiteSpace($Key) -or -not [string]::IsNullOrWhiteSpace($KeyProperty))) {
@@ -1610,7 +1649,13 @@ function New-BucketObject {
             $index = 0
             foreach ($raw in $InputObject) {
                 $item = $raw
-                if ($funnelDef) { $item = $item | ForEach-Object $funnelDef; if ($null -eq $item) { $skippedCount++; $index++; continue } }
+                if ($funnelDef) {
+                    $matchesAppliesTo = -not $funnelDef.ContainsKey('AppliesTo') -or ($null -ne ($item | Where-Object $funnelDef.AppliesTo))
+                    if ($matchesAppliesTo) {
+                        $item = $item | ForEach-Object $funnelDef.Filter
+                        if ($null -eq $item) { $skippedCount++; $index++; continue }
+                    }
+                }
                 $itemFilename = Get-BucketFilename -Item $item -Key $Key -KeyProperty $KeyProperty -AsTimestamp:$AsTimestamp.IsPresent -Index $index -Extension $extension
                 if ($null -eq $itemFilename) { $skippedCount++; $index++; continue }
                 $itemFilePath = Join-Path $bucketPath $itemFilename
@@ -1639,7 +1684,13 @@ function New-BucketObject {
             $index = 0
             foreach ($raw in $pipeline) {
                 $item = $raw
-                if ($funnelDef) { $item = $item | ForEach-Object $funnelDef; if ($null -eq $item) { $skippedCount++; $index++; continue } }
+                if ($funnelDef) {
+                    $matchesAppliesTo = -not $funnelDef.ContainsKey('AppliesTo') -or ($null -ne ($item | Where-Object $funnelDef.AppliesTo))
+                    if ($matchesAppliesTo) {
+                        $item = $item | ForEach-Object $funnelDef.Filter
+                        if ($null -eq $item) { $skippedCount++; $index++; continue }
+                    }
+                }
                 $itemFilename = Get-BucketFilename -Item $item -Key $Key -KeyProperty $KeyProperty -AsTimestamp:$AsTimestamp.IsPresent -Index $index -Extension $extension
                 if ($null -eq $itemFilename) { $skippedCount++; $index++; continue }
                 $itemFilePath = Join-Path $bucketPath $itemFilename
@@ -2497,6 +2548,7 @@ function New-Funnel {
         [Parameter(Mandatory = $true)][string]$Name,
         [Parameter(Mandatory = $true)][scriptblock]$Filter,
         [string]$Description = "",
+        [scriptblock]$AppliesTo,
         [switch]$Force,
         [switch]$Quiet
     )
@@ -2506,9 +2558,12 @@ function New-Funnel {
     $funnelFile = Join-Path $funnelDir "$Name.json"
     if ((Test-Path $funnelFile) -and -not $Force) { throw "Funnel '$Name' already exists. Use -Force to overwrite." }
 
-    $text = @{ Filter = "$Filter"; Description = $Description } | ConvertTo-Json
+    $saveObj = @{ Filter = "$Filter"; Description = $Description }
+    $cacheObj = @{ Filter = "$Filter"; Description = $Description }
+    if ($AppliesTo) { $saveObj.AppliesTo = "$AppliesTo"; $cacheObj.AppliesTo = "$AppliesTo" }
+    $text = $saveObj | ConvertTo-Json
     [System.IO.File]::WriteAllText($funnelFile, $text, [System.Text.Encoding]::UTF8)
-    $script:FunnelCache[$Name] = @{ Filter = "$Filter"; Description = $Description }
+    $script:FunnelCache[$Name] = $cacheObj
     if (-not $Quiet) {
         Write-Host "$Name" -NoNewline -ForegroundColor $script:CPath
         Write-Host " · " -NoNewline -ForegroundColor $script:CMuted
@@ -2540,7 +2595,9 @@ function Get-Funnel {
 
     if ($Name) {
         $def = Get-FunnelDefinition -Name $Name
-        [PSCustomObject]@{ Name = $Name; Filter = $def.Filter; Description = $def.Description }
+        $out = [PSCustomObject]@{ Name = $Name; Filter = $def.Filter; Description = $def.Description }
+        if ($def.AppliesTo) { $out | Add-Member -NotePropertyName AppliesTo -NotePropertyValue $def.AppliesTo }
+        $out
         return
     }
 
@@ -2551,7 +2608,9 @@ function Get-Funnel {
         foreach ($f in [System.IO.DirectoryInfo]::new($userDir).GetFiles("*.json")) {
             $fName = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
             $def = Get-FunnelDefinition -Name $fName
-            [PSCustomObject]@{ Name = $fName; Filter = $def.Filter; Description = $def.Description }
+            $out = [PSCustomObject]@{ Name = $fName; Filter = $def.Filter; Description = $def.Description }
+            if ($def.AppliesTo) { $out | Add-Member -NotePropertyName AppliesTo -NotePropertyValue $def.AppliesTo }
+            $out
             $seen[$fName] = $true
         }
     }
@@ -2561,7 +2620,9 @@ function Get-Funnel {
             $fName = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
             if (-not $seen.ContainsKey($fName)) {
                 $def = Get-FunnelDefinition -Name $fName
-                [PSCustomObject]@{ Name = $fName; Filter = $def.Filter; Description = $def.Description }
+                $out = [PSCustomObject]@{ Name = $fName; Filter = $def.Filter; Description = $def.Description }
+                if ($def.AppliesTo) { $out | Add-Member -NotePropertyName AppliesTo -NotePropertyValue $def.AppliesTo }
+                $out
             }
         }
     }
@@ -2591,6 +2652,7 @@ function Set-Funnel {
         [Parameter(Mandatory = $true)][string]$Name,
         [scriptblock]$Filter,
         [string]$Description,
+        [scriptblock]$AppliesTo,
         [switch]$Quiet
     )
 
@@ -2601,10 +2663,14 @@ function Set-Funnel {
     $existing = Get-Content -Path $funnelFile -Raw -Encoding UTF8 | ConvertFrom-Json
     if ($Filter) { $existing.Filter = "$Filter" }
     if ($PSBoundParameters.ContainsKey('Description')) { $existing.Description = $Description }
+    if ($PSBoundParameters.ContainsKey('AppliesTo')) { $existing.AppliesTo = "$AppliesTo" }
 
-    $text = @{ Filter = $existing.Filter; Description = $existing.Description } | ConvertTo-Json
+    $saveObj = @{ Filter = $existing.Filter; Description = $existing.Description }
+    $cacheObj = @{ Filter = $existing.Filter; Description = $existing.Description }
+    if ($existing.AppliesTo) { $saveObj.AppliesTo = $existing.AppliesTo; $cacheObj.AppliesTo = $existing.AppliesTo }
+    $text = $saveObj | ConvertTo-Json
     [System.IO.File]::WriteAllText($funnelFile, $text, [System.Text.Encoding]::UTF8)
-    $script:FunnelCache[$Name] = @{ Filter = $existing.Filter; Description = $existing.Description }
+    $script:FunnelCache[$Name] = $cacheObj
     if (-not $Quiet) {
         Write-Host "$Name" -NoNewline -ForegroundColor $script:CPath
         Write-Host " · " -NoNewline -ForegroundColor $script:CMuted

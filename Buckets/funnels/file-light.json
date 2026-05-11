@@ -1,4 +1,5 @@
 {
   "Filter": "[PSCustomObject]@{ Name = $_.Name; FullName = $_.FullName; Length = $_.Length; LastWriteTime = $_.LastWriteTime; CreationTime = $_.CreationTime; Extension = $_.Extension; DirectoryName = $_.DirectoryName; IsReadOnly = $_.IsReadOnly }",
-  "Description": "Strips FileInfo/DirectoryInfo to lightweight metadata. Keeps: Name, FullName, Length, LastWriteTime, CreationTime, Extension, DirectoryName, IsReadOnly. Use on fill to store compact file listings."
+  "Description": "Strips FileInfo/DirectoryInfo to lightweight metadata. Keeps: Name, FullName, Length, LastWriteTime, CreationTime, Extension, DirectoryName, IsReadOnly. Use on fill to store compact file listings.",
+  "AppliesTo": "[System.IO.FileSystemInfo]"
 }
