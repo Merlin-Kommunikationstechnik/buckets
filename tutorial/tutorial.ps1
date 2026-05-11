@@ -22,7 +22,8 @@ $Sep = '─' * 55
 function tut-wipe {
     $root = Get-BucketRoot
     $current = Get-ChildItem $root -Directory -ErrorAction SilentlyContinue | ForEach-Object Name
-    $toRemove = $current | Where-Object { $_ -notin $script:userBuckets -and $_ -ne "tutorials" }
+    $protected = if ($script:preChapterBuckets) { $script:preChapterBuckets } else { $script:userBuckets }
+    $toRemove = $current | Where-Object { $_ -notin $protected }
     if ($toRemove) {
         Remove-Bucket -Bucket $toRemove -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue -WarningAction SilentlyContinue -Quiet
         $script:tutorialBuckets = ($script:tutorialBuckets + $toRemove) | Select-Object -Unique
@@ -331,6 +332,9 @@ while ($true) {
         Start-Sleep -Milliseconds 1000
         continue
     }
+
+    # Snapshot pre-chapter buckets so tut-wipe only removes what lessons create
+    $script:preChapterBuckets = Get-ChildItem (Get-BucketRoot) -Directory -ErrorAction SilentlyContinue | ForEach-Object Name
 
     $idx = 0
     while ($idx -ge 0 -and $idx -lt $allLessons.Count) {
