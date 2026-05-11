@@ -165,8 +165,8 @@ scoop -Bucket users -Key "Alice" | Select-Object Name, Role, Score
                                 Key = "01-scoop-all"
                                 Title = "Spilling all objects"
                                 Body = @'
-  The counterpart to fill is scoop (short for Get-BucketObject). With no arguments,
-  it returns every object from every bucket — useful for getting the lay of the land.
+  The counterpart to fill is scoop (short for Get-BucketObject). With -Bucket you
+  can target specific buckets and their objects.
 '@
                                 SetupCode = @'
 # Team members for one department
@@ -187,8 +187,8 @@ $teamData | fill -Bucket team -KeyProperty Name -Quiet
 $staffData | fill -Bucket staff -KeyProperty Name -Quiet
 '@
                                 Code = @'
-# With no arguments, scoop returns every object from every bucket
-scoop
+# Grab all objects from the team and staff buckets
+scoop -Bucket team, staff
 '@
                             }
                             @{
@@ -835,9 +835,8 @@ scoop -Bucket users -Key "Alice" | Select-Object Name, Role, Score
                                 Key = "01-scoop-all"
                                 Title = "Alle Objekte abrufen"
                                 Body = @'
-  Das Gegenstück zu fill ist scoop (Kurzform für Get-BucketObject). Ohne
-  Argumente gibt es jedes Objekt aus jedem Bucket zurück — nützlich für
-  einen ersten Überblick.
+  Das Gegenstück zu fill ist scoop (Kurzform für Get-BucketObject). Mit -Bucket
+  kannst du gezielt Buckets und ihre Objekte abfragen.
 '@
                                 SetupCode = @'
 # Teammitglieder für eine Abteilung
@@ -858,8 +857,8 @@ $teamData | fill -Bucket team -KeyProperty Name -Quiet
 $staffData | fill -Bucket staff -KeyProperty Name -Quiet
 '@
                                 Code = @'
-# Ohne Argumente gibt scoop jedes Objekt aus jedem Bucket zurück
-scoop
+# Alle Objekte aus den Buckets team und staff abrufen
+scoop -Bucket team, staff
 '@
                             }
                             @{
