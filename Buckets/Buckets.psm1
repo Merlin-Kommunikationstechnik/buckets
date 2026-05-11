@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     A PowerShell module for file-based PSObject storage using directory-backed buckets.
 .DESCRIPTION
@@ -32,6 +32,7 @@ $script:BucketPathCache = @{}
 $script:LastPWD = $PWD.Path
 $script:BucketRoot = $null
 $script:FunnelCache = @{}
+$script:BuiltinFunnelsDir = Join-Path $PSScriptRoot "funnels"
 $script:ClearCache = { $script:BucketPathCache.Clear(); $script:LastPWD = $PWD.Path }
 
 # --- Output colors ---
@@ -120,12 +121,19 @@ function Get-BucketsSystemPath {
 function Get-FunnelDefinition {
     param([Parameter(Mandatory = $true)][string]$Name)
     if ($script:FunnelCache.ContainsKey($Name)) { return $script:FunnelCache[$Name] }
-    $funnelDir = Join-Path (Get-BucketsSystemPath) "funnels"
-    $funnelFile = Join-Path $funnelDir "$Name.json"
-    if (-not (Test-Path $funnelFile)) { throw "Funnel '$Name' not found at '$funnelFile'" }
-    $def = Get-Content -Path $funnelFile -Raw -Encoding UTF8 | ConvertFrom-Json
-    $script:FunnelCache[$Name] = $def
-    return $def
+    $userFile = Join-Path (Join-Path (Get-BucketsSystemPath) "funnels") "$Name.json"
+    if (Test-Path $userFile) {
+        $def = Get-Content -Path $userFile -Raw -Encoding UTF8 | ConvertFrom-Json
+        $script:FunnelCache[$Name] = $def
+        return $def
+    }
+    $builtinFile = Join-Path $script:BuiltinFunnelsDir "$Name.json"
+    if (Test-Path $builtinFile) {
+        $def = Get-Content -Path $builtinFile -Raw -Encoding UTF8 | ConvertFrom-Json
+        $script:FunnelCache[$Name] = $def
+        return $def
+    }
+    throw "Funnel '$Name' not found"
 }
 
 function Get-BucketPath {
@@ -2513,22 +2521,22 @@ function Get-Funnel {
     .SYNOPSIS
     Lists named funnels or retrieves a specific funnel definition.
     .DESCRIPTION
-    Returns funnel definitions from $HOME/.buckets-system/funnels/. When no name is
-    given, lists all funnels with their name, filter script, and description.
+    Returns funnel definitions from the user funnels directory ($HOME/.buckets-system/funnels/)
+    and built-in funnels shipped with the module. User funnels with the same name override
+    built-in ones. When no name is given, lists all funnels.
     .PARAMETER Name
     Optional funnel name to retrieve. Returns all funnels if omitted.
     .EXAMPLE
     Get-Funnel
     .EXAMPLE
     Get-Funnel -Name admins
+    .EXAMPLE
+    Get-Funnel -Name file-light
     #>
     [CmdletBinding()]
     param(
         [Parameter(Position = 0)][string]$Name
     )
-
-    $funnelDir = Join-Path (Get-BucketsSystemPath) "funnels"
-    if (-not (Test-Path $funnelDir)) { return }
 
     if ($Name) {
         $def = Get-FunnelDefinition -Name $Name
@@ -2536,13 +2544,28 @@ function Get-Funnel {
         return
     }
 
-    foreach ($f in [System.IO.DirectoryInfo]::new($funnelDir).GetFiles("*.json")) {
-        $fName = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
-        $def = Get-FunnelDefinition -Name $fName
-        [PSCustomObject]@{ Name = $fName; Filter = $def.Filter; Description = $def.Description }
+    $seen = @{}
+
+    $userDir = Join-Path (Get-BucketsSystemPath) "funnels"
+    if (Test-Path $userDir) {
+        foreach ($f in [System.IO.DirectoryInfo]::new($userDir).GetFiles("*.json")) {
+            $fName = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
+            $def = Get-FunnelDefinition -Name $fName
+            [PSCustomObject]@{ Name = $fName; Filter = $def.Filter; Description = $def.Description }
+            $seen[$fName] = $true
+        }
+    }
+
+    if (Test-Path $script:BuiltinFunnelsDir) {
+        foreach ($f in [System.IO.DirectoryInfo]::new($script:BuiltinFunnelsDir).GetFiles("*.json")) {
+            $fName = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
+            if (-not $seen.ContainsKey($fName)) {
+                $def = Get-FunnelDefinition -Name $fName
+                [PSCustomObject]@{ Name = $fName; Filter = $def.Filter; Description = $def.Description }
+            }
+        }
     }
 }
-
 function Set-Funnel {
     <#
     .SYNOPSIS
@@ -2594,8 +2617,9 @@ function Remove-Funnel {
     .SYNOPSIS
     Deletes a named funnel definition.
     .DESCRIPTION
-    Removes a funnel JSON file from $HOME/.buckets-system/funnels/ and clears it from
-    the session cache.
+    Removes a funnel JSON file from the user funnels directory ($HOME/.buckets-system/funnels/)
+    and clears it from the session cache. Built-in funnels shipped with the module cannot be
+    removed unless a user override with the same name exists.
     .PARAMETER Name
     Name of the funnel to remove.
     .PARAMETER Quiet
@@ -2609,12 +2633,19 @@ function Remove-Funnel {
         [switch]$Quiet
     )
 
-    $funnelDir = Join-Path (Get-BucketsSystemPath) "funnels"
-    $funnelFile = Join-Path $funnelDir "$Name.json"
-    if (-not (Test-Path $funnelFile)) { throw "Funnel '$Name' not found." }
+    $userDir = Join-Path (Get-BucketsSystemPath) "funnels"
+    $userFile = Join-Path $userDir "$Name.json"
+    $builtinFile = Join-Path $script:BuiltinFunnelsDir "$Name.json"
+
+    if (-not (Test-Path $userFile)) {
+        if (Test-Path $builtinFile) {
+            throw "Funnel '$Name' is a built-in funnel and cannot be removed. Create a user funnel with the same name to override it."
+        }
+        throw "Funnel '$Name' not found."
+    }
 
     if ($PSCmdlet.ShouldProcess("funnel '$Name'", "Remove-Funnel")) {
-        [System.IO.File]::Delete($funnelFile)
+        [System.IO.File]::Delete($userFile)
         $script:FunnelCache.Remove($Name)
         if (-not $Quiet) {
             Write-Host "$Name" -NoNewline -ForegroundColor $script:CPath
@@ -2623,8 +2654,6 @@ function Remove-Funnel {
         }
     }
 }
-
-# --- Root management ---
 
 function Set-BucketRoot {
     <#
@@ -2810,11 +2839,24 @@ $BucketsPathCompleter = {
 
 $script:FunnelCompleterBlock = {
     param($commandName, $parameterName, $wordToComplete, $commandAst, $fakeBoundParameters)
-    $funnelDir = Join-Path (Get-BucketsSystemPath) "funnels"
-    if (-not (Test-Path $funnelDir)) { return }
-    [System.IO.DirectoryInfo]::new($funnelDir).GetFiles("$wordToComplete*.json") | ForEach-Object {
-        $fName = [System.IO.Path]::GetFileNameWithoutExtension($_.Name)
-        [System.Management.Automation.CompletionResult]::new($fName, $fName, 'ParameterValue', "funnel: $fName")
+    $seen = @{}
+
+    $userDir = Join-Path (Get-BucketsSystemPath) "funnels"
+    if (Test-Path $userDir) {
+        [System.IO.DirectoryInfo]::new($userDir).GetFiles("$wordToComplete*.json") | ForEach-Object {
+            $fName = [System.IO.Path]::GetFileNameWithoutExtension($_.Name)
+            $seen[$fName] = $true
+            [System.Management.Automation.CompletionResult]::new($fName, $fName, 'ParameterValue', "funnel: $fName")
+        }
+    }
+
+    if (Test-Path $script:BuiltinFunnelsDir) {
+        [System.IO.DirectoryInfo]::new($script:BuiltinFunnelsDir).GetFiles("$wordToComplete*.json") | ForEach-Object {
+            $fName = [System.IO.Path]::GetFileNameWithoutExtension($_.Name)
+            if (-not $seen.ContainsKey($fName)) {
+                [System.Management.Automation.CompletionResult]::new($fName, $fName, 'ParameterValue', "funnel: $fName")
+            }
+        }
     }
 }
 

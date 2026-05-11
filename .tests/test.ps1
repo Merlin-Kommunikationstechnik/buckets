@@ -1,4 +1,4 @@
-#!/usr/bin/env pwsh
+﻿#!/usr/bin/env pwsh
 <#
 .SYNOPSIS
     Test script for the Buckets module.
@@ -1035,7 +1035,68 @@ if ($funnelFail -eq 0) {
     }
 }
 
-# Cleanup — remove any leftover test funnels
+<#
+  9. Built-in funnel available without creation
+  Verifies: The file-light funnel ships with the module and is accessible immediately.
+#>
+Test-Funnel "Built-in file-light funnel is available" {
+    $f = Get-Funnel -Name "file-light"
+    $null -ne $f -and $f.Filter -match 'PSCustomObject' -and $f.Description -match "FileInfo"
+}
+
+<#
+  10. Get-Funnel lists built-in funnels
+  Verifies: Get-Funnel without a name includes the file-light built-in funnel.
+#>
+Test-Funnel "Get-Funnel lists built-in funnels" {
+    $all = Get-Funnel
+    @($all).Count -ge 1 -and ($all.Name -contains "file-light")
+}
+
+<#
+  11. Built-in file-light on fill (transform)
+  Verifies: file-light strips a FileInfo to essential properties when used on fill.
+#>
+Test-Funnel "Built-in file-light on fill strips FileInfo" {
+    $tmpFile = Join-Path $env:TEMP "buckets-test-filelight.txt"
+    Set-Content -Path $tmpFile -Value "hello world" -NoNewline
+    $fi = Get-Item $tmpFile
+    New-BucketObject -Bucket edge -InputObject $fi -Key "filelight-test" -Funnel "file-light" -Quiet
+    $saved = Get-BucketObject -Bucket edge -Key "filelight-test"
+    Remove-Item $tmpFile -Force -ErrorAction SilentlyContinue
+    $null -ne $saved -and $saved.Name -eq "buckets-test-filelight.txt" -and $saved.Length -eq 11 -and $null -eq $saved.PSPath -and $null -eq $saved.VersionInfo
+}
+
+<#
+  12. Remove-Funnel on built-in-only throws
+  Verifies: Removing a built-in funnel that has no user override is rejected.
+#>
+Test-Funnel "Remove-Funnel on built-in-only throws" {
+    $ok = $false
+    try {
+        Remove-Funnel -Name "file-light" -Quiet -ErrorAction Stop
+    } catch {
+        if ($_.Exception.Message -match "built-in") { $ok = $true }
+    }
+    $f = Get-Funnel -Name "file-light"
+    $ok -and $null -ne $f
+}
+
+<#
+  13. User override of built-in funnel
+  Verifies: Creating a funnel with same name as built-in overrides it,
+            and Remove-Funnel on the override removes it, revealing built-in.
+#>
+Test-Funnel "User override of built-in funnel and removal" {
+    New-Funnel -Name "file-light" -Filter { $true } -Force -Quiet
+    $f = Get-Funnel -Name "file-light"
+    Remove-Funnel -Name "file-light" -Quiet
+    $after = Get-Funnel -Name "file-light"
+    $null -ne $after -and $f.Filter.Trim() -eq '$true' -and $after.Filter -match 'PSCustomObject'
+}
+
+
+# Cleanup - remove any leftover test funnels
 Get-Funnel | Where-Object Name -like "test-funnel*" | ForEach-Object {
     Remove-Funnel -Name $_.Name -Quiet -ErrorAction SilentlyContinue
 }

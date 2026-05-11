@@ -73,7 +73,7 @@ PowerShell module for file-based PSObject storage using directory-backed "bucket
 | `Remove-Funnel` | `-Name`, `-Quiet` (SupportsShouldProcess) |
 
 ### Funnels
-Named reusable filter/transform scriptblocks stored in `$HOME/.buckets-system/funnels/` as JSON. Referenced by `-Funnel` on `fill`, `scoop`, and `dip`. Funnel definitions cached per session in `$script:FunnelCache`. Scriptblocks use `$_` for the pipeline object. Transforms on `fill` should return the modified object (or `$null` to skip). Filters on `scoop`/`dip` should return a truthy value for items to keep. `-Funnel` also accepts ad-hoc scriptblocks directly.
+Named reusable filter/transform scriptblocks stored in `$HOME/.buckets-system/funnels/` as JSON. Built-in funnels ship with the module in `Buckets/funnels/` (e.g. `file-light` for stripping FileInfo to essential metadata). User funnels shadow built-in ones with the same name. Built-in funnels cannot be removed via `Remove-Funnel` unless a user override exists. Referenced by `-Funnel` on `fill`, `scoop`, and `dip`. Funnel definitions cached per session in `$script:FunnelCache`. Scriptblocks use `$_` for the pipeline object. Transforms on `fill` should return the modified object (or `$null` to skip). Filters on `scoop`/`dip` should return a truthy value for items to keep. `-Funnel` also accepts ad-hoc scriptblocks directly.
 
 ### Remove-Bucket Safety
 Only removes buckets containing exclusively `.dat`/`.json` files (or empty directories). Skips buckets with other file types with a warning. Uses standard `-Confirm` support (SupportsShouldProcess). `-Force` skips confirmation entirely. Shows a colored pre-confirmation summary listing bucket names, object counts, and sizes before the standard confirmation prompt.
