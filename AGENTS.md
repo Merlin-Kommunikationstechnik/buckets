@@ -124,7 +124,7 @@ Benchmarks measure write/read throughput for 1k and 10k objects (simple + comple
 2. **Do NOT manually bump ModuleVersion** in `Buckets.psd1` — the workflow auto-bumps it
 3. `git push`
 4. `gh workflow run "Release Buckets" --ref main -f release_type=<patch|minor|major>`
-5. Monitor at the returned URL and notify user when done
+5. **MUST** run `gh run view <ID> --json status,conclusion` immediately. Do not tell the user anything about the release until you have checked the status. Use `gh run watch <ID> --exit-status` to block until completion, then report the result.
 
 ## Module Conventions
 - No emojis in code or comments

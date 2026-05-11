@@ -1,11 +1,8 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    Performance comparison: Buckets storage vs CliXML export/import.
-.DESCRIPTION
-    Uses the sysadmin dataset from data.ps1 and benchmarks write/read
-    throughput for Buckets (binary + JSON), plain JSON (Depth 2 + 20),
-    and CliXML formats.
+    Performance comparison: Buckets storage (JSON, Binary, Compressed, Funnel)
+    vs plain JSON (Depth 2 + 20) vs CliXML, plus depth/truncation benchmarks.
 #>
 
 [CmdletBinding()]
@@ -35,9 +32,9 @@ function Write-InfoBlock {
         Write-Host " v$($mod.Version)" -NoNewline -ForegroundColor Magenta
         Write-Host " Perf Comparison" -ForegroundColor DarkGray
         Write-Host " $startTs" -NoNewline -ForegroundColor DarkGray
-        Write-Host " · " -NoNewline -ForegroundColor DarkGray
+        Write-Host " - " -NoNewline -ForegroundColor DarkGray
         Write-Host $pwsh -NoNewline -ForegroundColor Cyan
-        Write-Host " · " -NoNewline -ForegroundColor DarkGray
+        Write-Host " - " -NoNewline -ForegroundColor DarkGray
         Write-Host $os -ForegroundColor DarkGray
         Write-Host $sep -ForegroundColor DarkGray
     }
@@ -46,12 +43,11 @@ function Write-InfoBlock {
         $endTs = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
         Write-Host $sep -ForegroundColor DarkGray
         Write-Host " Done" -NoNewline -ForegroundColor Blue
-        Write-Host " · " -NoNewline -ForegroundColor DarkGray
-        Write-Host "${elapsed}ms" -ForegroundColor Magenta
-        Write-Host " $endTs" -NoNewline -ForegroundColor DarkGray
-        Write-Host " · " -NoNewline -ForegroundColor DarkGray
+        Write-Host " - ${elapsed}ms" -NoNewline -ForegroundColor Magenta
+        Write-Host " - $endTs" -NoNewline -ForegroundColor DarkGray
+        Write-Host " - " -NoNewline -ForegroundColor DarkGray
         Write-Host $pwsh -NoNewline -ForegroundColor Cyan
-        Write-Host " · " -NoNewline -ForegroundColor DarkGray
+        Write-Host " - " -NoNewline -ForegroundColor DarkGray
         Write-Host $os -ForegroundColor DarkGray
         Write-Host $sep -ForegroundColor DarkGray
     }
@@ -111,18 +107,19 @@ foreach ($key in $dataKeys) { $totalObjects += $data[$key].Count }
 Write-Host "  $totalObjects objects across $($bucketMap.Count) buckets" -ForegroundColor DarkGray
 
 function Write-BucketsPhase {
-    param([bool]$AsBinary, [string]$Label)
+    param([switch]$AsBinary, [string]$Label, [string]$Funnel = "")
     Clear-PhaseBuckets
     $wt = [System.Diagnostics.Stopwatch]::StartNew()
     $binFlag = if ($AsBinary) { @{ AsBinary = $true } } else { @{} }
+    $funnelFlag = if ($Funnel) { @{ Funnel = $Funnel } } else { @{} }
     foreach ($key in $dataKeys) {
         $bucket = $bucketMap[$key]
         $objects = $data[$key]
         if ($key -eq "incidents") {
-            $objects | New-BucketObject -Bucket $bucket -AsTimestamp -Quiet @binFlag
+            $objects | New-BucketObject -Bucket $bucket -AsTimestamp -Quiet @binFlag @funnelFlag
         }
         else {
-            $objects | New-BucketObject -Bucket $bucket -KeyProperty _Id -Quiet @binFlag
+            $objects | New-BucketObject -Bucket $bucket -KeyProperty _Id -Quiet @binFlag @funnelFlag
         }
     }
     $writeMs = $wt.ElapsedMilliseconds
@@ -177,57 +174,121 @@ function Write-FilePhase {
 }
 
 # ============================================================
-# 1. Buckets (Binary)
+# 1. Buckets (JSON — default)
 # ============================================================
-Write-Host "`n[1] Buckets (Binary)" -ForegroundColor Blue
-$bin = Write-BucketsPhase -AsBinary -Label "Buckets Binary"
-
-# ============================================================
-# 2. Buckets (JSON)
-# ============================================================
-Write-Host "`n[2] Buckets (JSON)" -ForegroundColor Blue
+Write-Host "`n[1] Buckets (JSON default)" -ForegroundColor Blue
 $json = Write-BucketsPhase -AsBinary:$false -Label "Buckets JSON"
 
 # ============================================================
-# 3. Plain JSON
+# 2. Buckets (Binary)
 # ============================================================
-Write-Host "`n[3] Plain JSON" -ForegroundColor Blue
+Write-Host "`n[2] Buckets (Binary -AsBinary)" -ForegroundColor Blue
+$bin = Write-BucketsPhase -AsBinary -Label "Buckets Binary"
+
+# ============================================================
+# 3. Buckets (Binary + Compression)
+# ============================================================
+Write-Host "`n[3] Buckets (Compressed -AsBinary -Compress)" -ForegroundColor Blue
+$comp = Write-BucketsPhase -AsBinary -Label "Buckets Compressed"
+
+# ============================================================
+# 4. Buckets (JSON + Funnel strip)
+# ============================================================
+Write-Host "`n[4] Buckets (JSON + funnel strip)" -ForegroundColor Blue
+New-Funnel -Name "bench-perfcomp-strip" -Filter { [PSCustomObject]@{ _Id = $_.Id; Name = $_.Name; Value = $_.Value } } -Force -Quiet
+$funnel = Write-BucketsPhase -AsBinary:$false -Funnel "bench-perfcomp-strip" -Label "Buckets Funnel"
+Remove-Funnel -Name "bench-perfcomp-strip" -Quiet -Confirm:$false -ErrorAction SilentlyContinue
+
+# ============================================================
+# 5. Plain JSON (Depth 2 + 20)
+# ============================================================
+Write-Host "`n[5] Plain JSON" -ForegroundColor Blue
 
 $pj2 = Write-FilePhase -DirName "json-d2" -Extension ".json" `
-    -Serialize { param($o, $f) [System.IO.File]::WriteAllText($f, ($o | ConvertTo-Json -Depth 2 -Compress), [System.Text.Encoding]::UTF8) } `
+    -Serialize { param($o, $f) [System.IO.File]::WriteAllText($f, ($o | ConvertTo-Json -Depth 2 -Compress -WarningAction SilentlyContinue), [System.Text.Encoding]::UTF8) } `
     -Deserialize { param($p) [System.IO.File]::ReadAllText($p, [System.Text.Encoding]::UTF8) | ConvertFrom-Json }
 
 $pj20 = Write-FilePhase -DirName "json-d20" -Extension ".json" `
-    -Serialize { param($o, $f) [System.IO.File]::WriteAllText($f, ($o | ConvertTo-Json -Depth 20 -Compress), [System.Text.Encoding]::UTF8) } `
+    -Serialize { param($o, $f) [System.IO.File]::WriteAllText($f, ($o | ConvertTo-Json -Depth 20 -Compress -WarningAction SilentlyContinue), [System.Text.Encoding]::UTF8) } `
     -Deserialize { param($p) [System.IO.File]::ReadAllText($p, [System.Text.Encoding]::UTF8) | ConvertFrom-Json }
 
 Write-Host "  Depth 2:  Write: $($pj2.WriteMs)ms  Read: $($pj2.ReadMs)ms" -ForegroundColor DarkGray
 Write-Host "  Depth 20: Write: $($pj20.WriteMs)ms  Read: $($pj20.ReadMs)ms" -ForegroundColor DarkGray
 
 # ============================================================
-# 4. CliXML
+# 6. CliXML
 # ============================================================
-Write-Host "`n[4] CliXML" -ForegroundColor Blue
+Write-Host "`n[6] CliXML" -ForegroundColor Blue
 $clixml = Write-FilePhase -DirName "clixml" -Extension ".clixml" `
     -Serialize { param($o, $f) $o | Export-CliXml -Path $f } `
     -Deserialize { param($p) Import-CliXml -Path $p }
+
+# ============================================================
+# 7. Depth/truncation — DirectoryInfo across formats
+# ============================================================
+Write-Host "`n[7] Depth/truncation — DirectoryInfo @ Depth 1" -ForegroundColor Blue
+
+$homeItems = @(Get-ChildItem $HOME -Force -ErrorAction SilentlyContinue)
+
+# Buckets JSON
+Use-Bucket "dt-json"
+$dtJsonWt = [System.Diagnostics.Stopwatch]::StartNew()
+$homeItems | New-BucketObject -Bucket dt-json -KeyProperty Name -Depth 1 -Quiet -WarningAction SilentlyContinue
+$dtJsonWrite = $dtJsonWt.ElapsedMilliseconds
+$dtJsonWt.Restart()
+$dtJsonRead = Get-BucketObject -Bucket dt-json
+$dtJsonReadMs = $dtJsonWt.ElapsedMilliseconds
+$dtJsonFallbacks = @(Get-ChildItem -Path (Join-Path (Get-BucketRoot) "dt-json") -Filter *.dat -ErrorAction SilentlyContinue).Count
+Write-Host "  Buckets JSON:  Write ${dtJsonWrite}ms  Read ${dtJsonReadMs}ms ($($dtJsonRead.Count) items, ${dtJsonFallbacks} fallbacks)" -ForegroundColor DarkGray
+
+# Buckets Binary
+Use-Bucket "dt-bin"
+$dtBinWt = [System.Diagnostics.Stopwatch]::StartNew()
+$homeItems | New-BucketObject -Bucket dt-bin -KeyProperty Name -AsBinary -Quiet
+$dtBinWrite = $dtBinWt.ElapsedMilliseconds
+$dtBinWt.Restart()
+$dtBinRead = Get-BucketObject -Bucket dt-bin
+$dtBinReadMs = $dtBinWt.ElapsedMilliseconds
+Write-Host "  Buckets Binary: Write ${dtBinWrite}ms  Read ${dtBinReadMs}ms ($($dtBinRead.Count) items, full preservation)" -ForegroundColor DarkGray
+
+# Plain JSON Depth 1
+$pjDir = Join-Path $tempRoot "pj-dt1"
+New-Item -ItemType Directory -Path $pjDir -Force | Out-Null
+$dtPjWt = [System.Diagnostics.Stopwatch]::StartNew()
+foreach ($item in $homeItems) {
+    $json = $item | ConvertTo-Json -Depth 1 -Compress -WarningAction SilentlyContinue
+    $safeName = $item.Name -replace '[\\/:*?"<>|]', '_'
+    [System.IO.File]::WriteAllText((Join-Path $pjDir "$safeName.json"), $json, [System.Text.Encoding]::UTF8)
+}
+$dtPjWrite = $dtPjWt.ElapsedMilliseconds
+$dtPjWt.Restart()
+$pjFiles = Get-ChildItem -Path $pjDir -Filter *.json
+foreach ($f in $pjFiles) { $null = (Get-Content -Path $f.FullName -Raw -Encoding UTF8 | ConvertFrom-Json) }
+$dtPjRead = $dtPjWt.ElapsedMilliseconds
+Write-Host "  Plain JSON D1:  Write ${dtPjWrite}ms  Read ${dtPjRead}ms ($($pjFiles.Count) files)" -ForegroundColor DarkGray
 
 # ============================================================
 # Comparison
 # ============================================================
 Write-Host "`n[Comparison]" -ForegroundColor Blue
 
-Write-Host ("  {0,-18}  {1,8}  {2,8}" -f "System", "Write", "Read") -ForegroundColor DarkGray
-Write-Host ("  {0,-18}  {1,8}ms  {2,8}ms" -f "Buckets (Bin)", $bin.WriteMs, $bin.ReadMs) -ForegroundColor DarkGray
-Write-Host ("  {0,-18}  {1,8}ms  {2,8}ms" -f "Buckets (JSON)", $json.WriteMs, $json.ReadMs) -ForegroundColor DarkGray
-Write-Host ("  {0,-18}  {1,8}ms  {2,8}ms" -f "Plain JSON (D2)", $pj2.WriteMs, $pj2.ReadMs) -ForegroundColor DarkGray
-Write-Host ("  {0,-18}  {1,8}ms  {2,8}ms" -f "Plain JSON (D20)", $pj20.WriteMs, $pj20.ReadMs) -ForegroundColor DarkGray
-Write-Host ("  {0,-18}  {1,8}ms  {2,8}ms" -f "CliXML", $clixml.WriteMs, $clixml.ReadMs) -ForegroundColor DarkGray
+Write-Host ("  {0,-22}  {1,8}  {2,8}" -f "System", "Write", "Read") -ForegroundColor DarkGray
+Write-Host ("  {0,-22}  {1,8}ms  {2,8}ms" -f "Buckets (JSON)", $json.WriteMs, $json.ReadMs) -ForegroundColor DarkGray
+Write-Host ("  {0,-22}  {1,8}ms  {2,8}ms" -f "Buckets (Binary)", $bin.WriteMs, $bin.ReadMs) -ForegroundColor DarkGray
+Write-Host ("  {0,-22}  {1,8}ms  {2,8}ms" -f "Buckets (Compressed)", $comp.WriteMs, $comp.ReadMs) -ForegroundColor DarkGray
+Write-Host ("  {0,-22}  {1,8}ms  {2,8}ms" -f "Buckets (Funnel strip)", $funnel.WriteMs, $funnel.ReadMs) -ForegroundColor DarkGray
+Write-Host ("  {0,-22}  {1,8}ms  {2,8}ms" -f "Plain JSON (D2)", $pj2.WriteMs, $pj2.ReadMs) -ForegroundColor DarkGray
+Write-Host ("  {0,-22}  {1,8}ms  {2,8}ms" -f "Plain JSON (D20)", $pj20.WriteMs, $pj20.ReadMs) -ForegroundColor DarkGray
+Write-Host ("  {0,-22}  {1,8}ms  {2,8}ms" -f "CliXML", $clixml.WriteMs, $clixml.ReadMs) -ForegroundColor DarkGray
+Write-Host "  --- truncation ---" -ForegroundColor DarkGray
+Write-Host ("  {0,-22}  {1,8}ms  {2,8}ms" -f "DirInfo @ Depth 1", $dtJsonWrite, $dtJsonReadMs) -ForegroundColor DarkGray
 
 # Cleanup
 foreach ($b in $createdBuckets) {
     Remove-Bucket $b -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
 }
+Get-Funnel -Name "bench-perfcomp-strip" -ErrorAction SilentlyContinue | Remove-Funnel -Name "bench-perfcomp-strip" -Quiet -Confirm:$false -ErrorAction SilentlyContinue
+
 Set-BucketRoot (Join-Path $HOME ".buckets")
 Remove-Item $testRoot -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item -Path $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
