@@ -270,35 +270,35 @@ while ($true) {
     if ($choice -eq "q") { tut-wipe; Write-Host ""; exit }
 
     $chapter = $script:Chapters[$choice]
+    $isFullCourse = ($choice -eq $script:Chapters.Count - 1)
 
-    # Build flat lesson list from all sections in this chapter
+    # Build flat lesson list from all sections
     $allLessons = [System.Collections.ArrayList]@()
     $sectionTitles = [System.Collections.ArrayList]@()
+    $lessonChapterNames = [System.Collections.ArrayList]@()
 
-    $sections = @()
-    $chapterNode = $script:LangNode.Children | Where-Object Name -eq $chapter.Name
-    if ($chapterNode -and $chapterNode.Children) {
+    $chaptersToProcess = if ($isFullCourse) { @($script:Chapters | Where-Object { $_.Name -notlike '05-full-course' }) } else { @($chapter) }
+
+    foreach ($ch in $chaptersToProcess) {
+        $chapterNode = $script:LangNode.Children | Where-Object Name -eq $ch.Name
+        if (-not $chapterNode -or -not $chapterNode.Children) { continue }
         $sections = $chapterNode.Children | Sort-Object Name
-    }
-    if ($sections.Count -eq 0) {
-        Write-Host "  No sections found in chapter '$(Get-DisplayTitle $chapter.Name)'" -ForegroundColor Red
-        Start-Sleep -Milliseconds 1000
-        continue
-    }
 
-    foreach ($section in $sections) {
-        $bucketPath = "tutorials/$($script:Language)/$($chapter.Name)/$($section.Name)"
-        $lessons = @(Get-BucketObject -Bucket $bucketPath -NoRecurse -ErrorAction SilentlyContinue)
-        if ($lessons.Count -eq 0) { continue }
-        $lessons = $lessons | Sort-Object { $_.PSObject.Properties['_BucketKey'].Value }
-        foreach ($lesson in $lessons) {
-            [void]$allLessons.Add($lesson)
-            [void]$sectionTitles.Add((Get-DisplayTitle $section.Name))
+        foreach ($section in $sections) {
+            $bucketPath = "tutorials/$($script:Language)/$($ch.Name)/$($section.Name)"
+            $lessons = @(Get-BucketObject -Bucket $bucketPath -NoRecurse -ErrorAction SilentlyContinue)
+            if ($lessons.Count -eq 0) { continue }
+            $lessons = $lessons | Sort-Object { $_.PSObject.Properties['_BucketKey'].Value }
+            foreach ($lesson in $lessons) {
+                [void]$allLessons.Add($lesson)
+                [void]$sectionTitles.Add((Get-DisplayTitle $section.Name))
+                [void]$lessonChapterNames.Add((Get-DisplayTitle $ch.Name))
+            }
         }
     }
 
     if ($allLessons.Count -eq 0) {
-        Write-Host "  No lessons in chapter '$(Get-DisplayTitle $chapter.Name)'" -ForegroundColor Red
+        Write-Host "  No lessons found." -ForegroundColor Red
         Start-Sleep -Milliseconds 1000
         continue
     }
@@ -307,10 +307,11 @@ while ($true) {
     while ($idx -ge 0 -and $idx -lt $allLessons.Count) {
         $lesson = $allLessons[$idx]
         $sectionTitle = $sectionTitles[$idx]
+        $displayChapter = $lessonChapterNames[$idx]
 
         cls
         Write-Host ""
-        Write-Host "── Chapter: $(Get-DisplayTitle $chapter.Name) ──" -ForegroundColor DarkGray
+        Write-Host "── Chapter: $displayChapter ──" -ForegroundColor DarkGray
         Write-Host "── Section: $sectionTitle ──" -ForegroundColor DarkGray
         Write-Host "── Lesson $($idx+1)/$($allLessons.Count): $($lesson.Title) ──" -ForegroundColor Cyan
         Write-Host ""
@@ -376,5 +377,17 @@ while ($true) {
             "back" { $idx-- }
             "menu" { $idx = -1 }
         }
+    }
+
+    if ($isFullCourse) {
+        cls
+        Write-Host ""
+        Write-Host "  ╔══════════════════════════════════════════╗" -ForegroundColor Green
+        Write-Host "  ║         Course Complete!                 ║" -ForegroundColor Green
+        Write-Host "  ║     You finished all lessons.            ║" -ForegroundColor Green
+        Write-Host "  ╚══════════════════════════════════════════╝" -ForegroundColor Green
+        Write-Host ""
+        Write-Host "  Press any key to return to menu..." -ForegroundColor DarkGray
+        $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
     }
 }
