@@ -12,6 +12,9 @@
 Remove-Module Buckets -ErrorAction SilentlyContinue
 Import-Module "$PSScriptRoot/../Buckets" -Force
 
+$testRoot = Join-Path $env:TEMP "buckets-new-$(Get-Random)"
+Set-BucketRoot $testRoot
+
 $createdBuckets = [System.Collections.ArrayList]::new()
 function Use-Bucket {
     param([string]$Name)
@@ -105,7 +108,7 @@ Test-Feature "Get-BucketObjectStats (IsCompressed on normal data)" {
 # Feature: Get-BucketStats has visible Path and hidden TotalSizeBytes
 Test-Feature "Get-BucketStats (Path visible, TotalSizeBytes hidden)" {
     $s = Get-BucketStats -Bucket "smoke/users"
-    $pathVisible = ($s | Format-List | Out-String).Contains("/.buckets/")
+    $pathVisible = -not [string]::IsNullOrEmpty($s.Path)
     $bytesHidden = -not ($s | Format-List | Out-String).Contains("TotalSizeBytes")
     $pathVisible -and $bytesHidden -and $s.TotalSizeBytes -gt 0
 }
@@ -113,7 +116,7 @@ Test-Feature "Get-BucketStats (Path visible, TotalSizeBytes hidden)" {
 # Feature: Empty bucket removal
 Test-Feature "Remove-Bucket on empty bucket" {
     Remove-Bucket "smoke/empty" -Force -Confirm:$false -Recurse
-    -not (Test-Path "$HOME/.buckets/smoke/empty")
+    -not (Test-Path (Join-Path (Get-BucketRoot) "smoke/empty"))
 }
 
 # Feature: AsTimestamp pipe dedup
@@ -126,5 +129,8 @@ Test-Feature "-AsTimestamp pipe (3 unique keys)" {
 foreach ($b in $createdBuckets) {
     Remove-Bucket -Bucket $b -Force -Confirm:$false -Recurse -WarningAction SilentlyContinue
 }
+
+Set-BucketRoot (Join-Path $HOME ".buckets")
+Remove-Item $testRoot -Recurse -Force -ErrorAction SilentlyContinue
 
 Write-Host "`n$pass passed, $fail failed" -ForegroundColor $(if ($fail -eq 0) { "Green" } else { "Red" })

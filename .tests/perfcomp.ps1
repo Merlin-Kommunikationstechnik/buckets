@@ -14,6 +14,9 @@ param()
 Remove-Module Buckets -ErrorAction SilentlyContinue
 Import-Module "$PSScriptRoot/../Buckets" -Force
 
+$testRoot = Join-Path $env:TEMP "buckets-perfcomp-$(Get-Random)"
+Set-BucketRoot $testRoot
+
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
 $startTs = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 
@@ -225,6 +228,8 @@ Write-Host ("  {0,-18}  {1,8}ms  {2,8}ms" -f "CliXML", $clixml.WriteMs, $clixml.
 foreach ($b in $createdBuckets) {
     Remove-Bucket $b -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
 }
+Set-BucketRoot (Join-Path $HOME ".buckets")
+Remove-Item $testRoot -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item -Path $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
 
 Write-InfoBlock -Mode bottom

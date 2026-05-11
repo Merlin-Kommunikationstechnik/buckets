@@ -10,6 +10,9 @@
 #Remove-Module Buckets -ErrorAction SilentlyContinue
 #Import-Module "$PSScriptRoot/../Buckets" -Force
 
+$testRoot = Join-Path $env:TEMP "buckets-bench-$(Get-Random)"
+Set-BucketRoot $testRoot
+
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
 $startTs = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 
@@ -229,5 +232,8 @@ Write-Host "  Write: ${jsonWriteTimeC}ms, Read: ${jsonReadTimeC}ms, Objects: $($
 foreach ($b in $createdBuckets) {
     Remove-Bucket $b -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse
 }
+
+Set-BucketRoot (Join-Path $HOME ".buckets")
+Remove-Item $testRoot -Recurse -Force -ErrorAction SilentlyContinue
 
 Write-InfoBlock -Mode bottom

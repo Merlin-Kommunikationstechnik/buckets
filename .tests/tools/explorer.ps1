@@ -43,7 +43,7 @@ function Format-Value {
 }
 
 function Get-RootPath {
-    return Join-Path $HOME ".buckets"
+    return Get-BucketRoot
 }
 
 function Scan-Buckets {

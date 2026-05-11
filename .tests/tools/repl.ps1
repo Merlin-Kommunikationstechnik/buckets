@@ -21,13 +21,13 @@ $sep = "=" * 52
 # --- Helpers ---
 
 function Clear-Buckets {
-    $bucketDir = Join-Path $HOME ".buckets"
+    $bucketDir = Get-BucketRoot
     if (Test-Path $bucketDir) {
         Remove-Item $bucketDir -Recurse -Force
-        Write-Host "  Wiped .buckets directory." -ForegroundColor DarkGray
+        Write-Host "  Wiped $(Split-Path $bucketDir -Leaf) directory." -ForegroundColor DarkGray
     }
     else {
-        Write-Host "  No .buckets directory found." -ForegroundColor DarkGray
+        Write-Host "  No bucket root found at '$bucketDir'." -ForegroundColor DarkGray
     }
 }
 
