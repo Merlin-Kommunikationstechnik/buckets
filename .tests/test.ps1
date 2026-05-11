@@ -7,8 +7,8 @@
 Remove-Module Buckets -ErrorAction SilentlyContinue
 Import-Module "$PSScriptRoot/../Buckets" -Force
 
-$bucketDir = Join-Path $HOME ".buckets"
-if (Test-Path $bucketDir) { Remove-Item $bucketDir -Recurse -Force }
+$testRoot = Join-Path $env:TEMP "buckets-test-$(Get-Random)"
+Set-BucketRoot $testRoot
 
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
 $startTs = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
@@ -271,7 +271,7 @@ Remove-Bucket "compressed" -Force -Confirm:$false -WarningAction SilentlyContinu
 New-BucketObject -Bucket compressed -InputObject @{ _Id = "comp"; Data = "x" * 5000; Type = "compressed" } -KeyProperty "_Id" -Compress -Quiet
 Use-Bucket "compressed"
 New-BucketObject -Bucket compressed -InputObject @{ _Id = "uncomp"; Data = "x" * 5000; Type = "uncompressed" } -KeyProperty "_Id" -Quiet
-$basePath = Join-Path $HOME ".buckets"
+$basePath = $testRoot
 $compPath = Join-Path $basePath "compressed"
 $compSize = (Get-ChildItem $compPath -Filter "comp.dat").Length
 $uncompSize = (Get-ChildItem $compPath -Filter "uncomp.dat").Length
@@ -368,8 +368,7 @@ try {
 }
 
 Write-Host "  Corrupted file handling..." -NoNewline
-$basePath = Join-Path $HOME ".buckets"
-$usersPath = Join-Path $basePath "users"
+$usersPath = Join-Path $testRoot "users"
 $corruptPath = Join-Path $usersPath "corrupt.dat"
 [System.IO.File]::WriteAllText($corruptPath, "THIS_IS_NOT_VALID_BASE64!!!", [System.Text.Encoding]::UTF8)
 $beforeCount = (Get-BucketObject -Bucket users).Count
@@ -549,7 +548,7 @@ if ($deepGone -and $parentIntact) {
 
 # Test Remove-Bucket -Recurse
 Remove-Bucket "org" -Recurse -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
-$orgGone = -not (Test-Path (Join-Path $HOME ".buckets/org"))
+$orgGone = -not (Test-Path (Join-Path $testRoot "org"))
 if ($orgGone) {
     Write-Host "  Recursive remove: OK (entire tree removed)" -ForegroundColor Magenta
 } else {
@@ -660,7 +659,8 @@ Write-Host "`n[18] Get-Bucket -Tree edge cases" -ForegroundColor Blue
 # Filtered tree with -Name
 $treeFiltered = Get-Bucket -Tree -Raw -Name "org/eu"
 $hasOrgEu = $treeFiltered.Children | Where-Object { $_.Name -eq "org" -and $_.Children[0].Name -eq "eu" }
-$noOtherBuckets = ($treeFiltered.Children | Where-Object { $_.Name -ne ".buckets" }).Count -eq 1
+$rootName = Split-Path $testRoot -Leaf
+$noOtherBuckets = ($treeFiltered.Children | Where-Object { $_.Name -ne $rootName }).Count -eq 1
 if ($hasOrgEu -and $noOtherBuckets) {
     Write-Host "  -Tree -Name org/eu: OK (filtered to org subtree)" -ForegroundColor Magenta
 } else {
@@ -668,7 +668,7 @@ if ($hasOrgEu -and $noOtherBuckets) {
 }
 
 # Missing directory resilience (remove a subdirectory then scan tree)
-$teamAPath = Join-Path $HOME ".buckets/org/eu/de/berlin/team-a"
+$teamAPath = Join-Path $testRoot "org/eu/de/berlin/team-a"
 if (Test-Path $teamAPath) { Remove-Item $teamAPath -Recurse -Force }
 $treeAfterDelete = Get-Bucket -Tree -Raw -Name "org" -ErrorAction SilentlyContinue
 $orgNode = $treeAfterDelete.Children | Where-Object { $_.Name -eq "org" }
@@ -895,7 +895,7 @@ Test-Edge "Compressed round-trip via Set-BucketObject" {
   Why it matters: Scripts should handle missing data gracefully.
 #>
 Test-Edge "No-buckets root (nonexistent path returns empty)" {
-    $noB = Get-Bucket -Path (Join-Path $HOME ".buckets/nonexistent-root")
+    $noB = Get-Bucket -Path (Join-Path $testRoot "nonexistent-root")
     $null -eq $noB -or @($noB).Count -eq 0
 }
 
@@ -919,5 +919,8 @@ if ($failCount -eq 0) {
         if ($_.Detail) { Write-Host "      $($_.Detail)" -ForegroundColor DarkGray }
     }
 }
+
+Set-BucketRoot (Join-Path $HOME ".buckets")
+Remove-Item $testRoot -Recurse -Force -ErrorAction SilentlyContinue
 
 Write-InfoBlock -Mode bottom

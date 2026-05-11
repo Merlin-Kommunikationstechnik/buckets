@@ -98,7 +98,7 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .tests/new.ps1       # Smoke test 
 pwsh -NoProfile -File tutorial/populate-tutorial.ps1                # Populate tutorial bucket data
 pwsh -NoProfile -File tutorial/tutorial.ps1                         # Interactive tutorial
 ```
-Tests wipe `.buckets` directory, then run functional tests: hashtables, nested objects, FileInfo (binary fallback), logs, JSON config, metrics, mixed formats, Copy/Rename/Export/Import, compression, -WhatIf, round-trip integrity (10/10 checks), error conditions, nested buckets with -Recurse, metadata isolation, and -Tree edge cases.
+Tests run in an isolated temp directory via `Set-BucketRoot`, never touching `$HOME/.buckets`. Then run: hashtables, nested objects, FileInfo (binary fallback), logs, JSON config, metrics, mixed formats, Copy/Rename/Export/Import, compression, -WhatIf, round-trip integrity (10/10 checks), error conditions, nested buckets with -Recurse, metadata isolation, and -Tree edge cases.
 
 Benchmarks measure write/read throughput for 1k and 10k objects (simple + complex) in both binary and JSON formats.
 
