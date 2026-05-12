@@ -238,7 +238,7 @@ function Measure-DepthBench {
     $datFiles = @(Get-ChildItem -Path $dir -Filter *.dat -ErrorAction SilentlyContinue)
     $totalSize = ($jsonFiles | Measure-Object -Property Length -Sum).Sum + ($datFiles | Measure-Object -Property Length -Sum).Sum
     $sizeStr = if ($totalSize -gt 1MB) { "$([math]::Round($totalSize/1MB,1))MB" } else { "$([math]::Round($totalSize/1KB))KB" }
-    Write-BenchResult $Label $writeMs $readMs $read.Count ("Size ${sizeStr}  JSON:$($jsonFiles.Count)  Dat:$($datFiles.Count)")
+    Write-BenchResult $Label $writeMs $readMs $read.Count ("Size {0,7}  JSON:{1,3}  Dat:{2,3}" -f $sizeStr, $jsonFiles.Count, $datFiles.Count)
 }
 
 Measure-DepthBench "DirectoryInfo (all items) @ Depth 1" -Depth 1 -Items $homeItems -Bucket "dep-d1" -KeyProp Name
