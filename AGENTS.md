@@ -43,7 +43,7 @@ PowerShell module for file-based PSObject storage using directory-backed "bucket
 - JSON auto-depth: auto-increments from `-Depth` (default 20) up to 100 to avoid truncation; falls back to binary with `Write-Warning` if still truncated or on exception
 - `BinaryDepth` default: 5 (ValidateRange 1-100), only relevant for `-AsBinary` or binary fallback
 - Arrays stored as individual files
-- Key sanitization: `/`, `:`, `*`, `?`, `"`, `<`, `>`, `|`, `.`, `[`, `]` → `_`
+- Key sanitization: `/`, `:`, `*`, `?`, `"`, `<`, `>`, `|`, `[`, `]` → `_`
 - Empty keys after sanitization are rejected
 
 ## Cmdlets

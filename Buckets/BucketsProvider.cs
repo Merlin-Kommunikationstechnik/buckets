@@ -80,7 +80,7 @@ namespace Buckets.Provider
     [CmdletProvider("Buckets", ProviderCapabilities.ShouldProcess)]
     public class BucketsProvider : NavigationCmdletProvider, IContentCmdletProvider
     {
-        private static readonly char[] InvalidChars = { '/', ':', '*', '?', '"', '<', '>', '|', '.', '[', ']' };
+        private static readonly char[] InvalidChars = { '/', ':', '*', '?', '"', '<', '>', '|', '[', ']' };
         private static readonly byte[] GZipMagic = { 0x1F, 0x8B };
         private static readonly char ProviderSep = Path.DirectorySeparatorChar;
         private static readonly char Sep = Path.DirectorySeparatorChar;
@@ -1170,13 +1170,8 @@ namespace Buckets.Provider
                 }
 
                 string ext = format == "json" ? ".json" : ".dat";
-                if (string.IsNullOrEmpty(Path.GetExtension(physical)))
-                {
-                    physical = Path.ChangeExtension(physical, ext);
-                }
-
                 string dir = Path.GetDirectoryName(physical);
-                string key = Path.GetFileNameWithoutExtension(physical);
+                string key = Path.GetFileName(physical);
                 string sanitizedKey = SanitizeKey(key);
 
                 if (string.IsNullOrEmpty(sanitizedKey))
@@ -1638,15 +1633,10 @@ namespace Buckets.Provider
             }
 
             // Default to .dat if no extension specified
-            string ext = Path.GetExtension(sanitized);
-            if (string.IsNullOrEmpty(ext))
-            {
-                // Check if bucket has .json files
-                var jsonCount = new DirectoryInfo(bucketPath).GetFiles("*.json").Length;
-                var datCount = new DirectoryInfo(bucketPath).GetFiles("*.dat").Length;
-                ext = jsonCount > datCount ? ".json" : ".dat";
-                sanitized = sanitized + ext;
-            }
+            var jsonCount = new DirectoryInfo(bucketPath).GetFiles("*.json").Length;
+            var datCount = new DirectoryInfo(bucketPath).GetFiles("*.dat").Length;
+            string ext = jsonCount > datCount ? ".json" : ".dat";
+            sanitized = sanitized + ext;
 
             return Path.Combine(bucketPath, sanitized);
         }

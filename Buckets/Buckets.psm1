@@ -174,7 +174,7 @@ function Get-BucketFilename {
     param($Item, [string]$Key, [string]$KeyProperty, [bool]$AsTimestamp, [int]$Index, [string]$Extension)
 
     if (-not [string]::IsNullOrWhiteSpace($Key)) {
-        $safeKey = $Key -replace '[\\/:\*\?"<>\|\.\[\]]', '_'
+        $safeKey = $Key -replace '[\\/:\*\?"<>\|\[\]]', '_'
         if ([string]::IsNullOrWhiteSpace($safeKey) -or $safeKey -match '^_+$') {
             Write-Verbose "Key is empty after sanitization ('$Key' -> '$safeKey'), skipping"
             return $null
@@ -188,7 +188,7 @@ function Get-BucketFilename {
             Write-Verbose "Property '$KeyProperty' not found on object, skipping"
             return $null
         }
-        $safeKey = $keyValue -replace '[\\/:\*\?"<>\|\.\[\]]', '_'
+        $safeKey = $keyValue -replace '[\\/:\*\?"<>\|\[\]]', '_'
         if ([string]::IsNullOrWhiteSpace($safeKey) -or $safeKey -match '^_+$') {
             Write-Verbose "Key for object is empty after sanitization ('$keyValue' -> '$safeKey'), skipping"
             return $null
@@ -207,7 +207,7 @@ function Resolve-ItemKey {
     param($Item, [string]$Key, [string]$KeyProperty, [int]$Index)
 
     if (-not [string]::IsNullOrWhiteSpace($Key)) {
-        $safeKey = $Key -replace '[\\/:\*\?"<>\|\.\[\]]', '_'
+        $safeKey = $Key -replace '[\\/:\*\?"<>\|\[\]]', '_'
         if ([string]::IsNullOrWhiteSpace($safeKey) -or $safeKey -match '^_+$') { return $null }
         return $safeKey
     }
@@ -215,7 +215,7 @@ function Resolve-ItemKey {
     if (-not [string]::IsNullOrWhiteSpace($KeyProperty)) {
         $keyValue = $Item.$KeyProperty
         if ($null -eq $keyValue) { return $null }
-        $safeKey = $keyValue -replace '[\\/:\*\?"<>\|\.\[\]]', '_'
+        $safeKey = $keyValue -replace '[\\/:\*\?"<>\|\[\]]', '_'
         if ([string]::IsNullOrWhiteSpace($safeKey) -or $safeKey -match '^_+$') { return $null }
         return $safeKey
     }
@@ -446,7 +446,7 @@ function Get-BucketFiles {
 
 function Sanitize-Key {
     param([string]$Key)
-    $safe = $Key -replace '[\\/:\*\?"<>\|\.\[\]]', '_'
+    $safe = $Key -replace '[\\/:\*\?"<>\|\[\]]', '_'
     if ([string]::IsNullOrWhiteSpace($safe) -or $safe -match '^_+$') { return $null }
     return $safe
 }
@@ -510,7 +510,7 @@ function Copy-BucketObject {
     if ([string]::IsNullOrWhiteSpace($DestinationBucket)) { $DestinationBucket = $Bucket }
     if ([string]::IsNullOrWhiteSpace($DestinationKey)) { $DestinationKey = $Key }
 
-    $safeDestKey = $DestinationKey -replace '[\\/:\*\?"<>\|\.\[\]]', '_'
+    $safeDestKey = $DestinationKey -replace '[\\/:\*\?"<>\|\[\]]', '_'
     if ([string]::IsNullOrWhiteSpace($safeDestKey) -or $safeDestKey -match '^_+$') {
         throw "Destination key '$DestinationKey' is invalid after sanitization"
     }
@@ -1403,7 +1403,7 @@ function Import-Bucket {
 
     foreach ($obj in $objectArray) {
         $key = if ($obj.PSObject.Properties['_BucketKey']) { $obj._BucketKey } else { [Guid]::NewGuid().ToString() }
-        $safeKey = $key -replace '[\\/:\*\?"<>\|\.\[\]]', '_'
+        $safeKey = $key -replace '[\\/:\*\?"<>\|\[\]]', '_'
         if ([string]::IsNullOrWhiteSpace($safeKey) -or $safeKey -match '^_+$') { $safeKey = [Guid]::NewGuid().ToString() }
 
         $jsonPath = Join-Path $bucketPath "${safeKey}.json"
@@ -1496,7 +1496,7 @@ function Move-BucketObject {
     if ([string]::IsNullOrWhiteSpace($DestinationBucket)) { $DestinationBucket = $Bucket }
     if ([string]::IsNullOrWhiteSpace($DestinationKey)) { $DestinationKey = $Key }
 
-    $safeDestKey = $DestinationKey -replace '[\\/:\*\?"<>\|\.\[\]]', '_'
+    $safeDestKey = $DestinationKey -replace '[\\/:\*\?"<>\|\[\]]', '_'
     if ([string]::IsNullOrWhiteSpace($safeDestKey) -or $safeDestKey -match '^_+$') {
         throw "Destination key '$DestinationKey' is invalid after sanitization"
     }
@@ -1554,7 +1554,7 @@ function New-BucketObject {
     .PARAMETER Key
     Literal filename (without extension).
     .PARAMETER KeyProperty
-    Property name whose value becomes the filename. Special characters (/, :, *, ?, ", <, >, |, ., []) are sanitized to underscores.
+    Property name whose value becomes the filename. Special characters (/, :, *, ?, ", <, >, |, [, ]) are sanitized to underscores.
     .PARAMETER Depth
     Maximum depth for JSON serialization. Default: 20.
     .PARAMETER BinaryDepth
@@ -2261,7 +2261,7 @@ function Rename-BucketObject {
         throw "Bucket '$Bucket' not found at '$bucketPath'"
     }
 
-    $safeNewKey = $NewKey -replace '[\\/:\*\?"<>\|\.\[\]]', '_'
+    $safeNewKey = $NewKey -replace '[\\/:\*\?"<>\|\[\]]', '_'
     if ([string]::IsNullOrWhiteSpace($safeNewKey) -or $safeNewKey -match '^_+$') {
         throw "New key '$NewKey' is invalid after sanitization"
     }
@@ -2380,7 +2380,7 @@ function Set-BucketObject {
 
         if ($InputObject.PSObject.Properties[$Key]) {
             $resolvedKey = $InputObject.$Key
-            if ($null -ne $resolvedKey) { $Key = $resolvedKey -replace '[\\/:\*\?"<>\|\.\[\]]', '_' }
+            if ($null -ne $resolvedKey) { $Key = $resolvedKey -replace '[\\/:\*\?"<>\|\[\]]', '_' }
         }
 
         if ($null -eq $bucketPath) {
