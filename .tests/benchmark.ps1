@@ -57,10 +57,16 @@ function Write-InfoBlock {
     }
 }
 
+function Format-BenchTime([int]$Ms) {
+    if ($Ms -ge 1000) { ($ms / 1000).ToString("F2", [System.Globalization.CultureInfo]::InvariantCulture) + "s" } else { "${Ms}ms" }
+}
+
 function Write-BenchResult {
     param([string]$Label, [int]$WriteMs, [int]$ReadMs, [int]$Count, [string]$Extra = "")
     $extraStr = if ($Extra) { "  $Extra" } else { "" }
-    Write-Host ("  {0,-50} Write {1,5}ms  Read {2,5}ms  Obj: {3}{4}" -f $Label, $WriteMs, $ReadMs, $Count, $extraStr) -ForegroundColor DarkGray
+    $wt = Format-BenchTime $WriteMs
+    $rt = Format-BenchTime $ReadMs
+    Write-Host ("  {0,-50} Write {1,8}  Read {2,8}  Obj: {3}{4}" -f $Label, $wt, $rt, $Count, $extraStr) -ForegroundColor DarkGray
     $script:phase++
     $pct = [math]::Min(100, [int](($script:phase / $script:totalPhases) * 100))
     Write-Progress -Activity "Buckets Benchmark" -Status "Phase $($script:phase)/$($script:totalPhases): $Label" -PercentComplete $pct
