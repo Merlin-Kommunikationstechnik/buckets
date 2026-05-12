@@ -264,7 +264,7 @@ $depH1Json = @(Get-ChildItem -Path $depH1Dir -Filter *.json -ErrorAction Silentl
 $depH1Dat = @(Get-ChildItem -Path $depH1Dir -Filter *.dat -ErrorAction SilentlyContinue)
 $depH1Size = ($depH1Json | Measure-Object -Property Length -Sum).Sum + ($depH1Dat | Measure-Object -Property Length -Sum).Sum
 $depH1SizeStr = if ($depH1Size -gt 1MB) { "$([math]::Round($depH1Size/1MB,1))MB" } else { "$([math]::Round($depH1Size/1KB))KB" }
-Write-BenchResult "Deep hashtable (25 levels) @ Depth 1 (truncated)" $w1 $r1ms 1 ("Size {0,7}  JSON:{1,3}  Dat:{2,3}" -f $depH1SizeStr, $depH1Json.Count, $depH1Dat.Count)
+Write-BenchResult "Deep hashtable (25 levels) @ Depth 1 (truncated)" $w1 $r1ms 1 (" Size {0,7}  JSON:{1,3}  Dat:{2,3}" -f $depH1SizeStr, $depH1Json.Count, $depH1Dat.Count)
 
 Use-Bucket "dep-h20"
 $wt = [System.Diagnostics.Stopwatch]::StartNew()
@@ -278,7 +278,7 @@ $depH20Json = @(Get-ChildItem -Path $depH20Dir -Filter *.json -ErrorAction Silen
 $depH20Dat = @(Get-ChildItem -Path $depH20Dir -Filter *.dat -ErrorAction SilentlyContinue)
 $depH20Size = ($depH20Json | Measure-Object -Property Length -Sum).Sum + ($depH20Dat | Measure-Object -Property Length -Sum).Sum
 $depH20SizeStr = if ($depH20Size -gt 1MB) { "$([math]::Round($depH20Size/1MB,1))MB" } else { "$([math]::Round($depH20Size/1KB))KB" }
-Write-BenchResult "Deep hashtable (25 levels) @ Depth 20 (full)" $w20 $r20ms 1 ("Size {0,7}  JSON:{1,3}  Dat:{2,3}" -f $depH20SizeStr, $depH20Json.Count, $depH20Dat.Count)
+Write-BenchResult "Deep hashtable (25 levels) @ Depth 20 (full)" $w20 $r20ms 1 (" Size {0,7}  JSON:{1,3}  Dat:{2,3}" -f $depH20SizeStr, $depH20Json.Count, $depH20Dat.Count)
 
 Use-Bucket "dep-hbin"
 $wt = [System.Diagnostics.Stopwatch]::StartNew()
@@ -292,7 +292,7 @@ $depHbinJson = @(Get-ChildItem -Path $depHbinDir -Filter *.json -ErrorAction Sil
 $depHbinDat = @(Get-ChildItem -Path $depHbinDir -Filter *.dat -ErrorAction SilentlyContinue)
 $depHbinSize = ($depHbinJson | Measure-Object -Property Length -Sum).Sum + ($depHbinDat | Measure-Object -Property Length -Sum).Sum
 $depHbinSizeStr = if ($depHbinSize -gt 1MB) { "$([math]::Round($depHbinSize/1MB,1))MB" } else { "$([math]::Round($depHbinSize/1KB))KB" }
-Write-BenchResult "Deep hashtable (25 levels) @ binary (full preserv.)" $wbin $rbinms 1 ("Size {0,7}  JSON:{1,3}  Dat:{2,3}" -f $depHbinSizeStr, $depHbinJson.Count, $depHbinDat.Count)
+Write-BenchResult "Deep hashtable (25 levels) @ binary (full)" $wbin $rbinms 1 (" Size {0,7}  JSON:{1,3}  Dat:{2,3}" -f $depHbinSizeStr, $depHbinJson.Count, $depHbinDat.Count)
 
 # ============================================================
 # 7. Funnel — throughput impact
