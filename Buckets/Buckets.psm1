@@ -1571,9 +1571,11 @@ function New-BucketObject {
     Suppress all output. No progress indicator, no summary.
     .PARAMETER Overwrite
     Overwrite existing objects with the same key. Default: $false.
+    .PARAMETER PassThru
+    Emit a metadata object with details of the operation (StoredKeys, SkippedKeys, SanitizedKeys, OverwrittenKeys, counts, format).
     .OUTPUTS
     By default, a progress indicator and summary are shown.
-    Use -Verbose for per-object details. Use -Quiet for silent operation.
+    Use -PassThru to also get a metadata object. Use -Quiet for silent operation.
     .EXAMPLE
     New-BucketObject -Bucket users -InputObject $users -KeyProperty Name
     .EXAMPLE
@@ -1595,14 +1597,19 @@ function New-BucketObject {
         [switch]$Compress,
         [switch]$Overwrite,
         [switch]$Quiet,
+        [switch]$PassThru,
         [object]$Funnel
     )
 
     begin {
         $bucketPath = Ensure-BucketExists -Name $Bucket -Path $Path
         $extension = if ($AsBinary) { ".dat" } else { ".json" }
-        $savedCount = 0; $skippedCount = 0; $fallbackCount = 0; $formatFallbackCount = 0; $failedCount = 0; $totalCount = 0
+        $savedCount = 0; $skippedCount = 0; $fallbackCount = 0; $formatFallbackCount = 0; $failedCount = 0
         $overwrittenCount = 0; $sanitizedCount = 0
+        $storedKeys = [System.Collections.ArrayList]::new()
+        $skippedKeys = [System.Collections.ArrayList]::new()
+        $sanitizedKeys = [System.Collections.ArrayList]::new()
+        $overwrittenKeys = [System.Collections.ArrayList]::new()
         $useVerbose = $VerbosePreference -eq 'Continue'
         $useQuiet = $Quiet.IsPresent
         $showProgress = -not $useVerbose -and -not $useQuiet
@@ -1634,21 +1641,23 @@ function New-BucketObject {
                 }
                 $itemFilename = Get-BucketFilename -Item $item -Key $Key -KeyProperty $KeyProperty -AsTimestamp:$AsTimestamp.IsPresent -Index $index -Extension $extension
                 if ($null -eq $itemFilename) { $skippedCount++; $index++; continue }
-                if ($itemFilename.Sanitized) { $sanitizedCount++ }
+                $keyName = if ($itemFilename.OriginalKey) { $itemFilename.OriginalKey } else { [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename) }
+                if ($itemFilename.Sanitized) { $sanitizedCount++; $null = $sanitizedKeys.Add([PSCustomObject]@{ Original = $itemFilename.OriginalKey; Sanitized = [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename) }) }
                 $itemFilePath = Join-Path $bucketPath $itemFilename.Filename
                 $writeResult = Save-BucketFile -Path $itemFilePath -Item $item -Extension $extension -AsBinary:$AsBinary.IsPresent -Compress:$Compress.IsPresent -Depth $Depth -BinaryDepth $BinaryDepth -Overwrite:$Overwrite.IsPresent -BucketPath $bucketPath -Bucket $Bucket
                 if ($writeResult.Success) {
                     $savedCount++
+                    $null = $storedKeys.Add($keyName)
+                    if ($writeResult.Overwritten) { $overwrittenCount++; $null = $overwrittenKeys.Add($keyName) }
                     if ($showProgress -and $totalForItems -gt 50) {
                         $percent = if ($totalForItems -gt 0) { [math]::Round(($savedCount / $totalForItems) * 100) } else { 0 }
                         Write-Progress -Activity "Saving to '$Bucket'" -Status "$savedCount object(s) saved" -PercentComplete $percent -CurrentOperation ([System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename))
                     }
                 }
-                elseif ($writeResult.Skipped) { $skippedCount++ }
+                elseif ($writeResult.Skipped) { $skippedCount++; $null = $skippedKeys.Add($keyName) }
                 else { $failedCount++ }
                 if ($writeResult.Fallback) { $fallbackCount++ }
                 if ($writeResult.FormatFallback) { $formatFallbackCount++ }
-                if ($writeResult.Overwritten) { $overwrittenCount++ }
                 $index++
             }
         }
@@ -1672,21 +1681,23 @@ function New-BucketObject {
                 }
                 $itemFilename = Get-BucketFilename -Item $item -Key $Key -KeyProperty $KeyProperty -AsTimestamp:$AsTimestamp.IsPresent -Index $index -Extension $extension
                 if ($null -eq $itemFilename) { $skippedCount++; $index++; continue }
-                if ($itemFilename.Sanitized) { $sanitizedCount++ }
+                $keyName = if ($itemFilename.OriginalKey) { $itemFilename.OriginalKey } else { [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename) }
+                if ($itemFilename.Sanitized) { $sanitizedCount++; $null = $sanitizedKeys.Add([PSCustomObject]@{ Original = $itemFilename.OriginalKey; Sanitized = [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename) }) }
                 $itemFilePath = Join-Path $bucketPath $itemFilename.Filename
                 $writeResult = Save-BucketFile -Path $itemFilePath -Item $item -Extension $extension -AsBinary:$AsBinary.IsPresent -Compress:$Compress.IsPresent -Depth $Depth -BinaryDepth $BinaryDepth -Overwrite:$Overwrite.IsPresent -BucketPath $bucketPath -Bucket $Bucket
                 if ($writeResult.Success) {
                     $savedCount++
+                    $null = $storedKeys.Add($keyName)
+                    if ($writeResult.Overwritten) { $overwrittenCount++; $null = $overwrittenKeys.Add($keyName) }
                     if ($showProgress -and $totalForItems -gt 50) {
                         $percent = if ($totalForItems -gt 0) { [math]::Round(($savedCount / $totalForItems) * 100) } else { 0 }
                         Write-Progress -Activity "Saving to '$Bucket'" -Status "$savedCount object(s) saved" -PercentComplete $percent -CurrentOperation ([System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename))
                     }
                 }
-                elseif ($writeResult.Skipped) { $skippedCount++ }
+                elseif ($writeResult.Skipped) { $skippedCount++; $null = $skippedKeys.Add($keyName) }
                 else { $failedCount++ }
                 if ($writeResult.Fallback) { $fallbackCount++ }
                 if ($writeResult.FormatFallback) { $formatFallbackCount++ }
-                if ($writeResult.Overwritten) { $overwrittenCount++ }
                 $index++
             }
         }
@@ -1728,6 +1739,23 @@ function New-BucketObject {
                 Write-Host $failedCount -NoNewline -ForegroundColor $script:CNum
                 Write-Host " failed to serialize" -ForegroundColor $script:CError
             }
+        }
+        if ($PassThru) {
+            Write-Output ([PSCustomObject]@{
+                Bucket      = $Bucket
+                Saved       = $savedCount
+                Skipped     = $skippedCount
+                Overwritten = $overwrittenCount
+                Sanitized   = $sanitizedCount
+                Failed      = $failedCount
+                Total       = $savedCount + $skippedCount + $failedCount
+                Format      = if ($AsBinary) { "Binary" } else { "JSON" }
+                Compressed  = $Compress.IsPresent
+                StoredKeys   = [string[]]$storedKeys
+                SkippedKeys  = [string[]]$skippedKeys
+                SanitizedKeys = [PSCustomObject[]]$sanitizedKeys
+                OverwrittenKeys = [string[]]$overwrittenKeys
+            })
         }
     }
 }
