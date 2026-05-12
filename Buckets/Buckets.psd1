@@ -12,7 +12,7 @@
 RootModule = 'Buckets.psm1'
 
 # Version number of this module.
-ModuleVersion = '2.7.4'
+ModuleVersion = '2.7.5'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -134,6 +134,7 @@ PrivateData = @{
 # DefaultCommandPrefix = ''
 
 }
+
 
 
 
