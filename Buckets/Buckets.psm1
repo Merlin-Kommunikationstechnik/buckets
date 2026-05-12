@@ -2397,7 +2397,7 @@ function Set-BucketObject {
     begin {
         $bucketPath = $null; $savedCount = 0; $lastBucket = ''
         $useVerbose = $VerbosePreference -eq 'Continue'; $useQuiet = $Quiet.IsPresent
-        $usePassThru = $PassThru.IsPresent
+        $updatedKeys = [System.Collections.ArrayList]::new()
     }
 
     process {
@@ -2522,20 +2522,26 @@ function Set-BucketObject {
         if ($writeSuccess) {
             $savedCount++
             $lastBucket = $Bucket
+            $null = $updatedKeys.Add($Key)
             if ($useVerbose) { Write-Verbose "Updated [$Bucket/$Key] -> $filePath" }
-            elseif ($usePassThru) {
-                $out = [PSCustomObject]@{ Bucket = $Bucket; Key = $Key }
-                Write-Output $out
-            }
         }
     }
 
     end {
-        if ($savedCount -gt 0 -and -not $usePassThru -and -not $useVerbose -and -not $useQuiet) {
+        if ($savedCount -gt 0 -and -not $useVerbose -and -not $useQuiet) {
             Write-Host "$lastBucket" -NoNewline -ForegroundColor $script:CPath
             Write-Host " · " -NoNewline -ForegroundColor $script:CMuted
             Write-Host $savedCount -NoNewline -ForegroundColor $script:CNum
             Write-Host " updated" -ForegroundColor $script:CMuted
+        }
+        if ($PassThru -and $savedCount -gt 0) {
+            Write-Output ([PSCustomObject]@{
+                Bucket      = $lastBucket
+                Saved       = $savedCount
+                UpdatedKeys = [string[]]$updatedKeys
+                Format      = if ($AsBinary) { "Binary" } else { "JSON" }
+                Compressed  = $Compress.IsPresent
+            })
         }
     }
 }
