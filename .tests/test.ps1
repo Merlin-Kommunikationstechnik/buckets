@@ -442,9 +442,9 @@ Test-It "Get-Bucket finds 5 nested buckets" {
 
 Test-It "Provider navigation shows nested bucket structure" {
     $driveItems = @()
-    Get-ChildItem "buckets:\org" -ErrorAction SilentlyContinue | ForEach-Object { $driveItems += $_.Name }
+    Get-ChildItem "buckets:/org" -ErrorAction SilentlyContinue | ForEach-Object { $driveItems += $_.Name }
     $euItems = @()
-    Get-ChildItem "buckets:\org\eu" -ErrorAction SilentlyContinue | ForEach-Object { $euItems += $_.Name }
+    Get-ChildItem "buckets:/org/eu" -ErrorAction SilentlyContinue | ForEach-Object { $euItems += $_.Name }
     ($driveItems -contains "eu") -and ($euItems -contains "de")
 }
 
@@ -1403,7 +1403,7 @@ Test-It "Set-BucketRoot changes root and Get-BucketRoot reflects it" {
 
 Test-It "Sync-BucketDrive creates buckets PSDrive" {
     $drive = Get-PSDrive -Name "buckets" -ErrorAction SilentlyContinue
-    $null -ne $drive -and $drive.Root -eq "buckets:\"
+    $null -ne $drive -and $drive.Root -eq ("buckets:" + [System.IO.Path]::DirectorySeparatorChar)
 }
 
 Test-It "Set-BucketRoot with invalid path does not crash" {
