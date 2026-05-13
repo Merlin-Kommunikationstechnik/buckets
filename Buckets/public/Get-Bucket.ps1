@@ -326,6 +326,31 @@ function Get-Bucket {
     if (-not [string]::IsNullOrWhiteSpace($Name)) {
         if ($Name -match '[\*\?]') {
             $results = $results | Where-Object { $_.Name -like $Name }
+        } elseif ($Name.Contains('/')) {
+            # Nested path: exact match (avoids over-matching descendants).
+            # Resolve directly if non-recursive mode didn't scan this deep.
+            $results = $results | Where-Object { $_.Name -eq $Name }
+            if (-not $results) {
+                $nestedDir = Join-Path $Path ($Name.Replace('/', [System.IO.Path]::DirectorySeparatorChar))
+                if ([System.IO.Directory]::Exists($nestedDir)) {
+                    $total = 0
+                    $stack = [System.Collections.Stack]::new()
+                    $stack.Push($nestedDir)
+                    while ($stack.Count -gt 0) {
+                        $cur = [System.IO.DirectoryInfo]::new($stack.Pop())
+                        $total += $cur.GetFiles("*.dat").Length + $cur.GetFiles("*.json").Length
+                        foreach ($s in $cur.GetDirectories()) {
+                            if ($s.Name -ne ".buckets") { $stack.Push($s.FullName) }
+                        }
+                    }
+                    $hasSub = @([System.IO.DirectoryInfo]::new($nestedDir).GetDirectories() | Where-Object Name -ne '.buckets').Count -gt 0
+                    $obj = [PSCustomObject]@{ Name = $Name; ObjectCount = $total; HasSubBuckets = $hasSub }
+                    Add-HiddenProperty -Target $obj -Name 'Path' -Value $nestedDir
+                    $results = @($obj)
+                } else {
+                    $results = @()
+                }
+            }
         } else {
             $results = $results | Where-Object { $_.Name -like "*$Name*" }
         }
