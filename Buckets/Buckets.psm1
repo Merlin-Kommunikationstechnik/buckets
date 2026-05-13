@@ -1771,7 +1771,7 @@ function New-BucketObject {
             if ($indexedCount -gt 0) {
                 Write-Host "  " -NoNewline
                 Write-Host $indexedCount -NoNewline -ForegroundColor $script:CNum
-                Write-Host " indexed (auto-key)" -ForegroundColor $script:CSkip
+                Write-Host " indexed (AutoIndex)" -ForegroundColor $script:CSkip
             }
             if ($sanitizedCount -gt 0) {
                 Write-Host "  " -NoNewline
