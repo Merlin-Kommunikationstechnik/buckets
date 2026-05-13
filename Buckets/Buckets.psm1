@@ -125,12 +125,18 @@ function Get-FunnelDefinition {
     $userFile = Join-Path (Join-Path (Get-BucketsSystemPath) "funnels") "$Name.json"
     if (Test-Path $userFile) {
         $def = Get-Content -Path $userFile -Raw -Encoding UTF8 | ConvertFrom-Json
+        if ($def.Filter -and -not $def.Transform) {
+            $def | Add-Member -NotePropertyName Transform -NotePropertyValue $def.Filter
+        }
         $script:FunnelCache[$Name] = $def
         return $def
     }
     $builtinFile = Join-Path $script:BuiltinFunnelsDir "$Name.json"
     if (Test-Path $builtinFile) {
         $def = Get-Content -Path $builtinFile -Raw -Encoding UTF8 | ConvertFrom-Json
+        if ($def.Filter -and -not $def.Transform) {
+            $def | Add-Member -NotePropertyName Transform -NotePropertyValue $def.Filter
+        }
         $script:FunnelCache[$Name] = $def
         return $def
     }
@@ -141,10 +147,10 @@ function Resolve-Funnel {
     param([object]$Funnel)
     if (-not $Funnel) { return $null }
     if ($Funnel -is [scriptblock]) {
-        return @{ Filter = $Funnel }
+        return @{ Transform = $Funnel }
     }
     $def = Get-FunnelDefinition -Name $Funnel
-    $result = @{ Filter = [scriptblock]::Create($def.Filter) }
+    $result = @{ Transform = [scriptblock]::Create($def.Transform) }
     if ($def.AppliesTo) {
         $at = $def.AppliesTo.Trim()
         if ($at -match '^\[.+\]$') { $result.AppliesTo = [scriptblock]::Create("`$_ -is $at") }
@@ -1261,8 +1267,16 @@ function Get-BucketObject {
             if ($funnelDef) {
                 $matchesAppliesTo = -not $funnelDef.ContainsKey('AppliesTo') -or ($null -ne ($obj | Where-Object $funnelDef.AppliesTo))
                 if ($matchesAppliesTo) {
-                    $obj = $obj | ForEach-Object $funnelDef.Filter
-                    if ($null -eq $obj) { continue }
+                    $funnelItems = @($obj | ForEach-Object $funnelDef.Transform) | Where-Object { $_ -ne $null }
+                    foreach ($subItem in $funnelItems) {
+                        $relativePath = $file.FullName.Substring($bucketPath.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar)
+                        $keyWithoutExt = [System.IO.Path]::ChangeExtension($relativePath, $null).TrimEnd('.')
+                        Add-HiddenProperty -Target $subItem -Name '_BucketName' -Value $bucketName
+                        Add-HiddenProperty -Target $subItem -Name '_BucketKey' -Value $keyWithoutExt
+                        Add-HiddenProperty -Target $subItem -Name '_BucketFile' -Value $file.FullName
+                        $null = $allObjects.Add($subItem)
+                    }
+                    continue
                 }
             }
 
@@ -1627,7 +1641,7 @@ function New-BucketObject {
         $bucketPath = Ensure-BucketExists -Name $Bucket -Path $Path
         $extension = if ($AsBinary) { ".dat" } else { ".json" }
         $savedCount = 0; $skippedCount = 0; $fallbackCount = 0; $formatFallbackCount = 0; $failedCount = 0
-        $overwrittenCount = 0; $sanitizedCount = 0; $indexedCount = 0
+        $overwrittenCount = 0; $sanitizedCount = 0; $indexedCount = 0; $expandedCount = 0
         $storedKeys = [System.Collections.ArrayList]::new()
         $skippedKeys = [System.Collections.ArrayList]::new()
         $sanitizedKeys = [System.Collections.ArrayList]::new()
@@ -1658,8 +1672,74 @@ function New-BucketObject {
                 if ($funnelDef) {
                     $matchesAppliesTo = -not $funnelDef.ContainsKey('AppliesTo') -or ($null -ne ($item | Where-Object $funnelDef.AppliesTo))
                     if ($matchesAppliesTo) {
-                        $item = $item | ForEach-Object $funnelDef.Filter
-                        if ($null -eq $item) { $skippedCount++; $index++; continue }
+                        $funnelItems = @($item | ForEach-Object $funnelDef.Transform) | Where-Object { $_ -ne $null }
+                        if ($funnelItems.Count -eq 0) { $skippedCount++; $index++; continue }
+                        $subIdx = 0
+                        $expansionKeys = @{}
+                        foreach ($subItem in $funnelItems) {
+                            $subIdx++
+                            $item = $subItem
+                            $itemFilename = Get-BucketFilename -Item $item -Key $Key -KeyProperty $KeyProperty -AsTimestamp:$AsTimestamp.IsPresent -Index ($index + $subIdx - 1) -Extension $extension
+                            if ($null -eq $itemFilename) { $skippedCount++; continue }
+                            $keyName = if ($itemFilename.OriginalKey) { $itemFilename.OriginalKey } else { [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename) }
+                            if ($funnelItems.Count -gt 1) {
+                                $baseSafeKey = [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename)
+                                $baseOrigKey = $keyName
+                                if ($expansionKeys.ContainsKey($baseSafeKey)) {
+                                    $idx = 1
+                                    while ($true) {
+                                        $candidateKey = "${baseSafeKey}_${idx}"
+                                        if ($expansionKeys.ContainsKey($candidateKey)) { $idx++; continue }
+                                        break
+                                    }
+                                    $safeKey = "${baseSafeKey}_${idx}"
+                                    $keyName = "${baseOrigKey}_${idx}"
+                                    $itemFilename = [PSCustomObject]@{ Filename = "${safeKey}${extension}"; Sanitized = $itemFilename.Sanitized; OriginalKey = $keyName }
+                                }
+                                $expansionKeys[[System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename)] = $true
+                            }
+                            if ($subIdx -gt 1) { $expandedCount++ }
+                            if ($AutoIndex) {
+                                $baseSafeKey = [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename)
+                                $baseOrigKey = $keyName
+                                $inBatchCollision = $seenKeys.ContainsKey($baseSafeKey)
+                                $onDiskCollision = -not $Overwrite -and ([System.IO.File]::Exists((Join-Path $bucketPath "${baseSafeKey}.json")) -or [System.IO.File]::Exists((Join-Path $bucketPath "${baseSafeKey}.dat")))
+                                if ($inBatchCollision -or $onDiskCollision) {
+                                    $idx = 1
+                                    while ($true) {
+                                        $candidateKey = "${baseSafeKey}_${idx}"
+                                        if ($seenKeys.ContainsKey($candidateKey)) { $idx++; continue }
+                                        if (-not $Overwrite -and ([System.IO.File]::Exists((Join-Path $bucketPath "${candidateKey}.json")) -or [System.IO.File]::Exists((Join-Path $bucketPath "${candidateKey}.dat")))) { $idx++; continue }
+                                        break
+                                    }
+                                    $safeKey = "${baseSafeKey}_${idx}"
+                                    $keyName = "${baseOrigKey}_${idx}"
+                                    $itemFilename = [PSCustomObject]@{ Filename = "${safeKey}${extension}"; Sanitized = $itemFilename.Sanitized; OriginalKey = $keyName }
+                                    $indexedCount++
+                                    $seenKeys[$safeKey] = $true
+                                } else {
+                                    $seenKeys[$baseSafeKey] = $true
+                                }
+                            }
+                            if ($itemFilename.Sanitized) { $sanitizedCount++; $null = $sanitizedKeys.Add([PSCustomObject]@{ Original = $itemFilename.OriginalKey; Sanitized = [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename) }) }
+                            $itemFilePath = Join-Path $bucketPath $itemFilename.Filename
+                            $writeResult = Save-BucketFile -Path $itemFilePath -Item $item -Extension $extension -AsBinary:$AsBinary.IsPresent -Compress:$Compress.IsPresent -Depth $Depth -BinaryDepth $BinaryDepth -Overwrite:$Overwrite.IsPresent -BucketPath $bucketPath -Bucket $Bucket
+                            if ($writeResult.Success) {
+                                $savedCount++
+                                $null = $storedKeys.Add($keyName)
+                                if ($writeResult.Overwritten) { $overwrittenCount++; $null = $overwrittenKeys.Add($keyName) }
+                                if ($showProgress -and $totalForItems -gt 50) {
+                                    $percent = if ($totalForItems -gt 0) { [math]::Round(($savedCount / $totalForItems) * 100) } else { 0 }
+                                    Write-Progress -Activity "Saving to '$Bucket'" -Status "$savedCount object(s) saved" -PercentComplete $percent -CurrentOperation ([System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename))
+                                }
+                            }
+                            elseif ($writeResult.Skipped) { $skippedCount++; $null = $skippedKeys.Add($keyName) }
+                            else { $failedCount++ }
+                            if ($writeResult.Fallback) { $fallbackCount++ }
+                            if ($writeResult.FormatFallback) { $formatFallbackCount++ }
+                        }
+                        $index += $subIdx - 1
+                        continue
                     }
                 }
                 $itemFilename = Get-BucketFilename -Item $item -Key $Key -KeyProperty $KeyProperty -AsTimestamp:$AsTimestamp.IsPresent -Index $index -Extension $extension
@@ -1720,8 +1800,74 @@ function New-BucketObject {
                 if ($funnelDef) {
                     $matchesAppliesTo = -not $funnelDef.ContainsKey('AppliesTo') -or ($null -ne ($item | Where-Object $funnelDef.AppliesTo))
                     if ($matchesAppliesTo) {
-                        $item = $item | ForEach-Object $funnelDef.Filter
-                        if ($null -eq $item) { $skippedCount++; $index++; continue }
+                        $funnelItems = @($item | ForEach-Object $funnelDef.Transform) | Where-Object { $_ -ne $null }
+                        if ($funnelItems.Count -eq 0) { $skippedCount++; $index++; continue }
+                        $subIdx = 0
+                        $expansionKeys = @{}
+                        foreach ($subItem in $funnelItems) {
+                            $subIdx++
+                            $item = $subItem
+                            $itemFilename = Get-BucketFilename -Item $item -Key $Key -KeyProperty $KeyProperty -AsTimestamp:$AsTimestamp.IsPresent -Index ($index + $subIdx - 1) -Extension $extension
+                            if ($null -eq $itemFilename) { $skippedCount++; continue }
+                            $keyName = if ($itemFilename.OriginalKey) { $itemFilename.OriginalKey } else { [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename) }
+                            if ($funnelItems.Count -gt 1) {
+                                $baseSafeKey = [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename)
+                                $baseOrigKey = $keyName
+                                if ($expansionKeys.ContainsKey($baseSafeKey)) {
+                                    $idx = 1
+                                    while ($true) {
+                                        $candidateKey = "${baseSafeKey}_${idx}"
+                                        if ($expansionKeys.ContainsKey($candidateKey)) { $idx++; continue }
+                                        break
+                                    }
+                                    $safeKey = "${baseSafeKey}_${idx}"
+                                    $keyName = "${baseOrigKey}_${idx}"
+                                    $itemFilename = [PSCustomObject]@{ Filename = "${safeKey}${extension}"; Sanitized = $itemFilename.Sanitized; OriginalKey = $keyName }
+                                }
+                                $expansionKeys[[System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename)] = $true
+                            }
+                            if ($subIdx -gt 1) { $expandedCount++ }
+                            if ($AutoIndex) {
+                                $baseSafeKey = [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename)
+                                $baseOrigKey = $keyName
+                                $inBatchCollision = $seenKeys.ContainsKey($baseSafeKey)
+                                $onDiskCollision = -not $Overwrite -and ([System.IO.File]::Exists((Join-Path $bucketPath "${baseSafeKey}.json")) -or [System.IO.File]::Exists((Join-Path $bucketPath "${baseSafeKey}.dat")))
+                                if ($inBatchCollision -or $onDiskCollision) {
+                                    $idx = 1
+                                    while ($true) {
+                                        $candidateKey = "${baseSafeKey}_${idx}"
+                                        if ($seenKeys.ContainsKey($candidateKey)) { $idx++; continue }
+                                        if (-not $Overwrite -and ([System.IO.File]::Exists((Join-Path $bucketPath "${candidateKey}.json")) -or [System.IO.File]::Exists((Join-Path $bucketPath "${candidateKey}.dat")))) { $idx++; continue }
+                                        break
+                                    }
+                                    $safeKey = "${baseSafeKey}_${idx}"
+                                    $keyName = "${baseOrigKey}_${idx}"
+                                    $itemFilename = [PSCustomObject]@{ Filename = "${safeKey}${extension}"; Sanitized = $itemFilename.Sanitized; OriginalKey = $keyName }
+                                    $indexedCount++
+                                    $seenKeys[$safeKey] = $true
+                                } else {
+                                    $seenKeys[$baseSafeKey] = $true
+                                }
+                            }
+                            if ($itemFilename.Sanitized) { $sanitizedCount++; $null = $sanitizedKeys.Add([PSCustomObject]@{ Original = $itemFilename.OriginalKey; Sanitized = [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename) }) }
+                            $itemFilePath = Join-Path $bucketPath $itemFilename.Filename
+                            $writeResult = Save-BucketFile -Path $itemFilePath -Item $item -Extension $extension -AsBinary:$AsBinary.IsPresent -Compress:$Compress.IsPresent -Depth $Depth -BinaryDepth $BinaryDepth -Overwrite:$Overwrite.IsPresent -BucketPath $bucketPath -Bucket $Bucket
+                            if ($writeResult.Success) {
+                                $savedCount++
+                                $null = $storedKeys.Add($keyName)
+                                if ($writeResult.Overwritten) { $overwrittenCount++; $null = $overwrittenKeys.Add($keyName) }
+                                if ($showProgress -and $totalForItems -gt 50) {
+                                    $percent = if ($totalForItems -gt 0) { [math]::Round(($savedCount / $totalForItems) * 100) } else { 0 }
+                                    Write-Progress -Activity "Saving to '$Bucket'" -Status "$savedCount object(s) saved" -PercentComplete $percent -CurrentOperation ([System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename))
+                                }
+                            }
+                            elseif ($writeResult.Skipped) { $skippedCount++; $null = $skippedKeys.Add($keyName) }
+                            else { $failedCount++ }
+                            if ($writeResult.Fallback) { $fallbackCount++ }
+                            if ($writeResult.FormatFallback) { $formatFallbackCount++ }
+                        }
+                        $index += $subIdx - 1
+                        continue
                     }
                 }
                 $itemFilename = Get-BucketFilename -Item $item -Key $Key -KeyProperty $KeyProperty -AsTimestamp:$AsTimestamp.IsPresent -Index $index -Extension $extension
@@ -1783,6 +1929,11 @@ function New-BucketObject {
                 Write-Host $overwrittenCount -NoNewline -ForegroundColor $script:CNum
                 Write-Host " overwritten" -ForegroundColor $script:CSkip
             }
+            if ($expandedCount -gt 0) {
+                Write-Host "  " -NoNewline
+                Write-Host $expandedCount -NoNewline -ForegroundColor $script:CNum
+                Write-Host " expanded (multi-emit funnel)" -ForegroundColor $script:CSkip
+            }
             if ($indexedCount -gt 0) {
                 Write-Host "  " -NoNewline
                 Write-Host $indexedCount -NoNewline -ForegroundColor $script:CNum
@@ -1819,6 +1970,7 @@ function New-BucketObject {
                 Skipped     = $skippedCount
                 Overwritten = $overwrittenCount
                 Indexed     = $indexedCount
+                Expanded    = $expandedCount
                 Sanitized   = $sanitizedCount
                 Failed      = $failedCount
                 Total       = $savedCount + $skippedCount + $failedCount
@@ -2642,8 +2794,8 @@ function New-Funnel {
     (optionally modified), or $null to drop it. This works identically on fill and scoop.
     .PARAMETER Name
     Name for the funnel. Used to reference it later via -Funnel.
-    .PARAMETER Filter
-    ScriptBlock defining the funnel logic. Use $_ for the pipeline object.
+    .PARAMETER Transform
+    ScriptBlock defining the funnel transform logic. Use $_ for the pipeline object.
     .PARAMETER Description
     Optional human-readable description of what the funnel does.
     .PARAMETER Force
@@ -2651,14 +2803,14 @@ function New-Funnel {
     .PARAMETER Quiet
     Suppress success output.
     .EXAMPLE
-    New-Funnel -Name admins -Filter { if ($_.Role -eq "admin") { $_ } }
+    New-Funnel -Name admins -Transform { if ($_.Role -eq "admin") { $_ } }
     .EXAMPLE
-    New-Funnel -Name add-source -Filter { $_ | Add-Member -NotePropertyName "Source" -NotePropertyValue "import" -PassThru } -Description "Adds Source property"
+    New-Funnel -Name add-source -Transform { $_ | Add-Member -NotePropertyName "Source" -NotePropertyValue "import" -PassThru } -Description "Adds Source property"
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)][string]$Name,
-        [Parameter(Mandatory = $true)][scriptblock]$Filter,
+        [Parameter(Mandatory = $true)][scriptblock]$Transform,
         [string]$Description = "",
         [scriptblock]$AppliesTo,
         [switch]$Force,
@@ -2670,8 +2822,8 @@ function New-Funnel {
     $funnelFile = Join-Path $funnelDir "$Name.json"
     if ((Test-Path $funnelFile) -and -not $Force) { throw "Funnel '$Name' already exists. Use -Force to overwrite." }
 
-    $saveObj = @{ Filter = "$Filter"; Description = $Description }
-    $cacheObj = @{ Filter = "$Filter"; Description = $Description }
+    $saveObj = @{ Transform = "$Transform"; Description = $Description }
+    $cacheObj = @{ Transform = "$Transform"; Description = $Description }
     if ($AppliesTo) { $saveObj.AppliesTo = "$AppliesTo"; $cacheObj.AppliesTo = "$AppliesTo" }
     $text = $saveObj | ConvertTo-Json
     [System.IO.File]::WriteAllText($funnelFile, $text, [System.Text.Encoding]::UTF8)
@@ -2707,7 +2859,7 @@ function Get-Funnel {
 
     if ($Name) {
         $def = Get-FunnelDefinition -Name $Name
-        $out = [PSCustomObject]@{ Name = $Name; Filter = $def.Filter; Description = $def.Description }
+        $out = [PSCustomObject]@{ Name = $Name; Transform = $def.Transform; Description = $def.Description }
         if ($def.AppliesTo) { $out | Add-Member -NotePropertyName AppliesTo -NotePropertyValue $def.AppliesTo }
         $out
         return
@@ -2720,7 +2872,7 @@ function Get-Funnel {
         foreach ($f in [System.IO.DirectoryInfo]::new($userDir).GetFiles("*.json")) {
             $fName = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
             $def = Get-FunnelDefinition -Name $fName
-            $out = [PSCustomObject]@{ Name = $fName; Filter = $def.Filter; Description = $def.Description }
+            $out = [PSCustomObject]@{ Name = $fName; Transform = $def.Transform; Description = $def.Description }
             if ($def.AppliesTo) { $out | Add-Member -NotePropertyName AppliesTo -NotePropertyValue $def.AppliesTo }
             $out
             $seen[$fName] = $true
@@ -2732,7 +2884,7 @@ function Get-Funnel {
             $fName = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
             if (-not $seen.ContainsKey($fName)) {
                 $def = Get-FunnelDefinition -Name $fName
-                $out = [PSCustomObject]@{ Name = $fName; Filter = $def.Filter; Description = $def.Description }
+                $out = [PSCustomObject]@{ Name = $fName; Transform = $def.Transform; Description = $def.Description }
                 if ($def.AppliesTo) { $out | Add-Member -NotePropertyName AppliesTo -NotePropertyValue $def.AppliesTo }
                 $out
             }
@@ -2748,21 +2900,21 @@ function Set-Funnel {
     already exist. Omitting -Filter or -Description keeps the current value.
     .PARAMETER Name
     Name of the funnel to update.
-    .PARAMETER Filter
+    .PARAMETER Transform
     New scriptblock for the funnel. Uses $_ for the pipeline object.
     .PARAMETER Description
     New description for the funnel.
     .PARAMETER Quiet
     Suppress success output.
     .EXAMPLE
-    Set-Funnel -Name admins -Filter { $_.Role -eq "admin" -and $_.Active -eq $true }
+    Set-Funnel -Name admins -Transform { $_.Role -eq "admin" -and $_.Active -eq $true }
     .EXAMPLE
     Set-Funnel -Name admins -Description "Filters active admin users"
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)][string]$Name,
-        [scriptblock]$Filter,
+        [scriptblock]$Transform,
         [string]$Description,
         [scriptblock]$AppliesTo,
         [switch]$Quiet
@@ -2773,12 +2925,15 @@ function Set-Funnel {
     if (-not (Test-Path $funnelFile)) { throw "Funnel '$Name' not found. Use New-Funnel to create it." }
 
     $existing = Get-Content -Path $funnelFile -Raw -Encoding UTF8 | ConvertFrom-Json
-    if ($Filter) { $existing.Filter = "$Filter" }
+    if (-not $existing.Transform -and $existing.Filter) {
+        $existing | Add-Member -NotePropertyName Transform -NotePropertyValue $existing.Filter
+    }
+    if ($Transform) { $existing.Transform = "$Transform" }
     if ($PSBoundParameters.ContainsKey('Description')) { $existing.Description = $Description }
     if ($PSBoundParameters.ContainsKey('AppliesTo')) { $existing.AppliesTo = "$AppliesTo" }
 
-    $saveObj = @{ Filter = $existing.Filter; Description = $existing.Description }
-    $cacheObj = @{ Filter = $existing.Filter; Description = $existing.Description }
+    $saveObj = @{ Transform = $existing.Transform; Description = $existing.Description }
+    $cacheObj = @{ Transform = $existing.Transform; Description = $existing.Description }
     if ($existing.AppliesTo) { $saveObj.AppliesTo = $existing.AppliesTo; $cacheObj.AppliesTo = $existing.AppliesTo }
     $text = $saveObj | ConvertTo-Json
     [System.IO.File]::WriteAllText($funnelFile, $text, [System.Text.Encoding]::UTF8)

@@ -314,7 +314,7 @@ $wt.Restart()
 $rawR = Get-BucketObject -Bucket f-raw
 Write-BenchResult "Raw store (6 properties)" $rawW $wt.ElapsedMilliseconds $rawR.Count
 
-New-Funnel -Name "bench-strip" -Filter { [PSCustomObject]@{ Id = $_.Id; Name = $_.Name; Value = $_.Value } } -Force -Quiet
+New-Funnel -Name "bench-strip" -Transform { [PSCustomObject]@{ Id = $_.Id; Name = $_.Name; Value = $_.Value } } -Force -Quiet
 Use-Bucket "f-funnel"
 $wt = [System.Diagnostics.Stopwatch]::StartNew()
 1..$N | ForEach-Object { [PSCustomObject]@{ Id = $_; Name = "obj-$_"; Value = (Get-Random); A = 1; B = 2; C = 3; D = 4; E = 5 } } |

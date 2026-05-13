@@ -68,13 +68,16 @@ PowerShell module for file-based PSObject storage using directory-backed "bucket
 | `Set-BucketRoot` | `-Path` (mandatory, positional) |
 | `Get-BucketRoot` | (no parameters) |
 | `Sync-BucketDrive` | (no parameters) |
-| `New-Funnel` | `-Name`, `-Filter` (mandatory scriptblock with `$_`), `-Description`, `-Force`, `-Quiet` |
+| `New-Funnel` | `-Name`, `-Transform` (mandatory scriptblock with `$_`), `-Description`, `-Force`, `-Quiet` |
 | `Get-Funnel` | `-Name` (positional 0, all if omitted) |
-| `Set-Funnel` | `-Name`, `-Filter`, `-Description`, `-Quiet` |
+| `Set-Funnel` | `-Name`, `-Transform`, `-Description`, `-Quiet` |
 | `Remove-Funnel` | `-Name`, `-Quiet` (SupportsShouldProcess) |
 
 ### Funnels
-Named reusable filter/transform scriptblocks stored in `$HOME/.buckets-system/funnels/` as JSON. Built-in funnels ship with the module in `Buckets/funnels/` (e.g. `file-light` for stripping FileInfo to essential metadata). User funnels shadow built-in ones with the same name. Built-in funnels cannot be removed via `Remove-Funnel` unless a user override exists. Referenced by `-Funnel` on `fill` (New-BucketObject) and `scoop` (Get-BucketObject). Funnel definitions cached per session in `$script:FunnelCache`. Scriptblocks use `$_` for the pipeline object. Funnels use transform semantics on both fill and scoop: return the object to keep it (optionally modified), return `$null` to drop it. Boolean expressions like `{ $_.Prop -gt 5 }` no longer work as filters — use `{ if ($_.Prop -gt 5) { $_ } }`. `-Funnel` also accepts ad-hoc scriptblocks directly. `Resolve-Funnel` is the private helper that compiles named funnels into scriptblocks at call time.
+Named reusable transform scriptblocks stored in `$HOME/.buckets-system/funnels/` as JSON. Built-in funnels ship with the module in `Buckets/funnels/` (e.g. `file-light` for stripping FileInfo to essential metadata). User funnels shadow built-in ones with the same name. Built-in funnels cannot be removed via `Remove-Funnel` unless a user override exists. Referenced by `-Funnel` on `fill` (New-BucketObject) and `scoop` (Get-BucketObject). Funnel definitions cached per session in `$script:FunnelCache`. Scriptblocks use `$_` for the pipeline object. Funnels use transform semantics on both fill and scoop: return the object to keep it (optionally modified), return `$null` to drop it. Boolean expressions like `{ $_.Prop -gt 5 }` no longer work as filters — use `{ if ($_.Prop -gt 5) { $_ } }`. `-Funnel` also accepts ad-hoc scriptblocks directly. `Resolve-Funnel` is the private helper that compiles named funnels into scriptblocks at call time.
+
+### Multi-emit Funnels
+When a funnel returns an array of objects from a single input (e.g. splitting a compound object into parts), each item is processed independently. On fill, each emitted item gets its own filename with within-batch auto-indexing if keys collide (e.g. `key_1`, `key_2`). On scoop, each emitted item is returned independently with the source metadata (all sub-items share the same `_BucketName`, `_BucketKey`, `_BucketFile`). `$null` entries in the emitted array are silently skipped. The `Expanded` counter tracks how many additional items were created by multi-emit beyond the first.
 
 ### Remove-Bucket Safety
 Only removes buckets containing exclusively `.dat`/`.json` files (or empty directories). Skips buckets with other file types with a warning. Uses standard `-Confirm` support (SupportsShouldProcess). `-Force` skips confirmation entirely. Shows a colored pre-confirmation summary listing bucket names, object counts, and sizes before the standard confirmation prompt.

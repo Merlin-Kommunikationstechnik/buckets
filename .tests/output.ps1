@@ -362,10 +362,10 @@ Remove-Item $exportJson, $exportBin -Force -ErrorAction SilentlyContinue
 Write-Host "`n[15] Funnels" -ForegroundColor Blue
 
 Write-Host "`n  --- New-Funnel ---" -ForegroundColor DarkGray
-New-Funnel -Name "demo-filter" -Filter { if ($_.Val -gt 0) { $_ } } -Description "Filters positive values" -Force
+New-Funnel -Name "demo-filter" -Transform { if ($_.Val -gt 0) { $_ } } -Description "Filters positive values" -Force
 
 Write-Host "`n  --- New-Funnel (duplicate, throw) ---" -ForegroundColor DarkGray
-try { New-Funnel -Name "demo-filter" -Filter { $_ } -ErrorAction Stop } catch { Write-Host "  $_" -ForegroundColor Red }
+try { New-Funnel -Name "demo-filter" -Transform { $_ } -ErrorAction Stop } catch { Write-Host "  $_" -ForegroundColor Red }
 
 Write-Host "`n  --- Get-Funnel (all) ---" -ForegroundColor DarkGray
 Get-Funnel | Format-Table
@@ -374,7 +374,7 @@ Write-Host "`n  --- Get-Funnel (single) ---" -ForegroundColor DarkGray
 Get-Funnel -Name "demo-filter" | Format-List
 
 Write-Host "`n  --- Set-Funnel ---" -ForegroundColor DarkGray
-Set-Funnel -Name "demo-filter" -Filter { if ($_.Val -ge 0) { $_ } } -Description "Updated filter"
+Set-Funnel -Name "demo-filter" -Transform { if ($_.Val -ge 0) { $_ } } -Description "Updated filter"
 
 Write-Host "`n  --- Remove-Funnel -WhatIf ---" -ForegroundColor DarkGray
 Remove-Funnel -Name "demo-filter" -WhatIf

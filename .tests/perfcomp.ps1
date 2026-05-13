@@ -195,7 +195,7 @@ $comp = Write-BucketsPhase -AsBinary -Label "Buckets Compressed"
 # 4. Buckets (JSON + Funnel strip)
 # ============================================================
 Write-Host "`n[4] Buckets (JSON + funnel strip)" -ForegroundColor Blue
-New-Funnel -Name "bench-perfcomp-strip" -Filter { [PSCustomObject]@{ _Id = $_.Id; Name = $_.Name; Value = $_.Value } } -Force -Quiet
+New-Funnel -Name "bench-perfcomp-strip" -Transform { [PSCustomObject]@{ _Id = $_.Id; Name = $_.Name; Value = $_.Value } } -Force -Quiet
 $funnel = Write-BucketsPhase -AsBinary:$false -Funnel "bench-perfcomp-strip" -Label "Buckets Funnel"
 Remove-Funnel -Name "bench-perfcomp-strip" -Quiet -Confirm:$false -ErrorAction SilentlyContinue
 

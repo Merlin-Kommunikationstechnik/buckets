@@ -1118,9 +1118,9 @@ New-BucketObject -Bucket edge -InputObject @{ _Id = "f3"; Role = "user"; Level =
   Verifies: New-Funnel creates a funnel file and it appears in Get-Funnel.
 #>
 Test-Funnel "New-Funnel creates named funnel" {
-    New-Funnel -Name "test-funnel-1" -Filter { if ($_.Level -gt 2) { $_ } } -Description "Level above 2"
+    New-Funnel -Name "test-funnel-1" -Transform { if ($_.Level -gt 2) { $_ } } -Description "Level above 2"
     $f = Get-Funnel -Name "test-funnel-1"
-    $null -ne $f -and $f.Filter -match 'Level' -and $f.Description -eq "Level above 2"
+    $null -ne $f -and $f.Transform -match 'Level' -and $f.Description -eq "Level above 2"
 }
 
 <#
@@ -1157,7 +1157,7 @@ Test-Funnel "Ad-hoc scriptblock on scoop (filter)" {
             should return $_ for items to keep and $null to skip.
 #>
 Test-Funnel "Named funnel on fill (transform)" {
-    New-Funnel -Name "test-funnel-fill" -Filter {
+    New-Funnel -Name "test-funnel-fill" -Transform {
         if ($_.Level -gt 2) { $_ } else { $null }
     } -Description "Fill transform demo" -Force
     $items = @(
@@ -1197,7 +1197,7 @@ Test-Funnel "Remove-Funnel -WhatIf preview" {
   Verifies: Remove-Funnel actually deletes the funnel file and cache entry.
 #>
 Test-Funnel "Remove-Funnel deletes funnel" {
-    New-Funnel -Name "test-funnel-del" -Filter { $true } -Force
+    New-Funnel -Name "test-funnel-del" -Transform { $true } -Force
     Remove-Funnel -Name "test-funnel-del" -Quiet
     $funnelDir = Join-Path $HOME ".buckets-system/funnels"
     $funnelFile = Join-Path $funnelDir "test-funnel-del.json"
@@ -1223,7 +1223,7 @@ if ($funnelFail -eq 0) {
 #>
 Test-Funnel "Built-in file-light funnel is available" {
     $f = Get-Funnel -Name "file-light"
-    $null -ne $f -and $f.Filter -match 'PSCustomObject' -and $f.Description -match "FileInfo" -and $f.AppliesTo -match 'FileSystemInfo'
+    $null -ne $f -and $f.Transform -match 'PSCustomObject' -and $f.Description -match "FileInfo" -and $f.AppliesTo -match 'FileSystemInfo'
 }
 
 <#
@@ -1270,11 +1270,11 @@ Test-Funnel "Remove-Funnel on built-in-only throws" {
             and Remove-Funnel on the override removes it, revealing built-in.
 #>
 Test-Funnel "User override of built-in funnel and removal" {
-    New-Funnel -Name "file-light" -Filter { $true } -Force -Quiet
+    New-Funnel -Name "file-light" -Transform { $true } -Force -Quiet
     $f = Get-Funnel -Name "file-light"
     Remove-Funnel -Name "file-light" -Quiet
     $after = Get-Funnel -Name "file-light"
-    $null -ne $after -and $f.Filter.Trim() -eq '$true' -and $after.Filter -match 'PSCustomObject'
+    $null -ne $after -and $f.Transform.Trim() -eq '$true' -and $after.Transform -match 'PSCustomObject'
 }
 
 <#
@@ -1282,7 +1282,7 @@ Test-Funnel "User override of built-in funnel and removal" {
   Verifies: Funnel with AppliesTo matching the input object type applies the transform.
 #>
 Test-Funnel "AppliesTo on fill, type matches" {
-    New-Funnel -Name "test-appliesto" -Filter { $_.ToUpper() } -AppliesTo { $_ -is [string] } -Force -Quiet
+    New-Funnel -Name "test-appliesto" -Transform { $_.ToUpper() } -AppliesTo { $_ -is [string] } -Force -Quiet
     $null = "hello" | New-BucketObject -Bucket edge -Key "appliesto-match" -Funnel "test-appliesto" -Quiet
     $saved = Get-BucketObject -Bucket edge -Key "appliesto-match"
     Remove-Funnel -Name "test-appliesto" -Quiet -Confirm:$false
@@ -1295,7 +1295,7 @@ Test-Funnel "AppliesTo on fill, type matches" {
   Verifies: Funnel with AppliesTo NOT matching the input object passes through unchanged.
 #>
 Test-Funnel "AppliesTo on fill, type mismatch passes through" {
-    New-Funnel -Name "test-appliesto2" -Filter { $_.ToUpper() } -AppliesTo { $_ -is [string] } -Force -Quiet
+    New-Funnel -Name "test-appliesto2" -Transform { $_.ToUpper() } -AppliesTo { $_ -is [string] } -Force -Quiet
     $null = 42 | New-BucketObject -Bucket edge -Key "appliesto-nomatch" -Funnel "test-appliesto2" -Quiet
     $saved = Get-BucketObject -Bucket edge -Key "appliesto-nomatch"
     Remove-Funnel -Name "test-appliesto2" -Quiet -Confirm:$false
@@ -1309,7 +1309,7 @@ Test-Funnel "AppliesTo on fill, type mismatch passes through" {
 #>
 Test-Funnel "AppliesTo on scoop filters correctly" {
     $bucket = "at-scoop"
-    New-Funnel -Name "test-scoop" -Filter { if ($_.ToUpper().StartsWith("A")) { $_ } } -AppliesTo { $_ -is [string] } -Force -Quiet
+    New-Funnel -Name "test-scoop" -Transform { if ($_.ToUpper().StartsWith("A")) { $_ } } -AppliesTo { $_ -is [string] } -Force -Quiet
     $null = "Alice" | New-BucketObject -Bucket $bucket -Key "a" -Quiet
     $null = "Bob" | New-BucketObject -Bucket $bucket -Key "b" -Quiet
     $null = 99 | New-BucketObject -Bucket $bucket -Key "n" -Quiet
@@ -1325,7 +1325,7 @@ Test-Funnel "AppliesTo on scoop filters correctly" {
 #>
 Test-Funnel "AppliesTo absent = legacy behavior" {
     $bucket = "at-legacy"
-    New-Funnel -Name "test-legacy" -Filter { if ($_ -gt 10) { $_ } } -Force -Quiet
+    New-Funnel -Name "test-legacy" -Transform { if ($_ -gt 10) { $_ } } -Force -Quiet
     $null = 5 | New-BucketObject -Bucket $bucket -Key "low" -Quiet
     $null = 15 | New-BucketObject -Bucket $bucket -Key "high" -Quiet
     $results = Get-BucketObject -Bucket $bucket -Funnel "test-legacy"
@@ -1339,7 +1339,7 @@ Test-Funnel "AppliesTo absent = legacy behavior" {
   Verifies: AppliesTo is saved and visible via Get-Funnel output.
 #>
 Test-Funnel "New-Funnel -AppliesTo persists and shows in Get-Funnel" {
-    New-Funnel -Name "test-show-at" -Filter { $true } -AppliesTo { $_ -is [int] } -Force -Quiet
+    New-Funnel -Name "test-show-at" -Transform { $true } -AppliesTo { $_ -is [int] } -Force -Quiet
     $f = Get-Funnel -Name "test-show-at"
     Remove-Funnel -Name "test-show-at" -Quiet -Confirm:$false
     $null -ne $f.AppliesTo -and $f.AppliesTo -match 'is \[int\]'
@@ -1350,7 +1350,7 @@ Test-Funnel "New-Funnel -AppliesTo persists and shows in Get-Funnel" {
   Verifies: A funnel on scoop that transforms the object by adding a property.
 #>
 Test-Funnel "Transform on scoop adds property" {
-    New-Funnel -Name "test-transform-scoop" -Filter { $_ | Add-Member -NotePropertyName "Scooped" -NotePropertyValue $true -PassThru } -Force -Quiet
+    New-Funnel -Name "test-transform-scoop" -Transform { $_ | Add-Member -NotePropertyName "Scooped" -NotePropertyValue $true -PassThru } -Force -Quiet
     $bucket = "funnel-transform"
     New-BucketObject -Bucket $bucket -InputObject @{ _Id = "ft1"; Name = "Alice"; Role = "admin" } -KeyProperty _Id -Quiet
     New-BucketObject -Bucket $bucket -InputObject @{ _Id = "ft2"; Name = "Bob"; Role = "user" } -KeyProperty _Id -Quiet
@@ -1368,6 +1368,83 @@ Test-Funnel "Transform on scoop adds property" {
 Test-Funnel "Get-Bucket has no -Funnel parameter" {
     $cmd = Get-Command Get-Bucket
     -not ($cmd.Parameters.ContainsKey('Funnel'))
+}
+
+<#
+  21. Multi-emit on fill (splits one input into multiple stored objects)
+  Verifies: Funnel returning array stores each item independently.
+#>
+Test-Funnel "Multi-emit on fill splits object into multiple items" {
+    $bucket = "multi-fill"
+    $obj = @{ Name = "Project"; Members = @("Alice", "Bob", "Carol") }
+    New-Funnel -Name "test-multi-fill" -Transform {
+        $_.Members | ForEach-Object { [PSCustomObject]@{ Name = $_; Project = $_.Name; Role = "member" } }
+    } -Force -Quiet
+    New-BucketObject -Bucket $bucket -InputObject $obj -KeyProperty Name -Funnel "test-multi-fill" -Quiet
+    $results = Get-BucketObject -Bucket $bucket
+    Remove-Funnel -Name "test-multi-fill" -Quiet -Confirm:$false
+    Remove-Bucket $bucket -Force -Confirm:$false -Recurse -Quiet
+    @($results).Count -eq 3 -and ($results.Name -contains "Alice") -and ($results.Name -contains "Bob") -and ($results.Name -contains "Carol")
+}
+
+<#
+  22. Multi-emit on scoop (expands one stored object into multiple outputs)
+  Verifies: Funnel returning array on scoop returns all sub-items with shared metadata.
+#>
+Test-Funnel "Multi-emit on scoop expands object into multiple items" {
+    $bucket = "multi-scoop"
+    $obj = @{ _Id = "compound"; Parts = @("A", "B", "C"); Label = "Test" }
+    New-BucketObject -Bucket $bucket -InputObject $obj -KeyProperty _Id -Quiet
+    $results = Get-BucketObject -Bucket $bucket -Funnel {
+        $_.Parts | ForEach-Object { [PSCustomObject]@{ Part = $_; Label = $_.Label } }
+    }
+    Remove-Bucket $bucket -Force -Confirm:$false -Recurse -Quiet
+    @($results).Count -eq 3 -and ($results.Part -contains "A") -and ($results.Part -contains "B") -and ($results.Part -contains "C") -and ($results[0]._BucketName -eq $bucket) -and ($results[0]._BucketKey -eq "compound")
+}
+
+<#
+  23. Multi-emit with $null entries (should be skipped)
+  Verifies: $null entries in emitted array are silently dropped.
+#>
+Test-Funnel "Multi-emit skips null entries" {
+    $bucket = "multi-null"
+    $obj = @{ _Id = "mixed"; Items = @("keep", $null, "also-keep") }
+    New-BucketObject -Bucket $bucket -InputObject $obj -KeyProperty _Id -Quiet
+    $results = Get-BucketObject -Bucket $bucket -Funnel {
+        $_.Items | ForEach-Object { if ($_ -ne $null) { [PSCustomObject]@{ Value = $_; Label = $_.Label } } else { $null } }
+    }
+    Remove-Bucket $bucket -Force -Confirm:$false -Recurse -Quiet
+    @($results).Count -eq 2 -and ($results.Value -contains "keep") -and ($results.Value -contains "also-keep")
+}
+
+<#
+  24. Multi-emit with literal -Key (within-batch indexing)
+  Verifies: When funnel emits multiple items with a literal -Key, items get indexed.
+#>
+Test-Funnel "Multi-emit with -Key applies within-batch indexing" {
+    New-Funnel -Name "test-multi-key" -Transform {
+        @{ _Id = "split1"; Value = "first" }, @{ _Id = "split2"; Value = "second" }
+    } -Force -Quiet
+    $result = New-BucketObject -Bucket edge -InputObject @{} -Key "multi-key-test" -Funnel "test-multi-key" -PassThru
+    Remove-Funnel -Name "test-multi-key" -Quiet -Confirm:$false
+    $result.Saved -eq 2 -and $result.Expanded -eq 1 -and @($result.StoredKeys)[1] -like "*_1"
+}
+
+<#
+  25. Expanded count in summary and PassThru
+  Verifies: PassThru shows Expanded property when multi-emit occurs.
+#>
+Test-Funnel "Expanded count in PassThru" {
+    $bucket = "multi-exp-pt"
+    $obj = @{ Group = "Root"; Members = @("X", "Y") }
+    New-Funnel -Name "test-exp-pt" -Transform {
+        $parent = $_.Group
+        $_.Members | ForEach-Object { [PSCustomObject]@{ Member = $_; Group = $parent } }
+    } -Force -Quiet
+    $result = New-BucketObject -Bucket $bucket -InputObject $obj -KeyProperty Member -Funnel "test-exp-pt" -PassThru
+    Remove-Funnel -Name "test-exp-pt" -Quiet -Confirm:$false
+    Remove-Bucket $bucket -Force -Confirm:$false -Recurse -Quiet
+    $result.Saved -eq 2 -and $result.Expanded -eq 1 -and $null -ne $result.StoredKeys
 }
 
 
