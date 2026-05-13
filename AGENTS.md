@@ -45,12 +45,13 @@ PowerShell module for file-based PSObject storage using directory-backed "bucket
 - Arrays stored as individual files
 - Key sanitization: `/`, `:`, `*`, `?`, `"`, `<`, `>`, `|`, `[`, `]` → `_`
 - Empty keys after sanitization are rejected
+- `-AutoIndex` on `New-BucketObject`: when duplicate keys occur (within batch or pre-existing on disk), append `_1`, `_2`, etc. instead of skipping. With `-Overwrite`, first occurrence overwrites on disk; subsequent occurrences get indexed. No effect on GUID or timestamp keys.
 
 ## Cmdlets
 
 | Cmdlet | Key Params |
 |--------|-----------|
-| `New-BucketObject` | `-InputObject` (pipeline), `-Bucket` (default "default"), `-Key`, `-KeyProperty`, `-AsBinary`, `-AsTimestamp`, `-Depth`, `-BinaryDepth`, `-Compress`, `-Quiet`, `-Overwrite`, `-Funnel` |
+| `New-BucketObject` | `-InputObject` (pipeline), `-Bucket` (default "default"), `-Key`, `-KeyProperty`, `-AsBinary`, `-AsTimestamp`, `-Depth`, `-BinaryDepth`, `-Compress`, `-Quiet`, `-Overwrite`, `-AutoIndex`, `-Funnel` |
 | `Get-BucketObject` | `-Bucket` (positional 0, wildcards ok, all if omitted), `-Key` (positional 1), `-Match` (hashtable, supports $null), `-Filter` (scriptblock with `$_`), `-Recurse` (now default, kept for compat), `-NoRecurse`, `-First`, `-Skip`, `-Funnel` |
 | `Set-BucketObject` | `-InputObject` (pipeline binds `_BucketName`/`_BucketKey` or partial update), `-Bucket`, `-Key`, `-AsBinary`, `-Compress`, `-PassThru`, `-Quiet` |
 | `Remove-BucketObject` | `-Bucket`, `-Key` or `-All` or `-Match`/`-Filter` (mutual param sets), `-PassThru`, `-Quiet`, `-WhatIf` (SupportsShouldProcess) |

@@ -48,9 +48,10 @@ New-BucketObject
     [-Depth <int>]
     [-BinaryDepth <int>]
     [-AsTimestamp]
-    [-AsBinary]
+[-AsBinary]
     [-Compress]
     [-Overwrite]
+    [-AutoIndex]
     [-Quiet]
     [<CommonParameters>]
 ```
@@ -67,6 +68,7 @@ New-BucketObject
 | `-AsBinary` | Store in binary format (`.dat`) | `false` |
 | `-Compress` | GZip compress binary output | `false` |
 | `-Overwrite` | Overwrite existing objects with the same key | `false` |
+| `-AutoIndex` | Append `_1`, `_2`, etc. to duplicate keys instead of skipping | `false` |
 | `-Quiet` | Suppress output | `false` |
 
     )

@@ -1571,6 +1571,10 @@ function New-BucketObject {
     Suppress all output. No progress indicator, no summary.
     .PARAMETER Overwrite
     Overwrite existing objects with the same key. Default: $false.
+    .PARAMETER AutoIndex
+    When duplicate keys occur within the batch, append an incrementing index instead of skipping.
+    First duplicate gets _1, second gets _2, etc. Compatible with -Overwrite. No effect on
+    GUID or timestamp-based keys (already unique).
     .PARAMETER PassThru
     Emit a metadata object with details of the operation (StoredKeys, SkippedKeys, SanitizedKeys, OverwrittenKeys, counts, format).
     .OUTPUTS
@@ -1582,6 +1586,8 @@ function New-BucketObject {
     New-BucketObject -Bucket config -InputObject $config -Key "app-settings"
     .EXAMPLE
     New-BucketObject -Bucket users -InputObject $user -KeyProperty Name -AsBinary
+    .EXAMPLE
+    New-BucketObject -Bucket logs -InputObject $events -KeyProperty Level -AutoIndex
     #>
     [CmdletBinding()]
     param(
@@ -1596,6 +1602,7 @@ function New-BucketObject {
         [switch]$AsBinary,
         [switch]$Compress,
         [switch]$Overwrite,
+        [switch]$AutoIndex,
         [switch]$Quiet,
         [switch]$PassThru,
         [object]$Funnel
@@ -1605,11 +1612,12 @@ function New-BucketObject {
         $bucketPath = Ensure-BucketExists -Name $Bucket -Path $Path
         $extension = if ($AsBinary) { ".dat" } else { ".json" }
         $savedCount = 0; $skippedCount = 0; $fallbackCount = 0; $formatFallbackCount = 0; $failedCount = 0
-        $overwrittenCount = 0; $sanitizedCount = 0
+        $overwrittenCount = 0; $sanitizedCount = 0; $indexedCount = 0
         $storedKeys = [System.Collections.ArrayList]::new()
         $skippedKeys = [System.Collections.ArrayList]::new()
         $sanitizedKeys = [System.Collections.ArrayList]::new()
         $overwrittenKeys = [System.Collections.ArrayList]::new()
+        $seenKeys = @{}
         $useVerbose = $VerbosePreference -eq 'Continue'
         $useQuiet = $Quiet.IsPresent
         $showProgress = -not $useVerbose -and -not $useQuiet
@@ -1642,6 +1650,28 @@ function New-BucketObject {
                 $itemFilename = Get-BucketFilename -Item $item -Key $Key -KeyProperty $KeyProperty -AsTimestamp:$AsTimestamp.IsPresent -Index $index -Extension $extension
                 if ($null -eq $itemFilename) { $skippedCount++; $index++; continue }
                 $keyName = if ($itemFilename.OriginalKey) { $itemFilename.OriginalKey } else { [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename) }
+                if ($AutoIndex) {
+                    $baseSafeKey = [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename)
+                    $baseOrigKey = $keyName
+                    $inBatchCollision = $seenKeys.ContainsKey($baseSafeKey)
+                    $onDiskCollision = -not $Overwrite -and ([System.IO.File]::Exists((Join-Path $bucketPath "${baseSafeKey}.json")) -or [System.IO.File]::Exists((Join-Path $bucketPath "${baseSafeKey}.dat")))
+                    if ($inBatchCollision -or $onDiskCollision) {
+                        $idx = 1
+                        while ($true) {
+                            $candidateKey = "${baseSafeKey}_${idx}"
+                            if ($seenKeys.ContainsKey($candidateKey)) { $idx++; continue }
+                            if (-not $Overwrite -and ([System.IO.File]::Exists((Join-Path $bucketPath "${candidateKey}.json")) -or [System.IO.File]::Exists((Join-Path $bucketPath "${candidateKey}.dat")))) { $idx++; continue }
+                            break
+                        }
+                        $safeKey = "${baseSafeKey}_${idx}"
+                        $keyName = "${baseOrigKey}_${idx}"
+                        $itemFilename = [PSCustomObject]@{ Filename = "${safeKey}${extension}"; Sanitized = $itemFilename.Sanitized; OriginalKey = $keyName }
+                        $indexedCount++
+                        $seenKeys[$safeKey] = $true
+                    } else {
+                        $seenKeys[$baseSafeKey] = $true
+                    }
+                }
                 if ($itemFilename.Sanitized) { $sanitizedCount++; $null = $sanitizedKeys.Add([PSCustomObject]@{ Original = $itemFilename.OriginalKey; Sanitized = [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename) }) }
                 $itemFilePath = Join-Path $bucketPath $itemFilename.Filename
                 $writeResult = Save-BucketFile -Path $itemFilePath -Item $item -Extension $extension -AsBinary:$AsBinary.IsPresent -Compress:$Compress.IsPresent -Depth $Depth -BinaryDepth $BinaryDepth -Overwrite:$Overwrite.IsPresent -BucketPath $bucketPath -Bucket $Bucket
@@ -1682,6 +1712,28 @@ function New-BucketObject {
                 $itemFilename = Get-BucketFilename -Item $item -Key $Key -KeyProperty $KeyProperty -AsTimestamp:$AsTimestamp.IsPresent -Index $index -Extension $extension
                 if ($null -eq $itemFilename) { $skippedCount++; $index++; continue }
                 $keyName = if ($itemFilename.OriginalKey) { $itemFilename.OriginalKey } else { [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename) }
+                if ($AutoIndex) {
+                    $baseSafeKey = [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename)
+                    $baseOrigKey = $keyName
+                    $inBatchCollision = $seenKeys.ContainsKey($baseSafeKey)
+                    $onDiskCollision = -not $Overwrite -and ([System.IO.File]::Exists((Join-Path $bucketPath "${baseSafeKey}.json")) -or [System.IO.File]::Exists((Join-Path $bucketPath "${baseSafeKey}.dat")))
+                    if ($inBatchCollision -or $onDiskCollision) {
+                        $idx = 1
+                        while ($true) {
+                            $candidateKey = "${baseSafeKey}_${idx}"
+                            if ($seenKeys.ContainsKey($candidateKey)) { $idx++; continue }
+                            if (-not $Overwrite -and ([System.IO.File]::Exists((Join-Path $bucketPath "${candidateKey}.json")) -or [System.IO.File]::Exists((Join-Path $bucketPath "${candidateKey}.dat")))) { $idx++; continue }
+                            break
+                        }
+                        $safeKey = "${baseSafeKey}_${idx}"
+                        $keyName = "${baseOrigKey}_${idx}"
+                        $itemFilename = [PSCustomObject]@{ Filename = "${safeKey}${extension}"; Sanitized = $itemFilename.Sanitized; OriginalKey = $keyName }
+                        $indexedCount++
+                        $seenKeys[$safeKey] = $true
+                    } else {
+                        $seenKeys[$baseSafeKey] = $true
+                    }
+                }
                 if ($itemFilename.Sanitized) { $sanitizedCount++; $null = $sanitizedKeys.Add([PSCustomObject]@{ Original = $itemFilename.OriginalKey; Sanitized = [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename) }) }
                 $itemFilePath = Join-Path $bucketPath $itemFilename.Filename
                 $writeResult = Save-BucketFile -Path $itemFilePath -Item $item -Extension $extension -AsBinary:$AsBinary.IsPresent -Compress:$Compress.IsPresent -Depth $Depth -BinaryDepth $BinaryDepth -Overwrite:$Overwrite.IsPresent -BucketPath $bucketPath -Bucket $Bucket
@@ -1716,6 +1768,11 @@ function New-BucketObject {
                 Write-Host $overwrittenCount -NoNewline -ForegroundColor $script:CNum
                 Write-Host " overwritten" -ForegroundColor $script:CSkip
             }
+            if ($indexedCount -gt 0) {
+                Write-Host "  " -NoNewline
+                Write-Host $indexedCount -NoNewline -ForegroundColor $script:CNum
+                Write-Host " indexed (auto-key)" -ForegroundColor $script:CSkip
+            }
             if ($sanitizedCount -gt 0) {
                 Write-Host "  " -NoNewline
                 Write-Host $sanitizedCount -NoNewline -ForegroundColor $script:CNum
@@ -1746,6 +1803,7 @@ function New-BucketObject {
                 Saved       = $savedCount
                 Skipped     = $skippedCount
                 Overwritten = $overwrittenCount
+                Indexed     = $indexedCount
                 Sanitized   = $sanitizedCount
                 Failed      = $failedCount
                 Total       = $savedCount + $skippedCount + $failedCount

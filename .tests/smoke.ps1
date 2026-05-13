@@ -4,9 +4,7 @@
     Smoke test for latest committed features.
 .DESCRIPTION
     OVERWRITE this file when committing new features.
-    Tests: JSON-as-default format, funnel transform semantics on scoop,
-    funnel filter via $null, Get-Bucket no longer accepts -Funnel,
-    Resolve-Funnel helper.
+    Tests: -AutoIndex parameter on New-BucketObject.
 #>
 
 Remove-Module Buckets -ErrorAction SilentlyContinue
@@ -22,12 +20,16 @@ function Use-Bucket {
 }
 
 # === 1. Create test data ===
-New-BucketObject -Bucket "smoke/users" -InputObject @(
-    @{ _Id = "u1"; Name = "Alice"; Role = "admin" },
-    @{ _Id = "u2"; Name = "Bob"; Role = "user" },
-    @{ _Id = "u3"; Name = "Carol"; Role = "user" }
-) -KeyProperty _Id -Quiet
+New-BucketObject -Bucket "smoke/dup" -InputObject @(
+    @{ Name = "Alice"; Role = "admin" },
+    @{ Name = "Bob"; Role = "user" },
+    @{ Name = "Alice"; Role = "guest" }
+) -KeyProperty Name -AutoIndex -Quiet
 Use-Bucket "smoke"
+
+New-BucketObject -Bucket "smoke/pre" -InputObject @{ _Id = "test"; Val = 1 } -KeyProperty _Id -Quiet
+New-BucketObject -Bucket "smoke/pre" -InputObject @{ _Id = "test"; Val = 2 } -KeyProperty _Id -AutoIndex -Quiet
+Use-Bucket "smoke/pre"
 
 # === 2. Run smoke tests ===
 $pass = 0; $fail = 0
@@ -48,77 +50,54 @@ function Test-Feature {
     }
 }
 
-Write-Host "`n[Smoke Test] Funnel Consistency" -ForegroundColor Blue
+Write-Host "`n[Smoke Test] AutoIndex" -ForegroundColor Blue
 
-# Feature: Scoop funnel filters with $null return (transform semantics)
-Test-Feature "Scoop funnel filters via if/$null pattern" {
-    $result = Get-BucketObject -Bucket "smoke/users" -Funnel { if ($_.Role -eq "admin") { $_ } }
-    @($result).Count -eq 1 -and @($result)[0].Name -eq "Alice"
+Test-Feature "AutoIndex within-batch duplicates" {
+    $keys = (Get-BucketKeys -Bucket "smoke/dup").Key
+    $keys.Count -eq 3 -and "Alice" -in $keys -and "Alice_1" -in $keys -and "Bob" -in $keys
 }
 
-# Feature: Scoop funnel transforms (add property)
-Test-Feature "Scoop funnel transforms (adds property)" {
-    $result = Get-BucketObject -Bucket "smoke/users" -Funnel { $_ | Add-Member -NotePropertyName "Seen" -NotePropertyValue $true -PassThru }
-    @($result).Count -eq 3 -and @($result | Where-Object { $_.Seen -eq $true }).Count -eq 3
+Test-Feature "AutoIndex pre-existing key" {
+    $keys = (Get-BucketKeys -Bucket "smoke/pre").Key
+    $keys.Count -eq 2 -and "test" -in $keys -and "test_1" -in $keys
 }
 
-# Feature: Named funnel on scoop with transform semantics
-Test-Feature "Named funnel on scoop (transform filter)" {
-    New-Funnel -Name "smoke-admins" -Filter { if ($_.Role -eq "admin") { $_ } } -Force -Quiet
-    $result = Get-BucketObject -Bucket "smoke/users" -Funnel "smoke-admins"
-    Remove-Funnel -Name "smoke-admins" -Quiet -Confirm:$false
-    @($result).Count -eq 1 -and @($result)[0].Name -eq "Alice"
+Test-Feature "AutoIndex without -AutoIndex skips duplicates" {
+    $r = New-BucketObject -Bucket "smoke/skip" -InputObject @(
+        @{ Name = "x"; V = 1 },
+        @{ Name = "x"; V = 2 }
+    ) -KeyProperty Name -PassThru
+    $r.Saved -eq 1 -and $r.Skipped -eq 1
 }
 
-# Feature: Fill funnel still works (transform before store)
-Test-Feature "Fill funnel transforms before store" {
-    New-Funnel -Name "smoke-xform" -Filter { $_ | Add-Member -NotePropertyName "Source" -NotePropertyValue "test" -PassThru } -Force -Quiet
-    New-BucketObject -Bucket "smoke/transformed" -InputObject ([PSCustomObject]@{ _Id = "tx1"; Val = 42 }) -KeyProperty _Id -Funnel "smoke-xform" -Quiet
-    Use-Bucket "smoke/transformed"
-    $obj = Get-BucketObject -Bucket "smoke/transformed" -Key "tx1"
-    Remove-Funnel -Name "smoke-xform" -Quiet -Confirm:$false
-    $null -ne $obj -and $obj.Source -eq "test"
+Test-Feature "AutoIndex -Overwrite replaces first, indexes rest" {
+    Remove-Bucket "smoke/ow" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet -ErrorAction SilentlyContinue
+    New-BucketObject -Bucket "smoke/ow" -InputObject @{ _Id = "k"; V = 1 } -KeyProperty _Id -Quiet
+    $items = @([PSCustomObject]@{ _Id = "k"; V = 10 }, [PSCustomObject]@{ _Id = "k"; V = 20 })
+    $r = $items | New-BucketObject -Bucket "smoke/ow" -KeyProperty _Id -AutoIndex -Overwrite -PassThru
+    $r.Saved -eq 2 -and $r.Indexed -eq 1 -and $r.Overwritten -eq 1
 }
 
-# Feature: Get-Bucket has no -Funnel parameter
-Test-Feature "Get-Bucket has no -Funnel parameter" {
-    $cmd = Get-Command Get-Bucket
-    -not ($cmd.Parameters.ContainsKey('Funnel'))
+Test-Feature "AutoIndex -Key with pipeline" {
+    Remove-Bucket "smoke/key" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet -ErrorAction SilentlyContinue
+    1..3 | ForEach-Object { [PSCustomObject]@{ N = $_ } } | New-BucketObject -Bucket "smoke/key" -Key "item" -AutoIndex -PassThru | Out-Null
+    $keys = (Get-BucketKeys -Bucket "smoke/key").Key
+    $keys.Count -eq 3 -and "item" -in $keys -and "item_1" -in $keys -and "item_2" -in $keys
 }
 
-# Feature: Ad-hoc scriptblock funnel on scoop
-Test-Feature "Ad-hoc scriptblock funnel on scoop" {
-    $result = Get-BucketObject -Bucket "smoke/users" -Funnel { if ($_.Name -like "A*") { $_ } }
-    @($result).Count -eq 1 -and @($result)[0]._Id -eq "u1"
+Test-Feature "AutoIndex no duplicates = no indexing" {
+    $r = New-BucketObject -Bucket "smoke/nodup" -InputObject @(
+        @{ Name = "A"; V = 1 },
+        @{ Name = "B"; V = 2 }
+    ) -KeyProperty Name -AutoIndex -PassThru
+    $r.Indexed -eq 0 -and $r.Saved -eq 2
 }
 
-# Feature: JSON depth auto-increment
-Test-Feature "JSON auto-depth (deep object round-trips)" {
-    $inner = "leaf"
-    for ($i = 1; $i -le 25; $i++) { $inner = @{ "L$i" = $inner } }
-    New-BucketObject -Bucket "smoke/deep" -InputObject $inner -Key "deep" -Depth 2 -Quiet
-    Use-Bucket "smoke/deep"
-    $obj = Get-BucketObject -Bucket "smoke/deep" -Key "deep"
-    $null -ne $obj
-}
-
-# Feature: JSON format fallback to binary
-Test-Feature "JSON fallback to binary (circular ref)" {
-    $circ = [PSCustomObject]@{ _Id = "circ"; Name = "loop" }
-    $circ | Add-Member -NotePropertyName "Self" -NotePropertyValue $circ
-    New-BucketObject -Bucket "smoke/deep" -InputObject $circ -KeyProperty _Id -Quiet -WarningAction SilentlyContinue
-    Use-Bucket "smoke/deep"
-    $retrieved = Get-BucketObject -Bucket "smoke/deep" -Key "circ" -WarningAction SilentlyContinue
-    $null -ne $retrieved -and $retrieved.Name -eq "loop"
-}
-
-# Feature: JSON shallow object stays as .json
-Test-Feature "JSON shallow stays .json" {
-    New-BucketObject -Bucket "smoke/jsonshallow" -InputObject @{ _Id = "js"; Val = 1 } -KeyProperty _Id -Quiet
-    Use-Bucket "smoke/jsonshallow"
-    $jsonPath = Join-Path (Get-BucketRoot) "smoke/jsonshallow/js.json"
-    $datPath = Join-Path (Get-BucketRoot) "smoke/jsonshallow/js.dat"
-    (Test-Path $jsonPath) -and -not (Test-Path $datPath)
+Test-Feature "AutoIndex PassThru includes Indexed" {
+    Remove-Bucket "smoke/pt" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet -ErrorAction SilentlyContinue
+    $items = @([PSCustomObject]@{ Name = "z"; V = 1 }, [PSCustomObject]@{ Name = "z"; V = 2 })
+    $r = $items | New-BucketObject -Bucket "smoke/pt" -KeyProperty Name -AutoIndex -PassThru
+    $r.Indexed -eq 1
 }
 
 # === 3. Cleanup ===

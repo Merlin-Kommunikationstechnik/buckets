@@ -943,9 +943,83 @@ Test-Edge "JSON shallow object stays as .json" {
 }
 
 # ============================================================
-# 20. Funnel operations
+# 20. AutoIndex
 # ============================================================
-Write-Host "`n[20] Funnels" -ForegroundColor Blue
+Write-Host "`n[20] AutoIndex" -ForegroundColor Blue
+
+Test-Edge "AutoIndex within-batch duplicates" {
+    Remove-Bucket "ai-dup" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    $items = @(
+        [PSCustomObject]@{ Name = "Alice"; Role = "admin" },
+        [PSCustomObject]@{ Name = "Bob"; Role = "user" },
+        [PSCustomObject]@{ Name = "Alice"; Role = "guest" }
+    )
+    $result = $items | New-BucketObject -Bucket ai-dup -KeyProperty Name -AutoIndex -PassThru
+    $keyNames = (Get-BucketKeys -Bucket ai-dup).Key
+    $ok = $keyNames.Count -eq 3 -and $keyNames -contains "Alice" -and $keyNames -contains "Alice_1" -and $keyNames -contains "Bob"
+    Remove-Bucket "ai-dup" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    $ok
+}
+
+Test-Edge "AutoIndex pre-existing key on disk" {
+    Remove-Bucket "ai-pre" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    New-BucketObject -Bucket ai-pre -InputObject @{ _Id = "test"; Val = 1 } -KeyProperty _Id -Quiet
+    New-BucketObject -Bucket ai-pre -InputObject @{ _Id = "test"; Val = 2 } -KeyProperty _Id -AutoIndex -PassThru | Out-Null
+    $keyNames = (Get-BucketKeys -Bucket ai-pre).Key
+    $ok = $keyNames.Count -eq 2 -and $keyNames -contains "test" -and $keyNames -contains "test_1"
+    Remove-Bucket "ai-pre" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    $ok
+}
+
+Test-Edge "AutoIndex with -Overwrite" {
+    Remove-Bucket "ai-ow" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    New-BucketObject -Bucket ai-ow -InputObject @{ _Id = "x"; Val = 1 } -KeyProperty _Id -Quiet
+    $items = @(
+        [PSCustomObject]@{ _Id = "x"; Val = 10 },
+        [PSCustomObject]@{ _Id = "x"; Val = 20 }
+    )
+    $result = $items | New-BucketObject -Bucket ai-ow -KeyProperty _Id -AutoIndex -Overwrite -PassThru
+    $keyNames = (Get-BucketKeys -Bucket ai-ow).Key
+    $objX = Get-BucketObject -Bucket ai-ow -Key "x"
+    $ok = $keyNames.Count -eq 2 -and $objX.Val -eq 10 -and $keyNames -contains "x_1"
+    Remove-Bucket "ai-ow" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    $ok
+}
+
+Test-Edge "AutoIndex with -Key (single key, multi-object pipeline)" {
+    Remove-Bucket "ai-key" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    1..3 | ForEach-Object { [PSCustomObject]@{ Num = $_ } } | New-BucketObject -Bucket ai-key -Key "item" -AutoIndex -PassThru | Out-Null
+    $keyNames = (Get-BucketKeys -Bucket ai-key).Key
+    $ok = $keyNames.Count -eq 3 -and $keyNames -contains "item" -and $keyNames -contains "item_1" -and $keyNames -contains "item_2"
+    Remove-Bucket "ai-key" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    $ok
+}
+
+Test-Edge "AutoIndex without duplicates (no index)" {
+    Remove-Bucket "ai-none" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    $items = @(
+        [PSCustomObject]@{ Name = "Alice"; Role = "admin" },
+        [PSCustomObject]@{ Name = "Bob"; Role = "user" }
+    )
+    $result = $items | New-BucketObject -Bucket ai-none -KeyProperty Name -AutoIndex -PassThru
+    $keyNames = (Get-BucketKeys -Bucket ai-none).Key
+    $ok = $keyNames.Count -eq 2 -and $keyNames -contains "Alice" -and $keyNames -contains "Bob" -and "Alice_1" -notin $keyNames
+    Remove-Bucket "ai-none" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    $ok
+}
+
+Test-Edge "AutoIndex PassThru includes Indexed count" {
+    Remove-Bucket "ai-pt" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    $items = @(
+        [PSCustomObject]@{ Name = "x"; V = 1 },
+        [PSCustomObject]@{ Name = "x"; V = 2 },
+        [PSCustomObject]@{ Name = "x"; V = 3 }
+    )
+    $result = $items | New-BucketObject -Bucket ai-pt -KeyProperty Name -AutoIndex -PassThru
+    $ok = $result.Indexed -eq 2
+    Remove-Bucket "ai-pt" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    $ok
+}
 
 $funnelResults = [System.Collections.ArrayList]::new()
 
