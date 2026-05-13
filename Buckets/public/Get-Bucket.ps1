@@ -326,33 +326,47 @@ function Get-Bucket {
     if (-not [string]::IsNullOrWhiteSpace($Name)) {
         if ($Name -match '[\*\?]') {
             $results = $results | Where-Object { $_.Name -like $Name }
-        } elseif ($Name.Contains('/')) {
-            # Nested path: exact match (avoids over-matching descendants).
-            # Resolve directly if non-recursive mode didn't scan this deep.
-            $results = $results | Where-Object { $_.Name -eq $Name }
-            if (-not $results) {
-                $nestedDir = Join-Path $Path ($Name.Replace('/', [System.IO.Path]::DirectorySeparatorChar))
-                if ([System.IO.Directory]::Exists($nestedDir)) {
-                    $total = 0
-                    $stack = [System.Collections.Stack]::new()
-                    $stack.Push($nestedDir)
-                    while ($stack.Count -gt 0) {
-                        $cur = [System.IO.DirectoryInfo]::new($stack.Pop())
-                        $total += $cur.GetFiles("*.dat").Length + $cur.GetFiles("*.json").Length
-                        foreach ($s in $cur.GetDirectories()) {
-                            if ($s.Name -ne ".buckets") { $stack.Push($s.FullName) }
+        } else {
+            # Exact directory path lookup — show contents (sub-buckets + objects)
+            $resolvedDir = Join-Path $Path ($Name.Replace('/', [System.IO.Path]::DirectorySeparatorChar))
+            if ([System.IO.Directory]::Exists($resolvedDir)) {
+                $results.Clear()
+
+                # Objects directly in this directory
+                $resolvedDi = [System.IO.DirectoryInfo]::new($resolvedDir)
+                foreach ($f in ($resolvedDi.GetFiles("*.dat") + $resolvedDi.GetFiles("*.json") | Sort-Object Name)) {
+                    $keyName = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
+                    $null = $results.Add([PSCustomObject]@{
+                        Name       = $keyName
+                        Type       = "Object"
+                        Format     = if ($f.Extension -eq '.dat') { "Binary" } else { "JSON" }
+                        Size       = $f.Length
+                        BucketName = $Name
+                    })
+                }
+
+                # Sub-buckets: enumerate, with optional recursion
+                function _EnumSub {
+                    param([string]$Dir, [string]$Rel, [int]$CDepth)
+                    $di = [System.IO.DirectoryInfo]::new($Dir)
+                    foreach ($child in ($di.GetDirectories() | Sort-Object Name)) {
+                        if ($child.Name -eq ".buckets") { continue }
+                        $childHasFiles = $child.GetFiles("*.dat").Length -gt 0 -or $child.GetFiles("*.json").Length -gt 0
+                        $childHasSub = @($child.GetDirectories() | Where-Object Name -ne '.buckets').Count -gt 0
+                        if (-not $childHasFiles -and -not $childHasSub) { continue }
+                        $childRel = "$Rel/$($child.Name)"
+                        $obj = [PSCustomObject]@{ Name = $childRel; Type = "Bucket"; ObjectCount = $child.GetFiles("*.dat").Length + $child.GetFiles("*.json").Length; HasSubBuckets = $childHasSub }
+                        Add-HiddenProperty -Target $obj -Name 'Path' -Value $child.FullName
+                        $null = $results.Add($obj)
+                        if ($Recurse -and $CDepth -lt $Depth -and $childHasSub) {
+                            _EnumSub -Dir $child.FullName -Rel $childRel -CDepth ($CDepth + 1)
                         }
                     }
-                    $hasSub = @([System.IO.DirectoryInfo]::new($nestedDir).GetDirectories() | Where-Object Name -ne '.buckets').Count -gt 0
-                    $obj = [PSCustomObject]@{ Name = $Name; ObjectCount = $total; HasSubBuckets = $hasSub }
-                    Add-HiddenProperty -Target $obj -Name 'Path' -Value $nestedDir
-                    $results = @($obj)
-                } else {
-                    $results = @()
                 }
+                _EnumSub -Dir $resolvedDir -Rel $Name -CDepth 1
+            } else {
+                $results = @()
             }
-        } else {
-            $results = $results | Where-Object { $_.Name -like "*$Name*" }
         }
     }
 

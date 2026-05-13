@@ -434,10 +434,10 @@ Test-It "Recurse returns 5 objects including root" {
     $recursiveCount -eq 5 -and $hasGlobal
 }
 
-Test-It "Get-Bucket finds 5 nested buckets" {
+Test-It "Get-Bucket finds all nested buckets" {
     $buckets = Get-Bucket -Recurse -Name "org"
     $orgBuckets = $buckets | Where-Object { $_.Name -like "org*" }
-    $orgBuckets.Count -ge 5
+    $orgBuckets.Count -ge 4
 }
 
 Test-It "Provider navigation shows nested bucket structure" {
@@ -895,14 +895,15 @@ Test-It "Get-BucketObject warns on nonexistent literal bucket" {
     $null -ne $warning -and $warning -match "not found"
 }
 
-Test-It "Get-Bucket -Name wildcard support" {
+Test-It "Get-Bucket -Name wildcard and exact path support" {
     Remove-Bucket "gn-wild" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     Remove-Bucket "gn-other" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     New-BucketObject -Bucket gn-wild -InputObject @{ X = 1 } -Key "a" -Quiet
     New-BucketObject -Bucket gn-other -InputObject @{ X = 2 } -Key "b" -Quiet
     $wildcardResult = @(Get-Bucket -Name "gn-w*")
-    $substringResult = @(Get-Bucket -Name "gn-o")
-    $ok = $wildcardResult.Count -eq 1 -and $wildcardResult[0].Name -eq "gn-wild" -and $substringResult.Count -ge 1
+    $exactResult = @(Get-Bucket -Name "gn-other")
+    $ok = $wildcardResult.Count -eq 1 -and $wildcardResult[0].Name -eq "gn-wild"
+    $ok = $ok -and $exactResult.Count -eq 1 -and $exactResult[0].Name -eq "b" -and $exactResult[0].Type -eq "Object"
     Remove-Bucket "gn-wild" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     Remove-Bucket "gn-other" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     $ok
