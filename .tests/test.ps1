@@ -26,16 +26,16 @@ function Test-It {
         $ok = & $Test
         if ($ok) {
             Write-Host "  $Name " -NoNewline -ForegroundColor DarkGray
-            Write-Host "✅ PASS" -ForegroundColor Green
+            Write-Host "PASS" -ForegroundColor Green
             $null = $testResults.Add([PSCustomObject]@{ Name = $Name; Status = "PASS"; Detail = "" })
         } else {
             Write-Host "  $Name " -NoNewline -ForegroundColor DarkGray
-            Write-Host "❌ FAIL" -ForegroundColor Red
+            Write-Host "FAIL" -ForegroundColor Red
             $null = $testResults.Add([PSCustomObject]@{ Name = $Name; Status = "FAIL"; Detail = "returned false" })
         }
     } catch {
         Write-Host "  $Name " -NoNewline -ForegroundColor DarkGray
-        Write-Host "❌ FAIL" -ForegroundColor Red
+        Write-Host "FAIL" -ForegroundColor Red
         $null = $testResults.Add([PSCustomObject]@{ Name = $Name; Status = "FAIL"; Detail = $_.Exception.Message })
     }
 }
@@ -1270,9 +1270,9 @@ $passCount = ($testResults | Where-Object { $_.Status -eq "PASS" }).Count
 $failCount = ($testResults | Where-Object { $_.Status -eq "FAIL" }).Count
 
 if ($failCount -eq 0) {
-    Write-Host "  ✅ All $passCount/$($testResults.Count) checks passed" -ForegroundColor Green
+    Write-Host "  All $passCount/$($testResults.Count) checks passed" -ForegroundColor Green
 } else {
-    Write-Host "  ❌ $($failCount)/$($testResults.Count) FAILED:" -ForegroundColor Red
+    Write-Host "  $($failCount)/$($testResults.Count) FAILED:" -ForegroundColor Red
     $testResults | Where-Object { $_.Status -eq "FAIL" } | ForEach-Object {
         Write-Host "    $($_.Name)" -ForegroundColor Red
         if ($_.Detail) { Write-Host "      $($_.Detail)" -ForegroundColor DarkGray }
