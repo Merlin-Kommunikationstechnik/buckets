@@ -26,6 +26,7 @@ Write-Host "========== Multi-emit funnel demo ==========" -ForegroundColor Cyan
 
 # --- 1. Transform (was Filter) rename ---
 Write-Host "`n[1]  New-Funnel uses -Transform (was -Filter)" -ForegroundColor Blue
+Write-Host "  Creating a named funnel that splits Items array into individual objects" -ForegroundColor DarkGray
 New-Funnel -Name "demo-split" -Transform {
     $orderId = $_.OrderId
     $_.Items | ForEach-Object { [PSCustomObject]@{ Item = $_; Order = $orderId } }
@@ -44,6 +45,8 @@ $order = @{
     Customer = "Acme Corp"
     Items = @("Widget", "Gadget", "Doodad")
 }
+Write-Host "  Source object has 1 OrderId and 3 Items" -ForegroundColor DarkGray
+Write-Host "  Funnel splits Items into individual stored objects" -ForegroundColor DarkGray
 New-BucketObject -Bucket orders -InputObject $order -KeyProperty Item -Funnel demo-split -PassThru | Format-List Saved, Expanded, StoredKeys
 
 Write-Host "  Objects stored:" -ForegroundColor DarkGray
@@ -56,6 +59,7 @@ $server = @{
     Host = "db-01"
     Services = @("postgresql", "redis", "nginx")
 }
+Write-Host "  Same shape as [2] but uses inline scriptblock instead of named funnel" -ForegroundColor DarkGray
 New-BucketObject -Bucket servers -InputObject $server -KeyProperty Service -Funnel {
     $hostName = $_.Host
     $_.Services | ForEach-Object { [PSCustomObject]@{ Service = $_; Host = $hostName } }
@@ -68,6 +72,8 @@ Get-BucketObject -Bucket servers | Format-Table Service, Host, _BucketKey
 Write-Host "`n[4]  Within-batch key indexing with literal -Key" -ForegroundColor Blue
 
 $batch = @{ Type = "event"; Payload = @("start", "stop") }
+Write-Host "  Funnel emits 2 items from a single input with -Key 'batch-run'" -ForegroundColor DarkGray
+Write-Host "  Second item auto-gets _1 suffix to avoid key collision" -ForegroundColor DarkGray
 New-Funnel -Name "demo-index" -Transform {
     $eventType = $_.Type
     $_.Payload | ForEach-Object { [PSCustomObject]@{ Event = $_; Type = $eventType } }
@@ -85,6 +91,7 @@ $compound = @{
     Title = "Q1 Summary"
     Sections = @("Revenue", "Costs", "Headcount")
 }
+Write-Host "  Storing one compound report object, then expanding Sections on read" -ForegroundColor DarkGray
 New-BucketObject -Bucket reports -InputObject $compound -KeyProperty _Id -Quiet
 
 $sections = Get-BucketObject -Bucket reports -Key report-Q1 -Funnel {
@@ -98,6 +105,7 @@ $sections | Format-Table Section, ReportTitle, _BucketKey, _BucketName
 Write-Host "`n[6]  Null entries in emitted array are skipped" -ForegroundColor Blue
 
 $mixed = @{ _Id = "mixed-input"; Values = @(1, $null, 2, $null, 3) }
+Write-Host "  Array has 5 values including 2 nulls — funnel silently drops nulls" -ForegroundColor DarkGray
 New-BucketObject -Bucket mixed -InputObject $mixed -KeyProperty _Id -Quiet
 
 $clean = Get-BucketObject -Bucket mixed -Key mixed-input -Funnel {
@@ -111,6 +119,7 @@ $clean | Format-Table Value, _BucketKey, _BucketName
 Write-Host "`n[7]  Expanded counter shown in summary" -ForegroundColor Blue
 
 $obj = @{ Group = "Colors"; Members = @("Red", "Green", "Blue") }
+Write-Host "  Summary line shows 'N expanded (multi-emit funnel)' when expansion occurs" -ForegroundColor DarkGray
 New-BucketObject -Bucket colors -InputObject $obj -KeyProperty Color -Funnel {
     $grp = $_.Group
     $_.Members | ForEach-Object { [PSCustomObject]@{ Color = $_; Group = $grp } }
@@ -118,6 +127,7 @@ New-BucketObject -Bucket colors -InputObject $obj -KeyProperty Color -Funnel {
 
 # --- cleanup ---
 Write-Host "`n--- cleanup ---" -ForegroundColor DarkGray
+Write-Host "  Removing funnels, buckets, and temp directory" -ForegroundColor DarkGray
 Remove-Funnel -Name demo-split -Quiet -Confirm:$false
 Remove-Funnel -Name demo-index -Quiet -Confirm:$false
 Remove-Bucket orders, servers, events, reports, mixed, colors -Force -Confirm:$false -Recurse -Quiet
