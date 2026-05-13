@@ -335,7 +335,7 @@ if ($null -eq $retrieved) {
 # ============================================================
 Write-Host "`n[14] Error conditions (missing keys, corrupted files, bad params)" -ForegroundColor Blue
 
-Write-Host "  Missing bucket key..." -NoNewline
+Write-Host "  Missing bucket key..." -NoNewline -ForegroundColor DarkGray
 try {
     Get-BucketObject -Bucket nonexistent-bucket-xyz -Key "missing" 2>$null
     Write-Host " OK (returns empty)" -ForegroundColor Magenta
@@ -343,7 +343,7 @@ try {
     Write-Host " FAIL: $_" -ForegroundColor Red
 }
 
-Write-Host "  Remove non-existent key..." -NoNewline
+Write-Host "  Remove non-existent key..." -NoNewline -ForegroundColor DarkGray
 try {
     Remove-BucketObject -Bucket users -Key "nonexistent-key" -WarningVariable warn -WarningAction SilentlyContinue 2>$null
     if ($warn) { Write-Host " OK (warning issued)" -ForegroundColor Magenta } else { Write-Host " FAIL (no warning)" -ForegroundColor Red }
@@ -351,7 +351,7 @@ try {
     Write-Host " FAIL: $_" -ForegroundColor Red
 }
 
-Write-Host "  Remove without -Key or -All..." -NoNewline
+Write-Host "  Remove without -Key or -All..." -NoNewline -ForegroundColor DarkGray
 try {
     Remove-BucketObject -Bucket users 2>$null
     Write-Host " FAIL (should have thrown)" -ForegroundColor Red
@@ -359,7 +359,7 @@ try {
     Write-Host " OK (threw: $($_.Exception.Message))" -ForegroundColor Magenta
 }
 
-Write-Host "  Set-BucketObject without bucket/key..." -NoNewline
+Write-Host "  Set-BucketObject without bucket/key..." -NoNewline -ForegroundColor DarkGray
 try {
     @{ Name = "test" } | Set-BucketObject 2>$null
     Write-Host " FAIL (should have thrown)" -ForegroundColor Red
@@ -367,7 +367,7 @@ try {
     Write-Host " OK (threw)" -ForegroundColor Magenta
 }
 
-Write-Host "  Corrupted file handling..." -NoNewline
+Write-Host "  Corrupted file handling..." -NoNewline -ForegroundColor DarkGray
 $usersPath = Join-Path $testRoot "users"
 $corruptPath = Join-Path $usersPath "corrupt.dat"
 [System.IO.File]::WriteAllText($corruptPath, "THIS_IS_NOT_VALID_BASE64!!!", [System.Text.Encoding]::UTF8)
@@ -380,7 +380,7 @@ if ($null -eq $retrieved -and $cWarn) {
 }
 Remove-Item $corruptPath -Force
 
-Write-Host "  Get-BucketObject -Key across multiple buckets (no null-file crash)..." -NoNewline
+Write-Host "  Get-BucketObject -Key across multiple buckets (no null-file crash)..." -NoNewline -ForegroundColor DarkGray
 try {
     $errorsBefore = $Error.Count
     New-BucketObject -Bucket bucket-a -InputObject @{ X = 1; _Id = "only-in-a" } -KeyProperty "_Id" -Quiet
@@ -404,7 +404,7 @@ try {
     Write-Host " FAIL: $_" -ForegroundColor Red
 }
 
-Write-Host "  Get-BucketObject -Key with case mismatch..." -NoNewline
+Write-Host "  Get-BucketObject -Key with case mismatch..." -NoNewline -ForegroundColor DarkGray
 try {
     $errorsBefore = $Error.Count
     New-BucketObject -Bucket casetest -InputObject @{ Val = 42; _Id = "MixedCase-Key" } -KeyProperty "_Id" -Quiet
@@ -420,7 +420,7 @@ try {
     Write-Host " FAIL: $_" -ForegroundColor Red
 }
 
-Write-Host "  Set-BucketObject pipeline round-trip..." -NoNewline
+Write-Host "  Set-BucketObject pipeline round-trip..." -NoNewline -ForegroundColor DarkGray
 $user = Get-BucketObject -Bucket users -Key "Bob"
 $user.Role = "admin"
 $user | Set-BucketObject -Quiet
@@ -431,7 +431,7 @@ if ($updated.Role -eq "admin") {
     Write-Host " FAIL (role: $($updated.Role))" -ForegroundColor Red
 }
 
-Write-Host "  Auto-patch (hashtable)..." -NoNewline
+Write-Host "  Auto-patch (hashtable)..." -NoNewline -ForegroundColor DarkGray
 $before = Get-BucketObject -Bucket users -Key "Alice"
 $origEmail = $before.Email
 @{ Email = "alice@patched.com" } | Set-BucketObject -Bucket users -Key "Alice" -Quiet
@@ -443,7 +443,7 @@ if ($after.Email -eq "alice@patched.com" -and $after.Name -eq "Alice" -and $afte
     Write-Host " FAIL (email: $($after.Email), name: $($after.Name))" -ForegroundColor Red
 }
 
-Write-Host "  Auto-patch (PSCustomObject)..." -NoNewline
+Write-Host "  Auto-patch (PSCustomObject)..." -NoNewline -ForegroundColor DarkGray
 New-BucketObject -Bucket users -InputObject ([PSCustomObject]@{ _Id = "patch-obj"; Name = "Test"; Val = 1 }) -KeyProperty "_Id" -Quiet
 [PSCustomObject]@{ Val = 99; NewField = "added" } | Set-BucketObject -Bucket users -Key "patch-obj" -Quiet
 $patched = Get-BucketObject -Bucket users -Key "patch-obj"
@@ -454,7 +454,7 @@ if ($patched.Val -eq 99 -and $patched.Name -eq "Test" -and $patched.NewField -eq
 }
 Remove-BucketObject -Bucket users -Key "patch-obj" 2>&1 | Out-Null
 
-Write-Host "  Patch without Bucket/Key..." -NoNewline
+Write-Host "  Patch without Bucket/Key..." -NoNewline -ForegroundColor DarkGray
 try {
     @{ Name = "test" } | Set-BucketObject 2>$null
     Write-Host " FAIL (should have thrown)" -ForegroundColor Red
@@ -634,21 +634,21 @@ Write-Host "`n[17] Get-BucketObject -Recurse with filters" -ForegroundColor Blue
 $r1 = Get-BucketObject -Bucket "org" -Recurse -Key "info"
 $r1count = @($r1).Count
 $r1ok = $r1count -eq 3
-Write-Host "  -Recurse -Key info: $r1count objects" -NoNewline
+Write-Host "  -Recurse -Key info: $r1count objects" -NoNewline -ForegroundColor DarkGray
 if ($r1ok) { Write-Host " — OK" -ForegroundColor Magenta } else { Write-Host " — FAIL" -ForegroundColor Red }
 
 # Recurse + Match
 $r2 = Get-BucketObject -Bucket "org" -Recurse -Match @{ Country = "Germany" }
 $r2count = @($r2).Count
 $r2ok = $r2count -eq 1 -and $r2[0].Country -eq "Germany"
-Write-Host "  -Recurse -Match @{Country='Germany'}: $r2count objects" -NoNewline
+Write-Host "  -Recurse -Match @{Country='Germany'}: $r2count objects" -NoNewline -ForegroundColor DarkGray
 if ($r2ok) { Write-Host " — OK" -ForegroundColor Magenta } else { Write-Host " — FAIL" -ForegroundColor Red }
 
 # Recurse + Filter
 $r3 = Get-BucketObject -Bucket "org" -Recurse -Filter { $_.Employees -gt 100 }
 $r3count = @($r3).Count
 $r3ok = $r3count -eq 1 -and $r3[0].City -eq "Berlin"
-Write-Host "  -Recurse -Filter { `$_.Employees -gt 100 }: $r3count objects" -NoNewline
+Write-Host "  -Recurse -Filter { `$_.Employees -gt 100 }: $r3count objects" -NoNewline -ForegroundColor DarkGray
 if ($r3ok) { Write-Host " — OK" -ForegroundColor Magenta } else { Write-Host " — FAIL" -ForegroundColor Red }
 
 # ============================================================

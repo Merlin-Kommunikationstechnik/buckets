@@ -17,6 +17,11 @@ Import-Module "$PSScriptRoot/../../Buckets" -Force
 $root = Join-Path ([System.IO.Path]::GetTempPath()) "buckets-demo-multi-emit"
 Set-BucketRoot $root
 
+# Clean slate from any prior failed run
+Remove-Bucket orders, servers, events, reports, mixed, colors -Force -Confirm:$false -Recurse -Quiet -ErrorAction SilentlyContinue
+Remove-Funnel -Name demo-split -Quiet -Confirm:$false -ErrorAction SilentlyContinue
+Remove-Funnel -Name demo-index -Quiet -Confirm:$false -ErrorAction SilentlyContinue
+
 Write-Host "========== Multi-emit funnel demo ==========" -ForegroundColor Cyan
 
 # --- 1. Transform (was Filter) rename ---
@@ -113,7 +118,8 @@ New-BucketObject -Bucket colors -InputObject $obj -KeyProperty Color -Funnel {
 
 # --- cleanup ---
 Write-Host "`n--- cleanup ---" -ForegroundColor DarkGray
-Get-Funnel demo-split, demo-index | ForEach-Object { Remove-Funnel -Name $_.Name -Quiet -Confirm:$false }
+Remove-Funnel -Name demo-split -Quiet -Confirm:$false
+Remove-Funnel -Name demo-index -Quiet -Confirm:$false
 Remove-Bucket orders, servers, events, reports, mixed, colors -Force -Confirm:$false -Recurse -Quiet
 Set-BucketRoot (Join-Path $HOME ".buckets")
 Remove-Item $root -Recurse -Force -ErrorAction SilentlyContinue
