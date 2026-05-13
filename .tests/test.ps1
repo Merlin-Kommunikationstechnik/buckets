@@ -1517,7 +1517,7 @@ Test-It "Remove-BucketObject -Match -PassThru returns removed keys" {
     Remove-Bucket "rm-pt" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     New-BucketObject -Bucket "rm-pt" -InputObject @{ _Id = "a"; T = 1 }, @{ _Id = "b"; T = 2 } -KeyProperty _Id -Quiet
     Use-Bucket "rm-pt"
-    $removed = Remove-BucketObject -Bucket "rm-pt" -Match @{ T = 2 } -PassThru -Confirm:$false
+    $removed = Remove-BucketObject -Bucket "rm-pt" -Match @{ T = 2 } -PassThru -Confirm:$false -Quiet
     @($removed).Count -eq 1 -and $removed[0].Key -eq "b"
 }
 
