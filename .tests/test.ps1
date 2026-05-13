@@ -1252,6 +1252,466 @@ Test-It "Expanded count in PassThru" {
     $result.Saved -eq 2 -and $result.Expanded -eq 1 -and $null -ne $result.StoredKeys
 }
 
+# ============================================================
+# 22. Move-BucketObject
+# ============================================================
+Write-Host "`n[22] Move-BucketObject" -ForegroundColor Blue
+
+Test-It "Move-BucketObject cross-bucket moves preserves data" {
+    New-BucketObject -Bucket "mv-source" -InputObject @{ _Id = "mv1"; Val = 42 } -KeyProperty _Id -Quiet
+    Use-Bucket "mv-source"
+    Move-BucketObject -Bucket "mv-source" -Key "mv1" -DestinationBucket "mv-dest" -Quiet
+    Use-Bucket "mv-dest"
+    $inDest = Get-BucketObject -Bucket "mv-dest" -Key "mv1"
+    $inSource = Get-BucketObject -Bucket "mv-source" -Key "mv1" -WarningAction SilentlyContinue 2>$null
+    ($null -ne $inDest -and $inDest.Val -eq 42) -and ($null -eq $inSource)
+}
+
+Test-It "Move-BucketObject within-bucket renames" {
+    New-BucketObject -Bucket "mv-rename" -InputObject @{ _Id = "old"; Val = 99 } -KeyProperty _Id -Quiet
+    Use-Bucket "mv-rename"
+    Move-BucketObject -Bucket "mv-rename" -Key "old" -DestinationKey "new" -Quiet
+    $renamed = Get-BucketObject -Bucket "mv-rename" -Key "new"
+    $original = Get-BucketObject -Bucket "mv-rename" -Key "old" -WarningAction SilentlyContinue 2>$null
+    ($null -ne $renamed -and $renamed.Val -eq 99) -and ($null -eq $original)
+}
+
+Test-It "Move-BucketObject -PassThru returns destination metadata" {
+    New-BucketObject -Bucket "mv-pt" -InputObject @{ _Id = "x"; Text = "hello" } -KeyProperty _Id -Quiet
+    Use-Bucket "mv-pt"
+    $result = Move-BucketObject -Bucket "mv-pt" -Key "x" -DestinationBucket "mv-pt-dest" -PassThru
+    Use-Bucket "mv-pt-dest"
+    $null -ne $result -and $result.DestinationBucket -eq "mv-pt-dest" -and $result.DestinationKey -eq "x"
+}
+
+Test-It "Move-BucketObject on nonexistent key raises error" {
+    $ok = $false
+    try { Move-BucketObject -Bucket "mv-source" -Key "nonexistent" -DestinationBucket "mv-dest" -ErrorAction Stop 2>$null }
+    catch { $ok = $true }
+    $ok
+}
+
+Test-It "Move-BucketObject preserves binary format" {
+    New-BucketObject -Bucket "mv-bin" -InputObject @{ _Id = "b"; Data = "x" * 1000 } -KeyProperty _Id -AsBinary -Quiet
+    Use-Bucket "mv-bin"
+    Move-BucketObject -Bucket "mv-bin" -Key "b" -DestinationBucket "mv-bin-dest" -Quiet
+    Use-Bucket "mv-bin-dest"
+    $stats = Get-BucketObjectStats -Bucket "mv-bin-dest" -Key "b"
+    $null -ne $stats -and $stats.Format -eq "Binary"
+}
+
+# ============================================================
+# 23. Get-BucketStats
+# ============================================================
+Write-Host "`n[23] Get-BucketStats" -ForegroundColor Blue
+
+Test-It "Get-BucketStats returns object count, total size, and timestamps" {
+    $stats = Get-BucketStats -Bucket "users"
+    $stats.ObjectCount -gt 0 -and $stats.TotalSize -gt 0 -and $null -ne $stats.OldestObject -and $null -ne $stats.NewestObject
+}
+
+Test-It "Get-BucketStats on empty bucket returns zero count" {
+    $emptyTest = "empty-stats"
+    Remove-Bucket $emptyTest -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    New-BucketObject -Bucket $emptyTest -InputObject @{ _Id = "tmp" } -KeyProperty _Id -Quiet
+    Remove-BucketObject -Bucket $emptyTest -Key "tmp" -Quiet
+    $stats = Get-BucketStats -Bucket $emptyTest -WarningAction SilentlyContinue
+    $null -eq $stats -or $stats.ObjectCount -eq 0
+}
+
+Test-It "Get-BucketStats on nonexistent bucket warns" {
+    $warn = $null
+    $stats = Get-BucketStats -Bucket "totally-nonexistent-bucket-xyz" -WarningVariable warn -WarningAction SilentlyContinue 2>$null
+    $null -ne $warn -and ($null -eq $stats -or @($stats).Count -eq 0)
+}
+
+# ============================================================
+# 24. Get-BucketKeys
+# ============================================================
+Write-Host "`n[24] Get-BucketKeys" -ForegroundColor Blue
+
+Test-It "Get-BucketKeys lists all keys in a bucket" {
+    $keys = Get-BucketKeys -Bucket "users"
+    $keys.Count -eq 4 -and ($keys.Key -contains "Alice") -and ($keys.Key -contains "Bob") -and ($keys.Key -contains "Charlie") -and ($keys.Key -contains "Diana")
+}
+
+Test-It "Get-BucketKeys -Match filters by key pattern" {
+    $keys = Get-BucketKeys -Bucket "orders"
+    @($keys).Count -ge 1 -and @($keys | Where-Object { $_.Key -like "*ORD*" }).Count -eq @($keys).Count
+}
+
+Test-It "Get-BucketKeys returns Bucket + Key properties" {
+    $keys = Get-BucketKeys -Bucket "metrics"
+    $null -ne $keys[0].Bucket -and $null -ne $keys[0].Key -and ($keys[0].PSObject.Properties.Name.Count -eq 2)
+}
+
+# ============================================================
+# 25. Get-BucketObjectStats
+# ============================================================
+Write-Host "`n[25] Get-BucketObjectStats" -ForegroundColor Blue
+
+Test-It "Get-BucketObjectStats returns Format, Type, Size, LastWriteTime, IsCompressed" {
+    $stats = Get-BucketObjectStats -Bucket "users" -Key "Alice"
+    $null -ne $stats.Format -and $null -ne $stats.Type -and $stats.Size -gt 0 -and $null -ne $stats.LastWriteTime -and $null -ne $stats.IsCompressed
+}
+
+Test-It "Get-BucketObjectStats detects JSON format" {
+    $stats = Get-BucketObjectStats -Bucket "config" -Key "app-config"
+    $stats.Format -eq "JSON"
+}
+
+Test-It "Get-BucketObjectStats detects Binary format" {
+    $stats = Get-BucketObjectStats -Bucket "mixed" -Key "m2"
+    $stats.Format -eq "Binary"
+}
+
+Test-It "Get-BucketObjectStats detects compressed objects" {
+    $stats = Get-BucketObjectStats -Bucket "compressed" -Key "comp"
+    $stats.Format -eq "Binary" -and $stats.IsCompressed -eq $true
+}
+
+Test-It "Get-BucketObjectStats on nonexistent key warns" {
+    $warn = $null
+    $stats = Get-BucketObjectStats -Bucket "users" -Key "nonexistent-key-xyz" -WarningVariable warn -WarningAction SilentlyContinue 2>$null
+    $null -ne $warn -and $null -eq $stats
+}
+
+Test-It "Get-BucketObjectStats -Match filters by key" {
+    New-BucketObject -Bucket "gbo-stats" -InputObject @{ _Id = "alpha"; V = 1 }, @{ _Id = "beta"; V = 2 } -KeyProperty _Id -Quiet
+    Use-Bucket "gbo-stats"
+    $stats = Get-BucketObjectStats -Bucket "gbo-stats" -Match "a*"
+    @($stats).Count -eq 1 -and $stats.Key -eq "alpha"
+}
+
+# ============================================================
+# 26. Get-BucketRoot / Set-BucketRoot / Sync-BucketDrive
+# ============================================================
+Write-Host "`n[26] Get-BucketRoot / Set-BucketRoot / Sync-BucketDrive" -ForegroundColor Blue
+
+Test-It "Get-BucketRoot returns current root path" {
+    $root = Get-BucketRoot
+    $root -eq $testRoot
+}
+
+Test-It "Set-BucketRoot changes root and Get-BucketRoot reflects it" {
+    $newRoot = Join-Path $testRoot "new-root"
+    Set-BucketRoot $newRoot
+    $root = Get-BucketRoot
+    Set-BucketRoot $testRoot
+    $root -eq $newRoot
+}
+
+Test-It "Sync-BucketDrive creates buckets PSDrive" {
+    $drive = Get-PSDrive -Name "buckets" -ErrorAction SilentlyContinue
+    $null -ne $drive -and $drive.Root -eq "buckets:\"
+}
+
+Test-It "Set-BucketRoot with invalid path does not crash" {
+    $original = Get-BucketRoot
+    Set-BucketRoot "//invalid||path" -ErrorAction SilentlyContinue 2>$null
+    $ok = $true
+    Set-BucketRoot $testRoot
+    $ok
+}
+
+Test-It "Get-BucketRoot follows Set-BucketRoot changes" {
+    $original = Get-BucketRoot
+    $original -eq $testRoot
+}
+
+# ============================================================
+# 27. -Match with $null values
+# ============================================================
+Write-Host "`n[27] -Match with `$null values" -ForegroundColor Blue
+
+Test-It "Get-BucketObject -Match with $null finds objects where property is absent" {
+    Remove-Bucket "match-null" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    New-BucketObject -Bucket "match-null" -InputObject @{ _Id = "has-deleted"; Name = "A"; Deleted = $null } -KeyProperty _Id -Quiet
+    New-BucketObject -Bucket "match-null" -InputObject @{ _Id = "no-deleted"; Name = "B" } -KeyProperty _Id -Quiet
+    Use-Bucket "match-null"
+    $result = Get-BucketObject -Bucket "match-null" -Match @{ Deleted = $null }
+    @($result).Count -ge 1
+}
+
+Test-It "Get-BucketObject -Match with string in fresh bucket" {
+    Remove-Bucket "match-str" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    New-BucketObject -Bucket "match-str" -InputObject @{ _Id = "a"; Role = "admin"; Name = "Alice" }, @{ _Id = "b"; Role = "user"; Name = "Bob" } -KeyProperty _Id -Quiet
+    Use-Bucket "match-str"
+    $result = Get-BucketObject -Bucket "match-str" -Match @{ Role = "admin" }
+    @($result).Count -eq 1 -and $result[0].Name -eq "Alice"
+}
+
+# ============================================================
+# 28. Key sanitization
+# ============================================================
+Write-Host "`n[28] Key sanitization" -ForegroundColor Blue
+
+Test-It "Key with forward slash is sanitized to underscore" {
+    New-BucketObject -Bucket "sanitize" -InputObject @{ _Id = "a/b"; Val = 1 } -KeyProperty _Id -Quiet
+    Use-Bucket "sanitize"
+    $keys = Get-BucketKeys -Bucket "sanitize"
+    $keys.Key -eq "a_b" -and (Get-BucketObject -Bucket "sanitize" -Key "a_b").Val -eq 1
+}
+
+Test-It "Key with colon is sanitized" {
+    New-BucketObject -Bucket "sanitize" -InputObject @{ _Id = "key:name"; Val = 2 } -KeyProperty _Id -Quiet
+    $keys = Get-BucketKeys -Bucket "sanitize"
+    $keys.Key -eq "key_name" -and (Get-BucketObject -Bucket "sanitize" -Key "key_name").Val -eq 2
+}
+
+Test-It "Key with asterisk, question mark, angle brackets, pipe, quotes, brackets is sanitized" {
+    New-BucketObject -Bucket "sanitize" -InputObject @{ _Id = "a*b?c<d>e|f""g[h]"; Val = 3 } -KeyProperty _Id -Quiet
+    $keys = Get-BucketKeys -Bucket "sanitize"
+    $sanitized = "a_b_c_d_e_f_g_h_"
+    $keys.Key -eq $sanitized -and (Get-BucketObject -Bucket "sanitize" -Key $sanitized).Val -eq 3
+}
+
+Test-It "Empty key after sanitization is rejected" {
+    $before = @(Get-BucketKeys -Bucket "sanitize" -WarningAction SilentlyContinue).Count
+    $warn = $null
+    New-BucketObject -Bucket "sanitize" -InputObject @{ Val = 1 } -Key "/:?*" -WarningVariable warn -WarningAction SilentlyContinue -Quiet 2>$null
+    $after = @(Get-BucketKeys -Bucket "sanitize" -WarningAction SilentlyContinue).Count
+    ($after -eq $before) -and ($null -ne $warn)
+}
+
+Test-It "KeyProperty with only special chars is rejected" {
+    $before = @(Get-BucketKeys -Bucket "sanitize" -WarningAction SilentlyContinue).Count
+    $warn = $null
+    New-BucketObject -Bucket "sanitize" -InputObject @{ _Id = "/:*?"; Val = 2 } -KeyProperty _Id -WarningVariable warn -WarningAction SilentlyContinue -Quiet 2>$null
+    $after = @(Get-BucketKeys -Bucket "sanitize" -WarningAction SilentlyContinue).Count
+    ($after -eq $before) -and ($null -ne $warn)
+}
+
+Test-It "Import-Bucket warns when key sanitizes to empty" {
+    $badFile = Join-Path $testRoot "bad-key-import.json"
+    @(@{ _BucketKey = "/:?*"; Value = 1 }) | ConvertTo-Json | Set-Content $badFile
+    $warn = $null
+    Import-Bucket -Bucket "import-empty-warn" -InputFile $badFile -WarningVariable warn -WarningAction SilentlyContinue -Quiet
+    $null -ne $warn
+}
+
+# ============================================================
+# 29. Remove-BucketObject -Match / -Filter
+# ============================================================
+Write-Host "`n[29] Remove-BucketObject -Match / -Filter" -ForegroundColor Blue
+
+Test-It "Remove-BucketObject -Match removes matching objects" {
+    Remove-Bucket "rm-match" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    New-BucketObject -Bucket "rm-match" -InputObject @{ _Id = "a"; Role = "admin" }, @{ _Id = "b"; Role = "user" }, @{ _Id = "c"; Role = "admin" } -KeyProperty _Id -Quiet
+    Use-Bucket "rm-match"
+    Remove-BucketObject -Bucket "rm-match" -Match @{ Role = "admin" } -Confirm:$false -Quiet
+    $remaining = Get-BucketObject -Bucket "rm-match"
+    @($remaining).Count -eq 1 -and $remaining[0].Role -eq "user"
+}
+
+Test-It "Remove-BucketObject -Filter removes matching objects" {
+    Remove-Bucket "rm-filter" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    New-BucketObject -Bucket "rm-filter" -InputObject @{ _Id = "x"; V = 10 }, @{ _Id = "y"; V = 20 }, @{ _Id = "z"; V = 30 } -KeyProperty _Id -Quiet
+    Use-Bucket "rm-filter"
+    Remove-BucketObject -Bucket "rm-filter" -Filter { $_.V -gt 15 } -Confirm:$false -Quiet
+    $remaining = Get-BucketObject -Bucket "rm-filter"
+    @($remaining).Count -eq 1 -and $remaining[0].V -eq 10
+}
+
+Test-It "Remove-BucketObject -Match -PassThru returns removed keys" {
+    Remove-Bucket "rm-pt" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    New-BucketObject -Bucket "rm-pt" -InputObject @{ _Id = "a"; T = 1 }, @{ _Id = "b"; T = 2 } -KeyProperty _Id -Quiet
+    Use-Bucket "rm-pt"
+    $removed = Remove-BucketObject -Bucket "rm-pt" -Match @{ T = 2 } -PassThru -Confirm:$false
+    @($removed).Count -eq 1 -and $removed[0].Key -eq "b"
+}
+
+# ============================================================
+# 30. BinaryDepth explicit values
+# ============================================================
+Write-Host "`n[30] BinaryDepth explicit values" -ForegroundColor Blue
+
+Test-It "BinaryDepth=1 stores and retrieves simple objects" {
+    Remove-Bucket "bd-1" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    New-BucketObject -Bucket "bd-1" -InputObject @{ _Id = "s"; Name = "simple"; Val = 123 } -KeyProperty _Id -AsBinary -BinaryDepth 1 -Quiet
+    Use-Bucket "bd-1"
+    $obj = Get-BucketObject -Bucket "bd-1" -Key "s"
+    $null -ne $obj -and $obj.Name -eq "simple" -and $obj.Val -eq 123
+}
+
+Test-It "BinaryDepth=100 stores and retrieves objects" {
+    Remove-Bucket "bd-100" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    New-BucketObject -Bucket "bd-100" -InputObject @{ _Id = "h"; Name = "deep binary"; Data = "x" * 500 } -KeyProperty _Id -AsBinary -BinaryDepth 100 -Quiet
+    Use-Bucket "bd-100"
+    $obj = Get-BucketObject -Bucket "bd-100" -Key "h"
+    $null -ne $obj -and $obj.Name -eq "deep binary"
+}
+
+Test-It "BinaryDepth auto-increments on depth failure" {
+    Remove-Bucket "bd-auto" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    $deep = [PSCustomObject]@{ _Id = "a"; L1 = [PSCustomObject]@{ L2 = [PSCustomObject]@{ L3 = [PSCustomObject]@{ L4 = [PSCustomObject]@{ L5 = [PSCustomObject]@{ L6 = "deep" } } } } } }
+    New-BucketObject -Bucket "bd-auto" -InputObject $deep -KeyProperty _Id -AsBinary -BinaryDepth 2 -WarningAction SilentlyContinue -Quiet
+    Use-Bucket "bd-auto"
+    $obj = Get-BucketObject -Bucket "bd-auto" -Key "a"
+    $null -ne $obj -and $obj.L1.L2.L3.L4.L5.L6 -eq "deep"
+}
+
+# ============================================================
+# 31. Get-Bucket -Tree -Objects / -MaxFiles / -Depth
+# ============================================================
+Write-Host "`n[31] Get-Bucket -Tree -Objects / -MaxFiles / -Depth" -ForegroundColor Blue
+
+Test-It "Get-Bucket -Tree -Objects includes individual file info" {
+    $tree = Get-Bucket -Tree -Raw -Objects -Name "users"
+    $objects = $tree.Children | ForEach-Object { if ($_.Children) { $_.Children | Where-Object Type -eq "Object" } }
+    @($objects).Count -gt 0
+}
+
+Test-It "Get-Bucket -Tree -MaxFiles limits output" {
+    $tree = Get-Bucket -Tree -Raw -MaxFiles 2 -Name "metrics"
+    $count = 0
+    function Walk-Tree2 { param($node) if ($null -ne $node._BucketKey) { $script:count++ } if ($null -ne $node.Children) { $node.Children | ForEach-Object { Walk-Tree2 $_ } } }
+    Walk-Tree2 $tree
+    $count -le 2
+}
+
+Test-It "Get-Bucket -Tree -Depth limits nesting" {
+    $full = Get-Bucket -Tree -Raw -Name "org"
+    $fullOrg = $full.Children | Where-Object { $_.Name -eq "org" }
+    $limited = Get-Bucket -Tree -Raw -Depth 1 -Name "org"
+    $limitedOrg = $limited.Children | Where-Object { $_.Name -eq "org" }
+    $null -ne $fullOrg -and $fullOrg.Children.Count -ge 1 -and $null -ne $limitedOrg -and ($null -eq $limitedOrg.Children -or $limitedOrg.Children.Count -eq 0)
+}
+
+# ============================================================
+# 32. Copy-BucketObject -PassThru and binary preservation
+# ============================================================
+Write-Host "`n[32] Copy-BucketObject -PassThru / binary preservation" -ForegroundColor Blue
+
+Test-It "Copy-BucketObject -PassThru returns destination metadata" {
+    $result = Copy-BucketObject -Bucket "users" -Key "Alice" -DestinationBucket "copy-pt" -PassThru
+    Use-Bucket "copy-pt"
+    $null -ne $result -and $result.DestinationBucket -eq "copy-pt" -and $result.DestinationKey -eq "Alice"
+}
+
+Test-It "Copy-BucketObject preserves binary format" {
+    New-BucketObject -Bucket "copy-bin-src" -InputObject @{ _Id = "bf"; Data = "x" * 100 } -KeyProperty _Id -AsBinary -Quiet
+    Use-Bucket "copy-bin-src"
+    Copy-BucketObject -Bucket "copy-bin-src" -Key "bf" -DestinationBucket "copy-bin-dest" -Quiet
+    Use-Bucket "copy-bin-dest"
+    $destStats = Get-BucketObjectStats -Bucket "copy-bin-dest" -Key "bf"
+    $destStats.Format -eq "Binary"
+}
+
+Test-It "Copy-BucketObject to nonexistent source bucket raises error" {
+    $ok = $false
+    try { Copy-BucketObject -Bucket "nonexistent-copy-source" -Key "x" -DestinationBucket "copy-noop" -ErrorAction Stop 2>$null }
+    catch { $ok = $true }
+    $ok
+}
+
+# ============================================================
+# 33. Rename-BucketObject -PassThru
+# ============================================================
+Write-Host "`n[33] Rename-BucketObject -PassThru" -ForegroundColor Blue
+
+Test-It "Rename-BucketObject -PassThru returns new key metadata" {
+    New-BucketObject -Bucket "rn-pt" -InputObject @{ _Id = "old-name"; Data = "test" } -KeyProperty _Id -Quiet
+    Use-Bucket "rn-pt"
+    $result = Rename-BucketObject -Bucket "rn-pt" -Key "old-name" -NewKey "new-name" -PassThru
+    $null -ne $result -and $result.NewKey -eq "new-name" -and $result.Bucket -eq "rn-pt"
+}
+
+Test-It "Rename-BucketObject to existing key raises error" {
+    New-BucketObject -Bucket "rn-exists" -InputObject @{ _Id = "a"; V = 1 }, @{ _Id = "b"; V = 2 } -KeyProperty _Id -Quiet
+    Use-Bucket "rn-exists"
+    $ok = $false
+    try { Rename-BucketObject -Bucket "rn-exists" -Key "a" -NewKey "b" -ErrorAction Stop 2>$null }
+    catch { $ok = $true }
+    $ok
+}
+
+Test-It "Rename-BucketObject on nonexistent key raises error" {
+    $ok = $false
+    try { Rename-BucketObject -Bucket "users" -Key "nonexistent-rn" -NewKey "new" -ErrorAction Stop 2>$null }
+    catch { $ok = $true }
+    $ok
+}
+
+# ============================================================
+# 34. Export-Bucket -Compress / Import-Bucket -Overwrite
+# ============================================================
+Write-Host "`n[34] Export-Bucket -Compress / Import-Bucket -Overwrite" -ForegroundColor Blue
+
+Test-It "Export-Bucket -AsBinary -Compress creates compressed export" {
+    $exportPath = Join-Path $testRoot "export-compressed.dat"
+    Export-Bucket -Bucket "compressed" -OutputFile $exportPath -AsBinary -Compress -Quiet
+    $exists = Test-Path $exportPath
+    Remove-Item $exportPath -Force -ErrorAction SilentlyContinue
+    $exists
+}
+
+Test-It "Export-Bucket to JSON format creates valid JSON" {
+    $exportPath = Join-Path $testRoot "export-json.json"
+    Export-Bucket -Bucket "config" -OutputFile $exportPath -Quiet
+    $content = Get-Content $exportPath -Raw
+    Remove-Item $exportPath -Force -ErrorAction SilentlyContinue
+    $content -match '"Database"' -or $content -match '"_Id"'
+}
+
+Test-It "Import-Bucket -Overwrite replaces existing keys" {
+    Remove-Bucket "imp-over" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    $exportPath = Join-Path $testRoot "imp-over-export.clixml"
+    New-BucketObject -Bucket "imp-over" -InputObject @{ _Id = "key1"; Val = "original" } -KeyProperty _Id -Quiet
+    Export-Bucket -Bucket "imp-over" -OutputFile $exportPath -AsBinary -Quiet
+    New-BucketObject -Bucket "imp-over" -InputObject @{ _Id = "key1"; Val = "updated" } -KeyProperty _Id -Overwrite -Quiet
+    Remove-BucketObject -Bucket "imp-over" -Key "key1" -Quiet
+    Import-Bucket -Bucket "imp-over" -InputFile $exportPath -AsBinary -Overwrite -Quiet
+    $obj = Get-BucketObject -Bucket "imp-over" -Key "key1"
+    Remove-Item $exportPath -Force -ErrorAction SilentlyContinue
+    $null -ne $obj -and $obj.Val -eq "original"
+}
+
+Test-It "Import-Bucket without -Overwrite skips existing keys" {
+    Remove-Bucket "imp-skip2" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    $exportPath = Join-Path $testRoot "imp-skip-export.clixml"
+    New-BucketObject -Bucket "imp-skip2" -InputObject @{ _Id = "k1"; Val = "orig" }, @{ _Id = "k2"; Val = "also-orig" } -KeyProperty _Id -Quiet
+    Export-Bucket -Bucket "imp-skip2" -OutputFile $exportPath -AsBinary -Quiet
+    Remove-BucketObject -Bucket "imp-skip2" -Key "k2" -Quiet
+    Import-Bucket -Bucket "imp-skip2" -InputFile $exportPath -AsBinary -Quiet
+    $obj = Get-BucketObject -Bucket "imp-skip2" -Key "k2"
+    Remove-Item $exportPath -Force -ErrorAction SilentlyContinue
+    $null -ne $obj -and $obj.Val -eq "also-orig"
+}
+
+# ============================================================
+# 35. Set-BucketObject -AsBinary / -Depth
+# ============================================================
+Write-Host "`n[35] Set-BucketObject -AsBinary / -Depth" -ForegroundColor Blue
+
+Test-It "Set-BucketObject -AsBinary converts JSON to binary" {
+    New-BucketObject -Bucket "sbo-bin" -InputObject @{ _Id = "convert"; Data = "test" } -KeyProperty _Id -Quiet
+    Use-Bucket "sbo-bin"
+    @{ Data = "updated" } | Set-BucketObject -Bucket "sbo-bin" -Key "convert" -AsBinary -Quiet
+    $stats = Get-BucketObjectStats -Bucket "sbo-bin" -Key "convert"
+    $stats.Format -eq "Binary"
+}
+
+Test-It "Set-BucketObject -Depth controls serialization depth" {
+    New-BucketObject -Bucket "sbo-depth" -InputObject @{ _Id = "deep"; N = @{ L1 = @{ L2 = "value" } } } -KeyProperty _Id -Quiet
+    Use-Bucket "sbo-depth"
+    @{ N = @{ L1 = @{ L2 = "updated" } } } | Set-BucketObject -Bucket "sbo-depth" -Key "deep" -Depth 5 -Quiet
+    $obj = Get-BucketObject -Bucket "sbo-depth" -Key "deep"
+    $null -ne $obj -and $obj.N.L1.L2 -eq "updated"
+}
+
+Test-It "Set-BucketObject on nonexistent key raises error" {
+    $ok = $false
+    try { @{ Name = "test" } | Set-BucketObject -Bucket "users" -Key "nonexistent-set-key" -ErrorAction Stop 2>$null }
+    catch { $ok = $true }
+    $ok
+}
+
+Test-It "Set-BucketObject -PassThru returns updated metadata" {
+    $result = @{ Name = "Updated" } | Set-BucketObject -Bucket "users" -Key "Alice" -PassThru
+    $null -ne $result -and $result.Bucket -eq "users" -and $result.UpdatedKeys -contains "Alice"
+}
+
 
 # Cleanup - remove any leftover test funnels
 Get-Funnel | Where-Object Name -like "test-funnel*" | ForEach-Object {

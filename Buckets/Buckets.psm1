@@ -182,7 +182,7 @@ function Get-BucketFilename {
     if (-not [string]::IsNullOrWhiteSpace($Key)) {
         $safeKey = $Key -replace '[\\/:\*\?"<>\|\[\]]', '_'
         if ([string]::IsNullOrWhiteSpace($safeKey) -or $safeKey -match '^_+$') {
-            Write-Verbose "Key is empty after sanitization ('$Key' -> '$safeKey'), skipping"
+            Write-Warning "Key is empty after sanitization ('$Key' -> '$safeKey'), skipping"
             return $null
         }
         return [PSCustomObject]@{ Filename = "${safeKey}${Extension}"; Sanitized = $safeKey -ne $Key; OriginalKey = $Key }
@@ -191,12 +191,12 @@ function Get-BucketFilename {
     if (-not [string]::IsNullOrWhiteSpace($KeyProperty)) {
         $keyValue = $Item.$KeyProperty
         if ($null -eq $keyValue) {
-            Write-Verbose "Property '$KeyProperty' not found on object, skipping"
+            Write-Warning "Property '$KeyProperty' not found on object, skipping"
             return $null
         }
         $safeKey = $keyValue -replace '[\\/:\*\?"<>\|\[\]]', '_'
         if ([string]::IsNullOrWhiteSpace($safeKey) -or $safeKey -match '^_+$') {
-            Write-Verbose "Key for object is empty after sanitization ('$keyValue' -> '$safeKey'), skipping"
+            Write-Warning "Key for object is empty after sanitization ('$keyValue' -> '$safeKey'), skipping"
             return $null
         }
         return [PSCustomObject]@{ Filename = "${safeKey}${Extension}"; Sanitized = $safeKey -ne "$keyValue"; OriginalKey = "$keyValue" }
@@ -248,7 +248,8 @@ function Save-BucketFile {
     $writeSuccess = $false
     if ($AsBinary) {
         $currentDepth = $BinaryDepth
-        while ($currentDepth -le 10) {
+        $maxLoopDepth = [Math]::Max(10, $BinaryDepth)
+        while ($currentDepth -le $maxLoopDepth) {
             try {
                 $xml = [System.Management.Automation.PSSerializer]::Serialize($Item, $currentDepth)
                 $rawBytes = [System.Text.Encoding]::UTF8.GetBytes($xml)
@@ -812,7 +813,7 @@ function Get-Bucket {
             }
 
             foreach ($sub in $subDirs) {
-                if ($CurrentDepth + 1 -lt $Depth -or $Objects) {
+                if ($CurrentDepth -lt $Depth -or $Objects) {
                     $child = BuildTree -Dir $sub.FullName -Root $Root -CurrentDepth ($CurrentDepth + 1)
                     $null = $node.Children.Add($child)
                 }
@@ -829,6 +830,8 @@ function Get-Bucket {
                         SizeBytes    = $f.Length
                         Depth        = $CurrentDepth + 1
                         Children     = [System.Collections.ArrayList]::new()
+                        _BucketName  = $relPath
+                        _BucketKey   = $keyName
                     }
                     $fNode.PSObject.TypeNames.Insert(0, "Buckets.Tree")
                     $null = $node.Children.Add($fNode)
@@ -1433,7 +1436,10 @@ function Import-Bucket {
     foreach ($obj in $objectArray) {
         $key = if ($obj.PSObject.Properties['_BucketKey']) { $obj._BucketKey } else { [Guid]::NewGuid().ToString() }
         $safeKey = $key -replace '[\\/:\*\?"<>\|\[\]]', '_'
-        if ([string]::IsNullOrWhiteSpace($safeKey) -or $safeKey -match '^_+$') { $safeKey = [Guid]::NewGuid().ToString() }
+        if ([string]::IsNullOrWhiteSpace($safeKey) -or $safeKey -match '^_+$') {
+            Write-Warning "Key '$key' in imported object is invalid after sanitization, using GUID instead"
+            $safeKey = [Guid]::NewGuid().ToString()
+        }
 
         $jsonPath = Join-Path $bucketPath "${safeKey}.json"
         $datPath = Join-Path $bucketPath "${safeKey}.dat"
@@ -2723,8 +2729,13 @@ function Set-BucketObject {
             }
         }
         else {
+            if ($AsBinary -and $filePath -like "*.json") {
+                if (Test-Path $filePath) { Remove-Item $filePath -Force }
+                $filePath = [System.IO.Path]::ChangeExtension($filePath, ".dat")
+            }
             $currentDepth = $BinaryDepth; $serialized = $false
-            while (-not $serialized -and $currentDepth -le 10) {
+            $maxLoopDepth = [Math]::Max(10, $BinaryDepth)
+            while (-not $serialized -and $currentDepth -le $maxLoopDepth) {
                 try {
                     $xml = [System.Management.Automation.PSSerializer]::Serialize($InputObject, $currentDepth)
                     $rawBytes = [System.Text.Encoding]::UTF8.GetBytes($xml)
