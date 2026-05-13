@@ -60,7 +60,7 @@ PowerShell module for file-based PSObject storage using directory-backed "bucket
 | `Rename-BucketObject` | `-Bucket`, `-Key`, `-NewKey`, `-PassThru` |
 | `Export-Bucket` | `-Bucket`, `-OutputFile`, `-AsBinary`, `-Quiet` |
 | `Import-Bucket` | `-Bucket`, `-InputFile`, `-AsBinary`, `-Overwrite`, `-Quiet` |
-| `Get-Bucket` | `-Name` (positional 0, substring filter), `-Tree`, `-Raw` |
+| `Get-Bucket` | `-Name` (positional 0, wildcards supported; substring match if no wildcards), `-Tree`, `-Raw` |
 | `Get-BucketStats` | `-Bucket` (returns count, size, timestamps, visible Path) |
 | `Get-BucketKeys` | `-Bucket` (positional 0, wildcards ok), `-Match` (returns Bucket + Key only) |
 | `Get-BucketObjectStats` | `-Bucket` (positional 0, wildcards ok), `-Key` (positional 1), `-Match` (returns Format, Type, Size, LastWriteTime, IsCompressed) |
@@ -80,7 +80,7 @@ Named reusable filter/transform scriptblocks stored in `$HOME/.buckets-system/fu
 Only removes buckets containing exclusively `.dat`/`.json` files (or empty directories). Skips buckets with other file types with a warning. Uses standard `-Confirm` support (SupportsShouldProcess). `-Force` skips confirmation entirely. Shows a colored pre-confirmation summary listing bucket names, object counts, and sizes before the standard confirmation prompt.
 
 ### Remove-BucketObject Safety
-Uses `SupportsShouldProcess` for `-WhatIf` support. Parameter sets enforce `-Key` or `-All` (mutually exclusive). `-Match/-Filter` shows a pre-confirmation summary listing the first 5 matching keys and total size. Output shows `"bucket · N objects removed (matched)"` for filter operations, `"bucket · N objects removed"` for `-All`, and `"bucket/key · removed"` for single key.
+Uses `SupportsShouldProcess` for `-WhatIf` support. Parameter sets enforce `-Key` or `-All` (mutually exclusive). `-Match/-Filter` shows a pre-confirmation summary listing the first 5 matching keys and total size. Output shows `"bucket · N objects removed (matched)"` for filter operations, `"bucket · N objects removed"` for `-All`, and `"bucket/key · removed"` for single key. `-PassThru` returns objects with `Key` property (no file extension).
 
 ### Compression
 `-Compress` switch enables GZip compression for binary (`.dat`) files. Automatically detected on read via magic bytes (0x1F 0x8B). Achieves ~95% reduction on repetitive data.
@@ -134,9 +134,13 @@ Benchmarks measure write/read throughput for 1k and 10k objects (simple + comple
 - Binary format is the default (handles complex system objects)
 - `New-BucketObject` default: progress + summary; `-Verbose` for per-object details; `-Quiet` for silence
 - Default path resolves dynamically at call time via `Get-DefaultPath` (not at module load)
-- `Set-BucketObject` outputs summary line by default; use `-PassThru` to emit objects to pipeline, `-Quiet` for silence
+- `Set-BucketObject` outputs summary line by default; includes updated key names (up to 5, then "... N more"); use `-PassThru` to emit objects to pipeline, `-Quiet` for silence
 - Binary serialization auto-increments depth up to 5 if initial depth fails
 - `Remove-BucketObject -All` warns on empty bucket
+- `Remove-BucketObject -PassThru` returns objects with `Key` property (no file extension)
+- `Get-BucketObject` warns on nonexistent literal bucket names (wildcard matches stay silent)
+- `Import-Bucket` skip summary shows key names (up to 5, then "... +N more")
+- `Get-Bucket -Name` supports wildcards (`*`, `?`); without wildcards, substring match is used for backward compat
 - Corrupted files emit warning and return $null (don't break enumeration)
 - Bucket paths cached per session via `$script:BucketPathCache`
 - Path traversal protection: resolved paths must stay within root

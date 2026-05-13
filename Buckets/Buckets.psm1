@@ -955,7 +955,11 @@ function Get-Bucket {
     }
 
     if (-not [string]::IsNullOrWhiteSpace($Name)) {
-        $results = $results | Where-Object { $_.Name -like "*$Name*" }
+        if ($Name -match '[\*\?]') {
+            $results = $results | Where-Object { $_.Name -like $Name }
+        } else {
+            $results = $results | Where-Object { $_.Name -like "*$Name*" }
+        }
     }
 
     $results
@@ -1229,9 +1233,17 @@ function Get-BucketObject {
     $funnelDef = Resolve-Funnel $Funnel
 
     $allObjects = [System.Collections.ArrayList]::new()
+    $warnedBuckets = @{}
 
     foreach ($bucketPath in $bucketPaths) {
-        if (-not [System.IO.Directory]::Exists($bucketPath)) { continue }
+        if (-not [System.IO.Directory]::Exists($bucketPath)) {
+            $bucketLeaf = Split-Path $bucketPath -Leaf
+            if (-not $warnedBuckets.ContainsKey($bucketLeaf)) {
+                Write-Warning "Bucket '$bucketLeaf' not found"
+                $warnedBuckets[$bucketLeaf] = $true
+            }
+            continue
+        }
         $bucketName = Split-Path $bucketPath -Leaf
         $files = Get-ObjectFiles -BucketPath $bucketPath -Key $Key
 
@@ -1402,6 +1414,7 @@ function Import-Bucket {
 
     $bucketPath = Ensure-BucketExists -Name $Bucket -Path $Path
     $importedCount = 0; $skippedCount = 0
+    $skippedKeys = [System.Collections.ArrayList]::new()
 
     foreach ($obj in $objectArray) {
         $key = if ($obj.PSObject.Properties['_BucketKey']) { $obj._BucketKey } else { [Guid]::NewGuid().ToString() }
@@ -1417,6 +1430,7 @@ function Import-Bucket {
         if ($filePath -and -not $Overwrite) {
             Write-Verbose "Object with key '$safeKey' already exists in bucket '$Bucket'. Use -Overwrite to replace."
             $skippedCount++
+            $null = $skippedKeys.Add($safeKey)
             continue
         }
 
@@ -1445,7 +1459,8 @@ function Import-Bucket {
         if ($skippedCount -gt 0) {
             Write-Host "  " -NoNewline
             Write-Host $skippedCount -NoNewline -ForegroundColor $script:CNum
-            Write-Host " skipped (existing keys)" -ForegroundColor $script:CSkip
+            $skipDisplay = if ($skippedKeys.Count -le 5) { $skippedKeys -join ", " } else { ($skippedKeys | Select-Object -First 5) -join ", " + " ... +$($skippedKeys.Count - 5) more" }
+            Write-Host " skipped (existing keys: $skipDisplay)" -ForegroundColor $script:CSkip
         }
     }
 }
@@ -2204,7 +2219,8 @@ function Remove-BucketObject {
         if ($PassThru) {
             foreach ($f in $allFiles) {
                 $relPath = $f.FullName.Substring($bucketPath.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar)
-                [PSCustomObject]@{ Bucket = $Bucket; Key = $relPath }
+                $keyOnly = [System.IO.Path]::ChangeExtension($relPath, $null).TrimEnd('.')
+                [PSCustomObject]@{ Bucket = $Bucket; Key = $keyOnly }
             }
         }
         elseif (-not $WhatIfPreference -and -not $Quiet) {
@@ -2222,8 +2238,7 @@ function Remove-BucketObject {
         }
         elseif ($PSCmdlet.ShouldProcess("object '$Key' from bucket '$Bucket'", "Remove-BucketObject")) {
             if ($PassThru) {
-                $relPath = $file.FullName.Substring($bucketPath.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar)
-                [PSCustomObject]@{ Bucket = $Bucket; Key = $relPath }
+                [PSCustomObject]@{ Bucket = $Bucket; Key = $Key }
             }
             [System.IO.File]::Delete($file.FullName)
             $parentDir = [System.IO.Path]::GetDirectoryName($file.FullName)
@@ -2308,7 +2323,8 @@ function Remove-BucketObject {
             foreach ($f in $matchedFiles) {
                 if ($PassThru) {
                     $relPath = $f.FullName.Substring($bucketPath.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar)
-                    [PSCustomObject]@{ Bucket = $Bucket; Key = $relPath }
+                    $keyOnly = [System.IO.Path]::ChangeExtension($relPath, $null).TrimEnd('.')
+                    [PSCustomObject]@{ Bucket = $Bucket; Key = $keyOnly }
                 }
                 [System.IO.File]::Delete($f.FullName)
             }
@@ -2591,6 +2607,15 @@ function Set-BucketObject {
             Write-Host " · " -NoNewline -ForegroundColor $script:CMuted
             Write-Host $savedCount -NoNewline -ForegroundColor $script:CNum
             Write-Host " updated" -ForegroundColor $script:CMuted
+            if ($savedCount -le 5) {
+                Write-Host "  " -NoNewline
+                Write-Host ($updatedKeys -join ", ") -ForegroundColor $script:CNum
+            } else {
+                Write-Host "  " -NoNewline
+                Write-Host (($updatedKeys | Select-Object -First 5) -join ", ") -NoNewline -ForegroundColor $script:CNum
+                Write-Host " ..." -NoNewline -ForegroundColor $script:CMuted
+                Write-Host " +$($savedCount - 5) more" -ForegroundColor $script:CMuted
+            }
         }
         if ($PassThru -and $savedCount -gt 0) {
             Write-Output ([PSCustomObject]@{

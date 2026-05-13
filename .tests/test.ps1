@@ -1023,6 +1023,71 @@ Test-Edge "AutoIndex PassThru includes Indexed count" {
 
 $funnelResults = [System.Collections.ArrayList]::new()
 
+# ============================================================
+# 21. Output improvements (PassThru, summary, warnings)
+# ============================================================
+Write-Host "`n[21] Output improvements" -ForegroundColor Blue
+
+Test-Edge "Remove-BucketObject -PassThru Key has no file extension" {
+    Remove-Bucket "pt-ext" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    New-BucketObject -Bucket pt-ext -InputObject @{ Id = 1; Name = "test" } -Key "del1" -Quiet
+    $result = Remove-BucketObject -Bucket pt-ext -Key "del1" -PassThru
+    $ok = $result.Key -eq "del1" -and $result.Key -notmatch "\.(json|dat)$"
+    Remove-Bucket "pt-ext" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    $ok
+}
+
+Test-Edge "Remove-BucketObject -All -PassThru Key has no file extension" {
+    Remove-Bucket "pt-all" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    New-BucketObject -Bucket pt-all -InputObject @{ Id = 1 } -Key "a" -Quiet
+    New-BucketObject -Bucket pt-all -InputObject @{ Id = 2 } -Key "b" -Quiet
+    $results = @(Remove-BucketObject -Bucket pt-all -All -PassThru -Confirm:$false)
+    $ok = $results.Count -eq 2 -and ($results | ForEach-Object { $_.Key -notmatch "\.(json|dat)$" }) -notcontains $false
+    Remove-Bucket "pt-all" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    $ok
+}
+
+Test-Edge "Set-BucketObject -PassThru includes UpdatedKeys" {
+    Remove-Bucket "sbo-pt" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    New-BucketObject -Bucket sbo-pt -InputObject @{ Name = "Alice" } -Key "user1" -Quiet
+    $result = @{ Name = "Bob" } | Set-BucketObject -Bucket sbo-pt -Key "user1" -PassThru
+    $ok = $result.UpdatedKeys -contains "user1" -and $result.Saved -eq 1
+    Remove-Bucket "sbo-pt" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    $ok
+}
+
+Test-Edge "Get-BucketObject warns on nonexistent literal bucket" {
+    $warning = $null
+    Get-BucketObject -Bucket "totally-nonexistent-bucket-xyz-123" -WarningVariable warning -WarningAction SilentlyContinue 2>$null | Out-Null
+    $null -ne $warning -and $warning -match "not found"
+}
+
+Test-Edge "Get-Bucket -Name wildcard support" {
+    Remove-Bucket "gn-wild" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    Remove-Bucket "gn-other" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    New-BucketObject -Bucket gn-wild -InputObject @{ X = 1 } -Key "a" -Quiet
+    New-BucketObject -Bucket gn-other -InputObject @{ X = 2 } -Key "b" -Quiet
+    $wildcardResult = @(Get-Bucket -Name "gn-w*")
+    $substringResult = @(Get-Bucket -Name "gn-o")
+    $ok = $wildcardResult.Count -eq 1 -and $wildcardResult[0].Name -eq "gn-wild" -and $substringResult.Count -ge 1
+    Remove-Bucket "gn-wild" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    Remove-Bucket "gn-other" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    $ok
+}
+
+Test-Edge "Import-Bucket skip shows key names" {
+    Remove-Bucket "imp-skip" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    New-BucketObject -Bucket imp-skip -InputObject @{ Name = "alice" } -Key "alice" -Quiet
+    New-BucketObject -Bucket imp-skip -InputObject @{ Name = "bob" } -Key "bob" -Quiet
+    $exportPath = Join-Path $testRoot "imp-skip-test.clixml"
+    Export-Bucket -Bucket imp-skip -OutputFile $exportPath -AsBinary -Quiet
+    $result = Import-Bucket -Bucket imp-skip -InputFile $exportPath -AsBinary 6>&1 | Out-String
+    $ok = $result -match "skipped" -and $result -match "alice"
+    Remove-Bucket "imp-skip" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    Remove-Item $exportPath -Force -ErrorAction SilentlyContinue
+    $ok
+}
+
 function Test-Funnel {
     param([string]$Name, [scriptblock]$Test)
     try {

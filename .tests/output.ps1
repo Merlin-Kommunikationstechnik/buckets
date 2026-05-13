@@ -115,8 +115,11 @@ Get-Bucket -Tree
 Write-Host "`n  --- Tree with Objects ---" -ForegroundColor DarkGray
 Get-Bucket -Tree -Objects -MaxFiles 3
 
-Write-Host "`n  --- Filter by name ---" -ForegroundColor DarkGray
+Write-Host "`n  --- Filter by name (substring) ---" -ForegroundColor DarkGray
 Get-Bucket -Name "out-new" | Format-Table -AutoSize
+
+Write-Host "`n  --- Filter by name (wildcard) ---" -ForegroundColor DarkGray
+Get-Bucket -Name "out-new*" | Format-Table -AutoSize
 
 Write-Host "`n  --- Missing root ---" -ForegroundColor DarkGray
 Get-Bucket -Tree -Path "/nonexistent/path/buckets"
@@ -177,7 +180,7 @@ Get-BucketObject -Bucket out-new -Filter { $_.Val -gt 2 } | Format-Table _Id, Va
 Write-Host "`n  --- Funnel filter ---" -ForegroundColor DarkGray
 Get-BucketObject -Bucket out-new -Funnel { if ($_.Val -gt 2) { $_ } } | Format-Table _Id, Val
 
-Write-Host "`n  --- Missing bucket (returns empty) ---" -ForegroundColor DarkGray
+Write-Host "`n  --- Missing bucket (warning) ---" -ForegroundColor DarkGray
 $r = Get-BucketObject -Bucket nonexistent-xyz
 Write-Host "  Result: $($null -eq $r) ($(@($r).Count) items)"
 
@@ -342,6 +345,9 @@ Import-Bucket -Bucket out-imported-bin -InputFile $exportBin -AsBinary
 
 Write-Host "`n  --- Import with Overwrite ---" -ForegroundColor DarkGray
 Import-Bucket -Bucket out-imported -InputFile $exportJson -Overwrite
+
+Write-Host "`n  --- Import with skip (existing keys) ---" -ForegroundColor DarkGray
+Import-Bucket -Bucket out-imported-bin -InputFile $exportBin -AsBinary
 
 Write-Host "`n  --- Missing file (throw) ---" -ForegroundColor DarkGray
 try { Import-Bucket -Bucket out-imported -InputFile "/nonexistent/file.json" -ErrorAction Stop } catch { Write-Host "  $_" -ForegroundColor Red }

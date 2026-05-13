@@ -115,6 +115,7 @@ New-BucketObject -Path /tmp/buckets -InputObject $data -KeyProperty Name
 ### Get-BucketObject (alias: `scoop`)
 
 Retrieves objects from one or more buckets. Recursion into nested sub-buckets is enabled by default.
+Warns on nonexistent literal (non-wildcard) bucket names.
 
 ```powershell
 Get-BucketObject
@@ -196,7 +197,7 @@ Get-BucketObject -Bucket users -Skip 5 -First 5
 ### Set-BucketObject
 
 Updates an existing object in a bucket. Preserves the storage format.
-Outputs a summary line by default. Use `-PassThru` to emit updated objects to the pipeline.
+Outputs a summary line with updated key names by default. Use `-PassThru` to emit updated objects to the pipeline.
 
 ```powershell
 Set-BucketObject
@@ -270,7 +271,7 @@ Remove-BucketObject
 | `-All` | Remove all objects from the bucket |
 | `-Match` | Hashtable filter (exact match, supports `$null`) |
 | `-Filter` | ScriptBlock filter (`$_` references the object) |
-| `-PassThru` | Return the removed object's metadata |
+| `-PassThru` | Return the removed object's metadata (Key without file extension) |
 | `-Quiet` | Suppress output |
 | `-WhatIf` | Preview without removing |
 
@@ -406,7 +407,7 @@ Get-Bucket
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
-| `-Name` | Filter buckets by name (substring match on full nested path) | All buckets |
+| `-Name` | Filter buckets by name (wildcards `*`/`?` supported; substring match if no wildcards) | All buckets |
 | `-Path` | Storage root directory | `$HOME/.buckets` |
 | `-Tree` | Render a colorized tree view of all buckets and files | `false` |
 | `-Objects` | Show individual files in tree view | `false` (directories only) |
@@ -661,7 +662,7 @@ Export-Bucket -Bucket "projects/*" -OutputFile projects-backup.clixml -AsBinary
 
 ### Import-Bucket
 
-Imports objects from an archive file into a bucket.
+Imports objects from an archive file into a bucket. Skipped objects (existing keys) are listed by name in the summary output.
 
 ```powershell
 Import-Bucket
