@@ -25,7 +25,10 @@ function Get-Bucket {
     .PARAMETER MaxFiles
     Maximum files to display per bucket in tree view. Truncated files shown as "... N more". Default: 5.
     .PARAMETER Depth
-    Maximum depth to display in tree view.
+    Maximum nesting depth. In tree view, controls how many levels are rendered.
+    In list/table view (with -Recurse), limits how deep subdirectories are scanned.
+    Without -Recurse, limits aggregation depth (sub-bucket objects beyond this depth
+    are not counted in the parent's ObjectCount).
     .PARAMETER Recurse
     List all nested buckets with direct (non-aggregated) object counts.
     .OUTPUTS
@@ -263,7 +266,7 @@ function Get-Bucket {
     if ($Recurse) {
         # Recursive mode: all directories, direct counts
         function Scan-Recurse {
-            param([string]$Dir)
+            param([string]$Dir, [int]$currentDepth = 1)
             $di = [System.IO.DirectoryInfo]::new($Dir)
             $directCount = $di.GetFiles("*.dat").Length + $di.GetFiles("*.json").Length
             $hasSubBuckets = $false
@@ -271,7 +274,9 @@ function Get-Bucket {
             foreach ($child in $di.GetDirectories()) {
                 if ($child.Name -eq ".buckets") { continue }
                 $hasSubBuckets = $true
-                Scan-Recurse -Dir $child.FullName
+                if ($currentDepth -lt $Depth) {
+                    Scan-Recurse -Dir $child.FullName -currentDepth ($currentDepth + 1)
+                }
             }
 
             $relPath = $Dir.Substring($Path.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar).Replace([System.IO.Path]::DirectorySeparatorChar, '/')
@@ -285,13 +290,13 @@ function Get-Bucket {
         $rootDi = [System.IO.DirectoryInfo]::new($Path)
         foreach ($subDir in $rootDi.GetDirectories()) {
             if ($subDir.Name -eq ".buckets") { continue }
-            Scan-Recurse -Dir $subDir.FullName
+            Scan-Recurse -Dir $subDir.FullName -currentDepth 1
         }
     }
     else {
         # Non-recursive mode: top-level only, aggregated counts
         function Get-AggregatedStats {
-            param([string]$Dir)
+            param([string]$Dir, [int]$currentDepth = 1)
             $di = [System.IO.DirectoryInfo]::new($Dir)
             $count = $di.GetFiles("*.dat").Length + $di.GetFiles("*.json").Length
             $hasSubBuckets = $false
@@ -299,8 +304,10 @@ function Get-Bucket {
             foreach ($child in $di.GetDirectories()) {
                 if ($child.Name -eq ".buckets") { continue }
                 $hasSubBuckets = $true
-                $childStats = Get-AggregatedStats -Dir $child.FullName
-                $count += $childStats.TotalCount
+                if ($currentDepth -lt $Depth) {
+                    $childStats = Get-AggregatedStats -Dir $child.FullName -currentDepth ($currentDepth + 1)
+                    $count += $childStats.TotalCount
+                }
             }
 
             [PSCustomObject]@{ TotalCount = $count; HasSubBuckets = $hasSubBuckets }
@@ -309,7 +316,7 @@ function Get-Bucket {
         $rootDi = [System.IO.DirectoryInfo]::new($Path)
         foreach ($subDir in $rootDi.GetDirectories()) {
             if ($subDir.Name -eq ".buckets") { continue }
-            $stats = Get-AggregatedStats -Dir $subDir.FullName
+            $stats = Get-AggregatedStats -Dir $subDir.FullName -currentDepth 1
             $obj = [PSCustomObject]@{ Name = $subDir.Name; ObjectCount = $stats.TotalCount; HasSubBuckets = $stats.HasSubBuckets }
             Add-HiddenProperty -Target $obj -Name 'Path' -Value $subDir.FullName
             $null = $results.Add($obj)
