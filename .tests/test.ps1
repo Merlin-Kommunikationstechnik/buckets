@@ -702,9 +702,9 @@ Test-It "Empty bucket (InputObject `@() creates no objects)" {
             Without -NoRecurse (default), it descends into all sub-buckets.
   Why it matters: Users need both shallow and deep search modes.
 #>
-Test-It "Wildcard + -Recurse (org/eu -NoRecurse returns 1, without returns >1)" {
-    $flat = @(Get-BucketObject -Bucket "org/eu" -NoRecurse -WarningAction SilentlyContinue).Count
-    $recursive = @(Get-BucketObject -Bucket "org/eu" -WarningAction SilentlyContinue).Count
+Test-It "Wildcard + -Recurse (org/eu default returns 1, -Recurse returns >1)" {
+    $flat = @(Get-BucketObject -Bucket "org/eu" -WarningAction SilentlyContinue).Count
+    $recursive = @(Get-BucketObject -Bucket "org/eu" -Recurse -WarningAction SilentlyContinue).Count
     $recursive -gt $flat -and $flat -gt 0
 }
 

@@ -4,11 +4,11 @@ function Get-BucketObject {
     Retrieves objects from one or more buckets.
     .DESCRIPTION
     Reads serialized objects from bucket directories. When no bucket is specified,
-    searches all buckets under the storage path. Supports exact-match hashtable
+    reads from the "default" bucket. Supports exact-match hashtable
     filtering (-Match) and arbitrary scriptblock filtering (-Filter).
     Retrieved objects include metadata properties: _BucketName, _BucketKey, _BucketFile.
     .PARAMETER Bucket
-    Bucket name(s) to search (Position 0). If omitted, searches all buckets under -Path. Supports wildcards.
+    Bucket name(s) to search (Position 0). If omitted, reads from the "default" bucket. Supports wildcards.
     .PARAMETER Path
     Root directory for bucket storage. Default: $HOME/.buckets.
     .PARAMETER Key
@@ -18,9 +18,7 @@ function Get-BucketObject {
     .PARAMETER Filter
     ScriptBlock for custom filtering. Use $_ to reference object properties (e.g., { $_.Age -gt 30 }).
     .PARAMETER Recurse
-    Included for backward compatibility. No longer needed — recursion is now the default.
-    .PARAMETER NoRecurse
-    Suppress recursion into nested sub-buckets. Only returns objects from the specified bucket directory.
+    Recurse into nested sub-buckets. Without this switch, only returns objects from the specified bucket directory.
     .PARAMETER First
     Return only the first N objects.
     .PARAMETER Skip
@@ -42,8 +40,6 @@ function Get-BucketObject {
     .EXAMPLE
     Get-BucketObject -Bucket org
     .EXAMPLE
-    Get-BucketObject -Bucket org -NoRecurse
-    .EXAMPLE
     Get-BucketObject -First 10 -Skip 20
     #>
     [CmdletBinding()]
@@ -54,7 +50,6 @@ function Get-BucketObject {
         [hashtable]$Match,
         [scriptblock]$Filter,
         [switch]$Recurse,
-        [switch]$NoRecurse,
         [int]$First,
         [int]$Skip,
         [object]$Funnel
@@ -68,14 +63,14 @@ function Get-BucketObject {
         $cachedBuckets = $null
         foreach ($b in $Bucket) {
             if ($b -match '[\*\?]') {
-                if ($null -eq $cachedBuckets) { $cachedBuckets = Get-Bucket -Path $Path -Recurse }
+                if ($null -eq $cachedBuckets) { $cachedBuckets = Get-Bucket -Path $Path -Recurse:$Recurse }
                 $matched = $cachedBuckets | Where-Object { $_.Name -like $b }
                 $bucketPaths += $matched | ForEach-Object { $_.Path }
             }
             else {
                 $bp = Get-BucketPath -Name $b -Path $Path
                 $bucketPaths += $bp
-                if ($Recurse -or -not $NoRecurse) {
+                if ($Recurse) {
                     $nested = Get-Bucket -Path $Path -Recurse | Where-Object { $_.Name -like "$b/*" }
                     $bucketPaths += $nested | ForEach-Object { $_.Path }
                 }
@@ -83,7 +78,7 @@ function Get-BucketObject {
         }
     }
     else {
-        $bucketPaths += Get-Bucket -Path $Path -Recurse | ForEach-Object { $_.Path }
+        $bucketPaths += Get-BucketPath -Name "default" -Path $Path
     }
 
     $funnelDef = Resolve-Funnel $Funnel
