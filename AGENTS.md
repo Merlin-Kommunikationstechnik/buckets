@@ -51,6 +51,7 @@ PowerShell module for file-based PSObject storage using directory-backed "bucket
 
 | Cmdlet | Key Params |
 |--------|-----------|
+| `New-Bucket` | `-Name` (Position 0, mandatory), `-Path`, `-Force`, `-PassThru`, `-Quiet` |
 | `New-BucketObject` | `-InputObject` (pipeline), `-Bucket` (default "default"), `-Key`, `-KeyProperty`, `-AsBinary`, `-AsTimestamp`, `-Depth`, `-BinaryDepth`, `-Compress`, `-Quiet`, `-Overwrite`, `-AutoIndex`, `-Funnel` |
 | `Get-BucketObject` | `-Bucket` (positional 0, wildcards ok, default "default" if omitted), `-Key` (positional 1), `-Match` (hashtable, supports $null), `-Filter` (scriptblock with `$_`), `-Recurse` (opt-in, default is no recursion), `-First`, `-Skip`, `-Funnel` |
 | `Set-BucketObject` | `-InputObject` (pipeline binds `_BucketName`/`_BucketKey` or partial update), `-Bucket`, `-Key`, `-AsBinary`, `-Compress`, `-PassThru`, `-Quiet` |

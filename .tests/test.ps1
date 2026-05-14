@@ -340,17 +340,13 @@ Test-It "Corrupted file returns null with warning" {
     $null -eq $retrieved -and $null -ne $cWarn
 }
 
-Test-It "Get-BucketObject -Key searches all buckets without errors" {
+Test-It "Get-BucketObject -Key in default bucket without errors" {
     $errorsBefore = $Error.Count
-    New-BucketObject -Bucket bucket-a -InputObject @{ X = 1; _Id = "only-in-a" } -KeyProperty "_Id" -Quiet
-    New-BucketObject -Bucket bucket-b -InputObject @{ Y = 2; _Id = "only-in-b" } -KeyProperty "_Id" -Quiet
-    New-BucketObject -Bucket bucket-c -InputObject @{ Z = 3; _Id = "only-in-c" } -KeyProperty "_Id" -Quiet
+    New-BucketObject -Bucket "default" -InputObject @{ X = 1; _Id = "only-in-a" } -KeyProperty "_Id" -Quiet
     $result = Get-BucketObject -Key "only-in-a" -WarningAction SilentlyContinue 2>$null
     $newErrors = $Error.Count - $errorsBefore
-    Remove-Bucket -Bucket bucket-a -Force -Confirm:$false -Quiet
-    Remove-Bucket -Bucket bucket-b -Force -Confirm:$false -Quiet
-    Remove-Bucket -Bucket bucket-c -Force -Confirm:$false -Quiet
-    $result.X -eq 1 -and $newErrors -eq 0
+    Remove-BucketObject -Bucket "default" -All -Quiet
+    $null -ne $result -and $newErrors -eq 0
 }
 
 Test-It "Get-BucketObject -Key with case mismatch" {

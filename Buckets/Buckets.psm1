@@ -137,7 +137,7 @@ $script:KeyCompleterBlock = {
 Register-ArgumentCompleter -CommandName Copy-BucketObject -ParameterName DestinationBucket -ScriptBlock $script:CompleterBlock
 Register-ArgumentCompleter -CommandName Move-BucketObject -ParameterName DestinationBucket -ScriptBlock $script:CompleterBlock
 
-@('Get-Bucket', 'dip') | ForEach-Object {
+@('New-Bucket', 'Get-Bucket', 'dip') | ForEach-Object {
     Register-ArgumentCompleter -CommandName $_ -ParameterName Name -ScriptBlock $script:CompleterBlock
 }
 
@@ -214,7 +214,7 @@ foreach ($cmd in $nativeCommands) {
 
 Export-ModuleMember -Function @(
     'New-BucketObject', 'Get-BucketObject', 'Set-BucketObject',
-    'Remove-BucketObject', 'Get-Bucket', 'Get-BucketStats',
+    'Remove-BucketObject', 'New-Bucket', 'Get-Bucket', 'Get-BucketStats',
     'Get-BucketKeys', 'Get-BucketObjectStats', 'Remove-Bucket', 'Copy-BucketObject',
     'Rename-BucketObject', 'Move-BucketObject', 'Export-Bucket',
     'Import-Bucket', 'Set-BucketRoot', 'Get-BucketRoot', 'Sync-BucketDrive',
