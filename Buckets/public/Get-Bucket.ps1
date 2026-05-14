@@ -169,7 +169,7 @@ function Get-Bucket {
             }
 
             foreach ($sub in $subDirs) {
-                if ($CurrentDepth -lt $Depth -or $Objects) {
+                if ($CurrentDepth -lt $Depth) {
                     $child = BuildTree -Dir $sub.FullName -Root $Root -CurrentDepth ($CurrentDepth + 1)
                     $null = $node.Children.Add($child)
                 }

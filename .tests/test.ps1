@@ -1600,6 +1600,14 @@ Test-It "Get-Bucket -Tree -Depth limits nesting" {
     $null -ne $fullOrg -and $fullOrg.Children.Count -ge 1 -and $null -ne $limitedOrg -and ($null -eq $limitedOrg.Children -or $limitedOrg.Children.Count -eq 0)
 }
 
+Test-It "Get-Bucket -Tree -Depth 1 -Objects honors depth over objects" {
+    $tree = Get-Bucket -Tree -Raw -Depth 1 -Objects -Name "org"
+    $orgNode = $tree.Children | Where-Object { $_.Name -eq "org" }
+    $fileChildren = @($orgNode.Children | Where-Object Type -eq "Object")
+    $dirChildren = @($orgNode.Children | Where-Object Type -ne "Object")
+    $fileChildren.Count -gt 0 -and $dirChildren.Count -eq 0
+}
+
 # ============================================================
 # 32. Copy-BucketObject -PassThru and binary preservation
 # ============================================================
