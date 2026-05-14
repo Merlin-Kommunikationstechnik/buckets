@@ -132,7 +132,9 @@ Benchmarks measure write/read throughput for 1k and 10k objects (simple + comple
 1. **Confirm with the user before releasing** — do not run the workflow without explicit confirmation
 2. **Do NOT manually bump ModuleVersion** in `Buckets.psd1` — the workflow auto-bumps it
 3. `git push`
-4. `gh workflow run "Release Buckets" --ref main -f release_type=<patch|minor|major>`
+4. `gh workflow run "Release Buckets" --ref main -f release_type=<patch|minor|major> [-f prerelease=true]`
+   - Append `-f prerelease=true` to publish as a preview version (auto-generates `-preview` label, marks GitHub release as prerelease)
+   - Without `prerelease=true`, publishes as a stable release (removes any `Prerelease` key from the manifest)
 5. **MUST** run `gh run view <ID> --json status,conclusion` immediately. Do not tell the user anything about the release until you have checked the status. Use `gh run watch <ID> --exit-status` to block until completion, then report the result.
 
 ## Module Conventions

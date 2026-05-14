@@ -11,6 +11,11 @@ on:
           - major
           - minor
           - patch
+      prerelease:
+        description: Publish as prerelease (auto-generates -preview label)
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -28,8 +33,11 @@ jobs:
       - name: Bump module version
         id: bump
         shell: pwsh
+        env:
+          IS_PRERELEASE: ${{ github.event.inputs.prerelease }}
         run: |
           $ErrorActionPreference = "Stop"
+          $isPrerelease = $env:IS_PRERELEASE -eq 'true'
 
           $manifestPath = "Buckets/Buckets.psd1"
 
@@ -95,9 +103,36 @@ jobs:
             Set-Content -Path $manifestPath -Value $updatedManifestContent -Encoding UTF8
           }
 
-          "new_version=$newVersion" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          # Set or remove Prerelease key in PSData
+          $finalContent = Get-Content -Path $manifestPath -Raw
+          if ($isPrerelease) {
+            $finalContent = $finalContent.Replace("        # Prerelease = ''", "        Prerelease = 'preview'")
+          } else {
+            $finalContent = $finalContent.Replace("        Prerelease = 'preview'", "        # Prerelease = ''")
+          }
+          Set-Content -Path $manifestPath -Value $finalContent -Encoding UTF8
 
-      - name: Publish module to PowerShell Gallery
+          $label = if ($isPrerelease) { "$newVersion-preview" } else { "$newVersion" }
+          "new_version=$newVersion" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "new_version_label=$label" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Publish module to PowerShell Gallery (prerelease)
+        if: github.event.inputs.prerelease == 'true'
+        shell: pwsh
+        env:
+          PWSH_GALLERY_TOKEN: ${{ secrets.PWSH_GALLERY_TOKEN }}
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          if ([string]::IsNullOrWhiteSpace($env:PWSH_GALLERY_TOKEN)) {
+            throw "Missing secret 'PWSH_GALLERY_TOKEN'."
+          }
+
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Publish-Module -Path "./Buckets" -NuGetApiKey $env:PWSH_GALLERY_TOKEN -Prerelease
+
+      - name: Publish module to PowerShell Gallery (release)
+        if: github.event.inputs.prerelease != 'true'
         shell: pwsh
         env:
           PWSH_GALLERY_TOKEN: ${{ secrets.PWSH_GALLERY_TOKEN }}
@@ -114,8 +149,9 @@ jobs:
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.bump.outputs.new_version }}
-          name: Buckets v${{ steps.bump.outputs.new_version }}
+          tag_name: v${{ steps.bump.outputs.new_version_label }}
+          name: Buckets v${{ steps.bump.outputs.new_version_label }}
+          prerelease: ${{ github.event.inputs.prerelease == 'true' }}
           generate_release_notes: true
 
       - name: Commit bumped version files
@@ -133,5 +169,5 @@ jobs:
             exit 0
           fi
 
-          git commit -m "chore(release): bump Buckets to ${{ steps.bump.outputs.new_version }}"
+          git commit -m "chore(release): bump Buckets to ${{ steps.bump.outputs.new_version_label }}"
           git push
