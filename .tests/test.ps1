@@ -1742,6 +1742,57 @@ Test-It "Set-BucketObject -PassThru returns updated metadata" {
     $null -ne $result -and $result.Bucket -eq "users" -and $result.UpdatedKeys -contains "Alice"
 }
 
+# ============================================================
+# 36. Set-Bucket (rename/move bucket)
+# ============================================================
+Write-Host "`n[36] Set-Bucket (rename/move bucket)" -ForegroundColor Blue
+
+Test-It "Set-Bucket renames top-level bucket" {
+    Remove-Bucket "sb-rename" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    New-BucketObject -Bucket "sb-rename" -InputObject @{ Id = 1; Name = "test" } -Key "obj1" -Quiet
+    Use-Bucket "sb-rename"
+    Set-Bucket "sb-rename" "sb-renamed" -Quiet
+    $obj = Get-BucketObject -Bucket "sb-renamed" -Key "obj1" -WarningAction SilentlyContinue
+    $null -ne $obj -and $obj.Name -eq "test"
+}
+
+Test-It "Set-Bucket moves bucket to nested path" {
+    New-BucketObject -Bucket "sb-move" -InputObject @{ Id = 2 } -Key "obj2" -Quiet
+    Use-Bucket "sb-move"
+    Set-Bucket "sb-move" "parent/sb-moved" -Quiet
+    $obj = Get-BucketObject -Bucket "parent/sb-moved" -Key "obj2" -WarningAction SilentlyContinue
+    $null -ne $obj -and $obj.Id -eq 2
+}
+
+Test-It "Set-Bucket on nonexistent bucket warns" {
+    $warn = $null
+    Set-Bucket "sb-nonexistent" "sb-still-gone" -WarningVariable warn -WarningAction SilentlyContinue 2>$null
+    $null -ne $warn
+}
+
+Test-It "Set-Bucket to existing name warns" {
+    New-BucketObject -Bucket "sb-existing-target" -InputObject @{} -Key "x" -Quiet
+    Use-Bucket "sb-existing-target"
+    $warn = $null
+    Set-Bucket "users" "sb-existing-target" -WarningVariable warn -WarningAction SilentlyContinue 2>$null
+    $null -ne $warn
+}
+
+Test-It "Set-Bucket -PassThru returns metadata" {
+    New-BucketObject -Bucket "sb-pt" -InputObject @{ Id = 3 } -Key "obj3" -Quiet
+    Use-Bucket "sb-pt"
+    $result = Set-Bucket "sb-pt" "sb-pt-renamed" -PassThru
+    $null -ne $result -and $result.Name -eq "sb-pt-renamed" -and $result.OldName -eq "sb-pt"
+}
+
+Test-It "Set-Bucket -WhatIf does not rename" {
+    New-BucketObject -Bucket "sb-whatif" -InputObject @{ Id = 4 } -Key "obj4" -Quiet
+    Use-Bucket "sb-whatif"
+    Set-Bucket "sb-whatif" "sb-whatif-safe" -WhatIf
+    $obj = Get-BucketObject -Bucket "sb-whatif" -Key "obj4" -WarningAction SilentlyContinue
+    $null -ne $obj -and $obj.Id -eq 4
+}
+
 
 # Cleanup - remove any leftover test funnels
 Get-Funnel | Where-Object Name -like "test-funnel*" | ForEach-Object {

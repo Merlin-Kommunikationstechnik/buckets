@@ -62,6 +62,7 @@ PowerShell module for file-based PSObject storage using directory-backed "bucket
 | `Export-Bucket` | `-Bucket`, `-OutputFile`, `-AsBinary`, `-Quiet` |
 | `Import-Bucket` | `-Bucket`, `-InputFile`, `-AsBinary`, `-Overwrite`, `-Quiet` |
 | `Get-Bucket` | `-Name` (positional 0, wildcards supported; substring match if no wildcards), `-Tree`, `-Raw` |
+| `Set-Bucket` | `-Name` (positional 0, mandatory, pipeline by property), `-NewName` (positional 1, mandatory, pipeline by property), `-PassThru`, `-Quiet`, `-WhatIf` (SupportsShouldProcess) |
 | `Get-BucketStats` | `-Bucket` (returns count, size, timestamps, visible Path) |
 | `Get-BucketKeys` | `-Bucket` (positional 0, wildcards ok), `-Match` (returns Bucket + Key only) |
 | `Get-BucketObjectStats` | `-Bucket` (positional 0, wildcards ok), `-Key` (positional 1), `-Match` (returns Format, Type, Size, LastWriteTime, IsCompressed) |
@@ -85,6 +86,9 @@ Only removes buckets containing exclusively `.dat`/`.json` files (or empty direc
 
 ### Remove-BucketObject Safety
 Uses `SupportsShouldProcess` for `-WhatIf` support. Parameter sets enforce `-Key` or `-All` (mutually exclusive). `-Match/-Filter` shows a pre-confirmation summary listing the first 5 matching keys and total size. Output shows `"bucket · N objects removed (matched)"` for filter operations, `"bucket · N objects removed"` for `-All`, and `"bucket/key · removed"` for single key. `-PassThru` returns objects with `Key` property (no file extension).
+
+### Set-Bucket Safety
+Renames a bucket directory on disk. All nested objects and sub-buckets are preserved. `-NewName` supports full path changes (moves to a different parent). Checks for path traversal safety, validates source exists and destination doesn't. Accepts pipeline input for bulk operations via `Name`/`NewName` property binding. `-WhatIf` previews without renaming.
 
 ### Compression
 `-Compress` switch enables GZip compression for binary (`.dat`) files. Automatically detected on read via magic bytes (0x1F 0x8B). Achieves ~95% reduction on repetitive data.

@@ -140,9 +140,11 @@ $script:KeyCompleterBlock = {
 Register-ArgumentCompleter -CommandName Copy-BucketObject -ParameterName DestinationBucket -ScriptBlock $script:CompleterBlock
 Register-ArgumentCompleter -CommandName Move-BucketObject -ParameterName DestinationBucket -ScriptBlock $script:CompleterBlock
 
-@('New-Bucket', 'Get-Bucket', 'dip') | ForEach-Object {
+@('New-Bucket', 'Get-Bucket', 'Set-Bucket', 'dip') | ForEach-Object {
     Register-ArgumentCompleter -CommandName $_ -ParameterName Name -ScriptBlock $script:CompleterBlock
 }
+
+Register-ArgumentCompleter -CommandName Set-Bucket -ParameterName NewName -ScriptBlock $script:CompleterBlock
 
 @('Get-BucketObject', 'Set-BucketObject', 'Remove-BucketObject',
   'Copy-BucketObject', 'Rename-BucketObject', 'Move-BucketObject', 'spill') | ForEach-Object {
@@ -217,9 +219,10 @@ foreach ($cmd in $nativeCommands) {
 
 Export-ModuleMember -Function @(
     'New-BucketObject', 'Get-BucketObject', 'Set-BucketObject',
-    'Remove-BucketObject', 'New-Bucket', 'Get-Bucket', 'Get-BucketStats',
-    'Get-BucketKeys', 'Get-BucketObjectStats', 'Remove-Bucket', 'Copy-BucketObject',
-    'Rename-BucketObject', 'Move-BucketObject', 'Export-Bucket',
-    'Import-Bucket', 'Set-BucketRoot', 'Get-BucketRoot', 'Sync-BucketDrive',
+    'Remove-BucketObject', 'New-Bucket', 'Get-Bucket', 'Set-Bucket',
+    'Get-BucketStats', 'Get-BucketKeys', 'Get-BucketObjectStats',
+    'Remove-Bucket', 'Copy-BucketObject', 'Rename-BucketObject',
+    'Move-BucketObject', 'Export-Bucket', 'Import-Bucket',
+    'Set-BucketRoot', 'Get-BucketRoot', 'Sync-BucketDrive',
     'New-Funnel', 'Get-Funnel', 'Set-Funnel', 'Remove-Funnel'
 ) -Alias 'fill', 'scoop', 'spill', 'dip', 'drain'
