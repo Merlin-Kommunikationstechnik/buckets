@@ -683,7 +683,7 @@ $team | fill -Bucket team -KeyProperty Name -Quiet
 '@
                                 Code = @'
 # Create a funnel that filters for senior members (Level > 2)
-New-Funnel -Name "seniors" -Transform { if ($_.Level -gt 2) { $_ } } -Description "Team members above level 2"
+New-Funnel -Name "seniors" -Transform { if ($_.Level -gt 2) { $_ } } -Description "Team members above level 2" -Force
 
 # List all funnels to confirm
 Get-Funnel
@@ -723,7 +723,7 @@ New-Funnel -Name "add-seniority" -Transform {
     if ($_.Level -ge 4) { $_.Seniority = "Senior"; $_ }
     elseif ($_.Level -ge 2) { $_.Seniority = "Mid"; $_ }
     else { $null }
-}
+} -Force
 
 # Apply the funnel during fill
 $newTeam | fill -Bucket team -KeyProperty Name -Funnel "add-seniority" -Quiet
@@ -1808,7 +1808,7 @@ $team | fill -Bucket team -KeyProperty Name -Quiet
 '@
                                 Code = @'
 # Erstelle einen Funnel, der nach Senior-Mitgliedern filtert (Level > 2)
-New-Funnel -Name "seniors" -Transform { if ($_.Level -gt 2) { $_ } } -Description "Teammitglieder über Level 2"
+New-Funnel -Name "seniors" -Transform { if ($_.Level -gt 2) { $_ } } -Description "Teammitglieder über Level 2" -Force
 
 # Liste alle Funnels zur Bestätigung auf
 Get-Funnel
@@ -1851,7 +1851,7 @@ New-Funnel -Name "add-seniority" -Transform {
     if ($_.Level -ge 4) { $_.Seniority = "Senior"; $_ }
     elseif ($_.Level -ge 2) { $_.Seniority = "Mid"; $_ }
     else { $null }
-}
+} -Force
 
 # Wende den Funnel während fill an
 $newTeam | fill -Bucket team -KeyProperty Name -Funnel "add-seniority" -Quiet
