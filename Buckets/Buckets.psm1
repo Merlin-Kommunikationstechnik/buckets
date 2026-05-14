@@ -62,6 +62,9 @@ $moduleInfo.OnRemove = { Remove-PSDrive -Name buckets -Force -ErrorAction Silent
 # Map PSDrive on module import
 Sync-BucketDrive
 
+# Ensure default bucket exists
+$null = Ensure-BucketExists -Name "default"
+
 # --- Aliases ---
 
 Set-Alias -Name fill -Value New-BucketObject
