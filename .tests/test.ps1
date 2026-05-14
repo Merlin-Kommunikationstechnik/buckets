@@ -1977,6 +1977,59 @@ Test-It "Leading-dot hidden bucket name" {
 }
 
 # ============================================================
+# 42. New-Bucket cmdlet
+# ============================================================
+Write-Host "`n[42] New-Bucket cmdlet" -ForegroundColor Blue
+
+Test-It "New-Bucket creates an empty bucket directory" {
+    Remove-Bucket "nb-test" -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
+    New-Bucket "nb-test" -Quiet
+    $bucketPath = Join-Path (Get-BucketRoot) "nb-test"
+    (Test-Path $bucketPath) -and ((Get-ChildItem $bucketPath -Filter "*.json").Count -eq 0)
+}
+
+Test-It "New-Bucket creates nested bucket path" {
+    Remove-Bucket "nb-nested" -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
+    New-Bucket "nb-nested/sub/a" -Quiet
+    $bucketPath = Join-Path (Get-BucketRoot) "nb-nested/sub/a"
+    Test-Path $bucketPath
+}
+
+Test-It "New-Bucket warns on existing bucket" {
+    New-Bucket "nb-test" -Quiet
+    $warn = $null
+    New-Bucket "nb-test" -WarningVariable warn -WarningAction SilentlyContinue -Quiet
+    $null -ne $warn
+}
+
+Test-It "New-Bucket -Force recreates existing bucket" {
+    New-BucketObject -Bucket "nb-force" -InputObject @{ _Id = "x"; V = 1 } -KeyProperty _Id -Quiet
+    New-Bucket "nb-force" -Force -Quiet
+    $remaining = Get-BucketObject -Bucket "nb-force" -WarningAction SilentlyContinue
+    $null -eq $remaining -or @($remaining).Count -eq 0
+}
+
+Test-It "New-Bucket -PassThru returns bucket info" {
+    Remove-Bucket "nb-pt" -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
+    $result = New-Bucket "nb-pt" -PassThru -Quiet
+    $null -ne $result -and $result.Name -eq "nb-pt" -and $result.ObjectCount -eq 0 -and $result.HasSubBuckets -eq $false
+}
+
+Test-It "New-Bucket -WhatIf does not create bucket" {
+    Remove-Bucket "nb-whatif" -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
+    New-Bucket "nb-whatif" -WhatIf -Quiet
+    $bucketPath = Join-Path (Get-BucketRoot) "nb-whatif"
+    -not (Test-Path $bucketPath)
+}
+
+Test-It "New-Bucket bucket is visible via Get-Bucket listing" {
+    Remove-Bucket "nb-list" -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
+    New-Bucket "nb-list" -Quiet
+    $buckets = Get-Bucket
+    $null -ne $buckets -and @($buckets).Count -gt 0 -and ($buckets.Name -contains "nb-list")
+}
+
+# ============================================================
 # Cleanup - remove any leftover test funnels
 Get-Funnel | Where-Object Name -like "test-funnel*" | ForEach-Object {
     Remove-Funnel -Name $_.Name -Quiet -ErrorAction SilentlyContinue
