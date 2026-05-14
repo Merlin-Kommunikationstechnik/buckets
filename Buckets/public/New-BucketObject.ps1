@@ -38,7 +38,7 @@ function New-BucketObject {
     First duplicate gets _1, second gets _2, etc. Compatible with -Overwrite. No effect on
     GUID or timestamp-based keys (already unique).
     .PARAMETER PassThru
-    Emit a metadata object with details of the operation (StoredKeys, SkippedKeys, SanitizedKeys, OverwrittenKeys, counts, format).
+    Emit a metadata object with details of the operation (StoredKeys, ExistingKeys, SanitizedKeys, OverwrittenKeys, counts, format).
     .OUTPUTS
     By default, a progress indicator and summary are shown.
     Use -PassThru to also get a metadata object. Use -Quiet for silent operation.
@@ -73,10 +73,10 @@ function New-BucketObject {
     begin {
         $bucketPath = Ensure-BucketExists -Name $Bucket -Path $Path
         $extension = if ($AsBinary) { ".dat" } else { ".json" }
-        $savedCount = 0; $skippedCount = 0; $fallbackCount = 0; $formatFallbackCount = 0; $failedCount = 0
+        $savedCount = 0; $filteredCount = 0; $missingKeyCount = 0; $existingKeyCount = 0; $fallbackCount = 0; $formatFallbackCount = 0; $failedCount = 0
         $overwrittenCount = 0; $sanitizedCount = 0; $indexedCount = 0; $expandedCount = 0
         $storedKeys = [System.Collections.ArrayList]::new()
-        $skippedKeys = [System.Collections.ArrayList]::new()
+        $existingKeyKeys = [System.Collections.ArrayList]::new()
         $sanitizedKeys = [System.Collections.ArrayList]::new()
         $overwrittenKeys = [System.Collections.ArrayList]::new()
         $seenKeys = @{}
@@ -106,14 +106,14 @@ function New-BucketObject {
                     $matchesAppliesTo = -not $funnelDef.ContainsKey('AppliesTo') -or ($null -ne ($item | Where-Object $funnelDef.AppliesTo))
                     if ($matchesAppliesTo) {
                         $funnelItems = @($item | ForEach-Object $funnelDef.Transform) | Where-Object { $_ -ne $null }
-                        if ($funnelItems.Count -eq 0) { $skippedCount++; $index++; continue }
+                        if ($funnelItems.Count -eq 0) { $filteredCount++; $index++; continue }
                         $subIdx = 0
                         $expansionKeys = @{}
                         foreach ($subItem in $funnelItems) {
                             $subIdx++
                             $item = $subItem
                             $itemFilename = Get-BucketFilename -Item $item -Key $Key -KeyProperty $KeyProperty -AsTimestamp:$AsTimestamp.IsPresent -Index ($index + $subIdx - 1) -Extension $extension
-                            if ($null -eq $itemFilename) { $skippedCount++; continue }
+                            if ($null -eq $itemFilename) { $missingKeyCount++; continue }
                             $keyName = if ($itemFilename.OriginalKey) { $itemFilename.OriginalKey } else { [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename) }
                             if ($funnelItems.Count -gt 1) {
                                 $baseSafeKey = [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename)
@@ -166,7 +166,7 @@ function New-BucketObject {
                                     Write-Progress -Activity "Saving to '$Bucket'" -Status "$savedCount object(s) saved" -PercentComplete $percent -CurrentOperation ([System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename))
                                 }
                             }
-                            elseif ($writeResult.Skipped) { $skippedCount++; $null = $skippedKeys.Add($keyName) }
+                            elseif ($writeResult.Skipped) { $existingKeyCount++; $null = $existingKeyKeys.Add($keyName) }
                             else { $failedCount++ }
                             if ($writeResult.Fallback) { $fallbackCount++ }
                             if ($writeResult.FormatFallback) { $formatFallbackCount++ }
@@ -176,7 +176,7 @@ function New-BucketObject {
                     }
                 }
                 $itemFilename = Get-BucketFilename -Item $item -Key $Key -KeyProperty $KeyProperty -AsTimestamp:$AsTimestamp.IsPresent -Index $index -Extension $extension
-                if ($null -eq $itemFilename) { $skippedCount++; $index++; continue }
+                if ($null -eq $itemFilename) { $missingKeyCount++; $index++; continue }
                 $keyName = if ($itemFilename.OriginalKey) { $itemFilename.OriginalKey } else { [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename) }
                 if ($AutoIndex) {
                     $baseSafeKey = [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename)
@@ -212,7 +212,7 @@ function New-BucketObject {
                         Write-Progress -Activity "Saving to '$Bucket'" -Status "$savedCount object(s) saved" -PercentComplete $percent -CurrentOperation ([System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename))
                     }
                 }
-                elseif ($writeResult.Skipped) { $skippedCount++; $null = $skippedKeys.Add($keyName) }
+                elseif ($writeResult.Skipped) { $existingKeyCount++; $null = $existingKeyKeys.Add($keyName) }
                 else { $failedCount++ }
                 if ($writeResult.Fallback) { $fallbackCount++ }
                 if ($writeResult.FormatFallback) { $formatFallbackCount++ }
@@ -234,14 +234,14 @@ function New-BucketObject {
                     $matchesAppliesTo = -not $funnelDef.ContainsKey('AppliesTo') -or ($null -ne ($item | Where-Object $funnelDef.AppliesTo))
                     if ($matchesAppliesTo) {
                         $funnelItems = @($item | ForEach-Object $funnelDef.Transform) | Where-Object { $_ -ne $null }
-                        if ($funnelItems.Count -eq 0) { $skippedCount++; $index++; continue }
+                        if ($funnelItems.Count -eq 0) { $filteredCount++; $index++; continue }
                         $subIdx = 0
                         $expansionKeys = @{}
                         foreach ($subItem in $funnelItems) {
                             $subIdx++
                             $item = $subItem
                             $itemFilename = Get-BucketFilename -Item $item -Key $Key -KeyProperty $KeyProperty -AsTimestamp:$AsTimestamp.IsPresent -Index ($index + $subIdx - 1) -Extension $extension
-                            if ($null -eq $itemFilename) { $skippedCount++; continue }
+                            if ($null -eq $itemFilename) { $missingKeyCount++; continue }
                             $keyName = if ($itemFilename.OriginalKey) { $itemFilename.OriginalKey } else { [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename) }
                             if ($funnelItems.Count -gt 1) {
                                 $baseSafeKey = [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename)
@@ -294,7 +294,7 @@ function New-BucketObject {
                                     Write-Progress -Activity "Saving to '$Bucket'" -Status "$savedCount object(s) saved" -PercentComplete $percent -CurrentOperation ([System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename))
                                 }
                             }
-                            elseif ($writeResult.Skipped) { $skippedCount++; $null = $skippedKeys.Add($keyName) }
+                            elseif ($writeResult.Skipped) { $existingKeyCount++; $null = $existingKeyKeys.Add($keyName) }
                             else { $failedCount++ }
                             if ($writeResult.Fallback) { $fallbackCount++ }
                             if ($writeResult.FormatFallback) { $formatFallbackCount++ }
@@ -304,7 +304,7 @@ function New-BucketObject {
                     }
                 }
                 $itemFilename = Get-BucketFilename -Item $item -Key $Key -KeyProperty $KeyProperty -AsTimestamp:$AsTimestamp.IsPresent -Index $index -Extension $extension
-                if ($null -eq $itemFilename) { $skippedCount++; $index++; continue }
+                if ($null -eq $itemFilename) { $missingKeyCount++; $index++; continue }
                 $keyName = if ($itemFilename.OriginalKey) { $itemFilename.OriginalKey } else { [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename) }
                 if ($AutoIndex) {
                     $baseSafeKey = [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename)
@@ -340,7 +340,7 @@ function New-BucketObject {
                         Write-Progress -Activity "Saving to '$Bucket'" -Status "$savedCount object(s) saved" -PercentComplete $percent -CurrentOperation ([System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename))
                     }
                 }
-                elseif ($writeResult.Skipped) { $skippedCount++; $null = $skippedKeys.Add($keyName) }
+                elseif ($writeResult.Skipped) { $existingKeyCount++; $null = $existingKeyKeys.Add($keyName) }
                 else { $failedCount++ }
                 if ($writeResult.Fallback) { $fallbackCount++ }
                 if ($writeResult.FormatFallback) { $formatFallbackCount++ }
@@ -377,10 +377,21 @@ function New-BucketObject {
                 Write-Host $sanitizedCount -NoNewline -ForegroundColor $script:CNum
                 Write-Host " key name(s) sanitized" -ForegroundColor $script:CSkip
             }
-            if ($skippedCount -gt 0) {
+            if ($missingKeyCount -gt 0) {
                 Write-Host "  " -NoNewline
-                Write-Host $skippedCount -NoNewline -ForegroundColor $script:CNum
-                Write-Host " skipped (existing or missing key)" -ForegroundColor $script:CSkip
+                Write-Host $missingKeyCount -NoNewline -ForegroundColor $script:CNum
+                Write-Host " skipped (missing key)" -ForegroundColor $script:CSkip
+            }
+            if ($existingKeyCount -gt 0) {
+                Write-Host "  " -NoNewline
+                Write-Host $existingKeyCount -NoNewline -ForegroundColor $script:CNum
+                $skipDisplay = if ($existingKeyKeys.Count -le 5) { $existingKeyKeys -join ", " } else { ($existingKeyKeys | Select-Object -First 5) -join ", " + " ... +$($existingKeyKeys.Count - 5) more" }
+                Write-Host " skipped (existing key: $skipDisplay)" -ForegroundColor $script:CSkip
+            }
+            if ($filteredCount -gt 0) {
+                Write-Host "  " -NoNewline
+                Write-Host $filteredCount -NoNewline -ForegroundColor $script:CNum
+                Write-Host " skipped (filtered by funnel)" -ForegroundColor $script:CSkip
             }
             if ($fallbackCount -gt 0) {
                 Write-Host "  " -NoNewline
@@ -400,17 +411,17 @@ function New-BucketObject {
             Write-Output ([PSCustomObject]@{
                 Bucket      = $Bucket
                 Saved       = $savedCount
-                Skipped     = $skippedCount
+                Skipped     = $missingKeyCount + $existingKeyCount + $filteredCount
                 Overwritten = $overwrittenCount
                 Indexed     = $indexedCount
                 Expanded    = $expandedCount
                 Sanitized   = $sanitizedCount
                 Failed      = $failedCount
-                Total       = $savedCount + $skippedCount + $failedCount
+                Total       = $savedCount + $missingKeyCount + $existingKeyCount + $filteredCount + $failedCount
                 Format      = if ($AsBinary) { "Binary" } else { "JSON" }
                 Compressed  = $Compress.IsPresent
                 StoredKeys   = [string[]]$storedKeys
-                SkippedKeys  = [string[]]$skippedKeys
+                ExistingKeys = [string[]]$existingKeyKeys
                 SanitizedKeys = [PSCustomObject[]]$sanitizedKeys
                 OverwrittenKeys = [string[]]$overwrittenKeys
             })
