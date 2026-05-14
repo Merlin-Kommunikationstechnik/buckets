@@ -116,23 +116,7 @@ jobs:
           "new_version=$newVersion" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
           "new_version_label=$label" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
-      - name: Publish module to PowerShell Gallery (prerelease)
-        if: github.event.inputs.prerelease == 'true'
-        shell: pwsh
-        env:
-          PWSH_GALLERY_TOKEN: ${{ secrets.PWSH_GALLERY_TOKEN }}
-        run: |
-          $ErrorActionPreference = "Stop"
-
-          if ([string]::IsNullOrWhiteSpace($env:PWSH_GALLERY_TOKEN)) {
-            throw "Missing secret 'PWSH_GALLERY_TOKEN'."
-          }
-
-          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
-          Publish-Module -Path "./Buckets" -NuGetApiKey $env:PWSH_GALLERY_TOKEN -Prerelease
-
-      - name: Publish module to PowerShell Gallery (release)
-        if: github.event.inputs.prerelease != 'true'
+      - name: Publish module to PowerShell Gallery
         shell: pwsh
         env:
           PWSH_GALLERY_TOKEN: ${{ secrets.PWSH_GALLERY_TOKEN }}
