@@ -1748,6 +1748,9 @@ foreach ($bucket in $createdBuckets) {
     Remove-Bucket -Bucket $bucket -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
 }
 
+$dotSep = "·" * 52
+Write-Host $dotSep -ForegroundColor DarkGray
+
 $passCount = ($testResults | Where-Object { $_.Status -eq "PASS" }).Count
 $failCount = ($testResults | Where-Object { $_.Status -eq "FAIL" }).Count
 
