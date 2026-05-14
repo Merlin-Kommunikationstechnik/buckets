@@ -1,20 +1,21 @@
 function Get-ObjectFiles {
-    param([string]$BucketPath, [string]$Key)
+    param([string]$BucketPath, [string[]]$Key)
 
     $di = [System.IO.DirectoryInfo]::new($BucketPath)
-    if (-not [string]::IsNullOrWhiteSpace($Key)) {
-        $results = [System.Collections.ArrayList]::new()
-        $target = $Key.ToLowerInvariant()
-        foreach ($f in @($di.GetFiles("*.json")) + @($di.GetFiles("*.dat"))) {
-            $base = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
-            $baseLower = $base.ToLowerInvariant()
-            if ($baseLower -eq $target -or $baseLower.StartsWith("${target}_") -or $baseLower.StartsWith("${target}.")) {
+    $files = @($di.GetFiles("*.json")) + @($di.GetFiles("*.dat"))
+    $keys = @($Key | Where-Object { $_ })
+    if ($keys.Count -eq 0) { return $files }
+
+    $targets = @($keys | ForEach-Object { $_.ToLowerInvariant() })
+    $results = [System.Collections.ArrayList]::new()
+    foreach ($f in $files) {
+        $baseLower = [System.IO.Path]::GetFileNameWithoutExtension($f.Name).ToLowerInvariant()
+        foreach ($t in $targets) {
+            if ($baseLower -eq $t -or $baseLower.StartsWith("${t}_") -or $baseLower.StartsWith("${t}.")) {
                 $null = $results.Add($f)
+                break
             }
         }
-        return $results.ToArray()
     }
-    else {
-        return @($di.GetFiles("*.json")) + @($di.GetFiles("*.dat"))
-    }
+    return $results.ToArray()
 }

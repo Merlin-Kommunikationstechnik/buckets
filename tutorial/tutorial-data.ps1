@@ -729,9 +729,7 @@ New-Funnel -Name "add-seniority" -Transform {
 $newTeam | fill -Bucket team -KeyProperty Name -Funnel "add-seniority" -Quiet
 
 # Check the results — Grace and Ivan have Seniority, Heidi was skipped
-scoop -Bucket team -Key "Grace"
-scoop -Bucket team -Key "Heidi"
-scoop -Bucket team -Key "Ivan"
+scoop -Bucket team -Key "Grace", "Heidi", "Ivan"
 '@
                             }
                             @{
@@ -1859,9 +1857,7 @@ New-Funnel -Name "add-seniority" -Transform {
 $newTeam | fill -Bucket team -KeyProperty Name -Funnel "add-seniority" -Quiet
 
 # Überprüfe die Ergebnisse — Grace und Ivan haben Seniority, Heidi wurde übersprungen
-scoop -Bucket team -Key "Grace"
-scoop -Bucket team -Key "Heidi"
-scoop -Bucket team -Key "Ivan"
+scoop -Bucket team -Key "Grace", "Heidi", "Ivan"
 '@
                             }
                             @{

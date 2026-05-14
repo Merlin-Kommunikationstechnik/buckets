@@ -13,7 +13,7 @@ function Remove-BucketObject {
     .PARAMETER Path
     Root directory for bucket storage. Default: $HOME/.buckets.
     .PARAMETER Key
-    Object key to remove. Looks for both JSON and binary files. Case-insensitive.
+    Object key(s) to remove. Accepts multiple values (e.g. -Key "alpha", "beta"). Looks for both JSON and binary files. Case-insensitive.
     .PARAMETER All
     Remove all objects from the bucket.
     .PARAMETER Match
@@ -47,7 +47,7 @@ function Remove-BucketObject {
         [Parameter(ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][PSObject]$InputObject,
         [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)][Alias('_BucketName')][string]$Bucket,
         [string]$Path,
-        [Parameter(ParameterSetName = 'ByKey', ValueFromPipelineByPropertyName = $true)][Alias('_BucketKey')][string]$Key,
+        [Parameter(ParameterSetName = 'ByKey', ValueFromPipelineByPropertyName = $true)][Alias('_BucketKey')][string[]]$Key,
         [Parameter(ParameterSetName = 'All')][switch]$All,
         [Parameter(ParameterSetName = 'ByFilter')][hashtable]$Match,
         [Parameter(ParameterSetName = 'ByFilter')][scriptblock]$Filter,
@@ -65,15 +65,19 @@ function Remove-BucketObject {
         $Path = Resolve-SafePath -Path $Path
 
         function _GatherFiles {
-            param([string]$Dir, [int]$CurrentDepth, [int]$MaxDepth, [string]$Key)
+            param([string]$Dir, [int]$CurrentDepth, [int]$MaxDepth, [string[]]$Key)
             $files = @()
             $di = [System.IO.DirectoryInfo]::new($Dir)
             $allFiles = @($di.GetFiles("*.json")) + @($di.GetFiles("*.dat"))
-            if ($Key) {
-                $target = $Key.ToLowerInvariant()
+            $keys = @($Key | Where-Object { $_ })
+            if ($keys.Count -gt 0) {
+                $targets = @($keys | ForEach-Object { $_.ToLowerInvariant() })
                 $allFiles = @($allFiles | Where-Object {
                     $base = [System.IO.Path]::GetFileNameWithoutExtension($_.Name).ToLowerInvariant()
-                    $base -eq $target -or $base.StartsWith("${target}_") -or $base.StartsWith("${target}.")
+                    foreach ($t in $targets) {
+                        if ($base -eq $t -or $base.StartsWith("${t}_") -or $base.StartsWith("${t}.")) { return $true }
+                    }
+                    return $false
                 })
             }
             $files += $allFiles
@@ -92,7 +96,7 @@ function Remove-BucketObject {
             $hasMeta = $InputObject.PSObject.Properties['_BucketName'] -and $InputObject.PSObject.Properties['_BucketKey']
             if ($hasMeta) {
                 if ([string]::IsNullOrWhiteSpace($Bucket)) { $Bucket = $InputObject._BucketName }
-                if ([string]::IsNullOrWhiteSpace($Key)) { $Key = $InputObject._BucketKey }
+                if ($null -eq $Key -or $Key.Count -eq 0 -or ($Key.Count -eq 1 -and [string]::IsNullOrWhiteSpace($Key[0]))) { $Key = @($InputObject._BucketKey) }
             }
         }
 
@@ -173,14 +177,19 @@ function Remove-BucketObject {
             return
         }
 
-        if (-not [string]::IsNullOrWhiteSpace($Key)) {
-            $matchedFiles = if ($Recurse) { _GatherFiles -Dir $bucketPath -CurrentDepth 1 -MaxDepth $Depth -Key $Key } else { @() }
-            if (-not $Recurse) {
-                $file = Find-ObjectFile -BucketPath $bucketPath -Key $Key
-                if ($file) { $matchedFiles = @($file) }
+        $keys = @($Key | Where-Object { $_ })
+        if ($keys.Count -gt 0) {
+            $matchedFiles = @()
+            if ($Recurse) {
+                $matchedFiles = _GatherFiles -Dir $bucketPath -CurrentDepth 1 -MaxDepth $Depth -Key $keys
+            } else {
+                foreach ($singleKey in $keys) {
+                    $file = Find-ObjectFile -BucketPath $bucketPath -Key $singleKey
+                    if ($file) { $matchedFiles += $file }
+                }
             }
             if ($matchedFiles.Count -eq 0) {
-                Write-Warning "Object with key '$Key' not found in bucket '$Bucket'"
+                Write-Warning "Object with key '$($Key -join ', ')' not found in bucket '$Bucket'"
             } else {
                 foreach ($file in $matchedFiles) {
                     $fileKey = [System.IO.Path]::GetFileNameWithoutExtension($file.Name)

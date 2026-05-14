@@ -12,7 +12,7 @@ function Get-BucketObject {
     .PARAMETER Path
     Root directory for bucket storage. Default: $HOME/.buckets.
     .PARAMETER Key
-    Object key to retrieve (Position 1). Case-insensitive prefix match. Looks for both JSON and binary files.
+    Object key(s) to retrieve (Position 1). Accepts multiple values (e.g. -Key "alpha", "beta"). Case-insensitive prefix match for each key.
     .PARAMETER Match
     Hashtable of property-value pairs for exact-match filtering. All pairs must match. Supports $null values.
     .PARAMETER Filter
@@ -48,7 +48,7 @@ function Get-BucketObject {
     param(
         [Parameter(Position = 0)][string[]]$Bucket,
         [string]$Path,
-        [Parameter(Position = 1)][string]$Key,
+        [Parameter(Position = 1)][string[]]$Key,
         [hashtable]$Match,
         [scriptblock]$Filter,
         [switch]$Recurse,
@@ -102,7 +102,7 @@ function Get-BucketObject {
         $rel = $bucketPath.Substring($Path.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar)
         $bucketName = $rel -replace [regex]::Escape([System.IO.Path]::DirectorySeparatorChar), '/'
 
-        if ($Expand -and -not $Key) {
+        if ($Expand -and ($null -eq $Key -or $Key.Count -eq 0)) {
             $reconstructed = Reconstruct-Object -DirPath $bucketPath
             if ($null -ne $reconstructed) {
                 if ($Filter) {
@@ -152,12 +152,16 @@ function Get-BucketObject {
                 $null = $allObjects.Add($obj)
             }
 
-            if ($Expand -and $Key) {
+            if ($Expand -and $Key -and $Key.Count -gt 0) {
                 $subDirs = [System.IO.DirectoryInfo]::new($bucketPath).GetDirectories() | Where-Object { $_.Name -ne '.buckets' }
+                $keysLower = @($Key | ForEach-Object { $_.ToLowerInvariant() })
                 foreach ($subDir in $subDirs) {
-                    $targetKey = $Key.ToLowerInvariant()
                     $dirName = $subDir.Name.ToLowerInvariant()
-                    if ($dirName -ne $targetKey -and -not $dirName.StartsWith("${targetKey}_") -and -not $dirName.StartsWith("${targetKey}.")) { continue }
+                    $matched = $false
+                    foreach ($tk in $keysLower) {
+                        if ($dirName -eq $tk -or $dirName.StartsWith("${tk}_") -or $dirName.StartsWith("${tk}.")) { $matched = $true; break }
+                    }
+                    if (-not $matched) { continue }
                     $reconstructed = Reconstruct-Object -DirPath $subDir.FullName
                     if ($null -eq $reconstructed) { continue }
                     if ($Filter) {

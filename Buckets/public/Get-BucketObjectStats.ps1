@@ -9,7 +9,7 @@ function Get-BucketObjectStats {
     .PARAMETER Bucket
     Bucket name to scan. If omitted, scans all buckets under -Path. Supports wildcards.
     .PARAMETER Key
-    Exact object key to look up. When specified, returns stats for a single object only.
+    Object key(s) to look up. Accepts multiple values (e.g. -Key "alpha", "beta").
     .PARAMETER Path
     Root directory for bucket storage. Default: $HOME/.buckets.
     .PARAMETER Match
@@ -31,7 +31,7 @@ function Get-BucketObjectStats {
     [CmdletBinding()]
     param(
         [Parameter(Position = 0)][string]$Bucket,
-        [Parameter(Position = 1)][string]$Key,
+        [Parameter(Position = 1)][string[]]$Key,
         [string]$Path,
         [string]$Match,
         [switch]$Recurse,
@@ -70,31 +70,34 @@ function Get-BucketObjectStats {
         $bucketName = $bucketPath.Substring($Path.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar).Replace([System.IO.Path]::DirectorySeparatorChar, '/')
         $di = [System.IO.DirectoryInfo]::new($bucketPath)
 
-        if (-not [string]::IsNullOrWhiteSpace($Key)) {
-            $jsonFile = [System.IO.Path]::Combine($bucketPath, "$Key.json")
-            $datFile = [System.IO.Path]::Combine($bucketPath, "$Key.dat")
-            $found = $false
-            foreach ($filePath in @($datFile, $jsonFile)) {
-                if ([System.IO.File]::Exists($filePath)) {
-                    $f = [System.IO.FileInfo]::new($filePath)
-                    $info = Resolve-ObjectType -FileInfo $f
-                    $entry = [PSCustomObject]@{
-                        Bucket        = $bucketName
-                        Key           = $Key
-                        Format        = if ($f.Extension -eq ".json") { "JSON" } else { "Binary" }
-                        Type          = $info.Type
-                        Size          = $f.Length
-                        LastWriteTime = $f.LastWriteTime
-                        IsCompressed  = $info.IsCompressed
+        $keys = @($Key | Where-Object { $_ })
+        if ($keys.Count -gt 0) {
+            foreach ($singleKey in $keys) {
+                $jsonFile = [System.IO.Path]::Combine($bucketPath, "${singleKey}.json")
+                $datFile = [System.IO.Path]::Combine($bucketPath, "${singleKey}.dat")
+                $found = $false
+                foreach ($filePath in @($datFile, $jsonFile)) {
+                    if ([System.IO.File]::Exists($filePath)) {
+                        $f = [System.IO.FileInfo]::new($filePath)
+                        $info = Resolve-ObjectType -FileInfo $f
+                        $entry = [PSCustomObject]@{
+                            Bucket        = $bucketName
+                            Key           = $singleKey
+                            Format        = if ($f.Extension -eq ".json") { "JSON" } else { "Binary" }
+                            Type          = $info.Type
+                            Size          = $f.Length
+                            LastWriteTime = $f.LastWriteTime
+                            IsCompressed  = $info.IsCompressed
+                        }
+                        Add-HiddenProperty -Target $entry -Name 'Path' -Value $f.FullName
+                        $null = $results.Add($entry)
+                        $found = $true
+                        break
                     }
-                    Add-HiddenProperty -Target $entry -Name 'Path' -Value $f.FullName
-                    $null = $results.Add($entry)
-                    $found = $true
-                    break
                 }
-            }
-            if (-not $found) {
-                Write-Warning "Key '$Key' not found in bucket '$bucketName'"
+                if (-not $found) {
+                    Write-Warning "Key '$singleKey' not found in bucket '$bucketName'"
+                }
             }
             continue
         }
