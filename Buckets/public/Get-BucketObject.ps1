@@ -19,6 +19,8 @@ function Get-BucketObject {
     ScriptBlock for custom filtering. Use $_ to reference object properties (e.g., { $_.Age -gt 30 }).
     .PARAMETER Recurse
     Recurse into nested sub-buckets. Without this switch, only returns objects from the specified bucket directory.
+    .PARAMETER Depth
+    Maximum nesting depth when recursing. Default: unlimited. Depth 1 returns objects from the root bucket only (same as no -Recurse). Depth 2 adds immediate sub-buckets.
     .PARAMETER First
     Return only the first N objects.
     .PARAMETER Skip
@@ -50,6 +52,7 @@ function Get-BucketObject {
         [hashtable]$Match,
         [scriptblock]$Filter,
         [switch]$Recurse,
+        [int]$Depth = [int]::MaxValue,
         [int]$First,
         [int]$Skip,
         [object]$Funnel
@@ -63,7 +66,7 @@ function Get-BucketObject {
         $cachedBuckets = $null
         foreach ($b in $Bucket) {
             if ($b -match '[\*\?]') {
-                if ($null -eq $cachedBuckets) { $cachedBuckets = Get-Bucket -Path $Path -Recurse:$Recurse }
+                if ($null -eq $cachedBuckets) { $cachedBuckets = Get-Bucket -Path $Path -Recurse:$Recurse -Depth $Depth }
                 $matched = $cachedBuckets | Where-Object { $_.Name -like $b }
                 $bucketPaths += $matched | ForEach-Object { $_.Path }
             }
@@ -71,7 +74,7 @@ function Get-BucketObject {
                 $bp = Get-BucketPath -Name $b -Path $Path
                 $bucketPaths += $bp
                 if ($Recurse) {
-                    $nested = Get-Bucket -Path $Path -Recurse | Where-Object { $_.Name -like "$b/*" }
+                    $nested = Get-Bucket -Path $Path -Recurse -Depth $Depth | Where-Object { $_.Name -like "$b/*" }
                     $bucketPaths += $nested | ForEach-Object { $_.Path }
                 }
             }

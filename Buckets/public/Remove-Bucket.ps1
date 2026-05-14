@@ -21,6 +21,8 @@ function Remove-Bucket {
     .PARAMETER Recurse
     Remove the target bucket and all nested buckets beneath it. Without this flag,
     nested bucket directories are preserved.
+    .PARAMETER Depth
+    Maximum nesting depth when recursing. Default: unlimited. Depth 1 removes only the target bucket (same as no -Recurse). Depth 2 removes the target and immediate sub-buckets. Sub-buckets beyond this depth are preserved.
     .PARAMETER Force
     Skip confirmation prompt and remove immediately.
     .PARAMETER WhatIf
@@ -41,6 +43,7 @@ function Remove-Bucket {
         [Parameter(Mandatory = $true, Position = 0, ValueFromRemainingArguments = $true)][string[]]$Bucket,
         [string]$Path,
         [switch]$Recurse,
+        [int]$Depth = [int]::MaxValue,
         [switch]$Force,
         [switch]$Quiet
     )
@@ -155,6 +158,9 @@ function Remove-Bucket {
         if ($removable.Count -gt 0) {
             Write-RemovalSummary -Title "What if: Remove the following bucket(s)" `
                 -Names $removable.Name -Counts $removable.Objects -Sizes $removable.Size -Nested $removable.NestedBucketNames
+            if ($Recurse -and $Depth -lt [int]::MaxValue) {
+                Write-Host "  (recursion limited to depth $Depth)" -ForegroundColor $script:CSkip
+            }
         }
         if ($skippedBuckets.Count -gt 0) {
             Write-Host "  Skipped:" -ForegroundColor $script:CSkip
@@ -182,6 +188,9 @@ function Remove-Bucket {
         }
         Write-RemovalSummary -Title "Remove $($removable.Count) bucket(s)?" `
             -Names $removable.Name -Counts $removable.Objects -Sizes $removable.Size -Nested $preserved
+        if ($Recurse -and $Depth -lt [int]::MaxValue) {
+            Write-Host "  (recursion limited to depth $Depth)" -ForegroundColor $script:CSkip
+        }
     }
 
     # Skipped buckets (always shown if any)
@@ -231,7 +240,29 @@ function Remove-Bucket {
                 foreach ($ck in $cacheKeys) { $script:BucketPathCache.Remove($ck) }
             }
             elseif ($Recurse) {
-                [System.IO.Directory]::Delete($r.Path, $true)
+                if ($Depth -eq [int]::MaxValue) {
+                    [System.IO.Directory]::Delete($r.Path, $true)
+                } else {
+                    function Remove-WithDepthLimit {
+                        param([string]$Dir, [int]$CurrentDepth, [int]$MaxDepth)
+                        $di = [System.IO.DirectoryInfo]::new($Dir)
+                        foreach ($f in $di.GetFiles("*.dat")) { try { $f.Delete() } catch {} }
+                        foreach ($f in $di.GetFiles("*.json")) { try { $f.Delete() } catch {} }
+                        if ($CurrentDepth -lt $MaxDepth) {
+                            foreach ($sub in $di.GetDirectories()) {
+                                if ($sub.Name -eq '.buckets') { continue }
+                                Remove-WithDepthLimit -Dir $sub.FullName -CurrentDepth ($CurrentDepth + 1) -MaxDepth $MaxDepth
+                            }
+                        }
+                        $di.Refresh()
+                        $remainingFiles = @($di.GetFiles())
+                        $remainingDirs = @($di.GetDirectories() | Where-Object { $_.Name -ne '.buckets' })
+                        if ($remainingFiles.Count -eq 0 -and $remainingDirs.Count -eq 0) {
+                            try { $di.Delete() } catch {}
+                        }
+                    }
+                    Remove-WithDepthLimit -Dir $r.Path -CurrentDepth 0 -MaxDepth $Depth
+                }
                 $cacheKeys = @($script:BucketPathCache.Keys) | Where-Object { $_ -like "*|$($r.Name)*" }
                 foreach ($ck in $cacheKeys) { $script:BucketPathCache.Remove($ck) }
             }
