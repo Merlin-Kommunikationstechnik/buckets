@@ -91,7 +91,11 @@ $users = @(
 
 New-BucketObject -Bucket users -InputObject $users -KeyProperty Name -Quiet
 Use-Bucket "users"
-Write-Host "  Saved $($users.Count) users (keyed by Name)" -ForegroundColor DarkGray
+
+Test-It "Hashtable round-trip" {
+    $saved = Get-BucketObject -Bucket users
+    @($saved).Count -eq $users.Count -and (Get-BucketObject -Bucket users -Key "Alice").Name -eq "Alice"
+}
 
 # ============================================================
 # 2. Nested PSCustomObjects
@@ -128,7 +132,11 @@ $orders = @(
 
 New-BucketObject -Bucket orders -InputObject $orders -KeyProperty OrderId -Quiet
 Use-Bucket "orders"
-Write-Host "  Saved $($orders.Count) orders" -ForegroundColor DarkGray
+
+Test-It "Nested PSCustomObject round-trip" {
+    $saved = Get-BucketObject -Bucket orders
+    @($saved).Count -eq $orders.Count -and (Get-BucketObject -Bucket orders -Key "ORD-001").Customer -eq "Alice"
+}
 
 # ============================================================
 # 3. System objects (FileInfo) - triggers binary fallback
@@ -137,7 +145,11 @@ Write-Host "`n[3] System objects (FileInfo — complex objects auto-fallback to 
 
 Get-ChildItem $PSScriptRoot | Where-Object { $_.Name -notmatch "^\." } | New-BucketObject -Bucket files -KeyProperty Name -Quiet
 Use-Bucket "files"
-Write-Host "  Saved directory listing (complex objects fallback to .dat)" -ForegroundColor DarkGray
+
+Test-It "FileInfo binary fallback" {
+    $first = Get-BucketObject -Bucket files | Select-Object -First 1
+    @(Get-BucketObject -Bucket files).Count -gt 0 -and $null -ne $first.Name
+}
 
 # ============================================================
 # 4. Log entries with unique keys
@@ -153,7 +165,11 @@ $logEntries = @(
 
 New-BucketObject -Bucket logs -InputObject $logEntries -KeyProperty Id -Quiet
 Use-Bucket "logs"
-Write-Host "  Saved $($logEntries.Count) log entries" -ForegroundColor DarkGray
+
+Test-It "Log entry round-trip" {
+    $saved = Get-BucketObject -Bucket logs
+    @($saved).Count -eq 4 -and (Get-BucketObject -Bucket logs -Key "log-001").Level -eq "INFO"
+}
 
 # ============================================================
 # 5. Config (JSON format)
@@ -170,7 +186,11 @@ $config = [PSCustomObject]@{
 
 New-BucketObject -Bucket config -InputObject $config -KeyProperty _Id -Quiet
 Use-Bucket "config"
-Write-Host "  Saved config as JSON" -ForegroundColor DarkGray
+
+Test-It "JSON config round-trip" {
+    $saved = Get-BucketObject -Bucket config -Key "app-config"
+    $null -ne $saved -and $saved.Version -eq "2.1.0" -and $saved.Database.Host -eq "localhost"
+}
 
 # ============================================================
 # 6. Metrics
@@ -188,7 +208,11 @@ $metrics = foreach ($hour in 0..23) {
 
 New-BucketObject -Bucket metrics -InputObject $metrics -KeyProperty Hour -Quiet
 Use-Bucket "metrics"
-Write-Host "  Saved 24 hourly records" -ForegroundColor DarkGray
+
+Test-It "Metrics round-trip" {
+    $saved = Get-BucketObject -Bucket metrics
+    @($saved).Count -eq 24 -and (Get-BucketObject -Bucket metrics -Key "0").CPU -gt 0
+}
 
 # ============================================================
 # 7. Mixed formats in same bucket
@@ -200,9 +224,10 @@ New-BucketObject -Bucket mixed -InputObject @{ _Id = "m2"; Type = "binary"; Valu
 New-BucketObject -Bucket mixed -InputObject @{ _Id = "m3"; Type = "json-fallback" } -KeyProperty _Id -Quiet
 Use-Bucket "mixed"
 
-
-
-
+Test-It "Mixed formats (JSON + binary) in same bucket" {
+    $saved = Get-BucketObject -Bucket mixed
+    @($saved).Count -eq 3 -and (Get-BucketObject -Bucket mixed -Key "m1").Value -eq 1 -and (Get-BucketObject -Bucket mixed -Key "m2").Value -eq 2
+}
 # ============================================================
 # 8. Object operations (Copy, Rename, Export/Import)
 # ============================================================
