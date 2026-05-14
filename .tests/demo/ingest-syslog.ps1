@@ -77,9 +77,14 @@ if ($MyInvocation.ExpectingInput) {
     return
 }
 
-# File mode — process each path argument, or use Source as fallback path
+# File mode — process each path argument
 $paths = $args
-if ($paths.Count -eq 0) { $paths = @($Source) }
+if ($paths.Count -eq 0) {
+    Write-Host "Usage: $($MyInvocation.MyCommand.Name) [file1 file2 ...]" -ForegroundColor Yellow
+    Write-Host "  or:   Get-Content -Tail 0 -Wait /var/log/syslog | $($MyInvocation.MyCommand.Name)" -ForegroundColor Yellow
+    Write-Host "  or:   .\ingest-syslog.ps1 -Source <hostname> < file.log" -ForegroundColor Yellow
+    return
+}
 foreach ($path in $paths) {
     if (Test-Path -LiteralPath $path -PathType Leaf) {
         $src = [System.IO.Path]::GetFileNameWithoutExtension($path)
