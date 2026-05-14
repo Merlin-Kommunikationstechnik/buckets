@@ -14,6 +14,10 @@ function Get-BucketObjectStats {
     Root directory for bucket storage. Default: $HOME/.buckets.
     .PARAMETER Match
     Filter keys by pattern (wildcard). Case-insensitive.
+    .PARAMETER Recurse
+    Recurse into nested sub-buckets. Without this switch, only returns stats from the specified bucket directory.
+    .PARAMETER Depth
+    Maximum nesting depth when recursing. Default: unlimited.
     .OUTPUTS
     PSCustomObject with Bucket, Key, Format, Type, Size, LastWriteTime, and IsCompressed
     properties. Path is included as a hidden property.
@@ -29,7 +33,9 @@ function Get-BucketObjectStats {
         [Parameter(Position = 0)][string]$Bucket,
         [Parameter(Position = 1)][string]$Key,
         [string]$Path,
-        [string]$Match
+        [string]$Match,
+        [switch]$Recurse,
+        [int]$Depth = [int]::MaxValue
     )
 
     if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
@@ -38,12 +44,17 @@ function Get-BucketObjectStats {
     $bucketPaths = @()
     if (-not [string]::IsNullOrWhiteSpace($Bucket)) {
         if ($Bucket -match '[\*\?]') {
-            $cachedBuckets = Get-Bucket -Path $Path -Recurse
+            $cachedBuckets = Get-Bucket -Path $Path -Recurse -Depth $Depth
             $matched = $cachedBuckets | Where-Object { $_.Name -like $Bucket }
             $bucketPaths += $matched | ForEach-Object { $_.Path }
         }
         else {
-            $bucketPaths += Get-BucketPath -Name $Bucket -Path $Path
+            $bp = Get-BucketPath -Name $Bucket -Path $Path
+            $bucketPaths += $bp
+            if ($Recurse) {
+                $nested = Get-Bucket -Path $Path -Recurse -Depth $Depth | Where-Object { $_.Name -like "$Bucket/*" }
+                $bucketPaths += $nested | ForEach-Object { $_.Path }
+            }
         }
     }
     else {

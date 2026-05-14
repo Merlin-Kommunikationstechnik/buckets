@@ -16,6 +16,10 @@ function Export-Bucket {
     Export as CLIXML/PSSerializer binary archive (default is JSON).
     .PARAMETER Compress
     Enable GZip compression for CLIXML archives. Only effective with -AsBinary.
+    .PARAMETER Recurse
+    Recurse into nested sub-buckets. Without this switch, only exports objects from the specified bucket directory.
+    .PARAMETER Depth
+    Maximum nesting depth when recursing. Default: unlimited.
     .PARAMETER Quiet
     Suppress all output.
     .EXAMPLE
@@ -30,6 +34,8 @@ function Export-Bucket {
         [Parameter(Mandatory = $true)][string]$OutputFile,
         [switch]$AsBinary,
         [switch]$Compress,
+        [switch]$Recurse,
+        [int]$Depth = [int]::MaxValue,
         [switch]$Quiet
     )
 
@@ -41,7 +47,7 @@ function Export-Bucket {
     $exportedObjects = 0
 
     foreach ($b in $Bucket) {
-        $objects = Get-BucketObject -Bucket $b -Path $Path
+        $objects = Get-BucketObject -Bucket $b -Path $Path -Recurse:$Recurse -Depth $Depth
         if ($objects) {
             $allObjects += $objects
             $exportedBuckets++

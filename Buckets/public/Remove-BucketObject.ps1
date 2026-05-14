@@ -20,6 +20,11 @@ function Remove-BucketObject {
     Hashtable of property-value pairs for bulk deletion. All pairs must match. Supports $null values.
     .PARAMETER Filter
     ScriptBlock for custom bulk deletion. Use $_ to reference object properties.
+    .PARAMETER Recurse
+    Recurse into nested sub-buckets. Without this switch, only acts on the specified bucket directory.
+    Only applies to -All and -Match/-Filter. When used with -Key, searches for the key across all sub-buckets.
+    .PARAMETER Depth
+    Maximum nesting depth when recursing. Default: unlimited.
     .PARAMETER PassThru
     Return metadata for removed objects.
     .PARAMETER Quiet
@@ -46,6 +51,8 @@ function Remove-BucketObject {
         [Parameter(ParameterSetName = 'All')][switch]$All,
         [Parameter(ParameterSetName = 'ByFilter')][hashtable]$Match,
         [Parameter(ParameterSetName = 'ByFilter')][scriptblock]$Filter,
+        [switch]$Recurse,
+        [int]$Depth = [int]::MaxValue,
         [switch]$PassThru,
         [switch]$Quiet
     )
@@ -56,6 +63,28 @@ function Remove-BucketObject {
 
         if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
         $Path = Resolve-SafePath -Path $Path
+
+        function _GatherFiles {
+            param([string]$Dir, [int]$CurrentDepth, [int]$MaxDepth, [string]$Key)
+            $files = @()
+            $di = [System.IO.DirectoryInfo]::new($Dir)
+            $allFiles = @($di.GetFiles("*.json")) + @($di.GetFiles("*.dat"))
+            if ($Key) {
+                $target = $Key.ToLowerInvariant()
+                $allFiles = @($allFiles | Where-Object {
+                    $base = [System.IO.Path]::GetFileNameWithoutExtension($_.Name).ToLowerInvariant()
+                    $base -eq $target -or $base.StartsWith("${target}_") -or $base.StartsWith("${target}.")
+                })
+            }
+            $files += $allFiles
+            if ($CurrentDepth -lt $MaxDepth) {
+                foreach ($sub in $di.GetDirectories()) {
+                    if ($sub.Name -eq '.buckets') { continue }
+                    $files += _GatherFiles -Dir $sub.FullName -CurrentDepth ($CurrentDepth + 1) -MaxDepth $MaxDepth -Key $Key
+                }
+            }
+            $files
+        }
     }
 
     process {
@@ -78,9 +107,8 @@ function Remove-BucketObject {
             if ($allProcessed) { return }
             $allProcessed = $true
 
-            $allFiles = @()
             $di = [System.IO.DirectoryInfo]::new($bucketPath)
-            $allFiles += @($di.GetFiles("*.json")) + @($di.GetFiles("*.dat"))
+            $allFiles = if ($Recurse) { _GatherFiles -Dir $bucketPath -CurrentDepth 0 -MaxDepth $Depth } else { @($di.GetFiles("*.json")) + @($di.GetFiles("*.dat")) }
 
             if ($allFiles.Count -eq 0) { Write-Verbose "Bucket '$Bucket' is already empty"; return }
 
@@ -93,7 +121,8 @@ function Remove-BucketObject {
                 Write-Host $allFiles.Count -NoNewline -ForegroundColor $script:CNum
                 Write-Host " object(s) from " -NoNewline -ForegroundColor $script:CMuted
                 Write-Host $Bucket -NoNewline -ForegroundColor $script:CPath
-                Write-Host " ($sizeStr)" -ForegroundColor $script:CMuted
+                $recurseNote = if ($Recurse) { " (recursive, depth ${Depth})" } else { "" }
+                Write-Host "$recurseNote ($sizeStr)" -ForegroundColor $script:CMuted
                 Write-Host ""
                 return
             }
@@ -101,10 +130,29 @@ function Remove-BucketObject {
             $target = "$($allFiles.Count) object(s) from bucket '$Bucket'"
             if ($PSCmdlet.ShouldProcess($target, "Remove-BucketObject")) {
                 $allFiles | ForEach-Object { [System.IO.File]::Delete($_.FullName) }
-                foreach ($d in $di.GetDirectories()) {
-                    if ($d.Name -eq ".buckets") { continue }
-                    $remaining = @($d.GetFiles()) + @($d.GetDirectories())
-                    if ($remaining.Count -eq 0) { [System.IO.Directory]::Delete($d.FullName) }
+                if ($Recurse) {
+                    $emptyDirKeys = [System.Collections.ArrayList]::new()
+                    function _EnumDirs { param([string]$D, [int]$CD)
+                        $null = $emptyDirKeys.Add($D)
+                        if ($CD -lt $Depth) {
+                            foreach ($s in [System.IO.DirectoryInfo]::new($D).GetDirectories()) {
+                                if ($s.Name -ne '.buckets') { _EnumDirs -D $s.FullName -CD ($CD + 1) }
+                            }
+                        }
+                    }
+                    _EnumDirs -D $bucketPath -CD 0
+                    $emptyDirKeys | Sort-Object Length -Descending | ForEach-Object {
+                        $d = [System.IO.DirectoryInfo]::new($_)
+                        $d.Refresh()
+                        $remaining = @($d.GetFiles()) + @($d.GetDirectories() | Where-Object { $_.Name -ne '.buckets' })
+                        if ($remaining.Count -eq 0) { try { $d.Delete() } catch {} }
+                    }
+                } else {
+                    foreach ($d in $di.GetDirectories()) {
+                        if ($d.Name -eq ".buckets") { continue }
+                        $remaining = @($d.GetFiles()) + @($d.GetDirectories())
+                        if ($remaining.Count -eq 0) { [System.IO.Directory]::Delete($d.FullName) }
+                    }
                 }
             }
 
@@ -126,26 +174,34 @@ function Remove-BucketObject {
         }
 
         if (-not [string]::IsNullOrWhiteSpace($Key)) {
-            $file = Find-ObjectFile -BucketPath $bucketPath -Key $Key
-            if ($null -eq $file) {
-                Write-Warning "Object with key '$Key' not found in bucket '$Bucket'"
+            $matchedFiles = if ($Recurse) { _GatherFiles -Dir $bucketPath -CurrentDepth 0 -MaxDepth $Depth -Key $Key } else { @() }
+            if (-not $Recurse) {
+                $file = Find-ObjectFile -BucketPath $bucketPath -Key $Key
+                if ($file) { $matchedFiles = @($file) }
             }
-            elseif ($PSCmdlet.ShouldProcess("object '$Key' from bucket '$Bucket'", "Remove-BucketObject")) {
-                if ($PassThru) {
-                    [PSCustomObject]@{ Bucket = $Bucket; Key = $Key }
-                }
-                [System.IO.File]::Delete($file.FullName)
-                $parentDir = [System.IO.Path]::GetDirectoryName($file.FullName)
-                if ($parentDir -ne $bucketPath -and $parentDir.StartsWith($bucketPath)) {
-                    $parentDi = [System.IO.DirectoryInfo]::new($parentDir)
-                    $remaining = @($parentDi.GetFiles()) + @($parentDi.GetDirectories())
-                    if ($remaining.Count -eq 0) {
-                        [System.IO.Directory]::Delete($parentDir)
+            if ($matchedFiles.Count -eq 0) {
+                Write-Warning "Object with key '$Key' not found in bucket '$Bucket'"
+            } else {
+                foreach ($file in $matchedFiles) {
+                    $fileKey = [System.IO.Path]::GetFileNameWithoutExtension($file.Name)
+                    if ($PSCmdlet.ShouldProcess("object '$fileKey' from bucket '$Bucket'", "Remove-BucketObject")) {
+                        if ($PassThru) {
+                            [PSCustomObject]@{ Bucket = $Bucket; Key = $fileKey }
+                        }
+                        [System.IO.File]::Delete($file.FullName)
+                        $parentDir = [System.IO.Path]::GetDirectoryName($file.FullName)
+                        if ($parentDir.StartsWith($bucketPath)) {
+                            $parentDi = [System.IO.DirectoryInfo]::new($parentDir)
+                            $remaining = @($parentDi.GetFiles()) + @($parentDi.GetDirectories())
+                            if ($remaining.Count -eq 0) {
+                                try { [System.IO.Directory]::Delete($parentDir) } catch {}
+                            }
+                        }
+                        $removedCount++
+                        $lastBucket = $Bucket
+                        $null = $removedKeys.Add($fileKey)
                     }
                 }
-                $removedCount++
-                $lastBucket = $Bucket
-                $null = $removedKeys.Add($Key)
             }
             return
         }
@@ -154,9 +210,8 @@ function Remove-BucketObject {
             if ($filterProcessed) { return }
             $filterProcessed = $true
 
-            $allFiles = @()
             $di = [System.IO.DirectoryInfo]::new($bucketPath)
-            $allFiles += @($di.GetFiles("*.json")) + @($di.GetFiles("*.dat"))
+            $allFiles = if ($Recurse) { _GatherFiles -Dir $bucketPath -CurrentDepth 0 -MaxDepth $Depth } else { @($di.GetFiles("*.json")) + @($di.GetFiles("*.dat")) }
 
             if ($allFiles.Count -eq 0) { Write-Verbose "Bucket '$Bucket' is already empty"; return }
 
@@ -184,7 +239,8 @@ function Remove-BucketObject {
                 Write-Host $matchedFiles.Count -NoNewline -ForegroundColor $script:CNum
                 Write-Host " matching object(s) from " -NoNewline -ForegroundColor $script:CMuted
                 Write-Host $Bucket -NoNewline -ForegroundColor $script:CPath
-                Write-Host " ($sizeStr)" -ForegroundColor $script:CMuted
+                $recurseNote = if ($Recurse) { " (recursive, depth ${Depth})" } else { "" }
+                Write-Host "$recurseNote ($sizeStr)" -ForegroundColor $script:CMuted
                 $showKeys = $matchedKeys | Select-Object -First 5
                 foreach ($k in $showKeys) {
                     Write-Host "    $k" -ForegroundColor $script:CMuted
@@ -202,7 +258,8 @@ function Remove-BucketObject {
                 Write-Host $matchedFiles.Count -NoNewline -ForegroundColor $script:CNum
                 Write-Host " matching object(s) from " -NoNewline -ForegroundColor $script:CMuted
                 Write-Host $Bucket -NoNewline -ForegroundColor $script:CPath
-                Write-Host " ($sizeStr)" -ForegroundColor $script:CMuted
+                $recurseNote = if ($Recurse) { " (recursive, depth ${Depth})" } else { "" }
+                Write-Host "$recurseNote ($sizeStr)" -ForegroundColor $script:CMuted
                 $showKeys = $matchedKeys | Select-Object -First 5
                 foreach ($k in $showKeys) {
                     Write-Host "    " -NoNewline

@@ -55,17 +55,17 @@ PowerShell module for file-based PSObject storage using directory-backed "bucket
 | `New-BucketObject` | `-InputObject` (pipeline), `-Bucket` (default "default"), `-Key`, `-KeyProperty`, `-AsBinary`, `-AsTimestamp`, `-Depth`, `-BinaryDepth`, `-Compress`, `-Quiet`, `-Overwrite`, `-AutoIndex`, `-Funnel` |
 | `Get-BucketObject` | `-Bucket` (positional 0, wildcards ok, default "default" if omitted), `-Key` (positional 1), `-Match` (hashtable, supports $null), `-Filter` (scriptblock with `$_`), `-Recurse` (opt-in, default is no recursion), `-Depth` (limits recursion, default unlimited), `-First`, `-Skip`, `-Funnel` |
 | `Set-BucketObject` | `-InputObject` (pipeline binds `_BucketName`/`_BucketKey` or partial update), `-Bucket`, `-Key`, `-AsBinary`, `-Compress`, `-PassThru`, `-Quiet` |
-| `Remove-BucketObject` | `-Bucket`, `-Key` or `-All` or `-Match`/`-Filter` (mutual param sets), `-PassThru`, `-Quiet`, `-WhatIf` (SupportsShouldProcess) |
+| `Remove-BucketObject` | `-Bucket`, `-Key` or `-All` or `-Match`/`-Filter` (mutual param sets), `-Recurse`, `-Depth` (limits recursion, default unlimited), `-PassThru`, `-Quiet`, `-WhatIf` (SupportsShouldProcess) |
 | `Copy-BucketObject` | `-Bucket`, `-Key`, `-DestinationBucket`, `-DestinationKey`, `-PassThru` |
 | `Move-BucketObject` | `-Bucket`, `-Key`, `-DestinationBucket`, `-DestinationKey`, `-PassThru` |
 | `Rename-BucketObject` | `-Bucket`, `-Key`, `-NewKey`, `-PassThru` |
-| `Export-Bucket` | `-Bucket`, `-OutputFile`, `-AsBinary`, `-Quiet` |
+| `Export-Bucket` | `-Bucket`, `-OutputFile`, `-AsBinary`, `-Recurse`, `-Depth` (limits recursion, default unlimited), `-Quiet` |
 | `Import-Bucket` | `-Bucket`, `-InputFile`, `-AsBinary`, `-Overwrite`, `-Quiet` |
 | `Get-Bucket` | `-Name` (positional 0, wildcards supported; substring match if no wildcards), `-Tree`, `-Raw` |
 | `Set-Bucket` | `-Name` (positional 0, mandatory, pipeline by property), `-NewName` (positional 1, mandatory, pipeline by property), `-PassThru`, `-Quiet`, `-WhatIf` (SupportsShouldProcess) |
 | `Get-BucketStats` | `-Bucket` (returns count, size, timestamps, visible Path) |
-| `Get-BucketKeys` | `-Bucket` (positional 0, wildcards ok), `-Match` (returns Bucket + Key only) |
-| `Get-BucketObjectStats` | `-Bucket` (positional 0, wildcards ok), `-Key` (positional 1), `-Match` (returns Format, Type, Size, LastWriteTime, IsCompressed) |
+| `Get-BucketKeys` | `-Bucket` (positional 0, wildcards ok), `-Match` (returns Bucket + Key only), `-Recurse`, `-Depth` (limits recursion, default unlimited) |
+| `Get-BucketObjectStats` | `-Bucket` (positional 0, wildcards ok), `-Key` (positional 1), `-Match` (returns Format, Type, Size, LastWriteTime, IsCompressed), `-Recurse`, `-Depth` (limits recursion, default unlimited) |
 | `Remove-Bucket` | `-Bucket` (positional, wildcards ok), `-Recurse`, `-Depth` (limits recursion, default unlimited), `-Force`, `-Confirm` (SupportsShouldProcess), `-Quiet` |
 | `Set-BucketRoot` | `-Path` (mandatory, positional) |
 | `Get-BucketRoot` | (no parameters) |
