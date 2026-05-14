@@ -55,7 +55,8 @@ function Get-BucketObject {
         [int]$Depth = [int]::MaxValue,
         [int]$First,
         [int]$Skip,
-        [object]$Funnel
+        [object]$Funnel,
+        [switch]$Expand
     )
 
     if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
@@ -100,41 +101,74 @@ function Get-BucketObject {
         }
         $rel = $bucketPath.Substring($Path.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar)
         $bucketName = $rel -replace [regex]::Escape([System.IO.Path]::DirectorySeparatorChar), '/'
-        $files = Get-ObjectFiles -BucketPath $bucketPath -Key $Key
 
-        foreach ($file in $files) {
-            if ($null -eq $file -or -not [System.IO.File]::Exists($file.FullName)) { continue }
-            $obj = Read-BucketFile -File $file
-            if ($null -eq $obj) { continue }
+        if ($Expand -and -not $Key) {
+            $reconstructed = Reconstruct-Object -DirPath $bucketPath
+            if ($null -ne $reconstructed) {
+                if ($Filter) {
+                    if ($null -eq ($reconstructed | Where-Object $Filter)) { continue }
+                }
+                Add-HiddenProperty -Target $reconstructed -Name '_BucketName' -Value $bucketName
+                Add-HiddenProperty -Target $reconstructed -Name '_BucketKey' -Value $null
+                Add-HiddenProperty -Target $reconstructed -Name '_BucketFile' -Value $null
+                $null = $allObjects.Add($reconstructed)
+            }
+        }
+        else {
+            $files = Get-ObjectFiles -BucketPath $bucketPath -Key $Key
 
-            if ($Match -and -not (Test-MatchFilter -Object $obj -Match $Match)) { continue }
+            foreach ($file in $files) {
+                if ($null -eq $file -or -not [System.IO.File]::Exists($file.FullName)) { continue }
+                $obj = Read-BucketFile -File $file
+                if ($null -eq $obj) { continue }
 
-            if ($Filter) {
-                if ($null -eq ($obj | Where-Object $Filter)) { continue }
+                if ($Match -and -not (Test-MatchFilter -Object $obj -Match $Match)) { continue }
+
+                if ($Filter) {
+                    if ($null -eq ($obj | Where-Object $Filter)) { continue }
+                }
+
+                if ($funnelDef) {
+                    $matchesAppliesTo = -not $funnelDef.ContainsKey('AppliesTo') -or ($null -ne ($obj | Where-Object $funnelDef.AppliesTo))
+                    if ($matchesAppliesTo) {
+                        $funnelItems = @($obj | ForEach-Object $funnelDef.Transform) | Where-Object { $_ -ne $null }
+                        foreach ($subItem in $funnelItems) {
+                            $relativePath = $file.FullName.Substring($bucketPath.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar)
+                            $keyWithoutExt = [System.IO.Path]::ChangeExtension($relativePath, $null).TrimEnd('.')
+                            Add-HiddenProperty -Target $subItem -Name '_BucketName' -Value $bucketName
+                            Add-HiddenProperty -Target $subItem -Name '_BucketKey' -Value $keyWithoutExt
+                            Add-HiddenProperty -Target $subItem -Name '_BucketFile' -Value $file.FullName
+                            $null = $allObjects.Add($subItem)
+                        }
+                        continue
+                    }
+                }
+
+                $relativePath = $file.FullName.Substring($bucketPath.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar)
+                $keyWithoutExt = [System.IO.Path]::ChangeExtension($relativePath, $null).TrimEnd('.')
+                Add-HiddenProperty -Target $obj -Name '_BucketName' -Value $bucketName
+                Add-HiddenProperty -Target $obj -Name '_BucketKey' -Value $keyWithoutExt
+                Add-HiddenProperty -Target $obj -Name '_BucketFile' -Value $file.FullName
+                $null = $allObjects.Add($obj)
             }
 
-            if ($funnelDef) {
-                $matchesAppliesTo = -not $funnelDef.ContainsKey('AppliesTo') -or ($null -ne ($obj | Where-Object $funnelDef.AppliesTo))
-                if ($matchesAppliesTo) {
-                    $funnelItems = @($obj | ForEach-Object $funnelDef.Transform) | Where-Object { $_ -ne $null }
-                    foreach ($subItem in $funnelItems) {
-                        $relativePath = $file.FullName.Substring($bucketPath.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar)
-                        $keyWithoutExt = [System.IO.Path]::ChangeExtension($relativePath, $null).TrimEnd('.')
-                        Add-HiddenProperty -Target $subItem -Name '_BucketName' -Value $bucketName
-                        Add-HiddenProperty -Target $subItem -Name '_BucketKey' -Value $keyWithoutExt
-                        Add-HiddenProperty -Target $subItem -Name '_BucketFile' -Value $file.FullName
-                        $null = $allObjects.Add($subItem)
+            if ($Expand -and $Key) {
+                $subDirs = [System.IO.DirectoryInfo]::new($bucketPath).GetDirectories() | Where-Object { $_.Name -ne '.buckets' }
+                foreach ($subDir in $subDirs) {
+                    $targetKey = $Key.ToLowerInvariant()
+                    $dirName = $subDir.Name.ToLowerInvariant()
+                    if ($dirName -ne $targetKey -and -not $dirName.StartsWith("${targetKey}_") -and -not $dirName.StartsWith("${targetKey}.")) { continue }
+                    $reconstructed = Reconstruct-Object -DirPath $subDir.FullName
+                    if ($null -eq $reconstructed) { continue }
+                    if ($Filter) {
+                        if ($null -eq ($reconstructed | Where-Object $Filter)) { continue }
                     }
-                    continue
+                    Add-HiddenProperty -Target $reconstructed -Name '_BucketName' -Value $bucketName
+                    Add-HiddenProperty -Target $reconstructed -Name '_BucketKey' -Value $subDir.Name
+                    Add-HiddenProperty -Target $reconstructed -Name '_BucketFile' -Value $null
+                    $null = $allObjects.Add($reconstructed)
                 }
             }
-
-            $relativePath = $file.FullName.Substring($bucketPath.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar)
-            $keyWithoutExt = [System.IO.Path]::ChangeExtension($relativePath, $null).TrimEnd('.')
-            Add-HiddenProperty -Target $obj -Name '_BucketName' -Value $bucketName
-            Add-HiddenProperty -Target $obj -Name '_BucketKey' -Value $keyWithoutExt
-            Add-HiddenProperty -Target $obj -Name '_BucketFile' -Value $file.FullName
-            $null = $allObjects.Add($obj)
         }
     }
 

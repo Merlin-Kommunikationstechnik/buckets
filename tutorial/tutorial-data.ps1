@@ -790,9 +790,258 @@ scoop -Bucket team -Funnel { $_.Level -ge 3 }
                     }
                 )
             }
-            @{
-                Name = "06-full-course"
-                Title = "Full Course"
+        @{
+            Name = "06-expand"
+            Title = "Expand"
+            Sections = @(
+                @{
+                    Name = "01-basics"
+                    Title = "Basics"
+                    Lessons = @(
+                        @{
+                            Key = "expand-intro"
+                            Title = "What is Expand?"
+                            Body = @'
+  The -Expand switch transforms nested PowerShell objects into filesystem
+  directory trees. Each property becomes a file or subdirectory, and each
+  array element becomes an indexed entry.
+
+  On save (New-BucketObject -Expand):
+    · scalars → leaf files    (.json or .dat)
+    · containers → sub-bucket directories
+    · arrays → numbered files  (0.json, 1.json, …)
+
+  On retrieval (Get-BucketObject -Expand):
+    · sub-buckets → nested properties
+    · numbered files → arrays
+    · leaf files → scalar values
+
+  The process is fully reversible. What you save with -Expand reconstructs
+  identically when you read with -Expand.
+'@
+                        }
+                        @{
+                            Key = "simple-hash"
+                            Title = "Expanding a simple hashtable"
+                            Body = @'
+  A flat hashtable saved with -Expand creates one file per property.
+  Retrieving with -Expand rebuilds the original hashtable as a PSObject.
+'@
+                            SetupCode = @'
+$config = @{ host = "localhost"; port = 8080; ssl = $true }
+'@
+                            Code = @'
+# Save the hashtable expanded — each property becomes its own file
+$config | New-BucketObject -Bucket "expand-demo" -Expand -Quiet
+
+# Show the files on disk
+Get-ChildItem (Join-Path (Get-BucketRoot) "expand-demo")
+
+# Retrieve and reconstruct the original object
+Get-BucketObject -Bucket "expand-demo" -Expand
+'@
+                        }
+                        @{
+                            Key = "nested-hash"
+                            Title = "Expanding a nested hashtable"
+                            Body = @'
+  Nested hashtables become sub-bucket directories. The structure is
+  preserved as a directory tree on disk, fully browseable.
+'@
+                            SetupCode = @'
+$config = @{
+    server = @{ host = "db01"; port = 5432 }
+    logging = @{ level = "debug"; file = "/var/log/app.log" }
+}
+'@
+                            Code = @'
+# Each nested hashtable becomes a subdirectory
+$config | New-BucketObject -Bucket "expand-nested" -Expand -Quiet
+
+# Browse the directory tree
+Get-ChildItem (Join-Path (Get-BucketRoot) "expand-nested") -Recurse
+
+# Retrieve the full nested structure
+$r = Get-BucketObject -Bucket "expand-nested" -Expand
+"server host : $($r.server.host)"
+"logging level : $($r.logging.level)"
+'@
+                        }
+                        @{
+                            Key = "expand-retrieve"
+                            Title = "Retrieving expanded objects"
+                            Body = @'
+  Use -Expand on Get-BucketObject (scoop) to reconstruct expanded objects.
+  The cmdlet reads the directory structure and rebuilds the original
+  nested object — including arrays and nested containers.
+'@
+                            SetupCode = @'
+# Save a nested config for retrieval demo
+@{ app = "myapp"; env = @{ region = "eu-west"; tier = "production" } } |
+    New-BucketObject -Bucket "retrieve-demo" -Expand -Quiet
+'@
+                            Code = @'
+# Without -Expand: returns individual files as separate objects
+scoop -Bucket "retrieve-demo"
+
+# With -Expand: reconstructs the full nested structure
+scoop -Bucket "retrieve-demo" -Expand
+'@
+                        }
+                    )
+                }
+                @{
+                    Name = "02-arrays"
+                    Title = "Arrays"
+                    Lessons = @(
+                        @{
+                            Key = "array-primitives"
+                            Title = "Array of primitives"
+                            Body = @'
+  Arrays saved with -Expand and -Key become numbered files under a
+  subdirectory named by the key. Retrieving with -Key and -Expand
+  reconstructs the array.
+'@
+                            SetupCode = @'
+$items = @("alpha", "beta", "gamma")
+'@
+                            Code = @'
+# Save the array under key "items" — creates items/0.json, items/1.json, items/2.json
+$items | New-BucketObject -Bucket "lists" -Key "items" -Expand -Quiet
+
+# Show the directory structure
+Get-ChildItem (Join-Path (Get-BucketRoot) "lists") -Recurse
+
+# Retrieve and reconstruct the array
+$r = Get-BucketObject -Bucket "lists" -Key "items" -Expand
+"Count: $($r.Count)"
+"First: $($r[0])"
+'@
+                        }
+                        @{
+                            Key = "array-objects"
+                            Title = "Array of objects"
+                            Body = @'
+  Arrays of hashtables become indexed sub-buckets. Each array element
+  gets its own subdirectory with the element's properties as files.
+'@
+                            SetupCode = @'
+$users = @(
+    @{ name = "Alice"; role = "admin" }
+    @{ name = "Bob"; role = "user" }
+)
+'@
+                            Code = @'
+# Save as expanded array under key "users"
+$users | New-BucketObject -Bucket "teams" -Key "users" -Expand -Quiet
+
+# Show the directory tree
+Get-ChildItem (Join-Path (Get-BucketRoot) "teams") -Recurse
+
+# Retrieve and reconstruct
+$r = Get-BucketObject -Bucket "teams" -Key "users" -Expand
+"Users: $($r.Count)"
+"$($r[0].name) : $($r[0].role)"
+"$($r[1].name) : $($r[1].role)"
+'@
+                        }
+                        @{
+                            Key = "keyproperty-expand"
+                            Title = "Expand with -KeyProperty"
+                            Body = @'
+  -KeyProperty with -Expand gives each object its own sub-bucket named
+  by the property value, with the object's properties stored as files
+  inside.
+'@
+                            SetupCode = @'
+$items = @(
+    @{ id = "srv-a"; host = "web01"; port = 443 }
+    @{ id = "srv-b"; host = "web02"; port = 443 }
+)
+'@
+                            Code = @'
+# Each item goes into its own sub-bucket keyed by "id"
+$items | New-BucketObject -Bucket "services" -KeyProperty "id" -Expand -Quiet
+
+# Show the structure
+Get-ChildItem (Join-Path (Get-BucketRoot) "services") -Recurse
+
+# Retrieve one by its key
+Get-BucketObject -Bucket "services" -Key "srv-a" -Expand
+'@
+                        }
+                    )
+                }
+                @{
+                    Name = "03-advanced"
+                    Title = "Advanced"
+                    Lessons = @(
+                        @{
+                            Key = "expand-depth"
+                            Title = "Controlling recursion depth"
+                            Body = @'
+  -ExpandDepth limits how many levels of nesting are expanded into
+  sub-buckets. At the depth limit, containers are serialized as files
+  instead of being expanded further. This prevents explosion of
+  deeply nested structures.
+'@
+                            SetupCode = @'
+$config = @{
+    level1 = @{
+        level2 = @{ leaf = "deep" }
+    }
+}
+'@
+                            Code = @'
+# With -ExpandDepth 1, only level1 becomes a sub-bucket
+# level2 is stored as a file instead of expanding further
+$config | New-BucketObject -Bucket "depth-demo" -Expand -ExpandDepth 1 -Quiet
+
+# Show the filesystem — level1/ contains level2.json, not level2/ subdir
+Get-ChildItem (Join-Path (Get-BucketRoot) "depth-demo") -Recurse
+
+# Retrieve level1 — level2 is preserved as a serialized property
+$r = Get-BucketObject -Bucket "depth-demo" -Key "level1" -Expand
+"level2.leaf = $($r.level2.leaf)"
+'@
+                        }
+                        @{
+                            Key = "mixed-types"
+                            Title = "Mixed scalar + container properties"
+                            Body = @'
+  Hashtables with both primitive values and nested containers
+  expand correctly — scalars become files, containers become
+  subdirectories, and the full structure is reconstructed.
+'@
+                            SetupCode = @'
+$config = @{
+    name = "myapp"
+    version = 1.0
+    config = @{ debug = $true; timeout = 30 }
+    ports = @(80, 443)
+}
+'@
+                            Code = @'
+# Save with expand — scalars become files, containers become subdirs
+$config | New-BucketObject -Bucket "mixed-demo" -Expand -Quiet
+
+# Browse the tree
+Get-ChildItem (Join-Path (Get-BucketRoot) "mixed-demo") -Recurse
+
+# Retrieve — everything comes back as a single reconstructed object
+$r = Get-BucketObject -Bucket "mixed-demo" -Expand
+"$($r.name) v$($r.version)"
+"config.debug = $($r.config.debug)"
+"ports: $($r.ports -join ', ')"
+'@
+                        }
+                    )
+                }
+            )
+        }
+        @{
+            Name = "07-full-course"
+            Title = "Full Course"
                 Sections = @(
                     @{
                         Name = "01-course-overview"
@@ -810,8 +1059,9 @@ scoop -Bucket team -Funnel { $_.Level -ge 3 }
     02 · Beginner — CRUD operations (create, read, update, delete)
     03 · Advanced — copy, rename, PSDrive, nested buckets, pipelines
     04 · Sysadmin — real-world scenarios: inventory, logs, incidents
-    05 · Funnels — named reusable filters and transforms
-    06 · Full Course — complete walkthrough of all features
+     05 · Funnels — named reusable filters and transforms
+     06 · Expand — nested structures into browsable directory trees
+     07 · Full Course — complete walkthrough of all features
 
   Each chapter is divided into sections, and each section contains
   focused lessons with explanations and code examples you can run.
@@ -1632,9 +1882,263 @@ scoop -Bucket team -Funnel { $_.Level -ge 3 }
                     }
                 )
             }
-            @{
-                Name = "06-full-course"
-                Title = "Vollständiger Kurs"
+        @{
+            Name = "06-expand"
+            Title = "Expand"
+            Sections = @(
+                @{
+                    Name = "01-basics"
+                    Title = "Grundlagen"
+                    Lessons = @(
+                        @{
+                            Key = "expand-intro"
+                            Title = "Was ist Expand?"
+                            Body = @'
+  Der -Expand-Schalter verwandelt verschachtelte PowerShell-Objekte in
+  Verzeichnisbäume im Dateisystem. Jede Eigenschaft wird zu einer Datei
+  oder einem Unterverzeichnis, jedes Array-Element zu einem nummerierten
+  Eintrag.
+
+  Beim Speichern (New-BucketObject -Expand):
+    · Skalare → Blattdateien    (.json oder .dat)
+    · Container → Unterverzeichnisse
+    · Arrays → nummerierte Dateien  (0.json, 1.json, …)
+
+  Beim Abrufen (Get-BucketObject -Expand):
+    · Unterverzeichnisse → verschachtelte Eigenschaften
+    · nummerierte Dateien → Arrays
+    · Blattdateien → Skalarwerte
+
+  Der Vorgang ist vollständig umkehrbar. Was mit -Expand gespeichert
+  wird, wird beim Lesen mit -Expand identisch rekonstruiert.
+'@
+                        }
+                        @{
+                            Key = "simple-hash"
+                            Title = "Eine einfache Hashtable expandieren"
+                            Body = @'
+  Eine flache Hashtable, die mit -Expand gespeichert wird, erstellt
+  eine Datei pro Eigenschaft. Das Abrufen mit -Expand baut die
+  ursprüngliche Hashtable als PSObject wieder auf.
+'@
+                            SetupCode = @'
+$config = @{ host = "localhost"; port = 8080; ssl = $true }
+'@
+                            Code = @'
+# Die Hashtable expandiert speichern — jede Eigenschaft wird eigene Datei
+$config | New-BucketObject -Bucket "expand-demo" -Expand -Quiet
+
+# Die Dateien auf der Platte anzeigen
+Get-ChildItem (Join-Path (Get-BucketRoot) "expand-demo")
+
+# Das ursprüngliche Objekt abrufen und rekonstruieren
+Get-BucketObject -Bucket "expand-demo" -Expand
+'@
+                        }
+                        @{
+                            Key = "nested-hash"
+                            Title = "Verschachtelte Hashtable expandieren"
+                            Body = @'
+  Verschachtelte Hashtables werden zu Unterverzeichnissen. Die Struktur
+  bleibt als durchsuchbarer Verzeichnisbaum erhalten.
+'@
+                            SetupCode = @'
+$config = @{
+    server = @{ host = "db01"; port = 5432 }
+    logging = @{ level = "debug"; file = "/var/log/app.log" }
+}
+'@
+                            Code = @'
+# Jede verschachtelte Hashtable wird zum Unterverzeichnis
+$config | New-BucketObject -Bucket "expand-nested" -Expand -Quiet
+
+# Den Verzeichnisbaum durchsuchen
+Get-ChildItem (Join-Path (Get-BucketRoot) "expand-nested") -Recurse
+
+# Die vollständige Struktur abrufen
+$r = Get-BucketObject -Bucket "expand-nested" -Expand
+"Server Host: $($r.server.host)"
+"Logging Level: $($r.logging.level)"
+'@
+                        }
+                        @{
+                            Key = "expand-retrieve"
+                            Title = "Expandierte Objekte abrufen"
+                            Body = @'
+  Verwende -Expand bei Get-BucketObject (scoop), um expandierte Objekte
+  zu rekonstruieren. Das Cmdlet liest die Verzeichnisstruktur und baut
+  das ursprüngliche Objekt wieder auf — einschließlich Arrays und
+  verschachtelter Container.
+'@
+                            SetupCode = @'
+# Eine verschachtelte Konfiguration für die Abruf-Demo speichern
+@{ app = "myapp"; env = @{ region = "eu-west"; tier = "production" } } |
+    New-BucketObject -Bucket "retrieve-demo" -Expand -Quiet
+'@
+                            Code = @'
+# Ohne -Expand: einzelne Dateien als separate Objekte
+scoop -Bucket "retrieve-demo"
+
+# Mit -Expand: vollständige verschachtelte Struktur
+scoop -Bucket "retrieve-demo" -Expand
+'@
+                        }
+                    )
+                }
+                @{
+                    Name = "02-arrays"
+                    Title = "Arrays"
+                    Lessons = @(
+                        @{
+                            Key = "array-primitives"
+                            Title = "Array von primitiven Werten"
+                            Body = @'
+  Arrays, die mit -Expand und -Key gespeichert werden, werden zu
+  nummerierten Dateien in einem Unterverzeichnis. Der Abruf mit
+  -Key und -Expand rekonstruiert das Array.
+'@
+                            SetupCode = @'
+$items = @("alpha", "beta", "gamma")
+'@
+                            Code = @'
+# Das Array unter dem Schlüssel "items" speichern
+$items | New-BucketObject -Bucket "lists" -Key "items" -Expand -Quiet
+
+# Die Verzeichnisstruktur anzeigen
+Get-ChildItem (Join-Path (Get-BucketRoot) "lists") -Recurse
+
+# Das Array abrufen und rekonstruieren
+$r = Get-BucketObject -Bucket "lists" -Key "items" -Expand
+"Anzahl: $($r.Count)"
+"Erstes: $($r[0])"
+'@
+                        }
+                        @{
+                            Key = "array-objects"
+                            Title = "Array von Objekten"
+                            Body = @'
+  Arrays von Hashtables werden zu indizierten Unterverzeichnissen.
+  Jedes Array-Element erhält sein eigenes Verzeichnis mit den
+  Eigenschaften als Dateien.
+'@
+                            SetupCode = @'
+$users = @(
+    @{ name = "Alice"; role = "admin" }
+    @{ name = "Bob"; role = "user" }
+)
+'@
+                            Code = @'
+# Als expandiertes Array unter dem Schlüssel "users" speichern
+$users | New-BucketObject -Bucket "teams" -Key "users" -Expand -Quiet
+
+# Den Verzeichnisbaum anzeigen
+Get-ChildItem (Join-Path (Get-BucketRoot) "teams") -Recurse
+
+# Abrufen und rekonstruieren
+$r = Get-BucketObject -Bucket "teams" -Key "users" -Expand
+"Benutzer: $($r.Count)"
+"$($r[0].name) : $($r[0].role)"
+"$($r[1].name) : $($r[1].role)"
+'@
+                        }
+                        @{
+                            Key = "keyproperty-expand"
+                            Title = "Expand mit -KeyProperty"
+                            Body = @'
+  -KeyProperty mit -Expand gibt jedem Objekt sein eigenes Unterverzeichnis,
+  benannt nach dem Eigenschaftswert. Die Objekteigenschaften werden als
+  Dateien im Verzeichnis gespeichert.
+'@
+                            SetupCode = @'
+$items = @(
+    @{ id = "srv-a"; host = "web01"; port = 443 }
+    @{ id = "srv-b"; host = "web02"; port = 443 }
+)
+'@
+                            Code = @'
+# Jedes Objekt erhält sein eigenes Unterverzeichnis, benannt nach "id"
+$items | New-BucketObject -Bucket "services" -KeyProperty "id" -Expand -Quiet
+
+# Die Struktur anzeigen
+Get-ChildItem (Join-Path (Get-BucketRoot) "services") -Recurse
+
+# Ein Objekt über seinen Schlüssel abrufen
+Get-BucketObject -Bucket "services" -Key "srv-a" -Expand
+'@
+                        }
+                    )
+                }
+                @{
+                    Name = "03-advanced"
+                    Title = "Fortgeschritten"
+                    Lessons = @(
+                        @{
+                            Key = "expand-depth"
+                            Title = "Rekursionstiefe begrenzen"
+                            Body = @'
+  -ExpandDepth begrenzt die Anzahl der Ebenen, die in Unterverzeichnisse
+  expandiert werden. An der Tiefengrenze werden Container als Dateien
+  gespeichert, anstatt weiter expandiert zu werden. Das verhindert eine
+  Explosion tief verschachtelter Strukturen.
+'@
+                            SetupCode = @'
+$config = @{
+    level1 = @{
+        level2 = @{ leaf = "deep" }
+    }
+}
+'@
+                            Code = @'
+# Mit -ExpandDepth 1 wird nur level1 zum Unterverzeichnis
+# level2 wird als Datei gespeichert, nicht weiter expandiert
+$config | New-BucketObject -Bucket "depth-demo" -Expand -ExpandDepth 1 -Quiet
+
+# Dateisystem anzeigen — level1/ enthält level2.json, nicht level2/ Unterverzeichnis
+Get-ChildItem (Join-Path (Get-BucketRoot) "depth-demo") -Recurse
+
+# level1 abrufen — level2 bleibt als serialisierte Eigenschaft erhalten
+$r = Get-BucketObject -Bucket "depth-demo" -Key "level1" -Expand
+"level2.leaf = $($r.level2.leaf)"
+'@
+                        }
+                        @{
+                            Key = "mixed-types"
+                            Title = "Gemischte Skalar- und Containereigenschaften"
+                            Body = @'
+  Hashtables mit sowohl primitiven Werten als auch verschachtelten
+  Containern werden korrekt expandiert — Skalare werden zu Dateien,
+  Container zu Unterverzeichnissen, und die vollständige Struktur
+  wird rekonstruiert.
+'@
+                            SetupCode = @'
+$config = @{
+    name = "myapp"
+    version = 1.0
+    config = @{ debug = $true; timeout = 30 }
+    ports = @(80, 443)
+}
+'@
+                            Code = @'
+# Mit Expand speichern — Skalare werden Dateien, Container Unterverzeichnisse
+$config | New-BucketObject -Bucket "mixed-demo" -Expand -Quiet
+
+# Den Baum durchsuchen
+Get-ChildItem (Join-Path (Get-BucketRoot) "mixed-demo") -Recurse
+
+# Abrufen — alles kommt als ein einziges rekonstruiertes Objekt zurück
+$r = Get-BucketObject -Bucket "mixed-demo" -Expand
+"$($r.name) v$($r.version)"
+"config.debug = $($r.config.debug)"
+"Ports: $($r.ports -join ', ')"
+'@
+                        }
+                    )
+                }
+            )
+        }
+        @{
+            Name = "07-full-course"
+            Title = "Vollständiger Kurs"
                 Sections = @(
                     @{
                         Name = "01-course-overview"
@@ -1652,8 +2156,9 @@ scoop -Bucket team -Funnel { $_.Level -ge 3 }
     02 · Anfänger — CRUD-Operationen (erstellen, lesen, aktualisieren, löschen)
     03 · Fortgeschritten — kopieren, umbenennen, PSDrive, verschachtelte Buckets, Pipelines
     04 · Systemadministration — reale Szenarien: Inventar, Logs, Vorfälle
-    05 · Funnels — benannte wiederverwendbare Filter und Transformationen
-    06 · Vollständiger Kurs — komplette Durchlauf aller Funktionen
+     05 · Funnels — benannte wiederverwendbare Filter und Transformationen
+     06 · Expand — verschachtelte Strukturen als durchsuchbare Verzeichnisbäume
+     07 · Vollständiger Kurs — komplette Durchlauf aller Funktionen
 
   Jedes Kapitel ist in Abschnitte unterteilt, und jeder Abschnitt enthält
   fokussierte Lektionen mit Erklärungen und Codebeispielen zum Ausführen.

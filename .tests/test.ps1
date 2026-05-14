@@ -2030,6 +2030,139 @@ Test-It "New-Bucket bucket is visible via Get-Bucket listing" {
 }
 
 # ============================================================
+# 43. Expand / Reconstruct (-Expand on fill + scoop)
+# ============================================================
+Write-Host "`n[43] Expand / Reconstruct (-Expand)" -ForegroundColor Blue
+
+Test-It "Expand: simple hashtable round-trip" {
+    Remove-Bucket "expand-simple" -Force -Confirm:$false -Recurse -Quiet -ErrorAction SilentlyContinue
+    $original = @{ host = "localhost"; port = 8080; ssl = $true }
+    $original | New-BucketObject -Bucket "expand-simple" -Expand -Quiet
+    Use-Bucket "expand-simple"
+    $reconstructed = Get-BucketObject -Bucket "expand-simple" -Expand
+    $reconstructed.host -eq "localhost" -and $reconstructed.port -eq 8080 -and $reconstructed.ssl -eq $true
+}
+
+Test-It "Expand: nested hashtable round-trip" {
+    Remove-Bucket "expand-nested" -Force -Confirm:$false -Recurse -Quiet -ErrorAction SilentlyContinue
+    $original = @{
+        server = @{ host = "db01"; port = 5432 }
+        logging = @{ level = "debug"; file = "/var/log/app.log" }
+    }
+    $original | New-BucketObject -Bucket "expand-nested" -Expand -Quiet
+    Use-Bucket "expand-nested"
+    $r = Get-BucketObject -Bucket "expand-nested" -Expand
+    $r.server.host -eq "db01" -and $r.server.port -eq 5432 -and $r.logging.level -eq "debug" -and $r.logging.file -eq "/var/log/app.log"
+}
+
+Test-It "Expand: array of primitives round-trip" {
+    Remove-Bucket "expand-array" -Force -Confirm:$false -Recurse -Quiet -ErrorAction SilentlyContinue
+    $original = @("alpha", "beta", "gamma")
+    $original | New-BucketObject -Bucket "expand-array" -Key "items" -Expand -Quiet
+    Use-Bucket "expand-array"
+    $r = Get-BucketObject -Bucket "expand-array" -Key "items" -Expand
+    $r.Count -eq 3 -and $r[0] -eq "alpha" -and $r[1] -eq "beta" -and $r[2] -eq "gamma"
+}
+
+Test-It "Expand: array of objects round-trip" {
+    Remove-Bucket "expand-objarr" -Force -Confirm:$false -Recurse -Quiet -ErrorAction SilentlyContinue
+    $original = @(
+        @{ name = "Alice"; role = "admin" }
+        @{ name = "Bob"; role = "user" }
+    )
+    $original | New-BucketObject -Bucket "expand-objarr" -Key "users" -Expand -Quiet
+    Use-Bucket "expand-objarr"
+    $r = Get-BucketObject -Bucket "expand-objarr" -Key "users" -Expand
+    $r.Count -eq 2 -and $r[0].name -eq "Alice" -and $r[0].role -eq "admin" -and $r[1].name -eq "Bob" -and $r[1].role -eq "user"
+}
+
+Test-It "Expand: mixed scalar + container properties" {
+    Remove-Bucket "expand-mixed" -Force -Confirm:$false -Recurse -Quiet -ErrorAction SilentlyContinue
+    $original = @{
+        name = "app"
+        version = 1.0
+        config = @{ debug = $true; timeout = 30 }
+        ports = @(80, 443)
+    }
+    $original | New-BucketObject -Bucket "expand-mixed" -Expand -Quiet
+    Use-Bucket "expand-mixed"
+    $r = Get-BucketObject -Bucket "expand-mixed" -Expand
+    $r.name -eq "app" -and $r.version -eq 1.0 -and $r.config.debug -eq $true -and $r.config.timeout -eq 30 -and $r.ports.Count -eq 2 -and $r.ports[0] -eq 80 -and $r.ports[1] -eq 443
+}
+
+Test-It "Expand: -Filter on reconstructed object" {
+    Remove-Bucket "expand-filter" -Force -Confirm:$false -Recurse -Quiet -ErrorAction SilentlyContinue
+    $original = @{ host = "web01"; env = "prod"; ttl = 300 }
+    $original | New-BucketObject -Bucket "expand-filter" -Expand -Quiet
+    Use-Bucket "expand-filter"
+    $r = Get-BucketObject -Bucket "expand-filter" -Expand -Filter { $_.env -eq "prod" }
+    $null -ne $r -and $r.host -eq "web01" -and $r.env -eq "prod"
+}
+
+Test-It "Expand: -ExpandDepth limits recursion" {
+    Remove-Bucket "expand-depth" -Force -Confirm:$false -Recurse -Quiet -ErrorAction SilentlyContinue
+    $original = @{
+        level1 = @{
+            level2 = @{
+                leaf = "deep"
+            }
+        }
+    }
+    $original | New-BucketObject -Bucket "expand-depth" -Expand -ExpandDepth 1 -Quiet
+    Use-Bucket "expand-depth"
+    $r = Get-BucketObject -Bucket "expand-depth" -Key "level1" -Expand
+    # With depth 1, level2 should NOT be expanded into a sub-bucket, but stored as a file
+    $r.level2 -ne $null
+}
+
+Test-It "Expand: type preservation (int, bool, null)" {
+    Remove-Bucket "expand-types" -Force -Confirm:$false -Recurse -Quiet -ErrorAction SilentlyContinue
+    $original = @{ intVal = [int]42; boolVal = $true; nullVal = $null; strVal = "hello" }
+    $original | New-BucketObject -Bucket "expand-types" -AsBinary -Expand -Quiet
+    Use-Bucket "expand-types"
+    $r = Get-BucketObject -Bucket "expand-types" -Expand
+    $r.intVal -eq 42 -and $r.intVal -is [int] -and $r.boolVal -eq $true -and $r.boolVal -is [bool] -and $r.strVal -eq "hello"
+}
+
+Test-It "Expand: -Key acts as sub-bucket prefix" {
+    Remove-Bucket "expand-key" -Force -Confirm:$false -Recurse -Quiet -ErrorAction SilentlyContinue
+    $original = @{ host = "db01"; port = 5432 }
+    $original | New-BucketObject -Bucket "expand-key" -Key "database" -Expand -Quiet
+    Use-Bucket "expand-key"
+    $r = Get-BucketObject -Bucket "expand-key" -Key "database" -Expand
+    $r.host -eq "db01" -and $r.port -eq 5432
+}
+
+Test-It "Expand: empty hashtable produces nothing" {
+    Remove-Bucket "expand-empty" -Force -Confirm:$false -Recurse -Quiet -ErrorAction SilentlyContinue
+    @{} | New-BucketObject -Bucket "expand-empty" -Expand -Quiet
+    Use-Bucket "expand-empty"
+    $r = Get-BucketObject -Bucket "expand-empty" -Expand
+    $null -eq $r
+}
+
+Test-It "Expand: KeyProperty with array expands indexed" {
+    Remove-Bucket "expand-kp" -Force -Confirm:$false -Recurse -Quiet -ErrorAction SilentlyContinue
+    $items = @(
+        @{ id = "a"; val = 10 }
+        @{ id = "b"; val = 20 }
+    )
+    $items | New-BucketObject -Bucket "expand-kp" -KeyProperty "id" -Expand -Quiet
+    Use-Bucket "expand-kp"
+    $r = Get-BucketObject -Bucket "expand-kp" -Key "a" -Expand
+    $null -ne $r -and $r.val -eq 10
+}
+
+Test-It "Expand: property name sanitization" {
+    Remove-Bucket "expand-san" -Force -Confirm:$false -Recurse -Quiet -ErrorAction SilentlyContinue
+    $original = @{ "bad/key" = "value"; "another:name" = 42 }
+    $original | New-BucketObject -Bucket "expand-san" -Expand -Quiet
+    Use-Bucket "expand-san"
+    $r = Get-BucketObject -Bucket "expand-san" -Expand
+    $r.'bad_key' -eq "value" -and $r.'another_name' -eq 42
+}
+
+# ============================================================
 # Cleanup - remove any leftover test funnels
 Get-Funnel | Where-Object Name -like "test-funnel*" | ForEach-Object {
     Remove-Funnel -Name $_.Name -Quiet -ErrorAction SilentlyContinue

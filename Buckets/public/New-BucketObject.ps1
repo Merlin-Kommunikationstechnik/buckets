@@ -67,14 +67,16 @@ function New-BucketObject {
         [switch]$AutoIndex,
         [switch]$Quiet,
         [switch]$PassThru,
-        [object]$Funnel
+        [object]$Funnel,
+        [switch]$Expand,
+        [ValidateRange(1, 20)][int]$ExpandDepth = 5
     )
 
     begin {
         $bucketPath = Ensure-BucketExists -Name $Bucket -Path $Path
         $extension = if ($AsBinary) { ".dat" } else { ".json" }
         $savedCount = 0; $filteredCount = 0; $missingKeyCount = 0; $existingKeyCount = 0; $fallbackCount = 0; $formatFallbackCount = 0; $failedCount = 0
-        $overwrittenCount = 0; $sanitizedCount = 0; $indexedCount = 0; $expandedCount = 0
+        $overwrittenCount = 0; $sanitizedCount = 0; $indexedCount = 0; $expandedCount = 0; $expandBranchCount = 0; $expandLeafCount = 0
         $storedKeys = [System.Collections.ArrayList]::new()
         $existingKeyKeys = [System.Collections.ArrayList]::new()
         $sanitizedKeys = [System.Collections.ArrayList]::new()
@@ -84,6 +86,7 @@ function New-BucketObject {
         $useQuiet = $Quiet.IsPresent
         $showProgress = -not $useVerbose -and -not $useQuiet
         $pipeline = [System.Collections.ArrayList]::new()
+        $expandRoot = if ($Path) { Resolve-SafePath -Path $Path } else { Get-DefaultPath }
 
         $funnelDef = Resolve-Funnel $Funnel
 
@@ -94,6 +97,46 @@ function New-BucketObject {
 
     process {
         if ($null -eq $InputObject) { return }
+
+        if ($Expand) {
+            $inputIsDict = $InputObject -is [hashtable] -or $InputObject -is [System.Collections.IDictionary]
+            $inputIsPSObj = -not ($InputObject -is [string]) -and -not ($InputObject -is [ValueType]) -and -not ($InputObject -is [System.Collections.IEnumerable]) -and @($InputObject.PSObject.Properties | Where-Object { $_.MemberType -eq 'NoteProperty' }).Count -gt 0
+            $inputIsArray = -not ($InputObject -is [string]) -and -not ($InputObject -is [hashtable]) -and -not ($InputObject -is [System.Collections.IDictionary]) -and $InputObject -is [System.Collections.IEnumerable]
+            if ($inputIsDict -or $inputIsPSObj -or $inputIsArray) {
+                if ($Key) {
+                    $null = $pipeline.Add($InputObject)
+                    return
+                }
+                elseif ($KeyProperty) {
+                    $rootName = $InputObject.$KeyProperty
+                    if ([string]::IsNullOrWhiteSpace($rootName)) { $rootName = "expanded" }
+                    $subBucketPath = Join-Path $bucketPath $rootName
+                    $null = Ensure-BucketExists -Name "$Bucket/$rootName" -Path $expandRoot
+                    $expandResult = Expand-Object -Item $InputObject -BucketPath $subBucketPath -Extension $extension -AsBinary:$AsBinary.IsPresent -Compress:$Compress.IsPresent -Depth $Depth -BinaryDepth $BinaryDepth -Overwrite:$Overwrite.IsPresent -AutoIndex:$AutoIndex.IsPresent -CurrentDepth 0 -MaxDepth $ExpandDepth -RootPath $expandRoot -BucketName "$Bucket/$rootName"
+                    $savedCount += $expandResult.Saved; $failedCount += $expandResult.Failed
+                    $existingKeyCount += $expandResult.Skipped; $overwrittenCount += $expandResult.Overwritten
+                    $sanitizedCount += $expandResult.Sanitized; $indexedCount += $expandResult.Indexed
+                    $expandBranchCount += $expandResult.Branches; $expandLeafCount += $expandResult.Leaves
+                    foreach ($k in $expandResult.StoredKeys) { $null = $storedKeys.Add($k) }
+                    foreach ($k in $expandResult.SkippedKeys) { $null = $existingKeyKeys.Add($k) }
+                    foreach ($k in $expandResult.SanitizedDetails) { $null = $sanitizedKeys.Add($k) }
+                    foreach ($k in $expandResult.OverwrittenKeys) { $null = $overwrittenKeys.Add($k) }
+                    return
+                }
+                else {
+                    $expandResult = Expand-Object -Item $InputObject -BucketPath $bucketPath -Extension $extension -AsBinary:$AsBinary.IsPresent -Compress:$Compress.IsPresent -Depth $Depth -BinaryDepth $BinaryDepth -Overwrite:$Overwrite.IsPresent -AutoIndex:$AutoIndex.IsPresent -CurrentDepth 0 -MaxDepth $ExpandDepth -RootPath $expandRoot -BucketName $Bucket
+                    $savedCount += $expandResult.Saved; $failedCount += $expandResult.Failed
+                    $existingKeyCount += $expandResult.Skipped; $overwrittenCount += $expandResult.Overwritten
+                    $sanitizedCount += $expandResult.Sanitized; $indexedCount += $expandResult.Indexed
+                    $expandBranchCount += $expandResult.Branches; $expandLeafCount += $expandResult.Leaves
+                    foreach ($k in $expandResult.StoredKeys) { $null = $storedKeys.Add($k) }
+                    foreach ($k in $expandResult.SkippedKeys) { $null = $existingKeyKeys.Add($k) }
+                    foreach ($k in $expandResult.SanitizedDetails) { $null = $sanitizedKeys.Add($k) }
+                    foreach ($k in $expandResult.OverwrittenKeys) { $null = $overwrittenKeys.Add($k) }
+                    return
+                }
+            }
+        }
 
         $isCollection = $InputObject -is [System.Collections.IEnumerable] -and $InputObject -isnot [string] -and $InputObject -isnot [hashtable] -and $InputObject -isnot [System.Collections.IDictionary]
 
@@ -225,7 +268,26 @@ function New-BucketObject {
     }
 
     end {
-        if ($pipeline.Count -gt 0) {
+        if ($Expand -and $Key -and $pipeline.Count -gt 0) {
+            $subBucketPath = Join-Path $bucketPath $Key
+            $null = Ensure-BucketExists -Name "$Bucket/$Key" -Path $expandRoot
+            if ($pipeline.Count -eq 1) {
+                $expandResult = Expand-Object -Item $pipeline[0] -BucketPath $subBucketPath -Extension $extension -AsBinary:$AsBinary.IsPresent -Compress:$Compress.IsPresent -Depth $Depth -BinaryDepth $BinaryDepth -Overwrite:$Overwrite.IsPresent -AutoIndex:$AutoIndex.IsPresent -CurrentDepth 0 -MaxDepth $ExpandDepth -RootPath $expandRoot -BucketName "$Bucket/$Key"
+            } else {
+                $expandItems = [System.Collections.ArrayList]::new()
+                foreach ($pi in $pipeline) { $null = $expandItems.Add($pi) }
+                $expandResult = Expand-Object -Item $expandItems -BucketPath $subBucketPath -Extension $extension -AsBinary:$AsBinary.IsPresent -Compress:$Compress.IsPresent -Depth $Depth -BinaryDepth $BinaryDepth -Overwrite:$Overwrite.IsPresent -AutoIndex:$AutoIndex.IsPresent -CurrentDepth 0 -MaxDepth $ExpandDepth -RootPath $expandRoot -BucketName "$Bucket/$Key"
+            }
+            $savedCount += $expandResult.Saved; $failedCount += $expandResult.Failed
+            $existingKeyCount += $expandResult.Skipped; $overwrittenCount += $expandResult.Overwritten
+            $sanitizedCount += $expandResult.Sanitized; $indexedCount += $expandResult.Indexed
+            $expandBranchCount += $expandResult.Branches; $expandLeafCount += $expandResult.Leaves
+            foreach ($k in $expandResult.StoredKeys) { $null = $storedKeys.Add($k) }
+            foreach ($k in $expandResult.SkippedKeys) { $null = $existingKeyKeys.Add($k) }
+            foreach ($k in $expandResult.SanitizedDetails) { $null = $sanitizedKeys.Add($k) }
+            foreach ($k in $expandResult.OverwrittenKeys) { $null = $overwrittenKeys.Add($k) }
+        }
+        elseif ($pipeline.Count -gt 0) {
             $totalForItems = $pipeline.Count
             $index = 0
             foreach ($raw in $pipeline) {
@@ -362,6 +424,15 @@ function New-BucketObject {
                 Write-Host $overwrittenCount -NoNewline -ForegroundColor $script:CNum
                 Write-Host " overwritten" -ForegroundColor $script:CSkip
             }
+            if ($expandLeafCount -gt 0) {
+                Write-Host "  " -NoNewline
+                Write-Host $expandLeafCount -NoNewline -ForegroundColor $script:CNum
+                $leafLabel = if ($expandLeafCount -eq 1) { " leaf" } else { " leaves" }
+                Write-Host "$leafLabel, " -NoNewline -ForegroundColor $script:CMuted
+                Write-Host $expandBranchCount -NoNewline -ForegroundColor $script:CNum
+                $branchLabel = if ($expandBranchCount -eq 1) { " branch" } else { " branches" }
+                Write-Host "$branchLabel (expanded)" -ForegroundColor $script:CSkip
+            }
             if ($expandedCount -gt 0) {
                 Write-Host "  " -NoNewline
                 Write-Host $expandedCount -NoNewline -ForegroundColor $script:CNum
@@ -415,6 +486,8 @@ function New-BucketObject {
                 Overwritten = $overwrittenCount
                 Indexed     = $indexedCount
                 Expanded    = $expandedCount
+                Branches    = $expandBranchCount
+                Leaves      = $expandLeafCount
                 Sanitized   = $sanitizedCount
                 Failed      = $failedCount
                 Total       = $savedCount + $missingKeyCount + $existingKeyCount + $filteredCount + $failedCount

@@ -311,7 +311,7 @@ while ($true) {
     $sectionTitles = [System.Collections.ArrayList]@()
     $lessonChapterNames = [System.Collections.ArrayList]@()
 
-    $chaptersToProcess = if ($isFullCourse) { @($script:Chapters | Where-Object { $_.Name -notlike '06-full-course' }) } else { @($chapter) }
+    $chaptersToProcess = if ($isFullCourse) { @($script:Chapters | Where-Object { $_.Name -notlike '07-full-course' }) } else { @($chapter) }
 
     foreach ($ch in $chaptersToProcess) {
         $chapterNode = $script:LangNode.Children | Where-Object Name -eq $ch.Name
