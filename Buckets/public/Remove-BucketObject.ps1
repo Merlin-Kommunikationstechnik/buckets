@@ -108,7 +108,7 @@ function Remove-BucketObject {
             $allProcessed = $true
 
             $di = [System.IO.DirectoryInfo]::new($bucketPath)
-            $allFiles = if ($Recurse) { _GatherFiles -Dir $bucketPath -CurrentDepth 0 -MaxDepth $Depth } else { @($di.GetFiles("*.json")) + @($di.GetFiles("*.dat")) }
+            $allFiles = if ($Recurse) { _GatherFiles -Dir $bucketPath -CurrentDepth 1 -MaxDepth $Depth } else { @($di.GetFiles("*.json")) + @($di.GetFiles("*.dat")) }
 
             if ($allFiles.Count -eq 0) { Write-Verbose "Bucket '$Bucket' is already empty"; return }
 
@@ -140,7 +140,7 @@ function Remove-BucketObject {
                             }
                         }
                     }
-                    _EnumDirs -D $bucketPath -CD 0
+                    _EnumDirs -D $bucketPath -CD 1
                     $emptyDirKeys | Sort-Object Length -Descending | ForEach-Object {
                         $d = [System.IO.DirectoryInfo]::new($_)
                         $d.Refresh()
@@ -174,7 +174,7 @@ function Remove-BucketObject {
         }
 
         if (-not [string]::IsNullOrWhiteSpace($Key)) {
-            $matchedFiles = if ($Recurse) { _GatherFiles -Dir $bucketPath -CurrentDepth 0 -MaxDepth $Depth -Key $Key } else { @() }
+            $matchedFiles = if ($Recurse) { _GatherFiles -Dir $bucketPath -CurrentDepth 1 -MaxDepth $Depth -Key $Key } else { @() }
             if (-not $Recurse) {
                 $file = Find-ObjectFile -BucketPath $bucketPath -Key $Key
                 if ($file) { $matchedFiles = @($file) }
@@ -211,7 +211,7 @@ function Remove-BucketObject {
             $filterProcessed = $true
 
             $di = [System.IO.DirectoryInfo]::new($bucketPath)
-            $allFiles = if ($Recurse) { _GatherFiles -Dir $bucketPath -CurrentDepth 0 -MaxDepth $Depth } else { @($di.GetFiles("*.json")) + @($di.GetFiles("*.dat")) }
+            $allFiles = if ($Recurse) { _GatherFiles -Dir $bucketPath -CurrentDepth 1 -MaxDepth $Depth } else { @($di.GetFiles("*.json")) + @($di.GetFiles("*.dat")) }
 
             if ($allFiles.Count -eq 0) { Write-Verbose "Bucket '$Bucket' is already empty"; return }
 

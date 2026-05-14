@@ -1794,6 +1794,128 @@ Test-It "Set-Bucket -WhatIf does not rename" {
 }
 
 
+# ============================================================
+# 37. Get-BucketKeys -Recurse / -Depth
+# ============================================================
+Write-Host "`n[37] Get-BucketKeys -Recurse / -Depth" -ForegroundColor Blue
+
+Test-It "Get-BucketKeys -Recurse returns keys across nested buckets" {
+    $flat = Get-BucketKeys -Bucket "org"
+    $recursive = Get-BucketKeys -Bucket "org" -Recurse
+    $flat.Count -eq 1 -and $recursive.Count -eq 5
+}
+
+Test-It "Get-BucketKeys -Depth 1 limits to root only" {
+    $keys = Get-BucketKeys -Bucket "org" -Recurse -Depth 1
+    @($keys).Count -eq 1
+}
+
+Test-It "Get-BucketKeys -Depth 2 includes one level of nesting" {
+    $keys = Get-BucketKeys -Bucket "org" -Recurse -Depth 2
+    @($keys).Count -eq 2 -and ($keys.Key -contains "meta") -and ($keys.Key -contains "info")
+}
+
+# ============================================================
+# 38. Get-BucketObjectStats -Recurse / -Depth
+# ============================================================
+Write-Host "`n[38] Get-BucketObjectStats -Recurse / -Depth" -ForegroundColor Blue
+
+Test-It "Get-BucketObjectStats -Recurse returns stats across nested buckets" {
+    $flat = Get-BucketObjectStats -Bucket "org"
+    $recursive = Get-BucketObjectStats -Bucket "org" -Recurse
+    @($flat).Count -eq 1 -and @($recursive).Count -eq 5
+}
+
+Test-It "Get-BucketObjectStats -Depth 1 limits to root only" {
+    $stats = Get-BucketObjectStats -Bucket "org" -Recurse -Depth 1
+    @($stats).Count -eq 1 -and $stats[0].Key -eq "meta"
+}
+
+Test-It "Get-BucketObjectStats -Depth 2 includes one level of nesting" {
+    $stats = Get-BucketObjectStats -Bucket "org" -Recurse -Depth 2
+    @($stats).Count -eq 2
+}
+
+# ============================================================
+# 39. Export-Bucket -Recurse / -Depth
+# ============================================================
+Write-Host "`n[39] Export-Bucket -Recurse / -Depth" -ForegroundColor Blue
+
+Test-It "Export-Bucket -Recurse exports nested objects" {
+    $exportFlat = Join-Path $testRoot "export-rec-flat.json"
+    $exportRec = Join-Path $testRoot "export-rec-rec.json"
+    Export-Bucket -Bucket "org" -OutputFile $exportFlat -Quiet
+    Export-Bucket -Bucket "org" -OutputFile $exportRec -Recurse -Quiet
+    $flatContent = (Get-Content $exportFlat -Raw | ConvertFrom-Json)
+    $recContent = (Get-Content $exportRec -Raw | ConvertFrom-Json)
+    Remove-Item $exportFlat, $exportRec -Force -ErrorAction SilentlyContinue
+    @($flatContent).Count -eq 1 -and @($recContent).Count -eq 5
+}
+
+Test-It "Export-Bucket -Depth 1 exports root only" {
+    $exportPath = Join-Path $testRoot "export-depth1.json"
+    Export-Bucket -Bucket "org" -OutputFile $exportPath -Recurse -Depth 1 -Quiet
+    $content = (Get-Content $exportPath -Raw | ConvertFrom-Json)
+    Remove-Item $exportPath -Force -ErrorAction SilentlyContinue
+    @($content).Count -eq 1
+}
+
+Test-It "Export-Bucket -Depth 2 exports root + one level" {
+    $exportPath = Join-Path $testRoot "export-depth2.json"
+    Export-Bucket -Bucket "org" -OutputFile $exportPath -Recurse -Depth 2 -Quiet
+    $content = (Get-Content $exportPath -Raw | ConvertFrom-Json)
+    Remove-Item $exportPath -Force -ErrorAction SilentlyContinue
+    @($content).Count -eq 2
+}
+
+# ============================================================
+# 40. Remove-BucketObject -Recurse / -Depth
+# ============================================================
+Write-Host "`n[40] Remove-BucketObject -Recurse / -Depth" -ForegroundColor Blue
+
+# Recreate nested test data
+Remove-Bucket "rm-rec" -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
+New-BucketObject -Bucket "rm-rec" -InputObject @{ _Id = "root"; V = 1 } -KeyProperty _Id -Quiet
+New-BucketObject -Bucket "rm-rec/sub" -InputObject @{ _Id = "sub"; V = 2 } -KeyProperty _Id -Quiet
+New-BucketObject -Bucket "rm-rec/sub/deep" -InputObject @{ _Id = "deep"; V = 3 } -KeyProperty _Id -Quiet
+Use-Bucket "rm-rec"
+
+Test-It "Remove-BucketObject -All -Recurse removes nested objects" {
+    $before = @(Get-BucketObject -Bucket "rm-rec" -Recurse).Count
+    Remove-BucketObject -Bucket "rm-rec" -All -Recurse -Confirm:$false -Quiet
+    $after = @(Get-BucketObject -Bucket "rm-rec" -Recurse -WarningAction SilentlyContinue 2>$null).Count
+    $before -eq 3 -and $after -eq 0
+}
+
+# Recreate for depth test
+New-BucketObject -Bucket "rm-rec" -InputObject @{ _Id = "root"; V = 1 } -KeyProperty _Id -Quiet
+New-BucketObject -Bucket "rm-rec/sub" -InputObject @{ _Id = "sub"; V = 2 } -KeyProperty _Id -Quiet
+New-BucketObject -Bucket "rm-rec/sub/deep" -InputObject @{ _Id = "deep"; V = 3 } -KeyProperty _Id -Quiet
+
+Test-It "Remove-BucketObject -All -Depth 1 removes root only" {
+    Remove-BucketObject -Bucket "rm-rec" -All -Recurse -Depth 1 -Confirm:$false -Quiet
+    $remaining = Get-BucketObject -Bucket "rm-rec" -Recurse
+    $remaining.Count -eq 2 -and ($remaining._Id -contains "sub") -and ($remaining._Id -contains "deep")
+}
+
+# Recreate for depth 2 test
+New-BucketObject -Bucket "rm-rec" -InputObject @{ _Id = "root"; V = 1 } -KeyProperty _Id -Quiet
+
+Test-It "Remove-BucketObject -All -Depth 2 removes root + one level" {
+    Remove-BucketObject -Bucket "rm-rec" -All -Recurse -Depth 2 -Confirm:$false -Quiet
+    $remaining = Get-BucketObject -Bucket "rm-rec/sub" -Recurse
+    @($remaining).Count -eq 1 -and $remaining[0]._Id -eq "deep"
+}
+
+Test-It "Remove-BucketObject -Key -Recurse finds across nested buckets" {
+    New-BucketObject -Bucket "rm-rec/sub" -InputObject @{ _Id = "target"; V = 99 } -KeyProperty _Id -Quiet
+    New-BucketObject -Bucket "rm-rec/sub/deep" -InputObject @{ _Id = "target"; V = 100 } -KeyProperty _Id -Quiet
+    Remove-BucketObject -Bucket "rm-rec" -Key "target" -Recurse -Confirm:$false -Quiet
+    $remaining = Get-BucketObject -Bucket "rm-rec" -Recurse -Key "target" -WarningAction SilentlyContinue 2>$null
+    $null -eq $remaining
+}
+
+# ============================================================
 # Cleanup - remove any leftover test funnels
 Get-Funnel | Where-Object Name -like "test-funnel*" | ForEach-Object {
     Remove-Funnel -Name $_.Name -Quiet -ErrorAction SilentlyContinue
