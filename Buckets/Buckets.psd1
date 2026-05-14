@@ -110,7 +110,7 @@ PrivateData = @{
         # ProjectUri = ''
 
         # A URL to an icon representing this module.
-        # IconUri = ''
+        IconUri = 'https://raw.githubusercontent.com/Merlin-Kommunikationstechnik/Buckets/main/logo.png'
 
         # ReleaseNotes of this module
         ReleaseNotes = 'Fixed Get-BucketObject errors when searching multiple buckets with -Key. Get-ObjectFiles now returns empty array instead of $null when no key match found. Added case-insensitive key lookups. Performance improvements via direct .NET I/O calls.'
