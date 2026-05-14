@@ -12,7 +12,9 @@ PowerShell module for file-based PSObject storage using directory-backed "bucket
 6. **Sleek and pretty** — clean tree/list output, standardized cleanup patterns, consistent formatting
 
 ## Structure
-- `Buckets/Buckets.psm1` — module code (all cmdlets)
+- `Buckets/Buckets.psm1` — module loader (dot-sources `public/` and `private/`)
+- `Buckets/public/` — exported cmdlets
+- `Buckets/private/` — internal helper functions
 - `Buckets/Buckets.psd1` — module manifest
 - `.tests/test.ps1` — functional test suite
 - `.tests/benchmark.ps1` — performance benchmarks
@@ -38,8 +40,8 @@ PowerShell module for file-based PSObject storage using directory-backed "bucket
 
 ## Storage Conventions
 - Default path: `$HOME/.buckets` (overridable via `-Path`)
-- Default format: JSON (`.json`), human-readable and interoperable
-- Binary format: `-AsBinary` switch (`.dat`), for full .NET type preservation via PSSerializer
+- Default format: Binary (`.dat`), for full .NET type preservation via PSSerializer
+- JSON format: `-AsJSON` switch (`.json`), human-readable and interoperable
 - JSON auto-depth: auto-increments from `-Depth` (default 20) up to 100 to avoid truncation; falls back to binary with `Write-Warning` if still truncated or on exception
 - `BinaryDepth` default: 5 (ValidateRange 1-100), only relevant for `-AsBinary` or binary fallback
 - Arrays stored as individual files
@@ -61,7 +63,7 @@ PowerShell module for file-based PSObject storage using directory-backed "bucket
 | `Rename-BucketObject` | `-Bucket`, `-Key`, `-NewKey`, `-PassThru` |
 | `Export-Bucket` | `-Bucket`, `-OutputFile`, `-AsBinary`, `-Recurse`, `-Depth` (limits recursion, default unlimited), `-Quiet` |
 | `Import-Bucket` | `-Bucket`, `-InputFile`, `-AsBinary`, `-Overwrite`, `-Quiet` |
-| `Get-Bucket` | `-Name` (positional 0, wildcards supported; substring match if no wildcards), `-Tree`, `-Raw` |
+| `Get-Bucket` | `-Name` (positional 0, wildcards supported; exact name drills into contents), `-Tree`, `-Raw`, `-Objects`, `-MaxFiles`, `-Recurse`, `-Depth` |
 | `Set-Bucket` | `-Name` (positional 0, mandatory, pipeline by property), `-NewName` (positional 1, mandatory, pipeline by property), `-PassThru`, `-Quiet`, `-WhatIf` (SupportsShouldProcess) |
 | `Get-BucketStats` | `-Bucket` (returns count, size, timestamps, visible Path) |
 | `Get-BucketKeys` | `-Bucket` (positional 0, wildcards ok), `-Match` (returns Bucket + Key only), `-Recurse`, `-Depth` (limits recursion, default unlimited) |
@@ -114,7 +116,7 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .tests/new.ps1       # Smoke test 
 pwsh -NoProfile -File tutorial/populate-tutorial.ps1                # Populate tutorial bucket data
 pwsh -NoProfile -File tutorial/tutorial.ps1                         # Interactive tutorial
 ```
-Tests run in an isolated temp directory via `Set-BucketRoot`, never touching `$HOME/.buckets`. Then run: hashtables, nested objects, FileInfo (binary fallback), logs, JSON config, metrics, mixed formats, Copy/Rename/Export/Import, compression, -WhatIf, round-trip integrity (10/10 checks), error conditions, nested buckets with -Recurse, metadata isolation, and -Tree edge cases.
+Tests run in an isolated temp directory via `Set-BucketRoot`, never touching `$HOME/.buckets`. Then run: hashtables, nested objects, FileInfo (binary fallback), logs, JSON config, metrics, mixed formats, Copy/Rename/Export/Import, compression, -WhatIf, round-trip integrity (10/10 checks), error conditions, nested buckets with -Recurse, metadata isolation, -Tree edge cases, AutoIndex, output improvements, funnels, Move/Copy/Rename, BinaryDepth, -Match with $null, key sanitization, `-Recurse`/`-Depth` across all cmdlets, cross-platform path handling, and `New-Bucket`.
 
 Benchmarks measure write/read throughput for 1k and 10k objects (simple + complex) in both binary and JSON formats.
 
@@ -150,7 +152,7 @@ Benchmarks measure write/read throughput for 1k and 10k objects (simple + comple
 - `Remove-BucketObject -PassThru` returns objects with `Key` property (no file extension)
 - `Get-BucketObject` warns on nonexistent literal bucket names (wildcard matches stay silent)
 - `Import-Bucket` skip summary shows key names (up to 5, then "... +N more")
-- `Get-Bucket -Name` supports wildcards (`*`, `?`); without wildcards, substring match is used for backward compat
+- `Get-Bucket -Name` supports wildcards (`*`, `?`); without wildcards, exact name drills into bucket contents (objects + sub-buckets)
 - Corrupted files emit warning and return $null (don't break enumeration)
 - Bucket paths cached per session via `$script:BucketPathCache`
 - Path traversal protection: resolved paths must stay within root
