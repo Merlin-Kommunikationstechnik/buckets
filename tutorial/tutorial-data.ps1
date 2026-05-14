@@ -1035,6 +1035,44 @@ $r = Get-BucketObject -Bucket "mixed-demo" -Expand
 "ports: $($r.ports -join ', ')"
 '@
                         }
+                        @{
+                            Key = "hashtable-type"
+                            Title = "Hashtable type preservation"
+                            Body = @'
+  Saving a hashtable with -Expand creates files and subdirectories.
+  Retrieving it with -Expand returns a PSCustomObject — not a hashtable.
+
+  Buckets consistently normalizes hashtables to PSCustomObject for
+  uniform property access. This happens for binary and JSON storage
+  too, even without -Expand.
+
+  If you need a real hashtable, convert it afterward:
+    $hash = @{}
+    $obj.PSObject.Properties | ForEach-Object { $hash[$_.Name] = $_.Value }
+'@
+                            SetupCode = @'
+$config = @{ host = "localhost"; port = 8080; ssl = $true }
+'@
+                            Code = @'
+# Save with expand
+$config | New-BucketObject -Bucket "type-demo" -Expand -Quiet
+
+# Scoop with expand — what type is it?
+$r = Get-BucketObject -Bucket "type-demo" -Expand
+"Reconstructed type: $($r.GetType().Name)"
+
+# Save without expand (single file)
+$config | New-BucketObject -Bucket "type-demo" -Key "raw" -Quiet
+$r2 = Get-BucketObject -Bucket "type-demo" -Key "raw"
+"Single-file type: $($r2.GetType().Name)"
+
+# Both are PSCustomObject — convert to hashtable if needed
+$hash = @{}
+$r.PSObject.Properties | ForEach-Object { $hash[$_.Name] = $_.Value }
+$hash.GetType().Name
+$hash["host"]
+'@
+                        }
                     )
                 }
             )
@@ -2130,6 +2168,46 @@ $r = Get-BucketObject -Bucket "mixed-demo" -Expand
 "$($r.name) v$($r.version)"
 "config.debug = $($r.config.debug)"
 "Ports: $($r.ports -join ', ')"
+'@
+                        }
+                        @{
+                            Key = "hashtable-type"
+                            Title = "Hashtable-Typ bewahren"
+                            Body = @'
+  Wenn du eine Hashtable mit -Expand speicherst und mit -Expand
+  abrufst, erhältst du ein PSCustomObject zurück — keine Hashtable.
+  Das ist Absicht: Buckets normalisiert strukturierte Daten zu
+  PSCustomObject für einheitlichen Eigenschaftszugriff.
+
+  Dieselbe Normalisierung geschieht auch ohne -Expand. Eine Hashtable,
+  die als einzelne Datei gespeichert wurde (binär oder JSON), wird
+  ebenfalls als PSCustomObject zurückgegeben.
+
+  Falls du eine echte Hashtable benötigst, konvertiere sie manuell:
+    $hash = @{}
+    $obj.PSObject.Properties | ForEach-Object { $hash[$_.Name] = $_.Value }
+'@
+                            SetupCode = @'
+$config = @{ host = "localhost"; port = 8080; ssl = $true }
+'@
+                            Code = @'
+# Mit Expand speichern
+$config | New-BucketObject -Bucket "type-demo" -Expand -Quiet
+
+# Mit Expand abrufen — welcher Typ?
+$r = Get-BucketObject -Bucket "type-demo" -Expand
+"Rekonstruierter Typ: $($r.GetType().Name)"
+
+# Ohne Expand speichern (einzelne Datei)
+$config | New-BucketObject -Bucket "type-demo" -Key "raw" -Quiet
+$r2 = Get-BucketObject -Bucket "type-demo" -Key "raw"
+"Einzeldatei-Typ: $($r2.GetType().Name)"
+
+# Beide sind PSCustomObject — bei Bedarf in Hashtable umwandeln
+$hash = @{}
+$r.PSObject.Properties | ForEach-Object { $hash[$_.Name] = $_.Value }
+$hash.GetType().Name
+$hash["host"]
 '@
                         }
                     )
