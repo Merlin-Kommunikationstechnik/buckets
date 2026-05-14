@@ -665,10 +665,10 @@ $servers | fill -Bucket servers -KeyProperty Hostname -Quiet
                                 Key = "02-creating-a-funnel"
                                 Title = "Creating a Funnel"
                                 Body = @'
-  Use New-Funnel to create a named funnel. The -Filter parameter takes
+  Use New-Funnel to create a named funnel. The -Transform parameter takes
   a scriptblock that uses $_ for the pipeline object. Return the object
-  to keep it, or $null to drop it. For fill, return a modified object
-  to transform it before storage.
+  to keep it (optionally modified), or $null to drop it. For fill,
+  return a modified object to transform it before storage.
 
   Adding -Description lets you document what the funnel does.
 '@
@@ -683,7 +683,7 @@ $team | fill -Bucket team -KeyProperty Name -Quiet
 '@
                                 Code = @'
 # Create a funnel that filters for senior members (Level > 2)
-New-Funnel -Name "seniors" -Filter { $_.Level -gt 2 } -Description "Team members above level 2"
+New-Funnel -Name "seniors" -Transform { if ($_.Level -gt 2) { $_ } } -Description "Team members above level 2"
 
 # List all funnels to confirm
 Get-Funnel
@@ -719,7 +719,7 @@ $newTeam = @(
 '@
                                 Code = @'
 # Create a transform funnel that adds a Seniority label
-New-Funnel -Name "add-seniority" -Filter {
+New-Funnel -Name "add-seniority" -Transform {
     if ($_.Level -ge 4) { $_.Seniority = "Senior"; $_ }
     elseif ($_.Level -ge 2) { $_.Seniority = "Mid"; $_ }
     else { $null }
@@ -746,7 +746,7 @@ scoop -Bucket team -Key "Grace", "Heidi", "Ivan"
   $HOME/.buckets-system/funnels/. Each funnel is a single JSON file.
 '@
                                 SetupCode = @'
-New-Funnel -Name "demo-funnel" -Filter { $_.Active -eq $true } -Description "Active items only" -Force
+New-Funnel -Name "demo-funnel" -Transform { if ($_.Active) { $_ } } -Description "Active items only" -Force
 '@
                                 Code = @'
 # List all funnels (should include "demo-funnel")
@@ -783,7 +783,7 @@ $items | fill -Bucket team -KeyProperty Name -Quiet
 '@
                                 Code = @'
 # Ad-hoc filter — no named funnel needed
-scoop -Bucket team -Funnel { $_.Level -ge 3 }
+scoop -Bucket team -Funnel { if ($_.Level -ge 3) { $_ } }
 '@
                             }
                         )
@@ -1790,10 +1790,10 @@ Bei fill (New-BucketObject): Funnels transformieren Objekte vor
                                 Title = "Einen Funnel erstellen"
                                 Body = @'
   Verwende New-Funnel, um einen benannten Funnel zu erstellen. Der
-  Parameter -Filter erwartet einen Skriptblock, der $_ für das
-  Pipeline-Objekt verwendet. Gib das Objekt zurück zum Behalten,
-  oder $null zum Verwerfen. Für fill gib ein modifiziertes Objekt
-  zurück, um es vor dem Speichern zu transformieren.
+  Parameter -Transform erwartet einen Skriptblock, der $_ für das
+  Pipeline-Objekt verwendet. Gib das Objekt zurück zum Behalten
+  (optional modifiziert), oder $null zum Verwerfen. Für fill gib ein
+  modifiziertes Objekt zurück, um es vor dem Speichern zu transformieren.
 
   Mit -Description kannst du dokumentieren, was der Funnel tut.
 '@
@@ -1808,7 +1808,7 @@ $team | fill -Bucket team -KeyProperty Name -Quiet
 '@
                                 Code = @'
 # Erstelle einen Funnel, der nach Senior-Mitgliedern filtert (Level > 2)
-New-Funnel -Name "seniors" -Filter { $_.Level -gt 2 } -Description "Teammitglieder über Level 2"
+New-Funnel -Name "seniors" -Transform { if ($_.Level -gt 2) { $_ } } -Description "Teammitglieder über Level 2"
 
 # Liste alle Funnels zur Bestätigung auf
 Get-Funnel
@@ -1847,7 +1847,7 @@ $newTeam = @(
 '@
                                 Code = @'
 # Erstelle einen Transformations-Funnel, der ein Seniority-Label hinzufügt
-New-Funnel -Name "add-seniority" -Filter {
+New-Funnel -Name "add-seniority" -Transform {
     if ($_.Level -ge 4) { $_.Seniority = "Senior"; $_ }
     elseif ($_.Level -ge 2) { $_.Seniority = "Mid"; $_ }
     else { $null }
@@ -1875,7 +1875,7 @@ scoop -Bucket team -Key "Grace", "Heidi", "Ivan"
   einzelne JSON-Datei.
 '@
                                 SetupCode = @'
-New-Funnel -Name "demo-funnel" -Filter { $_.Active -eq $true } -Description "Nur aktive Elemente" -Force
+New-Funnel -Name "demo-funnel" -Transform { if ($_.Active) { $_ } } -Description "Nur aktive Elemente" -Force
 '@
                                 Code = @'
 # Liste alle Funnels auf (sollte "demo-funnel" enthalten)
@@ -1912,7 +1912,7 @@ $items | fill -Bucket team -KeyProperty Name -Quiet
 '@
                                 Code = @'
 # Ad-hoc-Filter — kein benannter Funnel nötig
-scoop -Bucket team -Funnel { $_.Level -ge 3 }
+scoop -Bucket team -Funnel { if ($_.Level -ge 3) { $_ } }
 '@
                             }
                         )
