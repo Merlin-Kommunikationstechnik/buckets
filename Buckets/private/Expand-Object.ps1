@@ -125,6 +125,62 @@ function Expand-Object {
             }
         }
     }
+    else {
+        $propNames = @($Item.PSObject.Properties | Where-Object { $_.MemberType -in @('Property', 'NoteProperty', 'ScriptProperty', 'CodeProperty', 'AliasProperty') } | ForEach-Object { $_.Name })
+        if ($propNames.Count -eq 0) { return $result }
+        $seenKeys = @{}
+        foreach ($pname in $propNames) {
+            $value = $Item.$pname
+            $safeKey = $pname -replace '[\\/:\*\?"<>\|\[\]]', '_'
+            if ($safeKey -match '^_+$' -or [string]::IsNullOrWhiteSpace($safeKey)) { continue }
+            $wasSanitized = $safeKey -ne $pname
+            if ($AutoIndex -and $seenKeys.ContainsKey($safeKey)) {
+                $idxVal = 1
+                while ($seenKeys.ContainsKey("${safeKey}_${idxVal}")) { $idxVal++ }
+                $safeKey = "${safeKey}_${idxVal}"
+                $result.Indexed++
+            }
+            $seenKeys[$safeKey] = $true
+
+            $valIsDict = $null -ne $value -and ($value -is [hashtable] -or $value -is [System.Collections.IDictionary])
+            $valIsPSObj = $null -ne $value -and -not ($value -is [string]) -and -not ($value -is [ValueType]) -and -not ($value -is [System.Collections.IEnumerable]) -and @($value.PSObject.Properties | Where-Object { $_.MemberType -eq 'NoteProperty' }).Count -gt 0
+            $valIsArray = $null -ne $value -and -not ($value -is [string]) -and -not ($value -is [hashtable]) -and -not ($value -is [System.Collections.IDictionary]) -and $value -is [System.Collections.IEnumerable]
+
+            if ($valIsDict -or $valIsPSObj -or $valIsArray) {
+                if ($CurrentDepth + 1 -ge $MaxDepth) {
+                    $filename = "${safeKey}${Extension}"
+                    $filePath = Join-Path $BucketPath $filename
+                    if ($wasSanitized) { $result.Sanitized++; $null = $result.SanitizedDetails.Add([PSCustomObject]@{ Original = $pname; Sanitized = $safeKey }) }
+                    $writeResult = Save-BucketFile -Path $filePath -Item $value -Extension $Extension -AsBinary:$AsBinary -Compress:$Compress -Depth $Depth -BinaryDepth $BinaryDepth -Overwrite:$Overwrite -BucketPath $BucketPath -Bucket $BucketName
+                    if ($writeResult.Success) { $result.Saved++; $result.Leaves++; $null = $result.StoredKeys.Add($safeKey); if ($writeResult.Overwritten) { $result.Overwritten++; $null = $result.OverwrittenKeys.Add($safeKey) } }
+                    elseif ($writeResult.Skipped) { $result.Skipped++; $null = $result.SkippedKeys.Add($safeKey) }
+                    else { $result.Failed++ }
+                }
+                else {
+                    $subBucketPath = Join-Path $BucketPath $safeKey
+                    $null = Ensure-BucketExists -Name "$BucketName/$safeKey" -Path $RootPath
+                    $result.Branches++
+                    $subResult = Expand-Object -Item $value -BucketPath $subBucketPath -Extension $Extension -AsBinary:$AsBinary -Compress:$Compress -Depth $Depth -BinaryDepth $BinaryDepth -Overwrite:$Overwrite -AutoIndex:$AutoIndex -CurrentDepth ($CurrentDepth + 1) -MaxDepth $MaxDepth -RootPath $RootPath -BucketName "$BucketName/$safeKey"
+                    $result.Saved += $subResult.Saved; $result.Failed += $subResult.Failed; $result.Skipped += $subResult.Skipped
+                    $result.Overwritten += $subResult.Overwritten; $result.Sanitized += $subResult.Sanitized; $result.Indexed += $subResult.Indexed
+                    $result.Branches += $subResult.Branches; $result.Leaves += $subResult.Leaves
+                    foreach ($k in $subResult.StoredKeys) { $null = $result.StoredKeys.Add($k) }
+                    foreach ($k in $subResult.SkippedKeys) { $null = $result.SkippedKeys.Add($k) }
+                    foreach ($k in $subResult.SanitizedDetails) { $null = $result.SanitizedDetails.Add($k) }
+                    foreach ($k in $subResult.OverwrittenKeys) { $null = $result.OverwrittenKeys.Add($k) }
+                }
+            }
+            else {
+                $filename = "${safeKey}${Extension}"
+                $filePath = Join-Path $BucketPath $filename
+                if ($wasSanitized) { $result.Sanitized++; $null = $result.SanitizedDetails.Add([PSCustomObject]@{ Original = $pname; Sanitized = $safeKey }) }
+                $writeResult = Save-BucketFile -Path $filePath -Item $value -Extension $Extension -AsBinary:$AsBinary -Compress:$Compress -Depth $Depth -BinaryDepth $BinaryDepth -Overwrite:$Overwrite -BucketPath $BucketPath -Bucket $BucketName
+                if ($writeResult.Success) { $result.Saved++; $result.Leaves++; $null = $result.StoredKeys.Add($safeKey); if ($writeResult.Overwritten) { $result.Overwritten++; $null = $result.OverwrittenKeys.Add($safeKey) } }
+                elseif ($writeResult.Skipped) { $result.Skipped++; $null = $result.SkippedKeys.Add($safeKey) }
+                else { $result.Failed++ }
+            }
+        }
+    }
 
     return $result
 }
