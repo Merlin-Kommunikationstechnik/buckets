@@ -33,7 +33,7 @@ Module cmdlets reference these variables. Test/demo scripts use literal color na
 
 ## 3. Banner: `Write-InfoBlock`
 
-Every script opens with a banner and closes with one. The function is defined locally in each script (no shared module).
+Scripts with standalone output (test suites, benchmarks, demos) open with a banner via a locally-defined `Write-InfoBlock` function and close with one. Pipeline scripts (ingest-*, simulate-*) and interactive tools may omit banners.
 
 ### Canonical Implementation
 
@@ -84,15 +84,25 @@ function Write-InfoBlock {
 
 ### Script Titles (existing usage)
 
-| Script | Title string |
-|---|---|
-| `.tests/test.ps1` | `"Test Suite"` |
-| `.tests/benchmark.ps1` | `"Benchmarks"` |
-| `.tests/data.ps1` | `"Sysadmin Data"` |
-| `.tests/tools/diag.ps1` | `"Diagnostics"` |
-| `.tests/demo/demo-ui.ps1` | `"UI/UX Demo"` |
-| `.tests/demo/cim-inventory.ps1` | `"CIM Inventory"` |
-| `.tests/demo/ad-simulator.ps1` | `"AD Simulator"` |
+| Script | Title string | Notes |
+|---|---|---|---|
+| `.tests/test.ps1` | `"Test Suite"` | Has banner |
+| `.tests/benchmark.ps1` | `"Benchmarks"` | Has banner |
+| `.tests/perfcomp.ps1` | `"Perf Comparison"` | Has banner |
+| `.tests/data.ps1` | `"Sysadmin Data"` | Has banner |
+| `.tests/output.ps1` | — | Builds own output, no banner |
+| `.tests/smoke.ps1` | — | No banner |
+| `.tests/tools/explorer.ps1` | `"Explorer"` | Inline banner (no `Write-InfoBlock`) |
+| `.tests/tools/repl.ps1` | `"REPL"` | Inline banner (no `Write-InfoBlock`) |
+| `.tests/demo/demo-ui.ps1` | `"UI/UX Demo"` | Has banner |
+| `.tests/demo/cim-inventory.ps1` | `"CIM Inventory"` | Has banner |
+| `.tests/demo/ad-simulator.ps1` | `"AD Simulator"` | Has banner |
+| `.tests/demo/demo-app.ps1` | — | Interactive app, no banner |
+| `.tests/demo/ingest-eventlog.ps1` | — | Pipeline script, no banner |
+| `.tests/demo/ingest-syslog.ps1` | — | Pipeline script, no banner |
+| `.tests/demo/log-query-examples.ps1` | — | No banner |
+| `.tests/demo/multi-emit-demo.ps1` | — | No banner (uses `===` header) |
+| `.tests/demo/simulate-syslog.ps1` | — | Pipeline script, no banner |
 
 ### Required Script Prerequisites
 
@@ -131,8 +141,6 @@ The standard separator between fields is a middle dot surrounded by spaces:
 ```
 
 This is `U+00B7` (middle dot). Used in `Write-InfoBlock`, module progress lines, and any multi-field status output.
-
-Do NOT use `" * "` (asterisk) — only `data.ps1` currently diverges and should be corrected to `" · "`.
 
 ## 7. Separator Lines
 
