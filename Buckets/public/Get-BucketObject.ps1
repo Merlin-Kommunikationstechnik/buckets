@@ -95,7 +95,8 @@ function Get-BucketObject {
             }
             continue
         }
-        $bucketName = Split-Path $bucketPath -Leaf
+        $rel = $bucketPath.Substring($Path.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar)
+        $bucketName = $rel -replace [regex]::Escape([System.IO.Path]::DirectorySeparatorChar), '/'
         $files = Get-ObjectFiles -BucketPath $bucketPath -Key $Key
 
         foreach ($file in $files) {
