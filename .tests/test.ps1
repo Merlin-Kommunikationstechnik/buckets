@@ -1916,6 +1916,67 @@ Test-It "Remove-BucketObject -Key -Recurse finds across nested buckets" {
 }
 
 # ============================================================
+# 41. Cross-platform path handling
+# ============================================================
+Write-Host "`n[41] Cross-platform path handling" -ForegroundColor Blue
+
+Test-It "Forward-slash normalization in _BucketName" {
+    $obj = Get-BucketObject -Bucket "org/eu" -Key "info"
+    $obj._BucketName -eq "org/eu" -and $obj._BucketName -notmatch '\\'
+}
+
+Test-It "Root path with trailing separator works and resolves to valid path" {
+    $orig = Get-BucketRoot
+    $withSep = "$orig$([System.IO.Path]::DirectorySeparatorChar)"
+    Set-BucketRoot $withSep
+    $root = Get-BucketRoot
+    Set-BucketRoot $orig
+    ($root -ne '') -and (Test-Path $root) -and ($root -match '^[A-Za-z]:|^/')
+}
+
+Test-It "Get-BucketRoot path exists and is accessible on all platforms" {
+    $root = Get-BucketRoot
+    (Test-Path $root) -and ([System.IO.Directory]::Exists($root))
+}
+
+Test-It "Default path via `$HOME/.buckets is constructable on any platform" {
+    $default = Join-Path $HOME ".buckets"
+    $default -ne '' -and ($default.StartsWith('/') -or $default -match '^[A-Za-z]:\\')
+}
+
+Test-It "Unicode bucket name round-trip" {
+    Remove-Bucket "üñî-café" -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
+    New-BucketObject -Bucket "üñî-café" -InputObject @{ _Id = "meta"; Name = "test" } -KeyProperty _Id -Quiet
+    Use-Bucket "üñî-café"
+    $obj = Get-BucketObject -Bucket "üñî-café" -Key "meta"
+    $null -ne $obj -and $obj.Name -eq "test"
+}
+
+Test-It "Dotted bucket names work" {
+    Remove-Bucket "org.v2" -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
+    New-BucketObject -Bucket "org.v2/sub" -InputObject @{ _Id = "a"; V = 1 } -KeyProperty _Id -Quiet
+    Use-Bucket "org.v2"
+    $obj = Get-BucketObject -Bucket "org.v2/sub" -Key "a"
+    $null -ne $obj -and $obj.V -eq 1
+}
+
+Test-It "Bucket name with spaces" {
+    Remove-Bucket "my bucket" -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
+    New-BucketObject -Bucket "my bucket" -InputObject @{ _Id = "obj"; Val = 42 } -KeyProperty _Id -Quiet
+    Use-Bucket "my bucket"
+    $obj = Get-BucketObject -Bucket "my bucket" -Key "obj"
+    $null -ne $obj -and $obj.Val -eq 42
+}
+
+Test-It "Leading-dot hidden bucket name" {
+    Remove-Bucket ".hidden" -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
+    New-BucketObject -Bucket ".hidden" -InputObject @{ _Id = "h"; Data = "secret" } -KeyProperty _Id -Quiet
+    Use-Bucket ".hidden"
+    $obj = Get-BucketObject -Bucket ".hidden" -Key "h"
+    $null -ne $obj -and $obj.Data -eq "secret"
+}
+
+# ============================================================
 # Cleanup - remove any leftover test funnels
 Get-Funnel | Where-Object Name -like "test-funnel*" | ForEach-Object {
     Remove-Funnel -Name $_.Name -Quiet -ErrorAction SilentlyContinue
