@@ -320,7 +320,7 @@ while ($true) {
 
         foreach ($section in $sections) {
             $bucketPath = "tutorials/$($script:Language)/$($ch.Name)/$($section.Name)"
-            $lessons = @(Get-BucketObject -Bucket $bucketPath -NoRecurse -ErrorAction SilentlyContinue)
+            $lessons = @(Get-BucketObject -Bucket $bucketPath -ErrorAction SilentlyContinue)
             if ($lessons.Count -eq 0) { continue }
             $lessons = $lessons | Sort-Object { $_.PSObject.Properties['_BucketKey'].Value }
             foreach ($lesson in $lessons) {
