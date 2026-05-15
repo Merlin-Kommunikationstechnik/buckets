@@ -47,7 +47,7 @@ function Expand-Object {
             $seenKeys[$safeKey] = $true
 
             $valIsDict = $null -ne $value -and ($value -is [hashtable] -or $value -is [System.Collections.IDictionary])
-            $valIsPSObj = $null -ne $value -and $value.GetType() -eq [PSCustomObject]
+            $valIsPSObj = $null -ne $value -and $value.GetType() -eq [System.Management.Automation.PSCustomObject]
             $valIsArray = $null -ne $value -and -not ($value -is [string]) -and -not ($value -is [hashtable]) -and -not ($value -is [System.Collections.IDictionary]) -and $value -is [System.Collections.ICollection]
 
             if ($valIsDict -or $valIsPSObj -or $valIsArray) {
@@ -90,7 +90,7 @@ function Expand-Object {
             $element = $Item[$i]
             $idxKey = $i.ToString()
             $elemIsDict = $null -ne $element -and ($element -is [hashtable] -or $element -is [System.Collections.IDictionary])
-            $elemIsPSObj = $null -ne $element -and $element.GetType() -eq [PSCustomObject]
+            $elemIsPSObj = $null -ne $element -and $element.GetType() -eq [System.Management.Automation.PSCustomObject]
             $elemIsArray = $null -ne $element -and -not ($element -is [string]) -and -not ($element -is [hashtable]) -and -not ($element -is [System.Collections.IDictionary]) -and $element -is [System.Collections.ICollection]
             if ($elemIsDict -or $elemIsPSObj -or $elemIsArray) {
                 if ($CurrentDepth + 1 -ge $MaxDepth) {
@@ -143,7 +143,7 @@ function Expand-Object {
             $seenKeys[$safeKey] = $true
 
             $valIsDict = $null -ne $value -and ($value -is [hashtable] -or $value -is [System.Collections.IDictionary])
-            $valIsPSObj = $null -ne $value -and $value.GetType() -eq [PSCustomObject]
+            $valIsPSObj = $null -ne $value -and $value.GetType() -eq [System.Management.Automation.PSCustomObject]
             $valIsArray = $null -ne $value -and -not ($value -is [string]) -and -not ($value -is [hashtable]) -and -not ($value -is [System.Collections.IDictionary]) -and $value -is [System.Collections.ICollection]
 
             if ($valIsDict -or $valIsPSObj -or $valIsArray) {

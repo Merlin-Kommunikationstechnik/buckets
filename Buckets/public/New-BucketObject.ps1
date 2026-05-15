@@ -86,6 +86,7 @@ function New-BucketObject {
         $useQuiet = $Quiet.IsPresent
         $showProgress = -not $useVerbose -and -not $useQuiet
         $pipeline = [System.Collections.ArrayList]::new()
+        $expandWarnedTypes = @{}
         $expandRoot = if ($Path) { Resolve-SafePath -Path $Path } else { Get-DefaultPath }
 
         $funnelDef = Resolve-Funnel $Funnel
@@ -100,7 +101,7 @@ function New-BucketObject {
 
         if ($Expand) {
             $inputIsDict = $InputObject -is [hashtable] -or $InputObject -is [System.Collections.IDictionary]
-            $inputIsPSObj = $InputObject.GetType() -eq [PSCustomObject]
+            $inputIsPSObj = $InputObject.GetType() -eq [System.Management.Automation.PSCustomObject]
             $inputIsArray = -not ($InputObject -is [string]) -and -not ($InputObject -is [hashtable]) -and -not ($InputObject -is [System.Collections.IDictionary]) -and $InputObject -is [System.Collections.ICollection]
             if ($inputIsDict -or $inputIsPSObj -or $inputIsArray) {
                 if ($Key) {
@@ -135,6 +136,10 @@ function New-BucketObject {
                     foreach ($k in $expandResult.OverwrittenKeys) { $null = $overwrittenKeys.Add($k) }
                     return
                 }
+            }
+            if (-not $Key -and -not $expandWarnedTypes.ContainsKey($InputObject.GetType().FullName)) {
+                $expandWarnedTypes[$InputObject.GetType().FullName] = $true
+                Write-Warning "Expand ignored for '$($InputObject.GetType().FullName)' — only PSCustomObject, hashtable, and array types are expandable"
             }
         }
 
