@@ -28,7 +28,7 @@ function Expand-Object {
     if ($null -eq $Item) { return $result }
 
     $isDict = $Item -is [hashtable] -or $Item -is [System.Collections.IDictionary]
-    $isArray = -not $isDict -and -not ($Item -is [string]) -and $Item -is [System.Collections.IEnumerable]
+    $isArray = -not $isDict -and -not ($Item -is [string]) -and $Item -is [System.Collections.ICollection]
 
     if ($isDict) {
         $propNames = if ($Item -is [hashtable]) { $Item.Keys } else { $Item.Keys }
@@ -47,8 +47,8 @@ function Expand-Object {
             $seenKeys[$safeKey] = $true
 
             $valIsDict = $null -ne $value -and ($value -is [hashtable] -or $value -is [System.Collections.IDictionary])
-            $valIsPSObj = $null -ne $value -and -not ($value -is [string]) -and -not ($value -is [ValueType]) -and -not ($value -is [System.Collections.IEnumerable]) -and @($value.PSObject.Properties | Where-Object { $_.MemberType -eq 'NoteProperty' }).Count -gt 0
-            $valIsArray = $null -ne $value -and -not ($value -is [string]) -and -not ($value -is [hashtable]) -and -not ($value -is [System.Collections.IDictionary]) -and $value -is [System.Collections.IEnumerable]
+            $valIsPSObj = $null -ne $value -and $value -is [PSCustomObject]
+            $valIsArray = $null -ne $value -and -not ($value -is [string]) -and -not ($value -is [hashtable]) -and -not ($value -is [System.Collections.IDictionary]) -and $value -is [System.Collections.ICollection]
 
             if ($valIsDict -or $valIsPSObj -or $valIsArray) {
                 if ($CurrentDepth + 1 -ge $MaxDepth) {
@@ -90,8 +90,8 @@ function Expand-Object {
             $element = $Item[$i]
             $idxKey = $i.ToString()
             $elemIsDict = $null -ne $element -and ($element -is [hashtable] -or $element -is [System.Collections.IDictionary])
-            $elemIsPSObj = $null -ne $element -and -not ($element -is [string]) -and -not ($element -is [ValueType]) -and -not ($element -is [System.Collections.IEnumerable]) -and @($element.PSObject.Properties | Where-Object { $_.MemberType -eq 'NoteProperty' }).Count -gt 0
-            $elemIsArray = $null -ne $element -and -not ($element -is [string]) -and -not ($element -is [hashtable]) -and -not ($element -is [System.Collections.IDictionary]) -and $element -is [System.Collections.IEnumerable]
+            $elemIsPSObj = $null -ne $element -and $element -is [PSCustomObject]
+            $elemIsArray = $null -ne $element -and -not ($element -is [string]) -and -not ($element -is [hashtable]) -and -not ($element -is [System.Collections.IDictionary]) -and $element -is [System.Collections.ICollection]
             if ($elemIsDict -or $elemIsPSObj -or $elemIsArray) {
                 if ($CurrentDepth + 1 -ge $MaxDepth) {
                     $filename = "${idxKey}${Extension}"
@@ -143,8 +143,8 @@ function Expand-Object {
             $seenKeys[$safeKey] = $true
 
             $valIsDict = $null -ne $value -and ($value -is [hashtable] -or $value -is [System.Collections.IDictionary])
-            $valIsPSObj = $null -ne $value -and -not ($value -is [string]) -and -not ($value -is [ValueType]) -and -not ($value -is [System.Collections.IEnumerable]) -and @($value.PSObject.Properties | Where-Object { $_.MemberType -eq 'NoteProperty' }).Count -gt 0
-            $valIsArray = $null -ne $value -and -not ($value -is [string]) -and -not ($value -is [hashtable]) -and -not ($value -is [System.Collections.IDictionary]) -and $value -is [System.Collections.IEnumerable]
+            $valIsPSObj = $null -ne $value -and $value -is [PSCustomObject]
+            $valIsArray = $null -ne $value -and -not ($value -is [string]) -and -not ($value -is [hashtable]) -and -not ($value -is [System.Collections.IDictionary]) -and $value -is [System.Collections.ICollection]
 
             if ($valIsDict -or $valIsPSObj -or $valIsArray) {
                 if ($CurrentDepth + 1 -ge $MaxDepth) {

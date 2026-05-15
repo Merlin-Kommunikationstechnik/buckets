@@ -100,8 +100,8 @@ function New-BucketObject {
 
         if ($Expand) {
             $inputIsDict = $InputObject -is [hashtable] -or $InputObject -is [System.Collections.IDictionary]
-            $inputIsPSObj = -not ($InputObject -is [string]) -and -not ($InputObject -is [ValueType]) -and -not ($InputObject -is [System.Collections.IEnumerable]) -and @($InputObject.PSObject.Properties | Where-Object { $_.MemberType -eq 'NoteProperty' }).Count -gt 0
-            $inputIsArray = -not ($InputObject -is [string]) -and -not ($InputObject -is [hashtable]) -and -not ($InputObject -is [System.Collections.IDictionary]) -and $InputObject -is [System.Collections.IEnumerable]
+            $inputIsPSObj = $InputObject -is [PSCustomObject]
+            $inputIsArray = -not ($InputObject -is [string]) -and -not ($InputObject -is [hashtable]) -and -not ($InputObject -is [System.Collections.IDictionary]) -and $InputObject -is [System.Collections.ICollection]
             if ($inputIsDict -or $inputIsPSObj -or $inputIsArray) {
                 if ($Key) {
                     $null = $pipeline.Add($InputObject)
@@ -138,7 +138,7 @@ function New-BucketObject {
             }
         }
 
-        $isCollection = $InputObject -is [System.Collections.IEnumerable] -and $InputObject -isnot [string] -and $InputObject -isnot [hashtable] -and $InputObject -isnot [System.Collections.IDictionary]
+        $isCollection = $InputObject -is [System.Collections.ICollection] -and $InputObject -isnot [string] -and $InputObject -isnot [hashtable] -and $InputObject -isnot [System.Collections.IDictionary]
 
         if ($isCollection) {
             $totalForItems = $InputObject.Count

@@ -156,3 +156,4 @@ Benchmarks measure write/read throughput for 1k and 10k objects (simple + comple
 - Corrupted files emit warning and return $null (don't break enumeration)
 - Bucket paths cached per session via `$script:BucketPathCache`
 - Path traversal protection: resolved paths must stay within root
+- `-Expand` safety guard: only `[PSCustomObject]`, hashtables (`IDictionary`), and true collections (`ICollection`) are expanded. System types (FileInfo, Process, ServiceController, XmlDocument, etc.) are saved as regular objects to prevent disk flooding.
