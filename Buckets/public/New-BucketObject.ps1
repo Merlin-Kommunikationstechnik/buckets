@@ -100,7 +100,7 @@ function New-BucketObject {
 
         if ($Expand) {
             $inputIsDict = $InputObject -is [hashtable] -or $InputObject -is [System.Collections.IDictionary]
-            $inputIsPSObj = $InputObject -is [PSCustomObject]
+            $inputIsPSObj = $InputObject.GetType() -eq [PSCustomObject]
             $inputIsArray = -not ($InputObject -is [string]) -and -not ($InputObject -is [hashtable]) -and -not ($InputObject -is [System.Collections.IDictionary]) -and $InputObject -is [System.Collections.ICollection]
             if ($inputIsDict -or $inputIsPSObj -or $inputIsArray) {
                 if ($Key) {
