@@ -69,9 +69,9 @@ $null = Ensure-BucketExists -Name "default"
 
 Set-Alias -Name fill -Value New-BucketObject
 Set-Alias -Name scoop -Value Get-BucketObject
-Set-Alias -Name spill -Value Remove-BucketObject
+Set-Alias -Name drain -Value Remove-BucketItem
 Set-Alias -Name dip -Value Get-Bucket
-Set-Alias -Name drain -Value Remove-Bucket
+
 Set-Alias -Name tint -Value Set-BucketObject
 Set-Alias -Name ls -Value Get-ChildItem -Scope Global -Force
 
@@ -132,9 +132,9 @@ $script:KeyCompleterBlock = {
     }
 }
 
-@('New-BucketObject', 'Get-BucketObject', 'Set-BucketObject', 'Remove-BucketObject',
-  'Get-BucketStats', 'Remove-Bucket', 'Copy-BucketObject', 'Rename-BucketObject',
-  'Move-BucketObject', 'Export-Bucket', 'Import-Bucket', 'fill', 'spill') | ForEach-Object {
+@('New-BucketObject', 'Get-BucketObject', 'Set-BucketObject', 'Remove-BucketItem',
+  'Get-BucketStats', 'Copy-BucketObject', 'Rename-BucketObject',
+  'Move-BucketObject', 'Export-Bucket', 'Import-Bucket', 'fill') | ForEach-Object {
     Register-ArgumentCompleter -CommandName $_ -ParameterName Bucket -ScriptBlock $script:CompleterBlock
 }
 
@@ -147,8 +147,8 @@ Register-ArgumentCompleter -CommandName Move-BucketObject -ParameterName Destina
 
 Register-ArgumentCompleter -CommandName Set-Bucket -ParameterName NewName -ScriptBlock $script:CompleterBlock
 
-@('Get-BucketObject', 'Set-BucketObject', 'Remove-BucketObject',
-  'Copy-BucketObject', 'Rename-BucketObject', 'Move-BucketObject', 'spill') | ForEach-Object {
+@('Get-BucketObject', 'Set-BucketObject', 'Remove-BucketItem',
+  'Copy-BucketObject', 'Rename-BucketObject', 'Move-BucketObject') | ForEach-Object {
     Register-ArgumentCompleter -CommandName $_ -ParameterName Key -ScriptBlock $script:KeyCompleterBlock
 }
 
@@ -220,10 +220,10 @@ foreach ($cmd in $nativeCommands) {
 
 Export-ModuleMember -Function @(
     'New-BucketObject', 'Get-BucketObject', 'Set-BucketObject',
-    'Remove-BucketObject', 'New-Bucket', 'Get-Bucket', 'Set-Bucket',
+    'Remove-BucketItem', 'New-Bucket', 'Get-Bucket', 'Set-Bucket',
     'Get-BucketStats', 'Get-BucketKeys', 'Get-BucketObjectStats',
-    'Remove-Bucket', 'Copy-BucketObject', 'Rename-BucketObject',
+    'Copy-BucketObject', 'Rename-BucketObject',
     'Move-BucketObject', 'Export-Bucket', 'Import-Bucket',
     'Set-BucketRoot', 'Get-BucketRoot', 'Sync-BucketDrive',
     'New-Funnel', 'Get-Funnel', 'Set-Funnel', 'Remove-Funnel'
-) -Alias 'fill', 'scoop', 'spill', 'dip', 'drain', 'tint'
+) -Alias 'fill', 'scoop', 'dip', 'drain', 'tint'

@@ -14,7 +14,7 @@ Import-Module ./Buckets
 # Save objects (JSON by default) — alias: fill
 New-BucketObject -InputObject @{ Name = "Alice"; Age = 30 } -KeyProperty Name
 
-# Retrieve — alias: spill
+# Retrieve — alias: scoop
 Get-BucketObject | Select-Object Name, Age
 
 # List buckets — alias: dip
@@ -166,9 +166,9 @@ Retrieved objects include metadata properties: `_BucketName`, `_BucketKey`, `_Bu
 #### Examples
 
 ```powershell
-# Using the spill alias
-spill -Bucket users
-spill "Alice" users
+# Using the drain alias
+drain -Bucket users
+drain -Key "Alice" -Bucket users
 
 # All objects from a bucket
 Get-BucketObject -Bucket users
@@ -293,33 +293,36 @@ tint Bob team Role "Lead"
 
 ---
 
-### Remove-BucketObject
+### Remove-BucketItem (alias: `drain`)
 
-Removes an object from a bucket.
+Removes objects from a bucket or deletes the bucket directory itself.
 
 ```powershell
-Remove-BucketObject
-    [-Bucket] <string>
-    [[-Path] <string>]
-    [[-Key] <string>]
-    [-All]
+Remove-BucketItem
+    [-Bucket] <string[]>
+    [[-Key] <string[]>]
     [-Match <hashtable>]
     [-Filter <scriptblock>]
+    [-Drop]
+    [-Force]
+    [-Recurse]
+    [-Depth <int>]
     [-PassThru]
     [-Quiet]
     [-WhatIf]
-    [-Confirm]
     [<CommonParameters>]
 ```
 
 | Parameter | Description |
 |-----------|-------------|
-| `-Bucket` | Bucket name |
-| `-Path` | Storage root directory |
-| `-Key` | Object key to remove |
-| `-All` | Remove all objects from the bucket |
+| `-Bucket` | Bucket name(s). Use `-Bucket` alone to remove all objects (keep bucket dir) |
+| `-Key` | Object key(s) to remove (default bucket: "default" if omitted) |
 | `-Match` | Hashtable filter (exact match, supports `$null`) |
 | `-Filter` | ScriptBlock filter (`$_` references the object) |
+| `-Drop` | Delete the bucket directory itself (safety-checked: `.dat`/`.json` only) |
+| `-Force` | Skip confirmation when using `-Drop` |
+| `-Recurse` | Recurse into nested sub-buckets |
+| `-Depth` | Maximum nesting depth (default: unlimited) |
 | `-PassThru` | Return the removed object's metadata (Key without file extension) |
 | `-Quiet` | Suppress output |
 | `-WhatIf` | Preview without removing |
@@ -327,17 +330,29 @@ Remove-BucketObject
 #### Examples
 
 ```powershell
-# Remove by key
-Remove-BucketObject -Bucket users -Key "Alice"
+# Remove by key (from default bucket)
+Remove-BucketItem -Key "Alice"
 
-# Remove all objects from bucket
-Remove-BucketObject -Bucket users -All
+# Remove by key from a specific bucket
+Remove-BucketItem -Bucket users -Key "Alice"
+
+# Remove all objects from bucket (keep directory)
+Remove-BucketItem -Bucket users
+
+# Remove all objects from bucket (recursive)
+Remove-BucketItem -Bucket org -Recurse
 
 # Remove matching objects
-Remove-BucketObject -Bucket users -Match @{ Status = "inactive" }
+Remove-BucketItem -Bucket users -Match @{ Status = "inactive" }
 
 # Remove with WhatIf preview
-Remove-BucketObject -Bucket temp -All -WhatIf
+Remove-BucketItem -Bucket temp -WhatIf
+
+# Delete bucket directory itself
+Remove-BucketItem -Bucket users -Drop
+
+# Delete multiple buckets
+Remove-BucketItem -Bucket users, temp -Drop -Force
 ```
 
 ---
@@ -622,28 +637,25 @@ NewestObject : 2024-01-20 14:22:00
 
 ---
 
-### Remove-Bucket
+### Remove-BucketItem — Drop (bucket removal)
 
-Removes one or more buckets and all their contents. Supports wildcards and nested buckets.
-
-Shows a colored summary of buckets to be removed before confirmation, listing object counts and sizes. Skipped buckets (containing non-bucket files) are shown with reasons.
+Use `Remove-BucketItem -Drop` to delete the bucket directory itself. Supports wildcards, nested buckets, safety checks (`.dat`/`.json` only), and colored pre-confirmation summary.
 
 ```powershell
-Remove-Bucket
+Remove-BucketItem
     [-Bucket] <string[]>
-    [[-Path] <string>]
+    [-Drop]
     [-Recurse]
     [-Force]
     [-Quiet]
     [-WhatIf]
-    [-Confirm]
     [<CommonParameters>]
 ```
 
 | Parameter | Description |
 |-----------|-------------|
 | `-Bucket` | Bucket name(s) or wildcard patterns (`*`, `?`). Nested paths like `"projects/myapp"` |
-| `-Path` | Storage root directory |
+| `-Drop` | Delete bucket directory (required for directory removal) |
 | `-Recurse` | Remove target bucket AND all nested sub-buckets |
 | `-Force` | Skip confirmation prompt and remove immediately |
 | `-Quiet` | Suppress progress output |
@@ -653,23 +665,23 @@ Remove-Bucket
 
 ```powershell
 # Single bucket (with confirmation)
-Remove-Bucket -Bucket users
+Remove-BucketItem -Bucket users -Drop
 
 # Multiple buckets
-Remove-Bucket -Bucket users, temp -Force
+Remove-BucketItem -Bucket users, temp -Drop -Force
 
 # Wildcard patterns
-Remove-Bucket -Bucket "temp*" -Force
-Remove-Bucket -Bucket "*_archive" -Force
+Remove-BucketItem -Bucket "temp*" -Drop -Force
+Remove-BucketItem -Bucket "*_archive" -Drop -Force
 
 # Nested bucket with all sub-buckets
-Remove-Bucket -Bucket "projects/myapp" -Recurse
+Remove-BucketItem -Bucket "projects/myapp" -Drop -Recurse
 
 # All buckets (with confirmation)
-Remove-Bucket *
+Remove-BucketItem -Bucket * -Drop
 
 # Preview without removing
-Remove-Bucket * -WhatIf
+Remove-BucketItem -Bucket * -Drop -WhatIf
 ```
 
 Safe by design: only removes directories containing exclusively `.dat`/`.json` files (or empty). Skips buckets with other file types with a warning.
@@ -976,7 +988,7 @@ The provider is created automatically on module import via `Sync-BucketDrive`. R
 | `New-BucketObject` (`fill`) | Save objects to a bucket |
 | `Get-BucketObject` (`scoop`) | Retrieve objects from buckets |
 | `Set-BucketObject` (`tint`) | Update an existing object |
-| `Remove-BucketObject` (`spill`) | Remove objects by key, filter, or all |
+| `Remove-BucketItem` (`drain`) | Remove objects (or buckets with `-Drop`) |
 | `Copy-BucketObject` | Copy objects within or between buckets |
 | `Rename-BucketObject` | Rename an object's key |
 | `Move-BucketObject` | Move objects between buckets |
@@ -984,7 +996,6 @@ The provider is created automatically on module import via `Sync-BucketDrive`. R
 | `Get-BucketKeys` | List object keys in a bucket (Bucket + Key only) |
 | `Get-BucketObjectStats` | Detailed per-object stats (format, type, size, timestamps, compression) |
 | `Get-BucketStats` | Show bucket statistics (visible Path, hidden TotalSizeBytes) |
-| `Remove-Bucket` (`drain`) | Remove buckets (supports wildcards, nested, WhatIf) |
 | `Export-Bucket` | Export bucket to archive |
 | `Import-Bucket` | Import objects from archive |
 | `Set-BucketRoot` | Override session storage root |

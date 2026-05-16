@@ -23,7 +23,7 @@ $createdBuckets = [System.Collections.ArrayList]::new()
 function Use-Bucket {
     param([string]$Name)
     $null = $createdBuckets.Add($Name)
-    Remove-Bucket $Name -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet | Out-Null
+    Remove-BucketItem -Bucket $Name -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet | Out-Null
 }
 
 function Write-InfoBlock {
@@ -442,7 +442,7 @@ Write-BenchResult "Expand (-Key -Expand)" $exaexW $wt.ElapsedMilliseconds $exaex
 # ============================================================
 # Cleanup
 # ============================================================
-foreach ($b in $createdBuckets) { Remove-Bucket $b -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet | Out-Null }
+foreach ($b in $createdBuckets) { Remove-BucketItem -Bucket $b -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet | Out-Null }
 
 Set-BucketRoot (Join-Path $HOME ".buckets")
 Remove-Item $testRoot -Recurse -Force -ErrorAction SilentlyContinue

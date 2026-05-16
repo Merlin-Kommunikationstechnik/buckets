@@ -56,7 +56,7 @@ function Write-InfoBlock {
 function Use-Bucket {
     param([string]$Name)
     $null = $createdBuckets.Add($Name)
-    Remove-Bucket $Name -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
+    Remove-BucketItem -Bucket $Name -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
 }
 
 function Clear-PhaseBuckets {
@@ -285,7 +285,7 @@ Write-Host ("  {0,-22}  {1,8}ms  {2,8}ms" -f "DirInfo @ Depth 1", $dtJsonWrite, 
 
 # Cleanup
 foreach ($b in $createdBuckets) {
-    Remove-Bucket $b -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
+    Remove-BucketItem -Bucket $b -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
 }
 Get-Funnel -Name "bench-perfcomp-strip" -ErrorAction SilentlyContinue | Remove-Funnel -Name "bench-perfcomp-strip" -Quiet -Confirm:$false -ErrorAction SilentlyContinue
 

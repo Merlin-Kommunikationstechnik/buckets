@@ -57,7 +57,7 @@ PowerShell module for file-based PSObject storage using directory-backed "bucket
 | `New-BucketObject` | `-InputObject` (pipeline), `-Bucket` (default "default"), `-Key`, `-KeyProperty`, `-AsBinary`, `-AsTimestamp`, `-Depth`, `-BinaryDepth`, `-Compress`, `-Quiet`, `-Overwrite`, `-AutoIndex`, `-Funnel` |
 | `Get-BucketObject` | `-Key` (positional 0), `-Bucket` (positional 1, wildcards ok, default "default" if omitted), `-Match` (hashtable, supports $null), `-Filter` (scriptblock with `$_`), `-All` (search all buckets, implies recursion), `-Recurse` (opt-in, default is no recursion), `-Depth` (limits recursion, default unlimited), `-First`, `-Skip`, `-Funnel` |
 | `Set-BucketObject` | `-InputObject` (pipeline binds `_BucketName`/`_BucketKey` or partial update), `-Bucket`, `-Key`, `-AsBinary`, `-Compress`, `-PassThru`, `-Quiet` |
-| `Remove-BucketObject` | `-Bucket`, `-Key` or `-All` or `-Match`/`-Filter` (mutual param sets), `-Recurse`, `-Depth` (limits recursion, default unlimited), `-PassThru`, `-Quiet`, `-WhatIf` (SupportsShouldProcess) |
+| `Remove-BucketItem` | `-Bucket`, `-Key`, `-Match`/`-Filter`, `-Drop` (delete bucket dir), `-Force` (skip confirm), `-Recurse`, `-Depth` (limits recursion, default unlimited), `-PassThru`, `-Quiet`, `-WhatIf` (SupportsShouldProcess) |
 | `Copy-BucketObject` | `-Bucket`, `-Key`, `-DestinationBucket`, `-DestinationKey`, `-PassThru` |
 | `Move-BucketObject` | `-Bucket`, `-Key`, `-DestinationBucket`, `-DestinationKey`, `-PassThru` |
 | `Rename-BucketObject` | `-Bucket`, `-Key`, `-NewKey`, `-PassThru` |
@@ -68,7 +68,7 @@ PowerShell module for file-based PSObject storage using directory-backed "bucket
 | `Get-BucketStats` | `-Bucket` (returns count, size, timestamps, visible Path) |
 | `Get-BucketKeys` | `-Bucket` (positional 0, wildcards ok), `-Match` (returns Bucket + Key only), `-Recurse`, `-Depth` (limits recursion, default unlimited) |
 | `Get-BucketObjectStats` | `-Key` (positional 0), `-Bucket` (positional 1, wildcards ok), `-Match` (returns Format, Type, Size, LastWriteTime, IsCompressed), `-Recurse`, `-Depth` (limits recursion, default unlimited) |
-| `Remove-Bucket` | `-Bucket` (positional, wildcards ok), `-Recurse`, `-Depth` (limits recursion, default unlimited), `-Force`, `-Confirm` (SupportsShouldProcess), `-Quiet` |
+| `Remove-BucketItem -Drop` | `-Bucket`, `-Drop`, `-Recurse`, `-Depth`, `-Force`, `-Quiet`, `-WhatIf` (SupportsShouldProcess). Merged from `Remove-Bucket`. |
 | `Set-BucketRoot` | `-Path` (mandatory, positional) |
 | `Get-BucketRoot` | (no parameters) |
 | `Sync-BucketDrive` | (no parameters) |
@@ -83,11 +83,11 @@ Named reusable transform scriptblocks stored in `$HOME/.buckets-system/funnels/`
 ### Multi-emit Funnels
 When a funnel returns an array of objects from a single input (e.g. splitting a compound object into parts), each item is processed independently. On fill, each emitted item gets its own filename with within-batch auto-indexing if keys collide (e.g. `key_1`, `key_2`). On scoop, each emitted item is returned independently with the source metadata (all sub-items share the same `_BucketName`, `_BucketKey`, `_BucketFile`). `$null` entries in the emitted array are silently skipped. The `Expanded` counter tracks how many additional items were created by multi-emit beyond the first.
 
-### Remove-Bucket Safety
-Only removes buckets containing exclusively `.dat`/`.json` files (or empty directories). Skips buckets with other file types with a warning. Uses standard `-Confirm` support (SupportsShouldProcess). `-Force` skips confirmation entirely. Shows a colored pre-confirmation summary listing bucket names, object counts, and sizes before the standard confirmation prompt.
+### Remove-BucketItem — Drop Safety (merged from Remove-Bucket)
+Only removes directories containing exclusively `.dat`/`.json` files (or empty). Skips buckets with other file types with a warning. Uses standard `-Confirm` support (SupportsShouldProcess). `-Force` skips confirmation entirely. Shows a colored pre-confirmation summary listing bucket names, object counts, and sizes before the standard confirmation prompt.
 
-### Remove-BucketObject Safety
-Uses `SupportsShouldProcess` for `-WhatIf` support. Parameter sets enforce `-Key` or `-All` (mutually exclusive). `-Match/-Filter` shows a pre-confirmation summary listing the first 5 matching keys and total size. Output shows `"bucket · N objects removed (matched)"` for filter operations, `"bucket · N objects removed"` for `-All`, and `"bucket/key · removed"` for single key. `-PassThru` returns objects with `Key` property (no file extension).
+### Remove-BucketItem Safety
+Uses `SupportsShouldProcess` for `-WhatIf` support. `-Bucket` alone removes all objects (no `-All` needed). `-Match/-Filter` shows a pre-confirmation summary listing the first 5 matching keys and total size. Output shows `"bucket · N objects removed (matched)"` for filter operations, `"bucket · N objects removed"` for all-object removal, and `"bucket/key · removed"` for single key. `-PassThru` returns objects with `Key` property (no file extension).
 
 ### Set-Bucket Safety
 Renames a bucket directory on disk. All nested objects and sub-buckets are preserved. `-NewName` supports full path changes (moves to a different parent). Checks for path traversal safety, validates source exists and destination doesn't. Accepts pipeline input for bulk operations via `Name`/`NewName` property binding. `-WhatIf` previews without renaming.
@@ -106,7 +106,6 @@ Renames a bucket directory on disk. All nested objects and sub-buckets are prese
 - `Get-ChildItem -Include "*.json", "*.dat"` fails without `-Recurse` — use separate `-Filter` calls
 - `@($InputObject)` enumerates hashtables into key-value pairs — wrap single items in `System.Collections.ArrayList`
 - `-Filter` scriptblock must use `$_` prefix — `Set-Variable` injection does not work with scriptblocks
-- Module removes built-in aliases `Save-BucketObject` and `Get-BucketObject` at load
 
 ## Testing
 ```bash
@@ -148,8 +147,8 @@ Benchmarks measure write/read throughput for 1k and 10k objects (simple + comple
 - Default path resolves dynamically at call time via `Get-DefaultPath` (not at module load)
 - `Set-BucketObject` outputs summary line by default; includes updated key names (up to 5, then "... N more"); use `-PassThru` to emit objects to pipeline, `-Quiet` for silence
 - Binary serialization auto-increments depth up to 5 if initial depth fails
-- `Remove-BucketObject -All` warns on empty bucket
-- `Remove-BucketObject -PassThru` returns objects with `Key` property (no file extension)
+- `Remove-BucketItem` with `-Bucket` alone warns on empty bucket
+- `Remove-BucketItem -PassThru` returns objects with `Key` property (no file extension)
 - `Get-BucketObject` warns on nonexistent literal bucket names (wildcard matches stay silent)
 - `Import-Bucket` skip summary shows key names (up to 5, then "... +N more")
 - `Get-Bucket -Name` supports wildcards (`*`, `?`); without wildcards, exact name drills into bucket contents (objects + sub-buckets)

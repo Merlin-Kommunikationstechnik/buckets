@@ -195,26 +195,26 @@ Import-Bucket -Bucket restored-users -InputFile $exportFile -AsBinary
 Remove-Item $exportFile, $exportJson -Force
 
 # ============================================================
-# 7. Remove-BucketObject
+# 7. Remove-BucketItem
 # ============================================================
-Write-Host "── 7. Remove-BucketObject ───────────────────" -ForegroundColor Blue
+Write-Host "── 7. Remove-BucketItem ───────────────────" -ForegroundColor Blue
 
 Write-Host "`n  Remove single key:" -ForegroundColor DarkGray
-Remove-BucketObject -Bucket staging -Key "tmp-item" -WarningAction SilentlyContinue
+Remove-BucketItem -Bucket staging -Key "tmp-item" -WarningAction SilentlyContinue
 
 Write-Host "`n  Remove-All with WhatIf:" -ForegroundColor DarkGray
-Remove-BucketObject -Bucket staging -All -WhatIf -WarningAction SilentlyContinue
+Remove-BucketItem -Bucket staging -WhatIf -WarningAction SilentlyContinue
 
 Write-Host "`n  Remove-All (actual):" -ForegroundColor DarkGray
-Remove-BucketObject -Bucket staging -All -WarningAction SilentlyContinue
+Remove-BucketItem -Bucket staging -WarningAction SilentlyContinue
 
 # ============================================================
-# 8. Remove-Bucket
+# 8. Remove-BucketItem -Drop
 # ============================================================
-Write-Host "── 8. Remove-Bucket ─────────────────────────" -ForegroundColor Blue
+Write-Host "── 8. Remove-BucketItem -Drop ────────────────" -ForegroundColor Blue
 
 Write-Host "`n  Remove empty bucket:" -ForegroundColor DarkGray
-Remove-Bucket staging -Force -Confirm:$false -WarningAction SilentlyContinue
+Remove-BucketItem -Bucket staging -Drop -Force -WarningAction SilentlyContinue
 
 Write-Host "`n  Bucket overview after cleanup:" -ForegroundColor DarkGray
 Get-Bucket -Tree
@@ -285,5 +285,5 @@ Write-Host "  Get-BucketObject -Bucket users" -ForegroundColor Cyan
 Write-Host "  Get-BucketStats -Bucket users" -ForegroundColor Cyan
 
 foreach ($bucket in $createdBuckets) {
-    Remove-Bucket -Bucket $bucket -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse
+    Remove-BucketItem -Bucket $bucket -Drop -Force -Recurse -WarningAction SilentlyContinue
 }

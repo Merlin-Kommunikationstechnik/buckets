@@ -74,7 +74,7 @@ function New-DemoEventLog {
 }
 
 # Clean previous run
-Remove-Bucket "logs" -Recurse -Force -Confirm:$false -Quiet -ErrorAction SilentlyContinue
+Remove-BucketItem -Bucket "logs" -Drop -Recurse -Force -Confirm:$false -Quiet -ErrorAction SilentlyContinue
 
 $hosts = @("web01", "web02", "db01", "lb01")
 
@@ -218,9 +218,9 @@ Write-Host ""
 
 Write-Host "═══ 16. Rotation preview (syslog+eventlog)  ════════════" -ForegroundColor Cyan
 Write-Host "  syslog:" -ForegroundColor DarkGray
-Remove-Bucket -Bucket "logs/syslog/*/$twoDaysAgo" -Recurse -WhatIf 2>&1 | Out-Host
+Remove-BucketItem -Bucket "logs/syslog/*/$twoDaysAgo" -Drop -Recurse -WhatIf 2>&1 | Out-Host
 Write-Host "  eventlog:" -ForegroundColor DarkGray
-Remove-Bucket -Bucket "logs/eventlog/*/$twoDaysAgo" -Recurse -WhatIf 2>&1 | Out-Host
+Remove-BucketItem -Bucket "logs/eventlog/*/$twoDaysAgo" -Drop -Recurse -WhatIf 2>&1 | Out-Host
 Write-Host ""
 
 Write-Host "All query patterns completed." -ForegroundColor Green

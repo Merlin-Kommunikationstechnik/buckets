@@ -20,7 +20,7 @@ function Use-Bucket {
 }
 function Clean-Bucket {
     param([string]$Name)
-    Remove-Bucket $Name -Force -Confirm:$false -Recurse -WarningAction SilentlyContinue -Quiet -ErrorAction SilentlyContinue
+    Remove-BucketItem -Bucket $Name -Drop -Force -Confirm:$false -Recurse -WarningAction SilentlyContinue -Quiet -ErrorAction SilentlyContinue
 }
 
 # ============================================================
@@ -214,9 +214,9 @@ $circSet | Add-Member -NotePropertyName "Self" -NotePropertyValue $circSet
 Set-BucketObject -Bucket out-new -Key "a" -InputObject $circSet -WarningAction Continue
 
 # ============================================================
-# 8. Remove-BucketObject
+# 8. Remove-BucketItem
 # ============================================================
-Write-Host "`n[8] Remove-BucketObject" -ForegroundColor Blue
+Write-Host "`n[8] Remove-BucketItem" -ForegroundColor Blue
 
 New-BucketObject -Bucket out-rm -InputObject @(
     @{ _Id = "del1"; V = 1 },
@@ -229,34 +229,34 @@ New-BucketObject -Bucket out-rm -InputObject @(
 Use-Bucket "out-rm"
 
 Write-Host "`n  --- Single key ---" -ForegroundColor DarkGray
-Remove-BucketObject -Bucket out-rm -Key "del1" -Quiet
+Remove-BucketItem -Bucket out-rm -Key "del1" -Quiet
 
 Write-Host "`n  --- Remove with PassThru ---" -ForegroundColor DarkGray
-Remove-BucketObject -Bucket out-rm -Key "del2" -PassThru | Format-Table
+Remove-BucketItem -Bucket out-rm -Key "del2" -PassThru | Format-Table
 
 Write-Host "`n  --- -Match pre-confirmation summary ---" -ForegroundColor DarkGray
-Remove-BucketObject -Bucket out-rm -Match @{ V = 3 } -WhatIf
+Remove-BucketItem -Bucket out-rm -Match @{ V = 3 } -WhatIf
 
 Write-Host "`n  --- -Filter pre-confirmation summary ---" -ForegroundColor DarkGray
-Remove-BucketObject -Bucket out-rm -Filter { $_.V -gt 4 } -WhatIf
+Remove-BucketItem -Bucket out-rm -Filter { $_.V -gt 4 } -WhatIf
 
 Write-Host "`n  --- -All WhatIf ---" -ForegroundColor DarkGray
-Remove-BucketObject -Bucket out-rm -All -WhatIf
+Remove-BucketItem -Bucket out-rm -WhatIf
 
 Write-Host "`n  --- -All actual removal ---" -ForegroundColor DarkGray
-Remove-BucketObject -Bucket out-rm -All -Confirm:$false
+Remove-BucketItem -Bucket out-rm -Confirm:$false
 
 Write-Host "`n  --- Missing key (warning) ---" -ForegroundColor DarkGray
-Remove-BucketObject -Bucket out-new -Key "nonexistent" -WarningVariable w -WarningAction SilentlyContinue
+Remove-BucketItem -Bucket out-new -Key "nonexistent" -WarningVariable w -WarningAction SilentlyContinue
 Write-Host "  Warning: $w" -ForegroundColor DarkGray
 
 Write-Host "`n  --- No -Key or -All (throw) ---" -ForegroundColor DarkGray
-try { Remove-BucketObject -Bucket out-new -ErrorAction Stop } catch { Write-Host "  $_" -ForegroundColor Red }
+try { Remove-BucketItem -Bucket out-new -ErrorAction Stop } catch { Write-Host "  $_" -ForegroundColor Red }
 
 # ============================================================
-# 9. Remove-Bucket
+# 9. Remove-BucketItem (bucket dir removal via -Drop)
 # ============================================================
-Write-Host "`n[9] Remove-Bucket" -ForegroundColor Blue
+Write-Host "`n[9] Remove-BucketItem" -ForegroundColor Blue
 
 New-BucketObject -Bucket out-del1 -InputObject @{ _Id = "x"; V = 1 } -KeyProperty _Id -Quiet
 New-BucketObject -Bucket out-del2 -InputObject @{ _Id = "y"; V = 2 } -KeyProperty _Id -Quiet
@@ -264,16 +264,16 @@ Use-Bucket "out-del1"
 Use-Bucket "out-del2"
 
 Write-Host "`n  --- -WhatIf ---" -ForegroundColor DarkGray
-Remove-Bucket out-del1 -WhatIf
+Remove-BucketItem -Bucket out-del1 -Drop -WhatIf
 
 Write-Host "`n  --- -Force (no confirmation) ---" -ForegroundColor DarkGray
-Remove-Bucket out-del1 -Force -Confirm:$false
+Remove-BucketItem -Bucket out-del1 -Drop -Force -Confirm:$false
 
 Write-Host "`n  --- -Recurse ---" -ForegroundColor DarkGray
-Remove-Bucket out-org -Recurse -Force -Confirm:$false
+Remove-BucketItem -Bucket out-org -Drop -Recurse -Force -Confirm:$false
 
 Write-Host "`n  --- Non-existent bucket (warning) ---" -ForegroundColor DarkGray
-Remove-Bucket "nonexistent-xyz" -Force -Confirm:$false -WarningVariable w -WarningAction SilentlyContinue
+Remove-BucketItem -Bucket "nonexistent-xyz" -Drop -Force -Confirm:$false -WarningVariable w -WarningAction SilentlyContinue
 Write-Host "  Warning: $w" -ForegroundColor DarkGray
 
 Write-Host "`n  --- Bucket with non-bucket files (warning) ---" -ForegroundColor DarkGray
@@ -281,7 +281,7 @@ New-BucketObject -Bucket out-foreign -InputObject @{ _Id = "doc"; V = 1 } -KeyPr
 Use-Bucket "out-foreign"
 $foreignPath = Join-Path (Get-BucketRoot) "out-foreign"
 Set-Content -Path (Join-Path $foreignPath "readme.txt") -Value "foreign file" -ErrorAction SilentlyContinue
-Remove-Bucket out-foreign -Confirm:$false -WarningVariable w -WarningAction SilentlyContinue 2>$null
+Remove-BucketItem -Bucket out-foreign -Drop -Confirm:$false -WarningVariable w -WarningAction SilentlyContinue 2>$null
 Write-Host "  Warning: $w" -ForegroundColor DarkGray
 
 # ============================================================
@@ -410,7 +410,7 @@ Write-Host "`n========================================" -ForegroundColor Blue
 Write-Host " Cleanup" -ForegroundColor Blue
 Write-Host "========================================`n" -ForegroundColor Blue
 
-foreach ($b in $createdBuckets) { Remove-Bucket $b -Force -Confirm:$false -Recurse -WarningAction SilentlyContinue -Quiet -ErrorAction SilentlyContinue }
+foreach ($b in $createdBuckets) { Remove-BucketItem -Bucket $b -Drop -Force -Confirm:$false -Recurse -WarningAction SilentlyContinue -Quiet -ErrorAction SilentlyContinue }
 Set-BucketRoot (Join-Path $HOME ".buckets")
 Remove-Item $testRoot -Recurse -Force -ErrorAction SilentlyContinue
 Write-Host "  Done" -ForegroundColor Green

@@ -18,7 +18,7 @@ function Use-Bucket {
 Use-Bucket "inventory"
 
 # Remove previous run
-Remove-Bucket "inventory" -Force -Confirm:$false -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
+Remove-BucketItem -Bucket "inventory" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
 
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
 $startTs = Get-Date -Format "yyyy-MM-dd HH:mm:ss"

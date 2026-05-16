@@ -52,9 +52,8 @@ Die sechs Kern-Cmdlets:
 
   fill   · New-BucketObject      Objekte schreiben
   scoop  · Get-BucketObject      Objekte lesen
-  spill  · Remove-BucketObject   Objekt loeschen
+  drain  · Remove-BucketItem     Objekte loeschen (mit -Drop auch Bucket)
   dip    · Get-Bucket            Buckets auflisten
-  drain  · Remove-Bucket         Bucket loeschen
 
 Standardwerte: JSON-Tiefe 20, Binary-Tiefe 5, Pfad C:\Users\berfelde/.buckets
 Alles ueber -Depth, -BinaryDepth oder -Path aenderbar.
@@ -1355,7 +1354,7 @@ catch { Write-Host "    Fehler: -Bucket und -Key erforderlich" -ForegroundColor 
 
   Fehler: -Bucket und -Key erforderlich
 
-## 4. Löschen — Remove-BucketObject
+## 4. Löschen — Remove-BucketItem
 ---
 
 ### 4.1 Vorschau mit -WhatIf
@@ -1366,7 +1365,7 @@ Immer sicher, es vor dem Löschen auszuprobieren.
 
 
 ```powershell
-Remove-BucketObject -Bucket team -Key "Bob" -WhatIf
+Remove-BucketItem -Bucket team -Key "Bob" -WhatIf
 ```
 
 
@@ -1377,7 +1376,7 @@ Das Löschen nach Schlüssel ist einfach. Geben Sie den Schlüssel des Objekts a
 
 
 ```powershell
-Remove-BucketObject -Bucket team -Key "Bob" -Quiet
+Remove-BucketItem -Bucket team -Key "Bob" -Quiet
 scoop -Bucket team
 ```
 
@@ -1419,7 +1418,7 @@ Buckets ist nachsichtig bei fehlenden Objekten.
 
 
 ```powershell
-Remove-BucketObject -Bucket team -Key "Zoe"
+Remove-BucketItem -Bucket team -Key "Zoe"
 ```
 
 
@@ -1431,7 +1430,7 @@ Parametersatzvalidierung den Befehl ab.
 
 
 ```powershell
-Remove-BucketObject -Bucket team -ErrorAction SilentlyContinue
+Remove-BucketItem -Bucket team -ErrorAction SilentlyContinue
 ```
 
 
@@ -1443,7 +1442,7 @@ mit einem Befehl.
 
 
 ```powershell
-Remove-BucketObject -Bucket team -Match @{ Role = "QA" } -Quiet
+Remove-BucketItem -Bucket team -Match @{ Role = "QA" } -Quiet
 scoop -Bucket team
 ```
 
@@ -1493,7 +1492,7 @@ Hier wird jedes inaktive Mitglied entfernt.
 
 
 ```powershell
-Remove-BucketObject -Bucket team -Filter { $_.Active -eq $false } -Quiet
+Remove-BucketItem -Bucket team -Filter { $_.Active -eq $false } -Quiet
 scoop -Bucket team
 ```
 
@@ -1542,7 +1541,7 @@ Role   : Developer
 
 
 ```powershell
-Remove-BucketObject -Bucket team -All -Quiet
+Remove-BucketItem -Bucket team -Quiet
 scoop -Bucket team
 ```
 
@@ -1557,7 +1556,7 @@ oder Bestätigungsmeldungen.
 ```powershell
 $tmp = @{ Data = "gone" }
 $tmp | fill -Bucket temp -Key "bye-bye" -Quiet
-Remove-BucketObject -Bucket temp -Key "bye-bye" -PassThru -Quiet
+Remove-BucketItem -Bucket temp -Key "bye-bye" -PassThru -Quiet
 ```
 
 ```
@@ -1624,7 +1623,7 @@ nützlich für die Pipeline-Protokollierung.
 
 ```powershell
 Copy-BucketObject -Bucket team -Key "Alice" -DestinationKey "Alice-pass" -PassThru -Quiet
-Remove-BucketObject -Bucket team -Key "Alice-pass" -Quiet
+Remove-BucketItem -Bucket team -Key "Alice-pass" -Quiet
 ```
 
 ```
@@ -2498,7 +2497,7 @@ types                  2
 users                  5
 ```
 
-## 6a. Remove-Bucket — Sicherheit und Platzhalter
+## 6a. Remove-BucketItem -Drop — Sicherheit und Platzhalter
 ---
 
 ### 6a.1 Entfernen Vorschau
@@ -2508,7 +2507,7 @@ users                  5
 
 
 ```powershell
-Remove-Bucket "team" -WhatIf
+Remove-BucketItem -Bucket "team" -Drop -WhatIf
 ```
 
 
@@ -2523,7 +2522,7 @@ Platzhaltermuster funktionieren auch. Vorschau zum Entfernen aller Buckets, die 
 
 
 ```powershell
-Remove-Bucket "t*" -WhatIf
+Remove-BucketItem -Bucket "t*" -Drop -WhatIf
 ```
 
 
@@ -2545,7 +2544,7 @@ weigert sich, Verzeichnisse mit anderen Dateitypen zu entfernen.
 ```powershell
 $tmp = @{ A = 1 }
 $tmp | fill -Bucket temp-remove -Key "x" -Quiet
-Remove-Bucket temp-remove -Force -Confirm:$false
+Remove-BucketItem -Bucket temp-remove -Drop -Force -Confirm:$false
 ```
 
 temp-remove · 1 object removed
@@ -2553,7 +2552,7 @@ temp-remove · 1 object removed
 ### 6a.4 Sicherheitsprüfung beim Entfernen
 ---
 
-Sicherheit zuerst: Remove-Bucket prüft, ob ein Verzeichnis nur Bucket-Dateien enthält.
+Sicherheit zuerst: Remove-BucketItem mit -Drop prüft, ob ein Verzeichnis nur Bucket-Dateien enthält.
 Wenn es unerwartete Dateitypen (wie .exe) findet, überspringt es das Verzeichnis mit einer
 Warnung, anstatt es zu löschen.
 
@@ -2562,7 +2561,7 @@ Warnung, anstatt es zu löschen.
 $badDir = Join-Path (Get-BucketRoot) "not-a-bucket"
 $null = New-Item -ItemType Directory -Path $badDir -Force
 Set-Content -Path (Join-Path $badDir "evil.exe") -Value "x" -NoNewline
-Remove-Bucket "not-a-bucket" -Force -Confirm:$false -WarningAction SilentlyContinue 2>$null
+Remove-BucketItem -Bucket "not-a-bucket" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue 2>$null
 Remove-Item $badDir -Recurse -Force -ErrorAction SilentlyContinue
 ```
 
@@ -2969,7 +2968,7 @@ in einen anderen mit vertrauten Dateisystembefehlen.
 
 ```powershell
 Copy-Item "buckets:\team\Alice" "buckets:\team\Alice-pscopy" -Force
-Remove-BucketObject -Bucket team -Key "Alice-pscopy" -Quiet
+Remove-BucketItem -Bucket team -Key "Alice-pscopy" -Quiet
 ```
 
 
@@ -3275,7 +3274,7 @@ US      New York    8300000
 ### 9.12 Verschachtelte Bäume entfernen
 ---
 
-Remove-Bucket mit -Recurse löscht einen ganzen verschachtelten Baum. Ein einziger Befehl
+Remove-BucketItem mit -Drop -Recurse löscht einen ganzen verschachtelten Baum. Ein einziger Befehl
 entfernt org und alles darunter.
 
 
@@ -3283,7 +3282,7 @@ entfernt org und alles darunter.
 @{ Name="Berlin"; Population=3600000; Country="DE" } | fill -Bucket "org/eu/de/cities" -Key "Berlin"
 @{ Name="London"; Population=8900000; Country="UK" } | fill -Bucket "org/eu/uk/cities" -Key "London"
 @{ Name="New York"; Population=8300000; Country="US" } | fill -Bucket "org/us/cities" -Key "New York"
-Remove-Bucket "org" -Recurse -Force -Confirm:$false
+Remove-BucketItem -Bucket "org" -Drop -Recurse -Force -Confirm:$false
 ```
 
 org · 0 objects removed
@@ -3936,8 +3935,8 @@ bereinigt — Ihr System ist genau so, wie es vor dem Start war.
 
 Was Sie gelernt haben:
 
-  fill / scoop / spill / dip / drain
-                               — speichern, lesen, Objekte loeschen, auflisten, Buckets loeschen
+  fill / scoop / dip / drain
+                               — speichern, lesen, auflisten, Objekte/Buckets loeschen
   -Key / -KeyProperty         — naming objects
   -Overwrite / -AsTimestamp    — replacement and timestamp keys
   -AsBinary / -Compress        — storage formats
@@ -3947,7 +3946,7 @@ Was Sie gelernt haben:
   -First / -Skip              — pagination
   Set-BucketObject             — update in place (pipeline + explicit)
   Partial update / patch       — add properties with hashtable pipe
-  scoop / spill / drain         — lesen, Objekte loeschen, Buckets loeschen
+  scoop / drain                 — lesen, Objekte und Buckets loeschen
   -WhatIf / -PassThru          — safety preview and metadata capture
   Copy / Rename / Move         — object operations with and without pass-through
   PSDrive operations           — Get-Content, Set-Content, Copy-Item, Remove-Item, Test-Path

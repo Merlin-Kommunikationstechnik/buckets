@@ -4,7 +4,7 @@
 
 Allow structured data (nested hashtables, arrays, scalars) to be decomposed into
 a bucket hierarchy on write (`fill -Expand`) and reconstructed back to the
-original structure on read (`spill -Collapse`).
+original structure on read (`scoop -Collapse`).
 
 ## Write side: `New-BucketObject -Expand`
 
@@ -99,13 +99,13 @@ files and `_array.json` markers.
 ### Examples
 
 ```powershell
-spill -Bucket "app" -Collapse -KeyProperty Name
+scoop -Bucket "app" -Collapse -KeyProperty Name
 # → @{
 #       users  = @(@{Name="Alice";Role="Admin"}, @{Name="Bob";Role="User"})
 #       config = @{ theme = "dark"; lang = "de" }
 #   }
 
-spill -Bucket "letters" -Collapse
+scoop -Bucket "letters" -Collapse
 # → @("a", "b", "c")
 ```
 
