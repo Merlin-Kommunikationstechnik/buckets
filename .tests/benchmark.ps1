@@ -75,7 +75,7 @@ function Write-BenchResult {
 $N = 1000
 
 $script:phase = 0
-$script:totalPhases = 22
+$script:totalPhases = 28
 
 Write-InfoBlock -Mode top
 
@@ -324,6 +324,112 @@ $wt.Restart()
 $funR = Get-BucketObject -Bucket f-funnel
 Write-BenchResult "Funnel strip (3 properties)" $funW $wt.ElapsedMilliseconds $funR.Count
 Remove-Funnel -Name "bench-strip" -Quiet -Confirm:$false
+
+# ============================================================
+# 10-12. Expand / Reconstruct throughput
+# ============================================================
+Write-Host "`n[10] Expand - simple flat hashtable (500 items)" -ForegroundColor Blue
+
+$Nex = 500
+$expandFlats = 1..$Nex | ForEach-Object { @{ id = "item-$_"; host = "srv-$_"; port = 80 + ($_ % 100); ssl = ($true, $false)[$_ % 2]; ttl = ($_ * 10); env = @("dev","stg","prod")[$_ % 3] } }
+
+Use-Bucket "ex-flat-norm"
+$wt = [System.Diagnostics.Stopwatch]::StartNew()
+$expandFlats | New-BucketObject -Bucket ex-flat-norm -KeyProperty id -Quiet
+$exfnW = $wt.ElapsedMilliseconds
+$wt.Restart()
+$exfnR = Get-BucketObject -Bucket ex-flat-norm
+$exfnDir = Join-Path (Get-BucketRoot) "ex-flat-norm"
+$exfnFiles = @(Get-ChildItem -Path $exfnDir -ErrorAction SilentlyContinue)
+$exfnSize = ($exfnFiles | Measure-Object -Property Length -Sum).Sum
+$exfnSizeStr = if ($exfnSize -gt 1MB) { "$([math]::Round($exfnSize/1MB,1))MB" } else { "$([math]::Round($exfnSize/1KB))KB" }
+Write-BenchResult "Normal (no expand)" $exfnW $wt.ElapsedMilliseconds $exfnR.Count ("Files: $($exfnFiles.Count), Size: ${exfnSizeStr}")
+
+Use-Bucket "ex-flat-exp"
+$wt = [System.Diagnostics.Stopwatch]::StartNew()
+$expandFlats | New-BucketObject -Bucket ex-flat-exp -KeyProperty id -Expand -Quiet
+$exfexW = $wt.ElapsedMilliseconds
+$wt.Restart()
+$exfexR = Get-BucketObject -Bucket ex-flat-exp -Expand
+$exfexDir = Join-Path (Get-BucketRoot) "ex-flat-exp"
+$exfexDirs = @(Get-ChildItem -Path $exfexDir -Directory -ErrorAction SilentlyContinue)
+$exfexFiles = @(Get-ChildItem -Path $exfexDir -Recurse -File -ErrorAction SilentlyContinue)
+$exfexSize = ($exfexFiles | Measure-Object -Property Length -Sum).Sum
+$exfexSizeStr = if ($exfexSize -gt 1MB) { "$([math]::Round($exfexSize/1MB,1))MB" } else { "$([math]::Round($exfexSize/1KB))KB" }
+Write-BenchResult "Expand (-Expand)" $exfexW $wt.ElapsedMilliseconds $exfexR.Count ("Dirs: $($exfexDirs.Count), Files: $($exfexFiles.Count), Size: ${exfexSizeStr}")
+
+Write-Host "`n[11] Expand - nested hashtable (${Nex} items, 3 groups each)" -ForegroundColor Blue
+
+$expandNested = 1..$Nex | ForEach-Object {
+    @{
+        id = "item-$_"
+        server = @{ host = "srv-$_"; port = 80 + ($_ % 100) }
+        logging = @{ level = @("debug","info","warn")[$_ % 3]; retention = ($_ * 7); file = "/var/log/app-$_.log" }
+        limits = @{ cpu = ($_ * 10); mem = ($_ * 20); disk = ($_ * 30) }
+    }
+}
+
+Use-Bucket "ex-nest-norm"
+$wt = [System.Diagnostics.Stopwatch]::StartNew()
+$expandNested | New-BucketObject -Bucket ex-nest-norm -KeyProperty id -Quiet
+$exnnW = $wt.ElapsedMilliseconds
+$wt.Restart()
+$exnnR = Get-BucketObject -Bucket ex-nest-norm
+$exnnDir = Join-Path (Get-BucketRoot) "ex-nest-norm"
+$exnnFiles = @(Get-ChildItem -Path $exnnDir -ErrorAction SilentlyContinue)
+$exnnSize = ($exnnFiles | Measure-Object -Property Length -Sum).Sum
+$exnnSizeStr = if ($exnnSize -gt 1MB) { "$([math]::Round($exnnSize/1MB,1))MB" } else { "$([math]::Round($exnnSize/1KB))KB" }
+Write-BenchResult "Normal (no expand)" $exnnW $wt.ElapsedMilliseconds $exnnR.Count ("Files: $($exnnFiles.Count), Size: ${exnnSizeStr}")
+
+Use-Bucket "ex-nest-exp"
+$wt = [System.Diagnostics.Stopwatch]::StartNew()
+$expandNested | New-BucketObject -Bucket ex-nest-exp -KeyProperty id -Expand -Quiet
+$exnexW = $wt.ElapsedMilliseconds
+$wt.Restart()
+$exnexR = Get-BucketObject -Bucket ex-nest-exp -Expand
+$exnexDir = Join-Path (Get-BucketRoot) "ex-nest-exp"
+$exnexDirs = @(Get-ChildItem -Path $exnexDir -Directory -Recurse -ErrorAction SilentlyContinue)
+$exnexFiles = @(Get-ChildItem -Path $exnexDir -Recurse -File -ErrorAction SilentlyContinue)
+$exnexSize = ($exnexFiles | Measure-Object -Property Length -Sum).Sum
+$exnexSizeStr = if ($exnexSize -gt 1MB) { "$([math]::Round($exnexSize/1MB,1))MB" } else { "$([math]::Round($exnexSize/1KB))KB" }
+Write-BenchResult "Expand (-Expand)" $exnexW $wt.ElapsedMilliseconds $exnexR.Count ("Dirs: $($exnexDirs.Count), Files: $($exnexFiles.Count), Size: ${exnexSizeStr}")
+
+Write-Host "`n[12] Expand - array with -Key (${Nex} items, 3 elements each)" -ForegroundColor Blue
+
+$expandArrays = 1..$Nex | ForEach-Object {
+    @(
+        [PSCustomObject]@{ name = "svc-$_-a"; port = 80 + ($_ % 100); status = "active" }
+        [PSCustomObject]@{ name = "svc-$_-b"; port = 81 + ($_ % 100); status = @("active","idle")[$_ % 2] }
+        [PSCustomObject]@{ name = "svc-$_-c"; port = 82 + ($_ % 100); status = @("active","maintenance")[$_ % 3 -eq 0 -and $_ -ne 0] }
+    )
+}
+# Flatten for non-expand comparison
+$flatItems = $expandArrays | ForEach-Object { $_ }
+
+Use-Bucket "ex-arr-norm"
+$wt = [System.Diagnostics.Stopwatch]::StartNew()
+$flatItems | New-BucketObject -Bucket ex-arr-norm -Key "services" -AutoIndex -Quiet
+$exanW = $wt.ElapsedMilliseconds
+$wt.Restart()
+$exanR = @(Get-BucketObject -Bucket ex-arr-norm)
+$exanDir = Join-Path (Get-BucketRoot) "ex-arr-norm"
+$exanFiles = @(Get-ChildItem -Path $exanDir -File -ErrorAction SilentlyContinue)
+$exanSize = ($exanFiles | Measure-Object -Property Length -Sum).Sum
+$exanSizeStr = if ($exanSize -gt 1MB) { "$([math]::Round($exanSize/1MB,1))MB" } else { "$([math]::Round($exanSize/1KB))KB" }
+Write-BenchResult "Normal (-AutoIndex, flat)" $exanW $wt.ElapsedMilliseconds $exanR.Count ("Files: $($exanFiles.Count), Size: ${exanSizeStr}")
+
+Use-Bucket "ex-arr-exp"
+$wt = [System.Diagnostics.Stopwatch]::StartNew()
+$expandArrays | New-BucketObject -Bucket ex-arr-exp -Key "services" -Expand -Quiet
+$exaexW = $wt.ElapsedMilliseconds
+$wt.Restart()
+$exaexR = @(Get-BucketObject -Bucket ex-arr-exp -Key "services" -Expand)
+$exaexDir = Join-Path (Get-BucketRoot) "ex-arr-exp/services"
+$exaexDirs = @(Get-ChildItem -Path $exaexDir -Directory -ErrorAction SilentlyContinue)
+$exaexFiles = @(Get-ChildItem -Path $exaexDir -Recurse -File -ErrorAction SilentlyContinue)
+$exaexSize = ($exaexFiles | Measure-Object -Property Length -Sum).Sum
+$exaexSizeStr = if ($exaexSize -gt 1MB) { "$([math]::Round($exaexSize/1MB,1))MB" } else { "$([math]::Round($exaexSize/1KB))KB" }
+Write-BenchResult "Expand (-Key -Expand)" $exaexW $wt.ElapsedMilliseconds $exaexR.Count ("Dirs: $($exaexDirs.Count), Files: $($exaexFiles.Count), Size: ${exaexSizeStr}")
 
 # ============================================================
 # Cleanup
