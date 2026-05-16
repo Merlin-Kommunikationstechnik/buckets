@@ -161,7 +161,7 @@ $users = @(
 $users | fill -Bucket "team" -KeyProperty Name -Quiet
 
 # Confirm the objects were saved — dip shows bucket contents
-dip -Name "team"
+dip "team"
 '@
                             }
                             @{
@@ -731,7 +731,7 @@ $deDepts = @(
 )
 $deDepts | fill -Bucket "org/eu/de/depts" -KeyProperty Dept -Quiet
 # Show the full hierarchy as a tree
-Get-Bucket -Tree -Name "org" -Objects
+Get-Bucket -Tree -Bucket "org" -Objects
 '@
                             }
                         )
@@ -1464,7 +1464,7 @@ $users = @(
 $users | fill -Bucket "team" -KeyProperty Name -Quiet
 
 # Bestätige, dass die Objekte gespeichert wurden — dip zeigt Bucket-Inhalt
-dip -Name "team"
+dip "team"
 '@
                             }
                             @{
@@ -2044,7 +2044,7 @@ $deDepts = @(
 )
 $deDepts | fill -Bucket "org/eu/de/depts" -KeyProperty Dept -Quiet
 # Zeige die vollständige Hierarchie als Baum an
-Get-Bucket -Tree -Name "org" -Objects
+Get-Bucket -Tree -Bucket "org" -Objects
 '@
                             }
                         )

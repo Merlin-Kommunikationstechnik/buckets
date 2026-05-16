@@ -3096,7 +3096,7 @@ Unter-Buckets rekursiv.
 @{ Name="Berlin"; Population=3600000; Country="DE" } | fill -Bucket "org/eu/de/cities" -Key "Berlin"
 @{ Name="London"; Population=8900000; Country="UK" } | fill -Bucket "org/eu/uk/cities" -Key "London"
 @{ Name="New York"; Population=8300000; Country="US" } | fill -Bucket "org/us/cities" -Key "New York"
-Get-Bucket -Name "org" -Recurse
+Get-Bucket -Bucket "org" -Recurse
 ```
 
 ```
@@ -3125,7 +3125,7 @@ die Organisationsstruktur auf einen Blick erkennbar ist.
 @{ Name="Berlin"; Population=3600000; Country="DE" } | fill -Bucket "org/eu/de/cities" -Key "Berlin"
 @{ Name="London"; Population=8900000; Country="UK" } | fill -Bucket "org/eu/uk/cities" -Key "London"
 @{ Name="New York"; Population=8300000; Country="US" } | fill -Bucket "org/us/cities" -Key "New York"
-Get-Bucket -Name "org" -Tree -Objects -MaxFiles 10
+Get-Bucket -Bucket "org" -Tree -Objects -MaxFiles 10
 ```
 
 .buckets (94 items, 47 KB)

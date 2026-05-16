@@ -14,7 +14,7 @@ function Get-Bucket {
     Use -Tree to render a beautiful colorized tree view of all buckets.
     .PARAMETER Path
     Root directory for bucket storage. Default: $HOME/.buckets.
-    .PARAMETER Name
+    .PARAMETER Bucket
     Filter buckets by name pattern (substring match on full nested path).
     .PARAMETER Tree
     Render a tree view of all buckets and directories.
@@ -46,7 +46,7 @@ function Get-Bucket {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Position = 0)][string]$Name,
+        [Parameter(Position = 0)][string]$Bucket,
         [string]$Path,
         [switch]$Tree,
         [switch]$Objects,
@@ -249,7 +249,7 @@ function Get-Bucket {
             }
         }
 
-        $script:TreeNameFilter = $Name
+        $script:TreeNameFilter = $Bucket
         try {
             $root = BuildTree -Dir $Path -Root $Path -CurrentDepth 0
             if ($Raw) { return $root }
@@ -323,12 +323,12 @@ function Get-Bucket {
         }
     }
 
-    if (-not [string]::IsNullOrWhiteSpace($Name)) {
-        if ($Name -match '[\*\?]') {
-            $results = $results | Where-Object { $_.Name -like $Name }
+    if (-not [string]::IsNullOrWhiteSpace($Bucket)) {
+        if ($Bucket -match '[\*\?]') {
+            $results = $results | Where-Object { $_.Name -like $Bucket }
         } else {
             # Exact directory path lookup — show contents (sub-buckets + objects)
-            $resolvedDir = Join-Path $Path ($Name.Replace('/', [System.IO.Path]::DirectorySeparatorChar))
+            $resolvedDir = Join-Path $Path ($Bucket.Replace('/', [System.IO.Path]::DirectorySeparatorChar))
             if ([System.IO.Directory]::Exists($resolvedDir)) {
                 $results.Clear()
 
@@ -341,7 +341,7 @@ function Get-Bucket {
                         Type       = "Object"
                         Format     = if ($f.Extension -eq '.dat') { "Binary" } else { "JSON" }
                         Size       = $f.Length
-                        BucketName = $Name
+                        BucketName = $Bucket
                     })
                 }
 
@@ -363,7 +363,7 @@ function Get-Bucket {
                         }
                     }
                 }
-                _EnumSub -Dir $resolvedDir -Rel $Name -CDepth 1
+                _EnumSub -Dir $resolvedDir -Rel $Bucket -CDepth 1
             } else {
                 $results = @()
             }

@@ -142,7 +142,8 @@ Register-ArgumentCompleter -CommandName Copy-BucketObject -ParameterName Destina
 Register-ArgumentCompleter -CommandName Move-BucketObject -ParameterName DestinationBucket -ScriptBlock $script:CompleterBlock
 
 @('New-Bucket', 'Get-Bucket', 'Set-Bucket', 'dip') | ForEach-Object {
-    Register-ArgumentCompleter -CommandName $_ -ParameterName Name -ScriptBlock $script:CompleterBlock
+    $paramName = if ($_ -in 'New-Bucket') { 'Name' } else { 'Bucket' }
+    Register-ArgumentCompleter -CommandName $_ -ParameterName $paramName -ScriptBlock $script:CompleterBlock
 }
 
 Register-ArgumentCompleter -CommandName Set-Bucket -ParameterName NewName -ScriptBlock $script:CompleterBlock

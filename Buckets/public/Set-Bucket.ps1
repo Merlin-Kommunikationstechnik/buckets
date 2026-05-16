@@ -6,7 +6,7 @@ function Set-Bucket {
     Renames a bucket to a new name within the same parent, or moves it to a different
     parent path. All nested objects and sub-buckets are preserved — the underlying
     directory is moved on disk. Accepts pipeline input for bulk operations.
-    .PARAMETER Name
+    .PARAMETER Bucket
     Current bucket name or path. Accepts pipeline input by property name.
     .PARAMETER NewName
     New bucket name or path. Accepts pipeline input by property name.
@@ -17,9 +17,9 @@ function Set-Bucket {
     .PARAMETER Quiet
     Suppress output.
     .EXAMPLE
-    Set-Bucket -Name "inventory/ams" -NewName "inventory/ams-servers"
+    Set-Bucket -Bucket "inventory/ams" -NewName "inventory/ams-servers"
     .EXAMPLE
-    Get-Bucket -Name "temp-*" | Select-Object Name, @{N="NewName";E={$_.Name -replace "^temp-", "archive-"}} | Set-Bucket
+    Get-Bucket -Bucket "temp-*" | Select-Object Name, @{N="NewName";E={$_.Name -replace "^temp-", "archive-"}} | Set-Bucket
     .EXAMPLE
     Set-Bucket "org" "organization" -PassThru
     .EXAMPLE
@@ -27,7 +27,7 @@ function Set-Bucket {
     #>
     [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Medium')]
     param(
-        [Parameter(Mandatory = $true, Position = 0, ValueFromPipelineByPropertyName = $true)][string]$Name,
+        [Parameter(Mandatory = $true, Position = 0, ValueFromPipelineByPropertyName = $true)][Alias('Name')][string]$Bucket,
         [Parameter(Mandatory = $true, Position = 1, ValueFromPipelineByPropertyName = $true)][string]$NewName,
         [string]$Path,
         [switch]$PassThru,
@@ -41,11 +41,11 @@ function Set-Bucket {
     }
 
     process {
-        $oldBucketPath = Get-BucketPath -Name $Name -Path $Path
+        $oldBucketPath = Get-BucketPath -Name $Bucket -Path $Path
         $newBucketPath = Get-BucketPath -Name $NewName -Path $Path
 
         if (-not [System.IO.Directory]::Exists($oldBucketPath)) {
-            Write-Warning "Bucket '$Name' not found at '$oldBucketPath'"
+            Write-Warning "Bucket '$Bucket' not found at '$oldBucketPath'"
             return
         }
 
@@ -64,7 +64,7 @@ function Set-Bucket {
             [System.IO.Directory]::Move($oldBucketPath, $newBucketPath)
             & $script:ClearCache
             $renamedCount++
-            $lastOld = $Name
+            $lastOld = $Bucket
             $lastNew = $NewName
         }
     }

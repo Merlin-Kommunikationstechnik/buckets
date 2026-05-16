@@ -257,7 +257,7 @@ foreach ($server in $servers) {
 New-BucketObject -Bucket "servers" -InputObject ([PSCustomObject]@{ _Id = "overview"; ServerCount = $servers.Count }) -KeyProperty _Id -Quiet
 Use-Bucket "servers"
 
-Get-Bucket -Tree -Name servers
+Get-Bucket -Tree -Bucket servers
 
 Write-Host "`n  Server error queries:" -ForegroundColor DarkGray
 foreach ($srv in $servers) {

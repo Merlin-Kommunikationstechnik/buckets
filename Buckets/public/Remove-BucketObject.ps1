@@ -85,11 +85,13 @@ function Remove-BucketObject {
         [Parameter(ParameterSetName = 'ByAll')]
         [Parameter(ParameterSetName = 'ByFilter')]
         [Parameter(ParameterSetName = 'DropBucket')]
+        [Parameter(ParameterSetName = 'ByKey')]
         [switch]$Recurse,
 
         [Parameter(ParameterSetName = 'ByAll')]
         [Parameter(ParameterSetName = 'ByFilter')]
         [Parameter(ParameterSetName = 'DropBucket')]
+        [Parameter(ParameterSetName = 'ByKey')]
         [int]$Depth = [int]::MaxValue,
 
         [switch]$PassThru,

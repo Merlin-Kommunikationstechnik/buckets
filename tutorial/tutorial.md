@@ -3095,7 +3095,7 @@ sub-buckets recursively.
 @{ Name="Berlin"; Population=3600000; Country="DE" } | fill -Bucket "org/eu/de/cities" -Key "Berlin"
 @{ Name="London"; Population=8900000; Country="UK" } | fill -Bucket "org/eu/uk/cities" -Key "London"
 @{ Name="New York"; Population=8300000; Country="US" } | fill -Bucket "org/us/cities" -Key "New York"
-Get-Bucket -Name "org" -Recurse
+Get-Bucket -Bucket "org" -Recurse
 ```
 
 ```
@@ -3124,7 +3124,7 @@ it easy to see the organizational structure at a glance.
 @{ Name="Berlin"; Population=3600000; Country="DE" } | fill -Bucket "org/eu/de/cities" -Key "Berlin"
 @{ Name="London"; Population=8900000; Country="UK" } | fill -Bucket "org/eu/uk/cities" -Key "London"
 @{ Name="New York"; Population=8300000; Country="US" } | fill -Bucket "org/us/cities" -Key "New York"
-Get-Bucket -Name "org" -Tree -Objects -MaxFiles 10
+Get-Bucket -Bucket "org" -Tree -Objects -MaxFiles 10
 ```
 
 .buckets (131 items, 58 KB)

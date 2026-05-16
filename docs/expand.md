@@ -145,7 +145,7 @@ If no `_array.json` is found and the bucket has leaf objects:
 2. When `-Collapse`, call new `Collapse-Bucket` helper
 3. New helper `Collapse-Bucket`:
    - `Get-BucketObject -Bucket $name` for leaf objects (+metadata)
-   - `Get-Bucket -Name "$name/*"` for sub-buckets
+   - `Get-Bucket -Bucket "$name/*"` for sub-buckets
    - Check for `_array.json` via `Test-Path`
    - Reconstruct array or hashtable accordingly
 4. Recursive for nested sub-buckets

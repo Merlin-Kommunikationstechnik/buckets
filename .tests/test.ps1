@@ -454,7 +454,7 @@ Test-It "Recurse returns 5 objects including root" {
 }
 
 Test-It "Get-Bucket finds all nested buckets" {
-    $buckets = Get-Bucket -Recurse -Name "org"
+    $buckets = Get-Bucket -Bucket "org" -Recurse
     $orgBuckets = $buckets | Where-Object { $_.Name -like "org*" }
     $orgBuckets.Count -eq 4
 }
@@ -494,7 +494,7 @@ Use-Bucket "org"
 Write-Host "`n[14] Get-Bucket -Tree" -ForegroundColor Blue
 
 Test-It "Get-Bucket -Tree shows correct nested structure" {
-    $tree = Get-Bucket -Tree -Raw -Name "org"
+    $tree = Get-Bucket -Tree -Raw -Bucket "org"
     $orgChildren = @($tree.Children | Where-Object { $_.Name -eq "org" })
     if ($orgChildren.Count -eq 1) {
         $orgNode = $orgChildren[0]
@@ -550,7 +550,7 @@ Write-Host "`n[17] Get-Bucket -Tree edge cases" -ForegroundColor Blue
 Test-It "Get-Bucket -Tree handles missing subdirectory gracefully" {
     $teamAPath = Join-Path $testRoot "org/eu/de/berlin/team-a"
     if (Test-Path $teamAPath) { Remove-Item $teamAPath -Recurse -Force }
-    $treeAfterDelete = Get-Bucket -Tree -Raw -Name "org" -ErrorAction SilentlyContinue
+    $treeAfterDelete = Get-Bucket -Tree -Raw -Bucket "org" -ErrorAction SilentlyContinue
     $orgNode = $treeAfterDelete.Children | Where-Object { $_.Name -eq "org" }
     $noCrash = $null -ne $orgNode
     $objectCount = if ($noCrash) { $orgNode.ObjectCount } else { 0 }
@@ -914,13 +914,13 @@ Test-It "Get-BucketObject warns on nonexistent literal bucket" {
     $null -ne $warning -and $warning -match "not found"
 }
 
-Test-It "Get-Bucket -Name wildcard and exact path support" {
+Test-It "Get-Bucket -Bucket wildcard and exact path support" {
     Remove-BucketObject -Bucket "gn-wild" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     Remove-BucketObject -Bucket "gn-other" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     New-BucketObject -Bucket gn-wild -InputObject @{ X = 1 } -Key "a" -Quiet
     New-BucketObject -Bucket gn-other -InputObject @{ X = 2 } -Key "b" -Quiet
-    $wildcardResult = @(Get-Bucket -Name "gn-w*")
-    $exactResult = @(Get-Bucket -Name "gn-other")
+    $wildcardResult = @(Get-Bucket -Bucket "gn-w*")
+    $exactResult = @(Get-Bucket -Bucket "gn-other")
     $ok = $wildcardResult.Count -eq 1 -and $wildcardResult[0].Name -eq "gn-wild"
     $ok = $ok -and $exactResult.Count -eq 1 -and $exactResult[0].Name -eq "b" -and $exactResult[0].Type -eq "Object"
     Remove-BucketObject -Bucket "gn-wild" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
@@ -1576,13 +1576,13 @@ Test-It "BinaryDepth auto-increments on depth failure" {
 Write-Host "`n[31] Get-Bucket -Tree -Objects / -MaxFiles / -Depth" -ForegroundColor Blue
 
 Test-It "Get-Bucket -Tree -Objects includes individual file info" {
-    $tree = Get-Bucket -Tree -Raw -Objects -Name "users"
+    $tree = Get-Bucket -Tree -Raw -Objects -Bucket "users"
     $objects = $tree.Children | ForEach-Object { if ($_.Children) { $_.Children | Where-Object Type -eq "Object" } }
     @($objects).Count -eq 4
 }
 
 Test-It "Get-Bucket -Tree -MaxFiles limits output" {
-    $tree = Get-Bucket -Tree -Raw -MaxFiles 2 -Name "metrics"
+    $tree = Get-Bucket -Tree -Raw -MaxFiles 2 -Bucket "metrics"
     $count = 0
     function Walk-Tree2 { param($node) if ($null -ne $node._BucketKey) { $script:count++ } if ($null -ne $node.Children) { $node.Children | ForEach-Object { Walk-Tree2 $_ } } }
     Walk-Tree2 $tree
@@ -1590,15 +1590,15 @@ Test-It "Get-Bucket -Tree -MaxFiles limits output" {
 }
 
 Test-It "Get-Bucket -Tree -Depth limits nesting" {
-    $full = Get-Bucket -Tree -Raw -Name "org"
+    $full = Get-Bucket -Tree -Raw -Bucket "org"
     $fullOrg = $full.Children | Where-Object { $_.Name -eq "org" }
-    $limited = Get-Bucket -Tree -Raw -Depth 1 -Name "org"
+    $limited = Get-Bucket -Tree -Raw -Depth 1 -Bucket "org"
     $limitedOrg = $limited.Children | Where-Object { $_.Name -eq "org" }
     $null -ne $fullOrg -and $fullOrg.Children.Count -eq 1 -and $null -ne $limitedOrg -and ($null -eq $limitedOrg.Children -or $limitedOrg.Children.Count -eq 0)
 }
 
 Test-It "Get-Bucket -Tree -Depth 1 -Objects honors depth over objects" {
-    $tree = Get-Bucket -Tree -Raw -Depth 1 -Objects -Name "org"
+    $tree = Get-Bucket -Tree -Raw -Depth 1 -Objects -Bucket "org"
     $orgNode = $tree.Children | Where-Object { $_.Name -eq "org" }
     $fileChildren = @($orgNode.Children | Where-Object Type -eq "Object")
     $dirChildren = @($orgNode.Children | Where-Object Type -ne "Object")

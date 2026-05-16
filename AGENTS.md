@@ -63,8 +63,8 @@ PowerShell module for file-based PSObject storage using directory-backed "bucket
 | `Rename-BucketObject` | `-Bucket`, `-Key`, `-NewKey`, `-PassThru` |
 | `Export-Bucket` | `-Bucket`, `-OutputFile`, `-AsBinary`, `-Recurse`, `-Depth` (limits recursion, default unlimited), `-Quiet` |
 | `Import-Bucket` | `-Bucket`, `-InputFile`, `-AsBinary`, `-Overwrite`, `-Quiet` |
-| `Get-Bucket` | `-Name` (positional 0, wildcards supported; exact name drills into contents), `-Tree`, `-Raw`, `-Objects`, `-MaxFiles`, `-Recurse`, `-Depth` |
-| `Set-Bucket` | `-Name` (positional 0, mandatory, pipeline by property), `-NewName` (positional 1, mandatory, pipeline by property), `-PassThru`, `-Quiet`, `-WhatIf` (SupportsShouldProcess) |
+| `Get-Bucket` | `-Bucket` (positional 0, wildcards supported; exact name drills into contents), `-Tree`, `-Raw`, `-Objects`, `-MaxFiles`, `-Recurse`, `-Depth` |
+| `Set-Bucket` | `-Bucket` (positional 0, mandatory, pipeline by property), `-NewName` (positional 1, mandatory, pipeline by property), `-PassThru`, `-Quiet`, `-WhatIf` (SupportsShouldProcess) |
 | `Get-BucketStats` | `-Bucket` (returns count, size, timestamps, visible Path) |
 | `Get-BucketKeys` | `-Bucket` (positional 0, wildcards ok), `-Match` (returns Bucket + Key only), `-Recurse`, `-Depth` (limits recursion, default unlimited) |
 | `Get-BucketObjectStats` | `-Key` (positional 0), `-Bucket` (positional 1, wildcards ok), `-Match` (returns Format, Type, Size, LastWriteTime, IsCompressed), `-Recurse`, `-Depth` (limits recursion, default unlimited) |
@@ -151,7 +151,7 @@ Benchmarks measure write/read throughput for 1k and 10k objects (simple + comple
 - `Remove-BucketObject -PassThru` returns objects with `Key` property (no file extension)
 - `Get-BucketObject` warns on nonexistent literal bucket names (wildcard matches stay silent)
 - `Import-Bucket` skip summary shows key names (up to 5, then "... +N more")
-- `Get-Bucket -Name` supports wildcards (`*`, `?`); without wildcards, exact name drills into bucket contents (objects + sub-buckets)
+- `Get-Bucket -Bucket` supports wildcards (`*`, `?`); without wildcards, exact name drills into bucket contents (objects + sub-buckets)
 - Corrupted files emit warning and return $null (don't break enumeration)
 - Bucket paths cached per session via `$script:BucketPathCache`
 - Path traversal protection: resolved paths must stay within root

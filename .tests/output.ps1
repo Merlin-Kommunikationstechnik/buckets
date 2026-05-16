@@ -116,10 +116,10 @@ Write-Host "`n  --- Tree with Objects ---" -ForegroundColor DarkGray
 Get-Bucket -Tree -Objects -MaxFiles 3
 
 Write-Host "`n  --- Filter by name (substring) ---" -ForegroundColor DarkGray
-Get-Bucket -Name "out-new" | Format-Table -AutoSize
+Get-Bucket -Bucket "out-new" | Format-Table -AutoSize
 
 Write-Host "`n  --- Filter by name (wildcard) ---" -ForegroundColor DarkGray
-Get-Bucket -Name "out-new*" | Format-Table -AutoSize
+Get-Bucket -Bucket "out-new*" | Format-Table -AutoSize
 
 Write-Host "`n  --- Missing root ---" -ForegroundColor DarkGray
 Get-Bucket -Tree -Path "/nonexistent/path/buckets"
