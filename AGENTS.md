@@ -55,7 +55,7 @@ PowerShell module for file-based PSObject storage using directory-backed "bucket
 |--------|-----------|
 | `New-Bucket` | `-Name` (Position 0, mandatory), `-Path`, `-Force`, `-PassThru`, `-Quiet` |
 | `New-BucketObject` | `-InputObject` (pipeline), `-Bucket` (default "default"), `-Key`, `-KeyProperty`, `-AsBinary`, `-AsTimestamp`, `-Depth`, `-BinaryDepth`, `-Compress`, `-Quiet`, `-Overwrite`, `-AutoIndex`, `-Funnel` |
-| `Get-BucketObject` | `-Key` (positional 0), `-Bucket` (positional 1, wildcards ok, default "default" if omitted), `-Match` (hashtable, supports $null), `-Filter` (scriptblock with `$_`), `-Recurse` (opt-in, default is no recursion), `-Depth` (limits recursion, default unlimited), `-First`, `-Skip`, `-Funnel` |
+| `Get-BucketObject` | `-Key` (positional 0), `-Bucket` (positional 1, wildcards ok, default "default" if omitted), `-Match` (hashtable, supports $null), `-Filter` (scriptblock with `$_`), `-All` (search all buckets, implies recursion), `-Recurse` (opt-in, default is no recursion), `-Depth` (limits recursion, default unlimited), `-First`, `-Skip`, `-Funnel` |
 | `Set-BucketObject` | `-InputObject` (pipeline binds `_BucketName`/`_BucketKey` or partial update), `-Bucket`, `-Key`, `-AsBinary`, `-Compress`, `-PassThru`, `-Quiet` |
 | `Remove-BucketObject` | `-Bucket`, `-Key` or `-All` or `-Match`/`-Filter` (mutual param sets), `-Recurse`, `-Depth` (limits recursion, default unlimited), `-PassThru`, `-Quiet`, `-WhatIf` (SupportsShouldProcess) |
 | `Copy-BucketObject` | `-Bucket`, `-Key`, `-DestinationBucket`, `-DestinationKey`, `-PassThru` |

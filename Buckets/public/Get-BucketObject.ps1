@@ -7,12 +7,12 @@ function Get-BucketObject {
     reads from the "default" bucket. Supports exact-match hashtable
     filtering (-Match) and arbitrary scriptblock filtering (-Filter).
     Retrieved objects include metadata properties: _BucketName, _BucketKey, _BucketFile.
+    .PARAMETER Key
+    Object key(s) to retrieve (Position 0). Accepts multiple values (e.g. -Key "alpha", "beta"). Case-insensitive prefix match for each key.
     .PARAMETER Bucket
     Bucket name(s) to search (Position 1). If omitted, reads from the "default" bucket. Supports wildcards.
     .PARAMETER Path
     Root directory for bucket storage. Default: $HOME/.buckets.
-    .PARAMETER Key
-    Object key(s) to retrieve (Position 0). Accepts multiple values (e.g. -Key "alpha", "beta"). Case-insensitive prefix match for each key.
     .PARAMETER Match
     Hashtable of property-value pairs for exact-match filtering. All pairs must match. Supports $null values.
     .PARAMETER Filter
@@ -21,6 +21,9 @@ function Get-BucketObject {
     Recurse into nested sub-buckets. Without this switch, only returns objects from the specified bucket directory.
     .PARAMETER Depth
     Maximum nesting depth when recursing. Default: unlimited. Depth 1 returns objects from the root bucket only (same as no -Recurse). Depth 2 adds immediate sub-buckets.
+    .PARAMETER All
+    Search across all buckets. Implies recursion (all sub-buckets included) unless overridden by -Depth 1.
+    Use with -Bucket to narrow which buckets to scan.
     .PARAMETER First
     Return only the first N objects.
     .PARAMETER Skip
@@ -43,6 +46,12 @@ function Get-BucketObject {
     Get-BucketObject -Bucket org
     .EXAMPLE
     Get-BucketObject -First 10 -Skip 20
+    .EXAMPLE
+    Get-BucketObject -All
+    .EXAMPLE
+    Get-BucketObject "config" -All
+    .EXAMPLE
+    Get-BucketObject -Bucket users -All
     #>
     [CmdletBinding()]
     param(
@@ -56,14 +65,28 @@ function Get-BucketObject {
         [int]$First,
         [int]$Skip,
         [object]$Funnel,
-        [switch]$Expand
+        [switch]$Expand,
+        [switch]$All
     )
 
     if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
     $Path = Resolve-SafePath -Path $Path
 
     $bucketPaths = @()
-    if ($Bucket -and $Bucket.Count -gt 0) {
+    if ($All) {
+        $allBuckets = Get-Bucket -Path $Path -Recurse -Depth $Depth
+        $selectedBuckets = $allBuckets
+        if ($Bucket -and $Bucket.Count -gt 0) {
+            $selectedBuckets = foreach ($b in $Bucket) {
+                $allBuckets | Where-Object { if ($b -match '[\*\?]') { $_.Name -like $b } else { $_.Name -eq $b -or $_.Name -like "$b/*" } }
+            }
+        }
+        if ($PSBoundParameters.ContainsKey('Depth') -and $Depth -eq 1) {
+            $selectedBuckets = $selectedBuckets | Where-Object { $_.Name -notmatch '[/\\]' }
+        }
+        $bucketPaths = @($selectedBuckets | ForEach-Object { $_.Path })
+    }
+    elseif ($Bucket -and $Bucket.Count -gt 0) {
         $cachedBuckets = $null
         foreach ($b in $Bucket) {
             if ($b -match '[\*\?]') {
