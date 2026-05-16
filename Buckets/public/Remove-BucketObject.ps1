@@ -156,6 +156,13 @@ function Remove-BucketObject {
         }
 
         if ($All) {
+            if ($fromPipeline) {
+                if (-not $Quiet) { Write-Warning "-All is not compatible with pipeline input, ignoring pipeline items" }
+                return
+            }
+            if ($PSBoundParameters.ContainsKey('Bucket')) {
+                Write-Warning "-All overrides explicit -Bucket, draining ALL buckets"
+            }
             $Bucket = @('*')
             $Recurse = $true
         }
@@ -502,14 +509,26 @@ function Remove-BucketObject {
         $allProcessed = $true
 
         # Resolve bucket paths (handle wildcards and arrays)
+        $resolvedRoot = Resolve-SafePath -Path $Path
         $bucketPaths = [System.Collections.ArrayList]::new()
         foreach ($b in $Bucket) {
             if ($b -match '[\*\?]') {
                 $matched = Find-MatchingBuckets -Root $Path -Patterns @($b)
-                foreach ($m in $matched) { $null = $bucketPaths.Add($m) }
+                foreach ($m in $matched) {
+                    $resolvedM = Resolve-SafePath -Path $m.Path
+                    if (-not $resolvedM.StartsWith($resolvedRoot, [System.StringComparison]::OrdinalIgnoreCase)) { continue }
+                    $null = $bucketPaths.Add($m)
+                }
             } else {
                 $bp = Get-BucketPath -Name $b -Path $Path
-                if ($bp) { $null = $bucketPaths.Add([PSCustomObject]@{ Name = $b; Path = $bp }) }
+                if ($bp) {
+                    $resolvedBp = Resolve-SafePath -Path $bp
+                    if (-not $resolvedBp.StartsWith($resolvedRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+                        Write-Warning "Bucket '$b' resolves outside bucket root, skipping"
+                        continue
+                    }
+                    $null = $bucketPaths.Add([PSCustomObject]@{ Name = $b; Path = $bp })
+                }
             }
         }
 
@@ -543,6 +562,8 @@ function Remove-BucketObject {
             $target = "$($allFiles.Count) object(s) from bucket '$bName'"
             if ($PSCmdlet.ShouldProcess($target, "Remove-BucketObject")) {
                 $allFiles | ForEach-Object { [System.IO.File]::Delete($_.FullName) }
+                $removedCount += $allFiles.Count
+                $lastBucket = $bName
                 if ($Recurse) {
                     $emptyDirKeys = [System.Collections.ArrayList]::new()
                     $edVisited = [System.Collections.Generic.HashSet[string]]::new()
