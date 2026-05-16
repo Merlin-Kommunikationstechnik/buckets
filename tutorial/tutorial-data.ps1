@@ -190,39 +190,7 @@ scoop -Bucket "team"
 scoop -Bucket "team" -Key "Alice"
 '@
                             }
-                            @{
-                                Key = "03-update"
-                                Title = "Update: modifying stored objects"
-                                Body = @'
-  Two ways to update an existing object:
 
-  1. Re-save with -Overwrite to replace the entire object (simple but
-     replaces all properties).
-  2. Use Set-BucketObject for partial updates — only the properties you
-     specify change, the rest stay untouched.
-'@
-                                SetupCode = @'
-$users = @(
-    @{ Name = "Alice"; Role = "Developer"; Score = 95 }
-    @{ Name = "Bob";   Role = "Designer";  Score = 72 }
-)
-$users | fill -Bucket "team" -KeyProperty Name -Quiet
-'@
-                                Code = @'
-# Method 1: Overwrite the entire object
-@{ Name = "Alice"; Role = "Lead"; Score = 99 } |
-    fill -Bucket "team" -Key "Alice" -Overwrite -Quiet
-
-# Method 2: Partial update — update Score via pipeline
-scoop -Bucket "team" -Key "Bob" | ForEach-Object {
-    $_.Score = 100
-    $_
-} | Set-BucketObject -PassThru
-
-# Check the results
-scoop -Bucket "team" -Key "Alice", "Bob"
-'@
-                            }
                             @{
                                 Key = "04-delete"
                                 Title = "Delete: removing objects"
@@ -254,8 +222,8 @@ scoop -Bucket "team"
 '@
                             }
                             @{
-                                Key = "05-tint-property-value"
-                                Title = "Quick update with tint"
+                                Key = "03-update"
+                                Title = "Update: modifying stored objects"
                                 Body = @'
   The tint alias (Set-BucketObject) has a handy shortcut: -Property and -Value.
   Instead of reading an object, modifying it, and piping it back, just name the
@@ -1525,39 +1493,7 @@ scoop -Bucket "team"
 scoop -Bucket "team" -Key "Alice"
 '@
                             }
-                            @{
-                                Key = "03-update"
-                                Title = "Aktualisieren: Objekte ändern"
-                                Body = @'
-  Zwei Möglichkeiten, ein vorhandenes Objekt zu aktualisieren:
 
-  1. Erneutes Speichern mit -Overwrite ersetzt das gesamte Objekt
-     (einfach, aber alle Eigenschaften werden ersetzt).
-  2. Set-BucketObject für Teilaktualisierungen — nur die angegebenen
-     Eigenschaften ändern sich, der Rest bleibt unberührt.
-'@
-                                SetupCode = @'
-$users = @(
-    @{ Name = "Alice"; Role = "Developer"; Score = 95 }
-    @{ Name = "Bob";   Role = "Designer";  Score = 72 }
-)
-$users | fill -Bucket "team" -KeyProperty Name -Quiet
-'@
-                                Code = @'
-# Methode 1: Komplett überschreiben
-@{ Name = "Alice"; Role = "Lead"; Score = 99 } |
-    fill -Bucket "team" -Key "Alice" -Overwrite -Quiet
-
-# Methode 2: Teilaktualisierung — nur Score ändern
-scoop -Bucket "team" -Key "Bob" | ForEach-Object {
-    $_.Score = 100
-    $_
-} | Set-BucketObject -PassThru
-
-# Ergebnisse überprüfen
-scoop -Bucket "team" -Key "Alice", "Bob"
-'@
-                            }
                             @{
                                 Key = "04-delete"
                                 Title = "Löschen: Objekte entfernen"
@@ -1589,8 +1525,8 @@ scoop -Bucket "team"
 '@
                             }
                             @{
-                                Key = "05-tint-property-value"
-                                Title = "Schnellaktualisierung mit tint"
+                                Key = "03-update"
+                                Title = "Aktualisieren: Objekte ändern"
                                 Body = @'
   Der tint-Alias (Set-BucketObject) bietet eine praktische Abkürzung:
   -Property und -Value. Anstatt ein Objekt zu lesen, zu ändern und
