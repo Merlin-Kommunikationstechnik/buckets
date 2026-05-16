@@ -124,130 +124,149 @@ function Set-BucketObject {
             }
         }
 
-        $file = Find-ObjectFile -BucketPath $bucketPath -Key $Key
-        if ($null -eq $file) {
-            throw "Object with key '$Key' not found in bucket '$Bucket'"
+        # Resolve matching file(s) — supports wildcards in Key
+        $matchingFiles = @()
+        $hasKeyWildcard = $Key -match '[\*\?]'
+        if ($hasKeyWildcard) {
+            $di = [System.IO.DirectoryInfo]::new($bucketPath)
+            $target = $Key.ToLowerInvariant()
+            $matchingFiles = @(foreach ($f in @($di.GetFiles("*.json")) + @($di.GetFiles("*.dat"))) {
+                $baseLower = [System.IO.Path]::GetFileNameWithoutExtension($f.Name).ToLowerInvariant()
+                if ($baseLower -like $target) { $f }
+            })
+            if ($matchingFiles.Count -eq 0) {
+                throw "No objects matching key pattern '$Key' found in bucket '$Bucket'"
+            }
+        } else {
+            $file = Find-ObjectFile -BucketPath $bucketPath -Key $Key
+            if ($null -eq $file) {
+                throw "Object with key '$Key' not found in bucket '$Bucket'"
+            }
+            $matchingFiles = @($file)
         }
 
-        $filePath = $file.FullName
-        $useJson = $file.Extension -eq ".json" -and -not $AsBinary
+        foreach ($file in $matchingFiles) {
+            $fileKey = [System.IO.Path]::GetFileNameWithoutExtension($file.Name)
+            $filePath = $file.FullName
+            $useJson = $file.Extension -eq ".json" -and -not $AsBinary
 
-        if ($isPropertySet) {
-            $existing = Read-BucketFile -File ([System.IO.FileInfo]::new($filePath))
-            if ($null -eq $existing) { throw "Failed to read existing object '$Key' in bucket '$Bucket'" }
-            if ($existing -is [hashtable]) { $existing[$Property] = $Value }
-            elseif ($existing.PSObject.Properties[$Property]) { $existing.PSObject.Properties[$Property].Value = $Value }
-            else { $existing | Add-Member -NotePropertyName $Property -NotePropertyValue $Value }
-            $InputObject = $existing
-        }
-        elseif ($isPatch) {
-            $existing = Read-BucketFile -File ([System.IO.FileInfo]::new($filePath))
-            if ($null -eq $existing) { throw "Failed to read existing object '$Key' in bucket '$Bucket'" }
-            if ($InputObject -is [hashtable]) {
-                if ($existing -is [hashtable]) {
-                    foreach ($kvp in $InputObject.GetEnumerator()) { $existing[$kvp.Key] = $kvp.Value }
+            if ($isPropertySet) {
+                $existing = Read-BucketFile -File ([System.IO.FileInfo]::new($filePath))
+                if ($null -eq $existing) { throw "Failed to read existing object '$fileKey' in bucket '$Bucket'" }
+                if ($existing -is [hashtable]) { $existing[$Property] = $Value }
+                elseif ($existing.PSObject.Properties[$Property]) { $existing.PSObject.Properties[$Property].Value = $Value }
+                else { $existing | Add-Member -NotePropertyName $Property -NotePropertyValue $Value }
+                $InputObject = $existing
+            }
+            elseif ($isPatch) {
+                $existing = Read-BucketFile -File ([System.IO.FileInfo]::new($filePath))
+                if ($null -eq $existing) { throw "Failed to read existing object '$fileKey' in bucket '$Bucket'" }
+                if ($InputObject -is [hashtable]) {
+                    if ($existing -is [hashtable]) {
+                        foreach ($kvp in $InputObject.GetEnumerator()) { $existing[$kvp.Key] = $kvp.Value }
+                    }
+                    else {
+                        foreach ($kvp in $InputObject.GetEnumerator()) {
+                            if ($existing.PSObject.Properties[$kvp.Key]) { $existing.PSObject.Properties[$kvp.Key].Value = $kvp.Value }
+                            else { $existing | Add-Member -NotePropertyName $kvp.Key -NotePropertyValue $kvp.Value }
+                        }
+                    }
                 }
                 else {
-                    foreach ($kvp in $InputObject.GetEnumerator()) {
-                        if ($existing.PSObject.Properties[$kvp.Key]) { $existing.PSObject.Properties[$kvp.Key].Value = $kvp.Value }
-                        else { $existing | Add-Member -NotePropertyName $kvp.Key -NotePropertyValue $kvp.Value }
-                    }
-                }
-            }
-            else {
-                foreach ($prop in $InputObject.PSObject.Properties) {
-                    if ($prop.IsSettable) {
-                        if ($existing -is [hashtable]) { $existing[$prop.Name] = $prop.Value }
-                        elseif ($existing.PSObject.Properties[$prop.Name]) { $existing.PSObject.Properties[$prop.Name].Value = $prop.Value }
-                        else { $existing | Add-Member -NotePropertyName $prop.Name -NotePropertyValue $prop.Value }
-                    }
-                }
-            }
-            $InputObject = $existing
-        }
-
-        $writeSuccess = $false
-        if ($useJson) {
-            try {
-                $json = ConvertTo-Json -InputObject $InputObject -Depth $Depth -Compress -WarningAction SilentlyContinue
-                [System.IO.File]::WriteAllText($filePath, $json, [System.Text.Encoding]::UTF8)
-                $writeSuccess = $true
-            }
-            catch {
-                $tmpBinary = $null
-                try {
-                    $xml = [System.Management.Automation.PSSerializer]::Serialize($InputObject, $BinaryDepth)
-                    $rawBytes = [System.Text.Encoding]::UTF8.GetBytes($xml)
-                    $binaryFilePath = [System.IO.Path]::ChangeExtension($filePath, ".dat")
-                    $tmpBinary = $binaryFilePath + ".tmp"
-                    if ($Compress) {
-                        $ms = [System.IO.MemoryStream]::new()
-                        try {
-                            $cs = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionLevel]::Optimal)
-                            try { $cs.Write($rawBytes, 0, $rawBytes.Length) }
-                            finally { $cs.Close() }
-                            [System.IO.File]::WriteAllBytes($tmpBinary, $ms.ToArray())
+                    foreach ($prop in $InputObject.PSObject.Properties) {
+                        if ($prop.IsSettable) {
+                            if ($existing -is [hashtable]) { $existing[$prop.Name] = $prop.Value }
+                            elseif ($existing.PSObject.Properties[$prop.Name]) { $existing.PSObject.Properties[$prop.Name].Value = $prop.Value }
+                            else { $existing | Add-Member -NotePropertyName $prop.Name -NotePropertyValue $prop.Value }
                         }
-                        finally { $ms.Dispose() }
                     }
-                    else { [System.IO.File]::WriteAllBytes($tmpBinary, $rawBytes) }
-                    if (Test-Path $filePath) { Remove-Item $filePath -Force }
-                    [System.IO.File]::Move($tmpBinary, $binaryFilePath)
-                    $tmpBinary = $null
-                    $filePath = $binaryFilePath
-                    Write-Warning "Object '$Key' too complex for JSON, saved as binary instead"
+                }
+                $InputObject = $existing
+            }
+
+            $writeSuccess = $false
+            if ($useJson) {
+                try {
+                    $json = ConvertTo-Json -InputObject $InputObject -Depth $Depth -Compress -WarningAction SilentlyContinue
+                    [System.IO.File]::WriteAllText($filePath, $json, [System.Text.Encoding]::UTF8)
                     $writeSuccess = $true
                 }
                 catch {
-                    if ($null -ne $tmpBinary -and (Test-Path $tmpBinary)) { Remove-Item $tmpBinary -Force -ErrorAction SilentlyContinue }
-                    throw "Failed to serialize object '$Key' as binary: $_"
-                }
-            }
-        }
-        else {
-            $oldFilePath = if ($AsBinary -and $filePath -like "*.json") { $filePath } else { $null }
-            if ($AsBinary -and $filePath -like "*.json") {
-                $filePath = [System.IO.Path]::ChangeExtension($filePath, ".dat")
-            }
-            $currentDepth = $BinaryDepth; $serialized = $false
-            $maxLoopDepth = [Math]::Max(10, $BinaryDepth)
-            $tmpFilePath = $filePath + ".tmp"
-            try {
-                while (-not $serialized -and $currentDepth -le $maxLoopDepth) {
+                    $tmpBinary = $null
                     try {
-                        $xml = [System.Management.Automation.PSSerializer]::Serialize($InputObject, $currentDepth)
+                        $xml = [System.Management.Automation.PSSerializer]::Serialize($InputObject, $BinaryDepth)
                         $rawBytes = [System.Text.Encoding]::UTF8.GetBytes($xml)
+                        $binaryFilePath = [System.IO.Path]::ChangeExtension($filePath, ".dat")
+                        $tmpBinary = $binaryFilePath + ".tmp"
                         if ($Compress) {
                             $ms = [System.IO.MemoryStream]::new()
                             try {
                                 $cs = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionLevel]::Optimal)
                                 try { $cs.Write($rawBytes, 0, $rawBytes.Length) }
                                 finally { $cs.Close() }
-                                [System.IO.File]::WriteAllBytes($tmpFilePath, $ms.ToArray())
+                                [System.IO.File]::WriteAllBytes($tmpBinary, $ms.ToArray())
                             }
                             finally { $ms.Dispose() }
                         }
-                        else { [System.IO.File]::WriteAllBytes($tmpFilePath, $rawBytes) }
-                        $serialized = $true
-                        if ($currentDepth -gt $BinaryDepth) { Write-Verbose "Binary serialization required depth $currentDepth (default: $BinaryDepth)" }
+                        else { [System.IO.File]::WriteAllBytes($tmpBinary, $rawBytes) }
+                        if (Test-Path $filePath) { Remove-Item $filePath -Force }
+                        [System.IO.File]::Move($tmpBinary, $binaryFilePath)
+                        $tmpBinary = $null
+                        $filePath = $binaryFilePath
+                        Write-Warning "Object '$fileKey' too complex for JSON, saved as binary instead"
+                        $writeSuccess = $true
                     }
-                    catch { $currentDepth++ }
+                    catch {
+                        if ($null -ne $tmpBinary -and (Test-Path $tmpBinary)) { Remove-Item $tmpBinary -Force -ErrorAction SilentlyContinue }
+                        throw "Failed to serialize object '$fileKey' as binary: $_"
+                    }
                 }
-                if (-not $serialized) { throw "Failed to serialize object '$Key' at any binary depth" }
-                if ($null -ne $oldFilePath -and (Test-Path $oldFilePath)) { Remove-Item $oldFilePath -Force }
-                [System.IO.File]::Move($tmpFilePath, $filePath, $true)
-                $writeSuccess = $true
             }
-            finally {
-                if (Test-Path $tmpFilePath) { Remove-Item $tmpFilePath -Force -ErrorAction SilentlyContinue }
+            else {
+                $oldFilePath = if ($AsBinary -and $filePath -like "*.json") { $filePath } else { $null }
+                if ($AsBinary -and $filePath -like "*.json") {
+                    $filePath = [System.IO.Path]::ChangeExtension($filePath, ".dat")
+                }
+                $currentDepth = $BinaryDepth; $serialized = $false
+                $maxLoopDepth = [Math]::Max(10, $BinaryDepth)
+                $tmpFilePath = $filePath + ".tmp"
+                try {
+                    while (-not $serialized -and $currentDepth -le $maxLoopDepth) {
+                        try {
+                            $xml = [System.Management.Automation.PSSerializer]::Serialize($InputObject, $currentDepth)
+                            $rawBytes = [System.Text.Encoding]::UTF8.GetBytes($xml)
+                            if ($Compress) {
+                                $ms = [System.IO.MemoryStream]::new()
+                                try {
+                                    $cs = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionLevel]::Optimal)
+                                    try { $cs.Write($rawBytes, 0, $rawBytes.Length) }
+                                    finally { $cs.Close() }
+                                    [System.IO.File]::WriteAllBytes($tmpFilePath, $ms.ToArray())
+                                }
+                                finally { $ms.Dispose() }
+                            }
+                            else { [System.IO.File]::WriteAllBytes($tmpFilePath, $rawBytes) }
+                            $serialized = $true
+                            if ($currentDepth -gt $BinaryDepth) { Write-Verbose "Binary serialization required depth $currentDepth (default: $BinaryDepth)" }
+                        }
+                        catch { $currentDepth++ }
+                    }
+                    if (-not $serialized) { throw "Failed to serialize object '$fileKey' at any binary depth" }
+                    if ($null -ne $oldFilePath -and (Test-Path $oldFilePath)) { Remove-Item $oldFilePath -Force }
+                    [System.IO.File]::Move($tmpFilePath, $filePath, $true)
+                    $writeSuccess = $true
+                }
+                finally {
+                    if (Test-Path $tmpFilePath) { Remove-Item $tmpFilePath -Force -ErrorAction SilentlyContinue }
+                }
             }
-        }
 
-        if ($writeSuccess) {
-            $savedCount++
-            $lastBucket = $Bucket
-            $null = $updatedKeys.Add($Key)
-            if ($useVerbose) { Write-Verbose "Updated [$Bucket/$Key] -> $filePath" }
+            if ($writeSuccess) {
+                $savedCount++
+                $lastBucket = $Bucket
+                $null = $updatedKeys.Add($fileKey)
+                if ($useVerbose) { Write-Verbose "Updated [$Bucket/$fileKey] -> $filePath" }
+            }
         }
     }
 
