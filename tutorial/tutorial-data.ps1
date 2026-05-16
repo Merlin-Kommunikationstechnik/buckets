@@ -125,10 +125,10 @@ Remove-Item -Path $oldWayDir -Recurse -Force -ErrorAction SilentlyContinue
                                 Code = @'
 # The BUCKETS way: one command, no file management
 $user = @{ Name = "Alice"; Role = "admin"; Score = 95 }
-$user | fill -Bucket "quickstart" -Key "alice" -Quiet
+$user | fill -Key "alice" -Bucket "quickstart" -Quiet
 
 # Read it back just as easily — no paths, no JSON parsing
-scoop -Bucket "quickstart" -Key "alice"
+scoop -Key "alice" -Bucket "quickstart"
 '@
                             }
                         )
@@ -187,7 +187,7 @@ $users | fill -Bucket "team" -KeyProperty Name -Quiet
 scoop -Bucket "team"
 
 # Scoop one specific object by key
-scoop -Bucket "team" -Key "Alice"
+scoop -Key "Alice" -Bucket "team"
 '@
                             }
 
@@ -212,10 +212,10 @@ $users | fill -Bucket "team" -KeyProperty Name -Quiet
 '@
                                 Code = @'
 # Preview deletion of a single object
-Remove-BucketObject -Bucket "team" -Key "Bob" -WhatIf
+Remove-BucketObject -Key "Bob" -Bucket "team" -WhatIf
 
 # Actually delete it
-Remove-BucketObject -Bucket "team" -Key "Bob" -Quiet
+Remove-BucketObject -Key "Bob" -Bucket "team" -Quiet
 
 # Confirm: Carol and Alice remain, Bob is gone
 scoop -Bucket "team"
@@ -241,13 +241,13 @@ $users | fill -Bucket "team" -KeyProperty Name -Quiet
 '@
                                 Code = @'
 # Update Bob's Score to 100 without reading first
-tint -Bucket "team" -Key "Bob" -Property Score -Value 100
+tint -Key "Bob" -Bucket "team" -Property Score -Value 100
 
 # Add a new property to Alice
 tint Alice team -Property Level -Value "Senior"
 
 # Verify both changes
-scoop -Bucket "team" -Key "Bob", "Alice"
+scoop -Key "Bob", "Alice" -Bucket "team"
 '@
                             }
                         )
@@ -277,7 +277,7 @@ $alice = @{ Name = "Alice"; Role = "admin"; Score = 95 }
 '@
                                 Code = @'
 # Save the hashtable as an object in the "users" bucket with key "Alice"
-New-BucketObject -InputObject $alice -Bucket users -Key "Alice"
+New-BucketObject -InputObject $alice -Key "Alice" -Bucket users
 '@
                             }
                             @{
@@ -315,7 +315,7 @@ $alice = @{ Name = "Alice"; Role = "admin"; Score = 95 }
 '@
                                 Code = @'
 # Store as human-readable JSON (.json) — this is the default format
-New-BucketObject -InputObject $alice -Bucket config -Key "app-config" -Quiet
+New-BucketObject -InputObject $alice -Key "app-config" -Bucket config -Quiet
 # List the .json file on disk to confirm the format
 Get-ChildItem (Join-Path (Get-BucketRoot) "config")
 '@
@@ -335,13 +335,13 @@ $alice2 = @{ Name = "Alice"; Role = "manager"; Score = 99 }
 '@
                                 Code = @'
 # First save succeeds — key "Alice" doesn't exist yet
-New-BucketObject -InputObject $alice  -Bucket users -Key "Alice" -Quiet
+New-BucketObject -InputObject $alice  -Key "Alice" -Bucket users -Quiet
 # Second save WITHOUT -Overwrite is silently skipped (key already exists)
-New-BucketObject -InputObject $alice2 -Bucket users -Key "Alice" -Quiet
+New-BucketObject -InputObject $alice2 -Key "Alice" -Bucket users -Quiet
 # Third save WITH -Overwrite replaces the existing object
-New-BucketObject -InputObject $alice2 -Bucket users -Key "Alice" -Overwrite -Quiet
+New-BucketObject -InputObject $alice2 -Key "Alice" -Bucket users -Overwrite -Quiet
 # Verify the overwritten data: Role=manager, Score=99
-scoop -Bucket users -Key "Alice" | Select-Object Name, Role, Score
+scoop -Key "Alice" -Bucket users | Select-Object Name, Role, Score
 '@
                             }
                         )
@@ -399,7 +399,7 @@ $teamData | fill -Bucket team -KeyProperty Name -Quiet
 '@
                                 Code = @'
 # Retrieve exactly one object by its key — much faster than filtering all objects
-scoop -Bucket team -Key "Alice"
+scoop -Key "Alice" -Bucket team
 '@
                             }
                             @{
@@ -478,7 +478,7 @@ $teamData | fill -Bucket team -KeyProperty Name -Quiet
 '@
                                 Code = @'
 # Retrieve Bob, modify properties, then pipe back to Set-BucketObject
-scoop -Bucket team -Key "Bob" | ForEach-Object {
+scoop -Key "Bob" -Bucket team | ForEach-Object {
     $_.Score = 99       # Update Score in place
     $_.Role = "Lead"    # Promote Bob to Lead
     $_                  # Pass the modified object downstream
@@ -502,9 +502,9 @@ $teamData | fill -Bucket team -KeyProperty Name -Quiet
 '@
                                 Code = @'
 # Partial update: only Role changes; Level, Score stay untouched
-Set-BucketObject -Bucket team -Key "Bob" -InputObject @{ Role = "Lead" } -PassThru
+Set-BucketObject -Key "Bob" -Bucket team -InputObject @{ Role = "Lead" } -PassThru
 # Confirm Bob now has Role=Lead while other properties remain unchanged
-scoop -Bucket team -Key "Bob"
+scoop -Key "Bob" -Bucket team
 '@
                             }
                         )
@@ -532,7 +532,7 @@ $teamData | fill -Bucket team -KeyProperty Name -Quiet
 '@
                                 Code = @'
 # Preview what would be deleted — no actual removal, perfectly safe
-Remove-BucketObject -Bucket team -Key "Bob" -WhatIf
+Remove-BucketObject -Key "Bob" -Bucket team -WhatIf
 '@
                             }
                             @{
@@ -613,9 +613,9 @@ $teamData | fill -Bucket team -KeyProperty Name -Quiet
 '@
                                 Code = @'
 # Copy Alice's object to a new key "Alice-Backup" — original stays untouched
-Copy-BucketObject -Bucket team -Key "Alice" -DestinationKey "Alice-Backup" -Quiet
+Copy-BucketObject -Key "Alice" -Bucket team -DestinationKey "Alice-Backup" -Quiet
 # Retrieve the copy to confirm it holds the same data as the original
-scoop -Bucket team -Key "Alice-Backup"
+scoop -Key "Alice-Backup" -Bucket team
 '@
                             }
                         )
@@ -633,7 +633,7 @@ scoop -Bucket team -Key "Alice-Backup"
 '@
                                 SetupCode = @'
 # Seed a sample config bucket so there is something to list with dip
-@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -Quiet
+@{ Host = "local"; Port = 5432 } | fill -Key "app-config" -Bucket config -Quiet
 '@
                                 Code = @'
 # dip (Get-Bucket) shows all buckets with object counts and timestamps
@@ -920,7 +920,7 @@ New-Funnel -Name "add-seniority" -Transform {
 $newTeam | fill -Bucket team -KeyProperty Name -Funnel "add-seniority" -Quiet
 
 # Check the results — Grace and Ivan have Seniority, Heidi was skipped
-scoop -Bucket team -Key "Grace", "Heidi", "Ivan"
+scoop -Key "Grace", "Heidi", "Ivan" -Bucket team
 '@
                             }
                             @{
@@ -1059,8 +1059,8 @@ $r = Get-BucketObject -Bucket "type-demo" -Expand
 "Reconstructed type: $($r.GetType().Name)"
 
 # Save without expand (single file)
-$config | New-BucketObject -Bucket "type-demo" -Key "raw" -Quiet
-$r2 = Get-BucketObject -Bucket "type-demo" -Key "raw"
+$config | New-BucketObject -Key "raw" -Bucket "type-demo" -Quiet
+$r2 = Get-BucketObject -Key "raw" -Bucket "type-demo"
 "Single-file type: $($r2.GetType().Name)"
 
 # Both are PSCustomObject — convert to hashtable if needed
@@ -1135,13 +1135,13 @@ $items = @("alpha", "beta", "gamma")
 '@
                             Code = @'
 # Save the array under key "items" — creates items/0.json, items/1.json, items/2.json
-$items | New-BucketObject -Bucket "lists" -Key "items" -Expand -Quiet
+$items | New-BucketObject -Key "items" -Bucket "lists" -Expand -Quiet
 
 # Show the directory structure
 Get-ChildItem (Join-Path (Get-BucketRoot) "lists") -Recurse
 
 # Retrieve and reconstruct the array
-$r = Get-BucketObject -Bucket "lists" -Key "items" -Expand
+$r = Get-BucketObject -Key "items" -Bucket "lists" -Expand
 "Count: $($r.Count)"
 "First: $($r[0])"
 '@
@@ -1161,13 +1161,13 @@ $users = @(
 '@
                             Code = @'
 # Save as expanded array under key "users"
-$users | New-BucketObject -Bucket "teams" -Key "users" -Expand -Quiet
+$users | New-BucketObject -Key "users" -Bucket "teams" -Expand -Quiet
 
 # Show the directory tree
 Get-ChildItem (Join-Path (Get-BucketRoot) "teams") -Recurse
 
 # Retrieve and reconstruct
-$r = Get-BucketObject -Bucket "teams" -Key "users" -Expand
+$r = Get-BucketObject -Key "users" -Bucket "teams" -Expand
 "Users: $($r.Count)"
 "$($r[0].name) : $($r[0].role)"
 "$($r[1].name) : $($r[1].role)"
@@ -1195,7 +1195,7 @@ $items | New-BucketObject -Bucket "services" -KeyProperty "id" -Expand -Quiet
 Get-ChildItem (Join-Path (Get-BucketRoot) "services") -Recurse
 
 # Retrieve one by its key
-Get-BucketObject -Bucket "services" -Key "srv-a" -Expand
+Get-BucketObject -Key "srv-a" -Bucket "services" -Expand
 '@
                         }
                     )
@@ -1229,7 +1229,7 @@ $config | New-BucketObject -Bucket "depth-demo" -Expand -ExpandDepth 1 -Quiet
 Get-ChildItem (Join-Path (Get-BucketRoot) "depth-demo") -Recurse
 
 # Retrieve level1 — level2 is preserved as a serialized property
-$r = Get-BucketObject -Bucket "depth-demo" -Key "level1" -Expand
+$r = Get-BucketObject -Key "level1" -Bucket "depth-demo" -Expand
 "level2.leaf = $($r.level2.leaf)"
 '@
                         }
@@ -1427,10 +1427,10 @@ Remove-Item -Path $oldWayDir -Recurse -Force -ErrorAction SilentlyContinue
                                 Code = @'
 # Der BUCKETS-Weg: ein Befehl, keine Dateiverwaltung
 $user = @{ Name = "Alice"; Role = "admin"; Score = 95 }
-$user | fill -Bucket "quickstart" -Key "alice" -Quiet
+$user | fill -Key "alice" -Bucket "quickstart" -Quiet
 
 # Genauso einfach wieder abrufen — keine Pfade, kein JSON-Parsing
-scoop -Bucket "quickstart" -Key "alice"
+scoop -Key "alice" -Bucket "quickstart"
 '@
                             }
                         )
@@ -1490,7 +1490,7 @@ $users | fill -Bucket "team" -KeyProperty Name -Quiet
 scoop -Bucket "team"
 
 # Ein einzelnes Objekt über seinen Schlüssel abrufen
-scoop -Bucket "team" -Key "Alice"
+scoop -Key "Alice" -Bucket "team"
 '@
                             }
 
@@ -1515,10 +1515,10 @@ $users | fill -Bucket "team" -KeyProperty Name -Quiet
 '@
                                 Code = @'
 # Vorschau: Löschen eines einzelnen Objekts
-Remove-BucketObject -Bucket "team" -Key "Bob" -WhatIf
+Remove-BucketObject -Key "Bob" -Bucket "team" -WhatIf
 
 # Tatsächlich löschen
-Remove-BucketObject -Bucket "team" -Key "Bob" -Quiet
+Remove-BucketObject -Key "Bob" -Bucket "team" -Quiet
 
 # Bestätigen: Carol und Alice sind noch da, Bob ist weg
 scoop -Bucket "team"
@@ -1545,13 +1545,13 @@ $users | fill -Bucket "team" -KeyProperty Name -Quiet
 '@
                                 Code = @'
 # Bobs Score auf 100 setzen, ohne vorher zu lesen
-tint -Bucket "team" -Key "Bob" -Property Score -Value 100
+tint -Key "Bob" -Bucket "team" -Property Score -Value 100
 
 # Alice eine neue Eigenschaft hinzufügen
 tint Alice team -Property Level -Value "Senior"
 
 # Beide Änderungen überprüfen
-scoop -Bucket "team" -Key "Bob", "Alice"
+scoop -Key "Bob", "Alice" -Bucket "team"
 '@
                             }
                         )
@@ -1582,7 +1582,7 @@ $alice = @{ Name = "Alice"; Role = "admin"; Score = 95 }
 '@
                                 Code = @'
 # Speichere die Hashtable als Objekt im Bucket "users" mit dem Schlüssel "Alice"
-New-BucketObject -InputObject $alice -Bucket users -Key "Alice"
+New-BucketObject -InputObject $alice -Key "Alice" -Bucket users
 '@
                             }
                             @{
@@ -1621,7 +1621,7 @@ $alice = @{ Name = "Alice"; Role = "admin"; Score = 95 }
 '@
                                 Code = @'
 # Speichere als lesbares JSON (.json) — das Standardformat
-New-BucketObject -InputObject $alice -Bucket config -Key "app-config" -Quiet
+New-BucketObject -InputObject $alice -Key "app-config" -Bucket config -Quiet
 # Zeige die .json-Datei auf der Platte zur Bestätigung
 Get-ChildItem (Join-Path (Get-BucketRoot) "config")
 '@
@@ -1642,13 +1642,13 @@ $alice2 = @{ Name = "Alice"; Role = "manager"; Score = 99 }
 '@
                                 Code = @'
 # Erster Speichervorgang erfolgreich — Schlüssel "Alice" existiert noch nicht
-New-BucketObject -InputObject $alice  -Bucket users -Key "Alice" -Quiet
+New-BucketObject -InputObject $alice  -Key "Alice" -Bucket users -Quiet
 # Zweiter Speichervorgang OHNE -Overwrite wird still übersprungen (existiert bereits)
-New-BucketObject -InputObject $alice2 -Bucket users -Key "Alice" -Quiet
+New-BucketObject -InputObject $alice2 -Key "Alice" -Bucket users -Quiet
 # Dritter Speichervorgang MIT -Overwrite ersetzt das vorhandene Objekt
-New-BucketObject -InputObject $alice2 -Bucket users -Key "Alice" -Overwrite -Quiet
+New-BucketObject -InputObject $alice2 -Key "Alice" -Bucket users -Overwrite -Quiet
 # Überprüfe die überschriebenen Daten: Role=manager, Score=99
-scoop -Bucket users -Key "Alice" | Select-Object Name, Role, Score
+scoop -Key "Alice" -Bucket users | Select-Object Name, Role, Score
 '@
                             }
                         )
@@ -1706,7 +1706,7 @@ $teamData | fill -Bucket team -KeyProperty Name -Quiet
 '@
                                 Code = @'
 # Ein Objekt genau über seinen Schlüssel abrufen — viel schneller als Filtern
-scoop -Bucket team -Key "Alice"
+scoop -Key "Alice" -Bucket team
 '@
                             }
                             @{
@@ -1787,7 +1787,7 @@ $teamData | fill -Bucket team -KeyProperty Name -Quiet
 '@
                                 Code = @'
 # Rufe Bob ab, ändere Eigenschaften, leite zurück an Set-BucketObject
-scoop -Bucket team -Key "Bob" | ForEach-Object {
+scoop -Key "Bob" -Bucket team | ForEach-Object {
     $_.Score = 99       # Aktualisiere Score direkt
     $_.Role = "Lead"    # Befördere Bob zum Lead
     $_                  # Gib das geänderte Objekt weiter
@@ -1812,9 +1812,9 @@ $teamData | fill -Bucket team -KeyProperty Name -Quiet
 '@
                                 Code = @'
 # Teilaktualisierung: nur Role ändert sich; Level, Score bleiben erhalten
-Set-BucketObject -Bucket team -Key "Bob" -InputObject @{ Role = "Lead" } -PassThru
+Set-BucketObject -Key "Bob" -Bucket team -InputObject @{ Role = "Lead" } -PassThru
 # Bestätige: Bob hat jetzt Role=Lead, andere Eigenschaften unverändert
-scoop -Bucket team -Key "Bob"
+scoop -Key "Bob" -Bucket team
 '@
                             }
                         )
@@ -1842,7 +1842,7 @@ $teamData | fill -Bucket team -KeyProperty Name -Quiet
 '@
                                 Code = @'
 # Zeige Vorschau, was gelöscht würde — keine tatsächliche Löschung, völlig sicher
-Remove-BucketObject -Bucket team -Key "Bob" -WhatIf
+Remove-BucketObject -Key "Bob" -Bucket team -WhatIf
 '@
                             }
                             @{
@@ -1924,9 +1924,9 @@ $teamData | fill -Bucket team -KeyProperty Name -Quiet
 '@
                                 Code = @'
 # Kopiere Alices Objekt unter neuem Schlüssel "Alice-Backup" — Original bleibt
-Copy-BucketObject -Bucket team -Key "Alice" -DestinationKey "Alice-Backup" -Quiet
+Copy-BucketObject -Key "Alice" -Bucket team -DestinationKey "Alice-Backup" -Quiet
 # Rufe die Kopie ab, um zu bestätigen, dass sie die gleichen Daten enthält
-scoop -Bucket team -Key "Alice-Backup"
+scoop -Key "Alice-Backup" -Bucket team
 '@
                             }
                         )
@@ -1945,7 +1945,7 @@ scoop -Bucket team -Key "Alice-Backup"
 '@
                                 SetupCode = @'
 # Erzeuge einen Beispiel-Config-Bucket, damit es etwas aufzulisten gibt
-@{ Host = "local"; Port = 5432 } | fill -Bucket config -Key "app-config" -Quiet
+@{ Host = "local"; Port = 5432 } | fill -Key "app-config" -Bucket config -Quiet
 '@
                                 Code = @'
 # dip (Get-Bucket) zeigt alle Buckets mit Objektanzahlen und Zeitstempeln
@@ -2242,7 +2242,7 @@ New-Funnel -Name "add-seniority" -Transform {
 $newTeam | fill -Bucket team -KeyProperty Name -Funnel "add-seniority" -Quiet
 
 # Überprüfe die Ergebnisse — Grace und Ivan haben Seniority, Heidi wurde übersprungen
-scoop -Bucket team -Key "Grace", "Heidi", "Ivan"
+scoop -Key "Grace", "Heidi", "Ivan" -Bucket team
 '@
                             }
                             @{
@@ -2386,8 +2386,8 @@ $r = Get-BucketObject -Bucket "type-demo" -Expand
 "Rekonstruierter Typ: $($r.GetType().Name)"
 
 # Ohne Expand speichern (einzelne Datei)
-$config | New-BucketObject -Bucket "type-demo" -Key "raw" -Quiet
-$r2 = Get-BucketObject -Bucket "type-demo" -Key "raw"
+$config | New-BucketObject -Key "raw" -Bucket "type-demo" -Quiet
+$r2 = Get-BucketObject -Key "raw" -Bucket "type-demo"
 "Einzeldatei-Typ: $($r2.GetType().Name)"
 
 # Beide sind PSCustomObject — bei Bedarf in Hashtable umwandeln
@@ -2463,13 +2463,13 @@ $items = @("alpha", "beta", "gamma")
 '@
                             Code = @'
 # Das Array unter dem Schlüssel "items" speichern
-$items | New-BucketObject -Bucket "lists" -Key "items" -Expand -Quiet
+$items | New-BucketObject -Key "items" -Bucket "lists" -Expand -Quiet
 
 # Die Verzeichnisstruktur anzeigen
 Get-ChildItem (Join-Path (Get-BucketRoot) "lists") -Recurse
 
 # Das Array abrufen und rekonstruieren
-$r = Get-BucketObject -Bucket "lists" -Key "items" -Expand
+$r = Get-BucketObject -Key "items" -Bucket "lists" -Expand
 "Anzahl: $($r.Count)"
 "Erstes: $($r[0])"
 '@
@@ -2490,13 +2490,13 @@ $users = @(
 '@
                             Code = @'
 # Als expandiertes Array unter dem Schlüssel "users" speichern
-$users | New-BucketObject -Bucket "teams" -Key "users" -Expand -Quiet
+$users | New-BucketObject -Key "users" -Bucket "teams" -Expand -Quiet
 
 # Den Verzeichnisbaum anzeigen
 Get-ChildItem (Join-Path (Get-BucketRoot) "teams") -Recurse
 
 # Abrufen und rekonstruieren
-$r = Get-BucketObject -Bucket "teams" -Key "users" -Expand
+$r = Get-BucketObject -Key "users" -Bucket "teams" -Expand
 "Benutzer: $($r.Count)"
 "$($r[0].name) : $($r[0].role)"
 "$($r[1].name) : $($r[1].role)"
@@ -2524,7 +2524,7 @@ $items | New-BucketObject -Bucket "services" -KeyProperty "id" -Expand -Quiet
 Get-ChildItem (Join-Path (Get-BucketRoot) "services") -Recurse
 
 # Ein Objekt über seinen Schlüssel abrufen
-Get-BucketObject -Bucket "services" -Key "srv-a" -Expand
+Get-BucketObject -Key "srv-a" -Bucket "services" -Expand
 '@
                         }
                     )
@@ -2558,7 +2558,7 @@ $config | New-BucketObject -Bucket "depth-demo" -Expand -ExpandDepth 1 -Quiet
 Get-ChildItem (Join-Path (Get-BucketRoot) "depth-demo") -Recurse
 
 # level1 abrufen — level2 bleibt als serialisierte Eigenschaft erhalten
-$r = Get-BucketObject -Bucket "depth-demo" -Key "level1" -Expand
+$r = Get-BucketObject -Key "level1" -Bucket "depth-demo" -Expand
 "level2.leaf = $($r.level2.leaf)"
 '@
                         }
