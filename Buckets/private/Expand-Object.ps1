@@ -14,7 +14,7 @@ function Expand-Object {
         [int]$MaxDepth = 5,
         [string]$RootPath,
         [string]$BucketName,
-        [ValidateRange(1, 10000)][int]$MaxProperties = 100
+        [ValidateRange(1, 10000)][int]$MaxProperties = 10000
     )
 
     $result = @{
