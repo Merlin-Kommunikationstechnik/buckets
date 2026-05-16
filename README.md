@@ -167,14 +167,14 @@ Retrieved objects include metadata properties: `_BucketName`, `_BucketKey`, `_Bu
 
 ```powershell
 # Using the spill alias
-spill users
-spill users "Alice"
+spill -Bucket users
+spill "Alice" users
 
-# All objects from a bucket (positional)
-Get-BucketObject users
+# All objects from a bucket
+Get-BucketObject -Bucket users
 
-# Specific object by bucket and key (positional)
-Get-BucketObject users "Alice"
+# Specific object by key and bucket (positional: key first)
+Get-BucketObject "Alice" users
 
 # All objects from all buckets
 Get-BucketObject
@@ -287,8 +287,8 @@ Set-BucketObject -Bucket users -Key "Alice" -InputObject $user
 # Single property update — no read needed
 Set-BucketObject -Bucket team -Key "Bob" -Property Score -Value 100
 
-# Using the tint alias
-tint team Bob -Property Role -Value "Lead"
+# Using the tint alias (key first, bucket second)
+tint Bob team -Property Role -Value "Lead"
 ```
 
 ---

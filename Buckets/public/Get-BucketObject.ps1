@@ -28,9 +28,9 @@ function Get-BucketObject {
     .OUTPUTS
     Deserialized PSObjects with _BucketName, _BucketKey, and _BucketFile metadata.
     .EXAMPLE
-    Get-BucketObject users
+    Get-BucketObject -Bucket users
     .EXAMPLE
-    Get-BucketObject users "Alice"
+    Get-BucketObject "Alice" users
     .EXAMPLE
     Get-BucketObject -Bucket users -Match @{ Role = "admin" }
     .EXAMPLE
@@ -46,9 +46,9 @@ function Get-BucketObject {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Position = 0)][string[]]$Bucket,
+        [Parameter(Position = 1)][string[]]$Bucket,
         [string]$Path,
-        [Parameter(Position = 1)][string[]]$Key,
+        [Parameter(Position = 0)][string[]]$Key,
         [hashtable]$Match,
         [scriptblock]$Filter,
         [switch]$Recurse,

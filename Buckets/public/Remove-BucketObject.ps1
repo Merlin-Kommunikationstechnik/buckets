@@ -45,9 +45,9 @@ function Remove-BucketObject {
     [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Medium', DefaultParameterSetName = 'ByKey')]
     param(
         [Parameter(ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][PSObject]$InputObject,
-        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)][Alias('_BucketName')][string]$Bucket,
+        [Parameter(Mandatory = $true, Position = 1, ValueFromPipelineByPropertyName = $true)][Alias('_BucketName')][string]$Bucket,
         [string]$Path,
-        [Parameter(ParameterSetName = 'ByKey', ValueFromPipelineByPropertyName = $true)][Alias('_BucketKey')][string[]]$Key,
+        [Parameter(Position = 0, ParameterSetName = 'ByKey', ValueFromPipelineByPropertyName = $true)][Alias('_BucketKey')][string[]]$Key,
         [Parameter(ParameterSetName = 'All')][switch]$All,
         [Parameter(ParameterSetName = 'ByFilter')][hashtable]$Match,
         [Parameter(ParameterSetName = 'ByFilter')][scriptblock]$Filter,

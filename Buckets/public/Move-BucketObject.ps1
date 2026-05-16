@@ -27,10 +27,10 @@ function Move-BucketObject {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $true)][string]$Bucket,
+        [Parameter(Mandatory = $true, Position = 1)][string]$Bucket,
         [string]$DestinationBucket,
         [string]$Path,
-        [Parameter(Mandatory = $true)][string]$Key,
+        [Parameter(Mandatory = $true, Position = 0)][string]$Key,
         [string]$DestinationKey,
         [switch]$PassThru,
         [switch]$Quiet
