@@ -50,21 +50,19 @@ function Set-BucketObject {
     .EXAMPLE
     Set-BucketObject -Bucket team -Key "Bob" -Property Score -Value 100
     #>
-    [CmdletBinding(SupportsShouldProcess = $true, DefaultParameterSetName = "Pipeline")]
+    [CmdletBinding(SupportsShouldProcess = $true)]
     param(
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, ParameterSetName = "Pipeline")]
+        [Parameter(ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
         [PSObject]$InputObject,
-        [Parameter(ValueFromPipelineByPropertyName = $true, ParameterSetName = "Pipeline")]
-        [Parameter(Mandatory = $true, Position = 0, ParameterSetName = "PropertyValue", ValueFromPipelineByPropertyName = $true)]
+        [Parameter(Position = 0, ValueFromPipelineByPropertyName = $true)]
         [Alias("_BucketKey")]
         [string]$Key,
-        [Parameter(ValueFromPipelineByPropertyName = $true, ParameterSetName = "Pipeline")]
-        [Parameter(Position = 1, ParameterSetName = "PropertyValue", ValueFromPipelineByPropertyName = $true)]
+        [Parameter(Position = 1, ValueFromPipelineByPropertyName = $true)]
         [Alias("_BucketName")]
         [string]$Bucket = 'default',
-        [Parameter(Mandatory = $true, Position = 2, ParameterSetName = "PropertyValue")]
+        [Parameter(Position = 2)]
         [string]$Property,
-        [Parameter(Mandatory = $true, Position = 3, ParameterSetName = "PropertyValue")]
+        [Parameter(Position = 3)]
         [PSObject]$Value,
         [string]$Path,
         [ValidateRange(1, 100)][int]$Depth = 20,
@@ -79,8 +77,11 @@ function Set-BucketObject {
         $bucketPath = $null; $savedCount = 0; $lastBucket = ''
         $useVerbose = $VerbosePreference -eq 'Continue'; $useQuiet = $Quiet.IsPresent
         $updatedKeys = [System.Collections.ArrayList]::new()
-        $isPropertySet = $PSCmdlet.ParameterSetName -eq "PropertyValue"
         $isPatch = $false
+        $isPropertySet = $PSBoundParameters.ContainsKey('Property') -or $PSBoundParameters.ContainsKey('Value')
+        if ($PSBoundParameters.ContainsKey('Property') -xor $PSBoundParameters.ContainsKey('Value')) {
+            throw "-Property and -Value must be used together."
+        }
     }
 
     process {
@@ -95,6 +96,9 @@ function Set-BucketObject {
             }
         }
         else {
+            if ($null -eq $InputObject) {
+                throw "Provide an object via pipeline, or use -Property and -Value with -Key."
+            }
             $isPatch = -not ($InputObject.PSObject.Properties['_BucketName'] -and $InputObject.PSObject.Properties['_BucketKey'])
 
             if ($isPatch) {
