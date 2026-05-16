@@ -211,7 +211,7 @@ Use-Bucket "metrics"
 
 Test-It "Metrics round-trip" {
     $saved = Get-BucketObject -Bucket metrics
-    @($saved).Count -eq 24 -and (Get-BucketObject -Bucket metrics -Key "0").CPU -gt 0
+    @($saved).Count -eq 24 -and (Get-BucketObject -Bucket metrics -Key "0").CPU -ge 5
 }
 
 # ============================================================
@@ -331,27 +331,27 @@ Test-It "Round-trip: all data fields preserved (String, Number, Bool, Null, Arra
 Write-Host "`n[12] Error conditions (missing keys, corrupted files, bad params)" -ForegroundColor Blue
 
 Test-It "Get-BucketObject on nonexistent bucket returns empty" {
-    $result = Get-BucketObject -Bucket nonexistent-bucket-xyz -Key "missing" 2>$null -WarningAction SilentlyContinue
+    $result = Get-BucketObject -Bucket nonexistent-bucket-xyz -Key "missing" -WarningAction SilentlyContinue
     $null -eq $result
 }
 
 Test-It "Remove-BucketObject on nonexistent key issues warning" {
     $warn = $null
-    Remove-BucketObject -Bucket users -Key "nonexistent-key" -WarningVariable warn -WarningAction SilentlyContinue 2>$null
+    Remove-BucketObject -Bucket users -Key "nonexistent-key" -WarningVariable warn -WarningAction SilentlyContinue
     $null -ne $warn
 }
 
 Test-It "Remove-BucketObject without -Key or -All throws" {
     $ok = $false
     try { Remove-BucketObject -Bucket users 2>$null; $ok = $false }
-    catch { $ok = $true }
+    catch { $ok = $_.Exception.Message -match "Specify either" }
     $ok
 }
 
 Test-It "Set-BucketObject without bucket/key throws" {
     $ok = $false
     try { @{ Name = "test" } | Set-BucketObject 2>$null; $ok = $false }
-    catch { $ok = $true }
+    catch { $ok = $_.Exception.Message -match "partial updates" }
     $ok
 }
 
@@ -454,7 +454,7 @@ Test-It "Recurse returns 5 objects including root" {
 Test-It "Get-Bucket finds all nested buckets" {
     $buckets = Get-Bucket -Recurse -Name "org"
     $orgBuckets = $buckets | Where-Object { $_.Name -like "org*" }
-    $orgBuckets.Count -ge 4
+    $orgBuckets.Count -eq 4
 }
 
 Test-It "Provider navigation shows nested bucket structure" {
@@ -468,7 +468,7 @@ Test-It "Provider navigation shows nested bucket structure" {
 # Remove tests
 Test-It "Remove-Bucket at deep level preserves parent" {
     Remove-Bucket $nestedBucket -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
-    $deepGone = $null -eq (Get-BucketObject -Bucket $nestedBucket -Key "profile" -WarningAction SilentlyContinue 2>$null)
+    $deepGone = $null -eq (Get-BucketObject -Bucket $nestedBucket -Key "profile" -WarningAction SilentlyContinue)
     $parentIntact = (Get-BucketObject -Bucket "org/eu/de/berlin" -Key "info").City -eq "Berlin"
     $deepGone -and $parentIntact
 }
@@ -496,7 +496,7 @@ Test-It "Get-Bucket -Tree shows correct nested structure" {
     $orgChildren = @($tree.Children | Where-Object { $_.Name -eq "org" })
     if ($orgChildren.Count -eq 1) {
         $orgNode = $orgChildren[0]
-        $orgNode._BucketName -eq "org" -and $orgNode.ObjectCount -eq 5 -and $orgNode.Children.Count -ge 1 -and $orgNode.Children[0].Name -eq "eu"
+        $orgNode._BucketName -eq "org" -and $orgNode.ObjectCount -eq 5 -and $orgNode.Children.Count -eq 1 -and $orgNode.Children[0].Name -eq "eu"
     } else { $false }
 }
 
@@ -589,7 +589,7 @@ Test-It "-AsTimestamp dedup (sequential calls get unique keys)" {
     $tsItems = 1..3 | ForEach-Object { @{ Val = $_ } }
     $tsItems | New-BucketObject -Bucket edge -AsTimestamp -Quiet
     $tsCount = (Get-BucketObject -Bucket edge).Count
-    $tsCount -ge 4
+    $tsCount -eq 4
 }
 
 <#
@@ -629,7 +629,7 @@ Test-It "Path traversal protection (../../etc rejected)" {
     try {
         New-BucketObject -Bucket "../../etc" -InputObject @{ x = 1 } -Key "test" -Quiet -ErrorAction Stop
         $false
-    } catch { $true }
+    } catch { $_.Exception.Message -match "outside" }
 }
 
 <#
@@ -908,7 +908,7 @@ Test-It "Set-BucketObject -PassThru includes UpdatedKeys" {
 
 Test-It "Get-BucketObject warns on nonexistent literal bucket" {
     $warning = $null
-    Get-BucketObject -Bucket "totally-nonexistent-bucket-xyz-123" -WarningVariable warning -WarningAction SilentlyContinue 2>$null | Out-Null
+    Get-BucketObject -Bucket "totally-nonexistent-bucket-xyz-123" -WarningVariable warning -WarningAction SilentlyContinue | Out-Null
     $null -ne $warning -and $warning -match "not found"
 }
 
@@ -945,6 +945,7 @@ Test-It "Import-Bucket skip shows key names" {
 Write-Host "`n[21] Funnels" -ForegroundColor Blue
 
 # Seed data for funnel tests
+Remove-Bucket "edge" -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
 New-BucketObject -Bucket edge -InputObject @{ _Id = "f1"; Role = "admin"; Level = 5 } -KeyProperty _Id -Quiet
 New-BucketObject -Bucket edge -InputObject @{ _Id = "f2"; Role = "user"; Level = 3 } -KeyProperty _Id -Quiet
 New-BucketObject -Bucket edge -InputObject @{ _Id = "f3"; Role = "user"; Level = 1 } -KeyProperty _Id -Quiet
@@ -956,7 +957,7 @@ New-BucketObject -Bucket edge -InputObject @{ _Id = "f3"; Role = "user"; Level =
 Test-It "New-Funnel creates named funnel" {
     New-Funnel -Name "test-funnel-1" -Transform { if ($_.Level -gt 2) { $_ } } -Description "Level above 2" -Quiet
     $f = Get-Funnel -Name "test-funnel-1"
-    $null -ne $f -and $f.Transform -match 'Level' -and $f.Description -eq "Level above 2"
+    $null -ne $f -and $null -ne $f.Transform -and $f.Transform -match 'Level' -and $f.Description -eq "Level above 2"
 }
 
 <#
@@ -965,7 +966,7 @@ Test-It "New-Funnel creates named funnel" {
 #>
 Test-It "Get-Funnel lists all funnels" {
     $all = Get-Funnel
-    $null -ne $all -and @($all).Count -ge 1 -and ($all.Name -contains "test-funnel-1")
+    $null -ne $all -and @($all).Count -ge 2 -and ($all.Name -contains "test-funnel-1")
 }
 
 <#
@@ -1046,7 +1047,7 @@ Test-It "Remove-Funnel deletes funnel" {
 #>
 Test-It "Built-in file-light funnel is available" {
     $f = Get-Funnel -Name "file-light"
-    $null -ne $f -and $f.Transform -match 'PSCustomObject' -and $f.Description -match "FileInfo" -and $f.AppliesTo -match 'FileSystemInfo'
+    $null -ne $f -and $null -ne $f.Transform -and $f.Transform -match 'PSCustomObject' -and $null -ne $f.Description -and $f.Description -match "FileInfo" -and $null -ne $f.AppliesTo -and $f.AppliesTo -match 'FileSystemInfo'
 }
 
 <#
@@ -1081,7 +1082,7 @@ Test-It "Remove-Funnel on built-in-only throws" {
     try {
         Remove-Funnel -Name "file-light" -Quiet -ErrorAction Stop
     } catch {
-        if ($_.Exception.Message -match "built-in") { $ok = $true }
+        $ok = $_.Exception.Message -match "built-in"
     }
     $f = Get-Funnel -Name "file-light"
     $ok -and $null -ne $f
@@ -1097,7 +1098,7 @@ Test-It "User override of built-in funnel and removal" {
     $f = Get-Funnel -Name "file-light"
     Remove-Funnel -Name "file-light" -Quiet
     $after = Get-Funnel -Name "file-light"
-    $null -ne $after -and $f.Transform.Trim() -eq '$true' -and $after.Transform -match 'PSCustomObject'
+    $null -ne $after -and $null -ne $f.Transform -and $f.Transform.Trim() -eq '$true' -and $null -ne $after.Transform -and $after.Transform -match 'PSCustomObject'
 }
 
 <#
@@ -1281,7 +1282,7 @@ Test-It "Move-BucketObject cross-bucket moves preserves data" {
     Move-BucketObject -Bucket "mv-source" -Key "mv1" -DestinationBucket "mv-dest" -Quiet
     Use-Bucket "mv-dest"
     $inDest = Get-BucketObject -Bucket "mv-dest" -Key "mv1"
-    $inSource = Get-BucketObject -Bucket "mv-source" -Key "mv1" -WarningAction SilentlyContinue 2>$null
+    $inSource = Get-BucketObject -Bucket "mv-source" -Key "mv1" -WarningAction SilentlyContinue
     ($null -ne $inDest -and $inDest.Val -eq 42) -and ($null -eq $inSource)
 }
 
@@ -1290,7 +1291,7 @@ Test-It "Move-BucketObject within-bucket renames" {
     Use-Bucket "mv-rename"
     Move-BucketObject -Bucket "mv-rename" -Key "old" -DestinationKey "new" -Quiet
     $renamed = Get-BucketObject -Bucket "mv-rename" -Key "new"
-    $original = Get-BucketObject -Bucket "mv-rename" -Key "old" -WarningAction SilentlyContinue 2>$null
+    $original = Get-BucketObject -Bucket "mv-rename" -Key "old" -WarningAction SilentlyContinue
     ($null -ne $renamed -and $renamed.Val -eq 99) -and ($null -eq $original)
 }
 
@@ -1305,7 +1306,7 @@ Test-It "Move-BucketObject -PassThru returns destination metadata" {
 Test-It "Move-BucketObject on nonexistent key raises error" {
     $ok = $false
     try { Move-BucketObject -Bucket "mv-source" -Key "nonexistent" -DestinationBucket "mv-dest" -ErrorAction Stop 2>$null }
-    catch { $ok = $true }
+    catch { $ok = $_.Exception.Message -match "not found" }
     $ok
 }
 
@@ -1325,7 +1326,7 @@ Write-Host "`n[23] Get-BucketStats" -ForegroundColor Blue
 
 Test-It "Get-BucketStats returns object count, total size, and timestamps" {
     $stats = Get-BucketStats -Bucket "users"
-    $stats.ObjectCount -gt 0 -and $stats.TotalSize -gt 0 -and $null -ne $stats.OldestObject -and $null -ne $stats.NewestObject
+    $stats.ObjectCount -eq 4 -and $stats.TotalSize -gt 0 -and $null -ne $stats.OldestObject -and $null -ne $stats.NewestObject
 }
 
 Test-It "Get-BucketStats on empty bucket returns zero count" {
@@ -1339,7 +1340,7 @@ Test-It "Get-BucketStats on empty bucket returns zero count" {
 
 Test-It "Get-BucketStats on nonexistent bucket warns" {
     $warn = $null
-    $stats = Get-BucketStats -Bucket "totally-nonexistent-bucket-xyz" -WarningVariable warn -WarningAction SilentlyContinue 2>$null
+    $stats = Get-BucketStats -Bucket "totally-nonexistent-bucket-xyz" -WarningVariable warn -WarningAction SilentlyContinue
     $null -ne $warn -and ($null -eq $stats -or @($stats).Count -eq 0)
 }
 
@@ -1355,7 +1356,7 @@ Test-It "Get-BucketKeys lists all keys in a bucket" {
 
 Test-It "Get-BucketKeys -Match filters by key pattern" {
     $keys = Get-BucketKeys -Bucket "orders"
-    @($keys).Count -ge 1 -and @($keys | Where-Object { $_.Key -like "*ORD*" }).Count -eq @($keys).Count
+    @($keys).Count -eq 2 -and @($keys | Where-Object { $_.Key -like "*ORD*" }).Count -eq @($keys).Count
 }
 
 Test-It "Get-BucketKeys returns Bucket + Key properties" {
@@ -1390,7 +1391,7 @@ Test-It "Get-BucketObjectStats detects compressed objects" {
 
 Test-It "Get-BucketObjectStats on nonexistent key warns" {
     $warn = $null
-    $stats = Get-BucketObjectStats -Bucket "users" -Key "nonexistent-key-xyz" -WarningVariable warn -WarningAction SilentlyContinue 2>$null
+    $stats = Get-BucketObjectStats -Bucket "users" -Key "nonexistent-key-xyz" -WarningVariable warn -WarningAction SilentlyContinue
     $null -ne $warn -and $null -eq $stats
 }
 
@@ -1425,11 +1426,9 @@ Test-It "Sync-BucketDrive creates buckets PSDrive" {
 }
 
 Test-It "Set-BucketRoot with invalid path does not crash" {
-    $original = Get-BucketRoot
-    Set-BucketRoot "//invalid||path" -ErrorAction SilentlyContinue 2>$null
-    $ok = $true
+    Set-BucketRoot "//invalid||path" -ErrorAction SilentlyContinue
     Set-BucketRoot $testRoot
-    $ok
+    $true
 }
 
 Test-It "Get-BucketRoot follows Set-BucketRoot changes" {
@@ -1448,7 +1447,7 @@ Test-It "Get-BucketObject -Match with $null finds objects where property is abse
     New-BucketObject -Bucket "match-null" -InputObject @{ _Id = "no-deleted"; Name = "B" } -KeyProperty _Id -Quiet
     Use-Bucket "match-null"
     $result = Get-BucketObject -Bucket "match-null" -Match @{ Deleted = $null }
-    @($result).Count -ge 1
+    @($result).Count -eq 1
 }
 
 Test-It "Get-BucketObject -Match with string in fresh bucket" {
@@ -1577,7 +1576,7 @@ Write-Host "`n[31] Get-Bucket -Tree -Objects / -MaxFiles / -Depth" -ForegroundCo
 Test-It "Get-Bucket -Tree -Objects includes individual file info" {
     $tree = Get-Bucket -Tree -Raw -Objects -Name "users"
     $objects = $tree.Children | ForEach-Object { if ($_.Children) { $_.Children | Where-Object Type -eq "Object" } }
-    @($objects).Count -gt 0
+    @($objects).Count -eq 4
 }
 
 Test-It "Get-Bucket -Tree -MaxFiles limits output" {
@@ -1593,7 +1592,7 @@ Test-It "Get-Bucket -Tree -Depth limits nesting" {
     $fullOrg = $full.Children | Where-Object { $_.Name -eq "org" }
     $limited = Get-Bucket -Tree -Raw -Depth 1 -Name "org"
     $limitedOrg = $limited.Children | Where-Object { $_.Name -eq "org" }
-    $null -ne $fullOrg -and $fullOrg.Children.Count -ge 1 -and $null -ne $limitedOrg -and ($null -eq $limitedOrg.Children -or $limitedOrg.Children.Count -eq 0)
+    $null -ne $fullOrg -and $fullOrg.Children.Count -eq 1 -and $null -ne $limitedOrg -and ($null -eq $limitedOrg.Children -or $limitedOrg.Children.Count -eq 0)
 }
 
 Test-It "Get-Bucket -Tree -Depth 1 -Objects honors depth over objects" {
@@ -1627,7 +1626,7 @@ Test-It "Copy-BucketObject preserves binary format" {
 Test-It "Copy-BucketObject to nonexistent source bucket raises error" {
     $ok = $false
     try { Copy-BucketObject -Bucket "nonexistent-copy-source" -Key "x" -DestinationBucket "copy-noop" -ErrorAction Stop 2>$null }
-    catch { $ok = $true }
+    catch { $ok = $_.Exception.Message -match "not found" }
     $ok
 }
 
@@ -1648,14 +1647,14 @@ Test-It "Rename-BucketObject to existing key raises error" {
     Use-Bucket "rn-exists"
     $ok = $false
     try { Rename-BucketObject -Bucket "rn-exists" -Key "a" -NewKey "b" -ErrorAction Stop 2>$null }
-    catch { $ok = $true }
+    catch { $ok = $_.Exception.Message -match "already exists" }
     $ok
 }
 
 Test-It "Rename-BucketObject on nonexistent key raises error" {
     $ok = $false
     try { Rename-BucketObject -Bucket "users" -Key "nonexistent-rn" -NewKey "new" -ErrorAction Stop 2>$null }
-    catch { $ok = $true }
+    catch { $ok = $_.Exception.Message -match "not found" }
     $ok
 }
 
@@ -1677,7 +1676,7 @@ Test-It "Export-Bucket to JSON format creates valid JSON" {
     Export-Bucket -Bucket "config" -OutputFile $exportPath -Quiet
     $content = Get-Content $exportPath -Raw
     Remove-Item $exportPath -Force -ErrorAction SilentlyContinue
-    $content -match '"Database"' -or $content -match '"_Id"'
+    $null -ne $content -and ($content -match '"Database"' -or $content -match '"_Id"')
 }
 
 Test-It "Import-Bucket -Overwrite replaces existing keys" {
@@ -1729,7 +1728,7 @@ Test-It "Set-BucketObject -Depth controls serialization depth" {
 Test-It "Set-BucketObject on nonexistent key raises error" {
     $ok = $false
     try { @{ Name = "test" } | Set-BucketObject -Bucket "users" -Key "nonexistent-set-key" -ErrorAction Stop 2>$null }
-    catch { $ok = $true }
+    catch { $ok = $_.Exception.Message -match "not found" }
     $ok
 }
 
@@ -1762,7 +1761,7 @@ Test-It "Set-Bucket moves bucket to nested path" {
 
 Test-It "Set-Bucket on nonexistent bucket warns" {
     $warn = $null
-    Set-Bucket "sb-nonexistent" "sb-still-gone" -WarningVariable warn -WarningAction SilentlyContinue 2>$null
+    Set-Bucket "sb-nonexistent" "sb-still-gone" -WarningVariable warn -WarningAction SilentlyContinue
     $null -ne $warn
 }
 
@@ -1770,7 +1769,7 @@ Test-It "Set-Bucket to existing name warns" {
     New-BucketObject -Bucket "sb-existing-target" -InputObject @{} -Key "x" -Quiet
     Use-Bucket "sb-existing-target"
     $warn = $null
-    Set-Bucket "users" "sb-existing-target" -WarningVariable warn -WarningAction SilentlyContinue 2>$null
+    Set-Bucket "users" "sb-existing-target" -WarningVariable warn -WarningAction SilentlyContinue
     $null -ne $warn
 }
 
@@ -1879,7 +1878,7 @@ Use-Bucket "rm-rec"
 Test-It "Remove-BucketObject -All -Recurse removes nested objects" {
     $before = @(Get-BucketObject -Bucket "rm-rec" -Recurse).Count
     Remove-BucketObject -Bucket "rm-rec" -All -Recurse -Confirm:$false -Quiet
-    $after = @(Get-BucketObject -Bucket "rm-rec" -Recurse -WarningAction SilentlyContinue 2>$null).Count
+    $after = @(Get-BucketObject -Bucket "rm-rec" -Recurse -WarningAction SilentlyContinue).Count
     $before -eq 3 -and $after -eq 0
 }
 
@@ -1907,7 +1906,7 @@ Test-It "Remove-BucketObject -Key -Recurse finds across nested buckets" {
     New-BucketObject -Bucket "rm-rec/sub" -InputObject @{ _Id = "target"; V = 99 } -KeyProperty _Id -Quiet
     New-BucketObject -Bucket "rm-rec/sub/deep" -InputObject @{ _Id = "target"; V = 100 } -KeyProperty _Id -Quiet
     Remove-BucketObject -Bucket "rm-rec" -Key "target" -Recurse -Confirm:$false -Quiet
-    $remaining = Get-BucketObject -Bucket "rm-rec" -Recurse -Key "target" -WarningAction SilentlyContinue 2>$null
+    $remaining = Get-BucketObject -Bucket "rm-rec" -Recurse -Key "target" -WarningAction SilentlyContinue
     $null -eq $remaining
 }
 
@@ -2022,7 +2021,7 @@ Test-It "New-Bucket bucket is visible via Get-Bucket listing" {
     Remove-Bucket "nb-list" -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
     New-Bucket "nb-list" -Quiet
     $buckets = Get-Bucket
-    $null -ne $buckets -and @($buckets).Count -gt 0 -and ($buckets.Name -contains "nb-list")
+    $null -ne $buckets -and ($buckets.Name -contains "nb-list")
 }
 
 # ============================================================
