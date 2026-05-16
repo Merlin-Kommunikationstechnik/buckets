@@ -111,12 +111,13 @@ Remove-Item -Path $oldWayDir -Recurse -Force -ErrorAction SilentlyContinue
   to manage, no JSON to parse. Objects go in, objects come out — the module
   handles the filesystem for you.
 
-  Throughout this Quick Start, we will use the four aliases provided by
+  Throughout this Quick Start, we will use the five aliases provided by
   the module:
 
     fill   = New-BucketObject    — store objects
     scoop  = Get-BucketObject    — retrieve objects
-    tint  = Set-BucketObject    — update objects
+    tint   = Set-BucketObject    — update objects
+    spill  = Remove-BucketObject — delete objects
     dip    = Get-Bucket           — list buckets
 
   These are shorter and easier to type during interactive use.
@@ -250,6 +251,35 @@ Remove-BucketObject -Bucket "team" -Key "Bob" -Quiet
 
 # Confirm: Carol and Alice remain, Bob is gone
 scoop -Bucket "team"
+'@
+                            }
+                            @{
+                                Key = "05-tint-property-value"
+                                Title = "Quick update with tint"
+                                Body = @'
+  The tint alias (Set-BucketObject) has a handy shortcut: -Property and -Value.
+  Instead of reading an object, modifying it, and piping it back, just name the
+  property and its new value. The cmdlet reads the file, applies the change, and
+  saves it for you.
+
+  This works for any property — existing or new, string or number.
+'@
+                                SetupCode = @'
+$users = @(
+    @{ Name = "Alice"; Role = "Developer"; Score = 95 }
+    @{ Name = "Bob";   Role = "Designer";  Score = 72 }
+)
+$users | fill -Bucket "team" -KeyProperty Name -Quiet
+'@
+                                Code = @'
+# Update Bob's Score to 100 without reading first
+tint -Bucket "team" -Key "Bob" -Property Score -Value 100
+
+# Add a new property to Alice
+tint team Alice -Property Role -Value "Lead"
+
+# Verify both changes
+scoop -Bucket "team" -Key "Bob", "Alice"
 '@
                             }
                         )
@@ -767,11 +797,12 @@ scoop -Bucket "dir-listing"
                                 Key = "01-aliases-reference"
                                 Title = "Aliases & Shortcuts Reference"
                                 Body = @'
-  Four aliases are exported by the module:
+  Five aliases are exported by the module:
 
     fill   = New-BucketObject     — save objects
     scoop  = Get-BucketObject     — retrieve objects
-    tint  = Set-BucketObject     — update objects
+    tint   = Set-BucketObject     — update objects
+    spill  = Remove-BucketObject  — delete objects
     dip    = Get-Bucket            — list buckets
 
   Pipeline parameter binding via metadata:
@@ -1415,11 +1446,12 @@ Remove-Item -Path $oldWayDir -Recurse -Force -ErrorAction SilentlyContinue
   keine Pfade zu verwalten, kein JSON zu parsen. Objekte rein, Objekte raus —
   das Modul kümmert sich um das Dateisystem.
 
-  In diesem Schnellstart verwenden wir die vier Aliase des Moduls:
+  In diesem Schnellstart verwenden wir die fünf Aliase des Moduls:
 
     fill   = New-BucketObject    — Objekte speichern
     scoop  = Get-BucketObject    — Objekte abrufen
-    tint  = Set-BucketObject    — Objekte aktualisieren
+    tint   = Set-BucketObject    — Objekte aktualisieren
+    spill  = Remove-BucketObject — Objekte löschen
     dip    = Get-Bucket           — Buckets auflisten
 
   Sie sind kürzer und leichter zu tippen.
@@ -1554,6 +1586,36 @@ Remove-BucketObject -Bucket "team" -Key "Bob" -Quiet
 
 # Bestätigen: Carol und Alice sind noch da, Bob ist weg
 scoop -Bucket "team"
+'@
+                            }
+                            @{
+                                Key = "05-tint-property-value"
+                                Title = "Schnellaktualisierung mit tint"
+                                Body = @'
+  Der tint-Alias (Set-BucketObject) bietet eine praktische Abkürzung:
+  -Property und -Value. Anstatt ein Objekt zu lesen, zu ändern und
+  zurückzupipen, nennst du einfach die Eigenschaft und ihren neuen Wert.
+  Das Cmdlet liest die Datei, wendet die Änderung an und speichert sie.
+
+  Das funktioniert für jede Eigenschaft — ob vorhanden oder neu,
+  ob Text oder Zahl.
+'@
+                                SetupCode = @'
+$users = @(
+    @{ Name = "Alice"; Role = "Developer"; Score = 95 }
+    @{ Name = "Bob";   Role = "Designer";  Score = 72 }
+)
+$users | fill -Bucket "team" -KeyProperty Name -Quiet
+'@
+                                Code = @'
+# Bobs Score auf 100 setzen, ohne vorher zu lesen
+tint -Bucket "team" -Key "Bob" -Property Score -Value 100
+
+# Alice eine neue Eigenschaft hinzufügen
+tint team Alice -Property Role -Value "Lead"
+
+# Beide Änderungen überprüfen
+scoop -Bucket "team" -Key "Bob", "Alice"
 '@
                             }
                         )
@@ -2081,11 +2143,12 @@ scoop -Bucket "dir-listing"
                                 Key = "01-aliases-reference"
                                 Title = "Alias-Referenz"
                                 Body = @'
-  Vier Aliase werden vom Modul exportiert:
+  Fünf Aliase werden vom Modul exportiert:
 
     fill   = New-BucketObject     — Objekte speichern
     scoop  = Get-BucketObject     — Objekte abrufen
-    tint  = Set-BucketObject     — Objekte aktualisieren
+    tint   = Set-BucketObject     — Objekte aktualisieren
+    spill  = Remove-BucketObject  — Objekte löschen
     dip    = Get-Bucket            — Buckets auflisten
 
   Pipeline-Parameterbindung über Metadaten:
