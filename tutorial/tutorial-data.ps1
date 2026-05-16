@@ -66,7 +66,197 @@ Get-BucketRoot
                 )
             }
             @{
-                Name = "02-beginner"
+                Name = "02-quickstart"
+                Title = "Quick Start"
+                Sections = @(
+                    @{
+                        Name = "01-old-way"
+                        Title = "The Old Way"
+                        Lessons = @(
+                            @{
+                                Key = "01-manual-json"
+                                Title = "Manual JSON files — the painful way"
+                                Body = @'
+  Before Buckets, storing data meant managing files by hand. You would use
+  Out-File or ConvertTo-Json to write JSON, then ConvertFrom-Json every time
+  you needed the data back. Want to update a single field? Re-read, modify,
+  re-write. Want to delete one record? Good luck finding the right file.
+
+  Buckets does all of this for you — automatically. No more manual file
+  management, no more parsing JSON by hand, no more tracking filenames.
+  Just pipe objects in and out.
+'@
+                                SetupCode = @'
+# Create a temp directory to demonstrate the old, manual way
+$oldWayDir = Join-Path ([System.IO.Path]::GetTempPath()) "buckets-tutorial-oldway"
+$null = New-Item -ItemType Directory -Path $oldWayDir -Force -ErrorAction SilentlyContinue
+'@
+                                Code = @'
+# The OLD way: manual JSON file management
+$user = @{ Name = "Alice"; Role = "admin"; Score = 95 }
+$user | ConvertTo-Json | Out-File (Join-Path $oldWayDir "alice.json")
+
+# The OLD way: reading it back
+Get-Content (Join-Path $oldWayDir "alice.json") | ConvertFrom-Json
+
+# Clean up
+Remove-Item -Path $oldWayDir -Recurse -Force -ErrorAction SilentlyContinue
+'@
+                            }
+                            @{
+                                Key = "02-buckets-rescue"
+                                Title = "Buckets to the rescue"
+                                Body = @'
+  With Buckets, the same operation is one line. No files to create, no paths
+  to manage, no JSON to parse. Objects go in, objects come out — the module
+  handles the filesystem for you.
+
+  Throughout this Quick Start, we will use the three aliases provided by
+  the module:
+
+    fill   = New-BucketObject    — store objects
+    scoop  = Get-BucketObject    — retrieve objects
+    dip    = Get-Bucket           — list buckets
+
+  These are shorter and easier to type during interactive use.
+'@
+                                Code = @'
+# The BUCKETS way: one command, no file management
+$user = @{ Name = "Alice"; Role = "admin"; Score = 95 }
+$user | fill -Bucket "quickstart" -Key "alice" -Quiet
+
+# Read it back just as easily — no paths, no JSON parsing
+scoop -Bucket "quickstart" -Key "alice"
+'@
+                            }
+                        )
+                    }
+                    @{
+                        Name = "02-basic-crud"
+                        Title = "Basic CRUD"
+                        Lessons = @(
+                            @{
+                                Key = "01-create"
+                                Title = "Create: saving your first objects"
+                                Body = @'
+  The fill command (New-BucketObject) stores objects into a bucket. A bucket
+  is just a directory on disk — no setup needed. Use -Key to give your object
+  a name, or -KeyProperty to derive the key from a property value.
+
+  When you pipe multiple objects, Buckets saves each one individually. The
+  filename (minus extension) becomes the object's key.
+'@
+                                SetupCode = @'
+# Some users to store in the "team" bucket
+$users = @(
+    @{ Name = "Alice"; Role = "Developer" }
+    @{ Name = "Bob";   Role = "Designer" }
+    @{ Name = "Carol"; Role = "PM" }
+)
+'@
+                                Code = @'
+# Fill with -KeyProperty: the "Name" value becomes each object's key
+$users | fill -Bucket "team" -KeyProperty Name -Quiet
+
+# Confirm the objects were saved — dip shows bucket contents
+dip -Name "team"
+'@
+                            }
+                            @{
+                                Key = "02-read"
+                                Title = "Read: retrieving objects"
+                                Body = @'
+  The scoop command (Get-BucketObject) retrieves objects. Without -Key, it
+  returns everything in the bucket. With -Key, it returns a single object.
+
+  Use -Match to filter by property values, or -Filter for custom script
+  block logic. We will explore those in the Beginner chapter.
+'@
+                                SetupCode = @'
+$users = @(
+    @{ Name = "Alice"; Role = "Developer"; Score = 95 }
+    @{ Name = "Bob";   Role = "Designer";  Score = 72 }
+    @{ Name = "Carol"; Role = "PM";        Score = 88 }
+)
+$users | fill -Bucket "team" -KeyProperty Name -Quiet
+'@
+                                Code = @'
+# Scoop all objects from the team bucket
+scoop -Bucket "team"
+
+# Scoop one specific object by key
+scoop -Bucket "team" -Key "Alice"
+'@
+                            }
+                            @{
+                                Key = "03-update"
+                                Title = "Update: modifying stored objects"
+                                Body = @'
+  Two ways to update an existing object:
+
+  1. Re-save with -Overwrite to replace the entire object (simple but
+     replaces all properties).
+  2. Use Set-BucketObject for partial updates — only the properties you
+     specify change, the rest stay untouched.
+'@
+                                SetupCode = @'
+$users = @(
+    @{ Name = "Alice"; Role = "Developer"; Score = 95 }
+    @{ Name = "Bob";   Role = "Designer";  Score = 72 }
+)
+$users | fill -Bucket "team" -KeyProperty Name -Quiet
+'@
+                                Code = @'
+# Method 1: Overwrite the entire object
+@{ Name = "Alice"; Role = "Lead"; Score = 99 } |
+    fill -Bucket "team" -Key "Alice" -Overwrite -Quiet
+
+# Method 2: Partial update — update Score via pipeline
+scoop -Bucket "team" -Key "Bob" | ForEach-Object {
+    $_.Score = 100
+    $_
+} | Set-BucketObject -PassThru
+
+# Check the results
+scoop -Bucket "team" -Key "Alice", "Bob"
+'@
+                            }
+                            @{
+                                Key = "04-delete"
+                                Title = "Delete: removing objects"
+                                Body = @'
+  Remove-BucketObject (also aliased as spill) removes objects. Always preview
+  with -WhatIf before deleting — it shows what would be removed without
+  actually deleting anything.
+
+  Use -All to clear an entire bucket, or -Match to delete only objects
+  matching specific property values.
+'@
+                                SetupCode = @'
+$users = @(
+    @{ Name = "Alice"; Role = "Developer"; Status = "active" }
+    @{ Name = "Bob";   Role = "Designer";  Status = "archived" }
+    @{ Name = "Carol"; Role = "PM";        Status = "active" }
+)
+$users | fill -Bucket "team" -KeyProperty Name -Quiet
+'@
+                                Code = @'
+# Preview deletion of a single object
+Remove-BucketObject -Bucket "team" -Key "Bob" -WhatIf
+
+# Actually delete it
+Remove-BucketObject -Bucket "team" -Key "Bob" -Quiet
+
+# Confirm: Carol and Alice remain, Bob is gone
+scoop -Bucket "team"
+'@
+                            }
+                        )
+                    }
+                )
+            }
+            @{
+                Name = "03-beginner"
                 Title = "Beginner"
                 Sections = @(
                     @{
@@ -398,7 +588,7 @@ Remove-BucketObject -Bucket team -Match @{ Status = "archived" } -PassThru
                 )
             }
             @{
-                Name = "03-advanced"
+                Name = "04-advanced"
                 Title = "Advanced"
                 Sections = @(
                     @{
@@ -594,7 +784,7 @@ scoop -Bucket "dir-listing"
                 )
             }
             @{
-                Name = "04-sysadmin"
+                Name = "05-sysadmin"
                 Title = "Sysadmin"
                 Sections = @(
                     @{
@@ -636,7 +826,7 @@ $servers | fill -Bucket servers -KeyProperty Hostname -Quiet
                 )
             }
             @{
-                Name = "05-funnels"
+                Name = "06-funnels"
                 Title = "Funnels"
                 Sections = @(
                     @{
@@ -791,7 +981,7 @@ scoop -Bucket team -Funnel { if ($_.Level -ge 3) { $_ } }
                 )
             }
         @{
-            Name = "06-expand"
+            Name = "07-expand"
             Title = "Expand"
             Sections = @(
                 @{
@@ -1077,7 +1267,7 @@ $r = Get-BucketObject -Bucket "mixed-demo" -Expand
             )
         }
         @{
-            Name = "07-full-course"
+            Name = "08-full-course"
             Title = "Full Course"
                 Sections = @(
                     @{
@@ -1092,13 +1282,14 @@ $r = Get-BucketObject -Bucket "mixed-demo" -Expand
   object to advanced pipelines and sysadmin scenarios.
 
   Chapters:
-    01 · Introduction — core concepts and the filesystem model
-    02 · Beginner — CRUD operations (create, read, update, delete)
-    03 · Advanced — copy, rename, PSDrive, nested buckets, pipelines
-    04 · Sysadmin — real-world scenarios: inventory, logs, incidents
-     05 · Funnels — named reusable filters and transforms
-     06 · Expand — nested structures into browsable directory trees
-     07 · Full Course — complete walkthrough of all features
+     01 · Introduction — core concepts and the filesystem model
+     02 · Quick Start — your first bucket in 60 seconds
+     03 · Beginner — CRUD operations (create, read, update, delete)
+     04 · Advanced — copy, rename, PSDrive, nested buckets, pipelines
+     05 · Sysadmin — real-world scenarios: inventory, logs, incidents
+     06 · Funnels — named reusable filters and transforms
+     07 · Expand — nested structures into browsable directory trees
+     08 · Full Course — complete walkthrough of all features
 
   Each chapter is divided into sections, and each section contains
   focused lessons with explanations and code examples you can run.
@@ -1176,7 +1367,198 @@ Get-BucketRoot
                 )
             }
             @{
-                Name = "02-beginner"
+                Name = "02-quickstart"
+                Title = "Schnellstart"
+                Sections = @(
+                    @{
+                        Name = "01-old-way"
+                        Title = "Der alte Weg"
+                        Lessons = @(
+                            @{
+                                Key = "01-manual-json"
+                                Title = "Manuelle JSON-Dateien — der mühsame Weg"
+                                Body = @'
+  Vor Buckets bedeutete Datenspeicherung Dateiverwaltung von Hand. Du musstest
+  Out-File oder ConvertTo-Json verwenden, um JSON zu schreiben, und dann jedes
+  Mal ConvertFrom-Json, wenn du die Daten brauchtest. Ein Feld aktualisieren?
+  Neu einlesen, ändern, neu schreiben. Einen Datensatz löschen? Viel Glück beim
+  Finden der richtigen Datei.
+
+  Buckets erledigt das alles automatisch für dich. Keine manuelle
+  Dateiverwaltung mehr, kein manuelles JSON-Parsing, kein Verfolgen von
+  Dateinamen. Einfach Objekte rein- und rauspipen.
+'@
+                                SetupCode = @'
+# Erstelle ein temporäres Verzeichnis für die alte, manuelle Methode
+$oldWayDir = Join-Path ([System.IO.Path]::GetTempPath()) "buckets-tutorial-oldway"
+$null = New-Item -ItemType Directory -Path $oldWayDir -Force -ErrorAction SilentlyContinue
+'@
+                                Code = @'
+# Der ALTE Weg: manuelle JSON-Dateiverwaltung
+$user = @{ Name = "Alice"; Role = "admin"; Score = 95 }
+$user | ConvertTo-Json | Out-File (Join-Path $oldWayDir "alice.json")
+
+# Der ALTE Weg: Rückeinlesen
+Get-Content (Join-Path $oldWayDir "alice.json") | ConvertFrom-Json
+
+# Aufräumen
+Remove-Item -Path $oldWayDir -Recurse -Force -ErrorAction SilentlyContinue
+'@
+                            }
+                            @{
+                                Key = "02-buckets-rescue"
+                                Title = "Buckets zur Rettung"
+                                Body = @'
+  Mit Buckets ist derselbe Vorgang eine Zeile lang. Keine Dateien zu erstellen,
+  keine Pfade zu verwalten, kein JSON zu parsen. Objekte rein, Objekte raus —
+  das Modul kümmert sich um das Dateisystem.
+
+  In diesem Schnellstart verwenden wir die drei Aliase des Moduls:
+
+    fill   = New-BucketObject    — Objekte speichern
+    scoop  = Get-BucketObject    — Objekte abrufen
+    dip    = Get-Bucket           — Buckets auflisten
+
+  Sie sind kürzer und leichter zu tippen.
+'@
+                                Code = @'
+# Der BUCKETS-Weg: ein Befehl, keine Dateiverwaltung
+$user = @{ Name = "Alice"; Role = "admin"; Score = 95 }
+$user | fill -Bucket "quickstart" -Key "alice" -Quiet
+
+# Genauso einfach wieder abrufen — keine Pfade, kein JSON-Parsing
+scoop -Bucket "quickstart" -Key "alice"
+'@
+                            }
+                        )
+                    }
+                    @{
+                        Name = "02-basic-crud"
+                        Title = "Einfaches CRUD"
+                        Lessons = @(
+                            @{
+                                Key = "01-create"
+                                Title = "Erstellen: erste Objekte speichern"
+                                Body = @'
+  Der fill-Befehl (New-BucketObject) speichert Objekte in einem Bucket.
+  Ein Bucket ist einfach ein Verzeichnis auf der Platte — keine Einrichtung
+  nötig. Mit -Key gibst du dem Objekt einen Namen, mit -KeyProperty wird
+  der Schlüssel aus einem Eigenschaftswert abgeleitet.
+
+  Wenn du mehrere Objekte pipest, speichert Buckets jedes einzelne. Der
+  Dateiname (ohne Erweiterung) wird zum Schlüssel des Objekts.
+'@
+                                SetupCode = @'
+# Einige Benutzer zum Speichern im Bucket "team"
+$users = @(
+    @{ Name = "Alice"; Role = "Developer" }
+    @{ Name = "Bob";   Role = "Designer" }
+    @{ Name = "Carol"; Role = "PM" }
+)
+'@
+                                Code = @'
+# fill mit -KeyProperty: der "Name"-Wert wird zum Schlüssel jedes Objekts
+$users | fill -Bucket "team" -KeyProperty Name -Quiet
+
+# Bestätige, dass die Objekte gespeichert wurden — dip zeigt Bucket-Inhalt
+dip -Name "team"
+'@
+                            }
+                            @{
+                                Key = "02-read"
+                                Title = "Lesen: Objekte abrufen"
+                                Body = @'
+  Der scoop-Befehl (Get-BucketObject) ruft Objekte ab. Ohne -Key gibt er
+  alles im Bucket zurück. Mit -Key ein einzelnes Objekt.
+
+  -Match filtert nach Eigenschaftswerten, -Filter verwendet benutzerdefinierte
+  Skriptblöcke. Diese lernst du im Kapitel "Anfänger" kennen.
+'@
+                                SetupCode = @'
+$users = @(
+    @{ Name = "Alice"; Role = "Developer"; Score = 95 }
+    @{ Name = "Bob";   Role = "Designer";  Score = 72 }
+    @{ Name = "Carol"; Role = "PM";        Score = 88 }
+)
+$users | fill -Bucket "team" -KeyProperty Name -Quiet
+'@
+                                Code = @'
+# Alle Objekte aus dem team-Bucket abrufen
+scoop -Bucket "team"
+
+# Ein einzelnes Objekt über seinen Schlüssel abrufen
+scoop -Bucket "team" -Key "Alice"
+'@
+                            }
+                            @{
+                                Key = "03-update"
+                                Title = "Aktualisieren: Objekte ändern"
+                                Body = @'
+  Zwei Möglichkeiten, ein vorhandenes Objekt zu aktualisieren:
+
+  1. Erneutes Speichern mit -Overwrite ersetzt das gesamte Objekt
+     (einfach, aber alle Eigenschaften werden ersetzt).
+  2. Set-BucketObject für Teilaktualisierungen — nur die angegebenen
+     Eigenschaften ändern sich, der Rest bleibt unberührt.
+'@
+                                SetupCode = @'
+$users = @(
+    @{ Name = "Alice"; Role = "Developer"; Score = 95 }
+    @{ Name = "Bob";   Role = "Designer";  Score = 72 }
+)
+$users | fill -Bucket "team" -KeyProperty Name -Quiet
+'@
+                                Code = @'
+# Methode 1: Komplett überschreiben
+@{ Name = "Alice"; Role = "Lead"; Score = 99 } |
+    fill -Bucket "team" -Key "Alice" -Overwrite -Quiet
+
+# Methode 2: Teilaktualisierung — nur Score ändern
+scoop -Bucket "team" -Key "Bob" | ForEach-Object {
+    $_.Score = 100
+    $_
+} | Set-BucketObject -PassThru
+
+# Ergebnisse überprüfen
+scoop -Bucket "team" -Key "Alice", "Bob"
+'@
+                            }
+                            @{
+                                Key = "04-delete"
+                                Title = "Löschen: Objekte entfernen"
+                                Body = @'
+  Remove-BucketObject (auch als spill bekannt) entfernt Objekte. Verwende
+  immer -WhatIf für eine Vorschau vor dem Löschen — es zeigt, was entfernt
+  würde, ohne tatsächlich etwas zu löschen.
+
+  -All leert einen gesamten Bucket, -Match löscht nur Objekte mit
+  bestimmten Eigenschaftswerten.
+'@
+                                SetupCode = @'
+$users = @(
+    @{ Name = "Alice"; Role = "Developer"; Status = "active" }
+    @{ Name = "Bob";   Role = "Designer";  Status = "archived" }
+    @{ Name = "Carol"; Role = "PM";        Status = "active" }
+)
+$users | fill -Bucket "team" -KeyProperty Name -Quiet
+'@
+                                Code = @'
+# Vorschau: Löschen eines einzelnen Objekts
+Remove-BucketObject -Bucket "team" -Key "Bob" -WhatIf
+
+# Tatsächlich löschen
+Remove-BucketObject -Bucket "team" -Key "Bob" -Quiet
+
+# Bestätigen: Carol und Alice sind noch da, Bob ist weg
+scoop -Bucket "team"
+'@
+                            }
+                        )
+                    }
+                )
+            }
+            @{
+                Name = "03-beginner"
                 Title = "Anfänger"
                 Sections = @(
                     @{
@@ -1515,7 +1897,7 @@ Remove-BucketObject -Bucket team -Match @{ Status = "archived" } -PassThru
                 )
             }
             @{
-                Name = "03-advanced"
+                Name = "04-advanced"
                 Title = "Fortgeschritten"
                 Sections = @(
                     @{
@@ -1714,7 +2096,7 @@ scoop -Bucket "dir-listing"
                 )
             }
             @{
-                Name = "04-sysadmin"
+                Name = "05-sysadmin"
                 Title = "Systemadministration"
                 Sections = @(
                     @{
@@ -1757,7 +2139,7 @@ $servers | fill -Bucket servers -KeyProperty Hostname -Quiet
                 )
             }
             @{
-                Name = "05-funnels"
+                Name = "06-funnels"
                 Title = "Funnels"
                 Sections = @(
                     @{
@@ -1920,7 +2302,7 @@ scoop -Bucket team -Funnel { if ($_.Level -ge 3) { $_ } }
                 )
             }
         @{
-            Name = "06-expand"
+            Name = "07-expand"
             Title = "Expand"
             Sections = @(
                 @{
@@ -2213,7 +2595,7 @@ $r = Get-BucketObject -Bucket "mixed-demo" -Expand
             )
         }
         @{
-            Name = "07-full-course"
+            Name = "08-full-course"
             Title = "Vollständiger Kurs"
                 Sections = @(
                     @{
@@ -2228,13 +2610,14 @@ $r = Get-BucketObject -Bucket "mixed-demo" -Expand
   ersten Objekt bis zu fortgeschrittenen Pipelines und Sysadmin-Szenarien.
 
   Kapitel:
-    01 · Einführung — Kernkonzepte und das Dateisystemmodell
-    02 · Anfänger — CRUD-Operationen (erstellen, lesen, aktualisieren, löschen)
-    03 · Fortgeschritten — kopieren, umbenennen, PSDrive, verschachtelte Buckets, Pipelines
-    04 · Systemadministration — reale Szenarien: Inventar, Logs, Vorfälle
-     05 · Funnels — benannte wiederverwendbare Filter und Transformationen
-     06 · Expand — verschachtelte Strukturen als durchsuchbare Verzeichnisbäume
-     07 · Vollständiger Kurs — komplette Durchlauf aller Funktionen
+     01 · Einführung — Kernkonzepte und das Dateisystemmodell
+     02 · Schnellstart — dein erster Bucket in 60 Sekunden
+     03 · Anfänger — CRUD-Operationen (erstellen, lesen, aktualisieren, löschen)
+     04 · Fortgeschritten — kopieren, umbenennen, PSDrive, verschachtelte Buckets, Pipelines
+     05 · Systemadministration — reale Szenarien: Inventar, Logs, Vorfälle
+     06 · Funnels — benannte wiederverwendbare Filter und Transformationen
+     07 · Expand — verschachtelte Strukturen als durchsuchbare Verzeichnisbäume
+     08 · Vollständiger Kurs — komplette Durchlauf aller Funktionen
 
   Jedes Kapitel ist in Abschnitte unterteilt, und jeder Abschnitt enthält
   fokussierte Lektionen mit Erklärungen und Codebeispielen zum Ausführen.
