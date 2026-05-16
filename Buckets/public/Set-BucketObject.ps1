@@ -55,11 +55,11 @@ function Set-BucketObject {
         [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, ParameterSetName = "Pipeline")]
         [PSObject]$InputObject,
         [Parameter(ValueFromPipelineByPropertyName = $true, ParameterSetName = "Pipeline")]
-        [Parameter(Mandatory = $true, Position = 0, ParameterSetName = "PropertyValue")]
+        [Parameter(Mandatory = $true, Position = 0, ParameterSetName = "PropertyValue", ValueFromPipelineByPropertyName = $true)]
         [Alias("_BucketKey")]
         [string]$Key,
         [Parameter(ValueFromPipelineByPropertyName = $true, ParameterSetName = "Pipeline")]
-        [Parameter(Mandatory = $true, Position = 1, ParameterSetName = "PropertyValue")]
+        [Parameter(Mandatory = $true, Position = 1, ParameterSetName = "PropertyValue", ValueFromPipelineByPropertyName = $true)]
         [Alias("_BucketName")]
         [string]$Bucket,
         [Parameter(Mandatory = $true, Position = 2, ParameterSetName = "PropertyValue")]
