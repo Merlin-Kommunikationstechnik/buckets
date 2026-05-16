@@ -284,7 +284,7 @@ Write-Host "`n[10] -WhatIf support (preview deletes without execution)" -Foregro
 
 Test-It "-WhatIf preview does not delete objects" {
     Remove-BucketObject -Bucket users -Key "Bob" -WhatIf
-    Remove-Bucket "users" -WhatIf -Force -WarningAction SilentlyContinue -ErrorAction SilentlyContinue | Out-Null
+    Remove-Bucket "users" -WhatIf -Force -WarningAction SilentlyContinue | Out-Null
     $remaining = Get-BucketObject -Bucket users -WarningAction SilentlyContinue
     @($remaining).Count -eq 4
 }
@@ -366,21 +366,17 @@ Test-It "Corrupted file returns null with warning" {
 }
 
 Test-It "Get-BucketObject -Key in default bucket without errors" {
-    $errorsBefore = $Error.Count
     New-BucketObject -Bucket "default" -InputObject @{ X = 1; _Id = "only-in-a" } -KeyProperty "_Id" -Quiet
-    $result = Get-BucketObject -Key "only-in-a" -WarningAction SilentlyContinue 2>$null
-    $newErrors = $Error.Count - $errorsBefore
+    $result = Get-BucketObject -Key "only-in-a" -WarningAction SilentlyContinue -ErrorVariable getErr
     Remove-BucketObject -Bucket "default" -All -Quiet
-    $null -ne $result -and $newErrors -eq 0
+    $null -ne $result -and $getErr.Count -eq 0
 }
 
 Test-It "Get-BucketObject -Key with case mismatch" {
-    $errorsBefore = $Error.Count
     New-BucketObject -Bucket casetest -InputObject @{ Val = 42; _Id = "MixedCase-Key" } -KeyProperty "_Id" -Quiet
-    $result = Get-BucketObject -Bucket casetest -Key "mixedcase-key" -WarningAction SilentlyContinue 2>$null
-    $newErrors = $Error.Count - $errorsBefore
+    $result = Get-BucketObject -Bucket casetest -Key "mixedcase-key" -WarningAction SilentlyContinue -ErrorVariable getErr
     Remove-Bucket -Bucket casetest -Force -Confirm:$false -Quiet
-    $null -ne $result -and $result.Val -eq 42 -and $newErrors -eq 0
+    $null -ne $result -and $result.Val -eq 42 -and $getErr.Count -eq 0
 }
 
 Test-It "Set-BucketObject pipeline round-trip" {
@@ -1223,10 +1219,10 @@ Test-It "Multi-emit on scoop expands object into multiple items" {
     $obj = @{ _Id = "compound"; Parts = @("A", "B", "C"); Label = "Test" }
     New-BucketObject -Bucket $bucket -InputObject $obj -KeyProperty _Id -Quiet
     $results = Get-BucketObject -Bucket $bucket -Funnel {
-        $_.Parts | ForEach-Object { [PSCustomObject]@{ Part = $_; Label = $_.Label } }
+        $label = $_.Label; $_.Parts | ForEach-Object { [PSCustomObject]@{ Part = $_; Label = $label } }
     }
     Remove-Bucket $bucket -Force -Confirm:$false -Recurse -Quiet
-    @($results).Count -eq 3 -and ($results.Part -contains "A") -and ($results.Part -contains "B") -and ($results.Part -contains "C") -and ($results[0]._BucketName -eq $bucket) -and ($results[0]._BucketKey -eq "compound")
+    @($results).Count -eq 3 -and ($results.Part -contains "A") -and ($results.Part -contains "B") -and ($results.Part -contains "C") -and ($results[0].Label -eq "Test") -and ($results[0]._BucketName -eq $bucket) -and ($results[0]._BucketKey -eq "compound")
 }
 
 <#
@@ -1491,7 +1487,7 @@ Test-It "Key with asterisk, question mark, angle brackets, pipe, quotes, bracket
 Test-It "Empty key after sanitization is rejected" {
     $before = @(Get-BucketKeys -Bucket "sanitize" -WarningAction SilentlyContinue).Count
     $warn = $null
-    New-BucketObject -Bucket "sanitize" -InputObject @{ Val = 1 } -Key "/:?*" -WarningVariable warn -WarningAction SilentlyContinue -Quiet 2>$null
+    New-BucketObject -Bucket "sanitize" -InputObject @{ Val = 1 } -Key "/:?*" -WarningVariable warn -WarningAction SilentlyContinue -Quiet
     $after = @(Get-BucketKeys -Bucket "sanitize" -WarningAction SilentlyContinue).Count
     ($after -eq $before) -and ($null -ne $warn)
 }
@@ -1499,7 +1495,7 @@ Test-It "Empty key after sanitization is rejected" {
 Test-It "KeyProperty with only special chars is rejected" {
     $before = @(Get-BucketKeys -Bucket "sanitize" -WarningAction SilentlyContinue).Count
     $warn = $null
-    New-BucketObject -Bucket "sanitize" -InputObject @{ _Id = "/:*?"; Val = 2 } -KeyProperty _Id -WarningVariable warn -WarningAction SilentlyContinue -Quiet 2>$null
+    New-BucketObject -Bucket "sanitize" -InputObject @{ _Id = "/:*?"; Val = 2 } -KeyProperty _Id -WarningVariable warn -WarningAction SilentlyContinue -Quiet
     $after = @(Get-BucketKeys -Bucket "sanitize" -WarningAction SilentlyContinue).Count
     ($after -eq $before) -and ($null -ne $warn)
 }
