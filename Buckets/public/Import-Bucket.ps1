@@ -26,7 +26,7 @@ function Import-Bucket {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $true)][string]$Bucket,
+        [Parameter(Mandatory = $true, Position = 0)][string]$Bucket,
         [Parameter(Mandatory = $true)][string]$InputFile,
         [string]$Path,
 [switch]$AsBinary,

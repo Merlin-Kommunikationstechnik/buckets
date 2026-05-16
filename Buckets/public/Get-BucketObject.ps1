@@ -8,11 +8,11 @@ function Get-BucketObject {
     filtering (-Match) and arbitrary scriptblock filtering (-Filter).
     Retrieved objects include metadata properties: _BucketName, _BucketKey, _BucketFile.
     .PARAMETER Bucket
-    Bucket name(s) to search (Position 0). If omitted, reads from the "default" bucket. Supports wildcards.
+    Bucket name(s) to search (Position 1). If omitted, reads from the "default" bucket. Supports wildcards.
     .PARAMETER Path
     Root directory for bucket storage. Default: $HOME/.buckets.
     .PARAMETER Key
-    Object key(s) to retrieve (Position 1). Accepts multiple values (e.g. -Key "alpha", "beta"). Case-insensitive prefix match for each key.
+    Object key(s) to retrieve (Position 0). Accepts multiple values (e.g. -Key "alpha", "beta"). Case-insensitive prefix match for each key.
     .PARAMETER Match
     Hashtable of property-value pairs for exact-match filtering. All pairs must match. Supports $null values.
     .PARAMETER Filter
@@ -46,9 +46,9 @@ function Get-BucketObject {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Position = 1)][string[]]$Bucket,
-        [string]$Path,
         [Parameter(Position = 0)][string[]]$Key,
+        [string]$Path,
+        [Parameter(Position = 1)][string[]]$Bucket,
         [hashtable]$Match,
         [scriptblock]$Filter,
         [switch]$Recurse,

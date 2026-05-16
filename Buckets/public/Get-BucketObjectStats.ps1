@@ -30,8 +30,8 @@ function Get-BucketObjectStats {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Position = 1)][string]$Bucket,
         [Parameter(Position = 0)][string[]]$Key,
+        [Parameter(Position = 1)][string]$Bucket,
         [string]$Path,
         [string]$Match,
         [switch]$Recurse,

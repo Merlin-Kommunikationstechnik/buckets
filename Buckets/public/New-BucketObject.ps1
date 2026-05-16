@@ -54,9 +54,9 @@ function New-BucketObject {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true, ValueFromPipeline = $true)][PSObject]$InputObject,
+        [Parameter(Position = 0)][string]$Key,
         [Parameter(Position = 1)][string]$Bucket = "default",
         [string]$Path,
-        [Parameter(Position = 0)][string]$Key,
         [string]$KeyProperty,
         [ValidateRange(1, 100)][int]$Depth = 20,
         [ValidateRange(1, 100)][int]$BinaryDepth = 5,

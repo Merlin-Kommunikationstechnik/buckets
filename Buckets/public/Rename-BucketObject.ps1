@@ -20,9 +20,9 @@ function Rename-BucketObject {
     #>
     [CmdletBinding()]
     param(
+        [Parameter(Mandatory = $true, Position = 0)][string]$Key,
         [Parameter(Mandatory = $true, Position = 1)][string]$Bucket,
         [string]$Path,
-        [Parameter(Mandatory = $true, Position = 0)][string]$Key,
         [Parameter(Mandatory = $true)][string]$NewKey,
         [switch]$PassThru,
         [switch]$Quiet
