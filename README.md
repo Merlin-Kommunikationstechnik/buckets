@@ -287,8 +287,8 @@ Set-BucketObject -Bucket users -Key "Alice" -InputObject $user
 # Single property update — no read needed
 Set-BucketObject -Bucket team -Key "Bob" -Property Score -Value 100
 
-# Using the blend alias
-blend team Bob -Property Role -Value "Lead"
+# Using the tint alias
+tint team Bob -Property Role -Value "Lead"
 ```
 
 ---
@@ -975,7 +975,7 @@ The provider is created automatically on module import via `Sync-BucketDrive`. R
 |----------------|-------------|
 | `New-BucketObject` (`fill`) | Save objects to a bucket |
 | `Get-BucketObject` (`scoop`) | Retrieve objects from buckets |
-| `Set-BucketObject` (`blend`) | Update an existing object |
+| `Set-BucketObject` (`tint`) | Update an existing object |
 | `Remove-BucketObject` (`spill`) | Remove objects by key, filter, or all |
 | `Copy-BucketObject` | Copy objects within or between buckets |
 | `Rename-BucketObject` | Rename an object's key |

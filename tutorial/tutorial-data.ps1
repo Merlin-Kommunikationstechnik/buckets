@@ -116,7 +116,7 @@ Remove-Item -Path $oldWayDir -Recurse -Force -ErrorAction SilentlyContinue
 
     fill   = New-BucketObject    — store objects
     scoop  = Get-BucketObject    — retrieve objects
-    blend  = Set-BucketObject    — update objects
+    tint  = Set-BucketObject    — update objects
     dip    = Get-Bucket           — list buckets
 
   These are shorter and easier to type during interactive use.
@@ -771,7 +771,7 @@ scoop -Bucket "dir-listing"
 
     fill   = New-BucketObject     — save objects
     scoop  = Get-BucketObject     — retrieve objects
-    blend  = Set-BucketObject     — update objects
+    tint  = Set-BucketObject     — update objects
     dip    = Get-Bucket            — list buckets
 
   Pipeline parameter binding via metadata:
@@ -1419,7 +1419,7 @@ Remove-Item -Path $oldWayDir -Recurse -Force -ErrorAction SilentlyContinue
 
     fill   = New-BucketObject    — Objekte speichern
     scoop  = Get-BucketObject    — Objekte abrufen
-    blend  = Set-BucketObject    — Objekte aktualisieren
+    tint  = Set-BucketObject    — Objekte aktualisieren
     dip    = Get-Bucket           — Buckets auflisten
 
   Sie sind kürzer und leichter zu tippen.
@@ -2085,7 +2085,7 @@ scoop -Bucket "dir-listing"
 
     fill   = New-BucketObject     — Objekte speichern
     scoop  = Get-BucketObject     — Objekte abrufen
-    blend  = Set-BucketObject     — Objekte aktualisieren
+    tint  = Set-BucketObject     — Objekte aktualisieren
     dip    = Get-Bucket            — Buckets auflisten
 
   Pipeline-Parameterbindung über Metadaten:

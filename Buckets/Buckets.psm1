@@ -72,7 +72,7 @@ Set-Alias -Name scoop -Value Get-BucketObject
 Set-Alias -Name spill -Value Remove-BucketObject
 Set-Alias -Name dip -Value Get-Bucket
 Set-Alias -Name drain -Value Remove-Bucket
-Set-Alias -Name blend -Value Set-BucketObject
+Set-Alias -Name tint -Value Set-BucketObject
 Set-Alias -Name ls -Value Get-ChildItem -Scope Global -Force
 
 # --- Argument completers ---
@@ -226,4 +226,4 @@ Export-ModuleMember -Function @(
     'Move-BucketObject', 'Export-Bucket', 'Import-Bucket',
     'Set-BucketRoot', 'Get-BucketRoot', 'Sync-BucketDrive',
     'New-Funnel', 'Get-Funnel', 'Set-Funnel', 'Remove-Funnel'
-) -Alias 'fill', 'scoop', 'spill', 'dip', 'drain', 'blend'
+) -Alias 'fill', 'scoop', 'spill', 'dip', 'drain', 'tint'
