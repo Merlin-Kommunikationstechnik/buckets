@@ -31,6 +31,9 @@ function Write-InfoBlock {
     $mod = Get-Module Buckets
     $pwsh = "$($PSVersionTable.PSVersion) ($($PSVersionTable.PSEdition))"
     $os = if ($IsMacOS) { "macOS" } elseif ($IsLinux) { "Linux" } else { "Windows" }
+    $cores = [Environment]::ProcessorCount
+    $cpuModel = try { if ($IsWindows) { (Get-CimInstance Win32_Processor -ErrorAction Stop).Name -replace '\s+', ' ' } elseif ($IsLinux) { ((Get-Content /proc/cpuinfo | Select-String "model name" | Select-Object -First 1) -replace '.*: ').Trim() } elseif ($IsMacOS) { (sysctl -n machdep.cpu.brand_string 2>$null).Trim() } } catch { $null }
+    $cpuStr = if ($cpuModel) { "$cores x $cpuModel" } else { "${cores} cores" }
     $sep = "=" * 52
     if ($Mode -eq "top") {
         Write-Host $sep -ForegroundColor DarkGray
@@ -41,18 +44,23 @@ function Write-InfoBlock {
         Write-Host " - " -NoNewline -ForegroundColor DarkGray
         Write-Host $pwsh -NoNewline -ForegroundColor Cyan
         Write-Host " - " -NoNewline -ForegroundColor DarkGray
-        Write-Host $os -ForegroundColor DarkGray
+        Write-Host $os -NoNewline -ForegroundColor DarkGray
+        Write-Host " - " -NoNewline -ForegroundColor DarkGray
+        Write-Host $cpuStr -ForegroundColor DarkGray
         Write-Host $sep -ForegroundColor DarkGray
     }
     else {
         $elapsed = $sw.ElapsedMilliseconds
         Write-Host $sep -ForegroundColor DarkGray
         Write-Host " Done" -NoNewline -ForegroundColor Blue
-        Write-Host " - ${elapsed}ms" -NoNewline -ForegroundColor Magenta
+        $secs = [math]::Round($elapsed / 1000, 2)
+        Write-Host " - ${secs}s" -NoNewline -ForegroundColor Magenta
         Write-Host " - " -NoNewline -ForegroundColor DarkGray
         Write-Host $pwsh -NoNewline -ForegroundColor Cyan
         Write-Host " - " -NoNewline -ForegroundColor DarkGray
-        Write-Host $os -ForegroundColor DarkGray
+        Write-Host $os -NoNewline -ForegroundColor DarkGray
+        Write-Host " - " -NoNewline -ForegroundColor DarkGray
+        Write-Host $cpuStr -ForegroundColor DarkGray
         Write-Host $sep -ForegroundColor DarkGray
     }
 }
