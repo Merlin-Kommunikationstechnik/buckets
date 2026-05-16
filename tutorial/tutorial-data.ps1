@@ -241,10 +241,10 @@ $users | fill -Bucket "team" -KeyProperty Name -Quiet
 '@
                                 Code = @'
 # Update Bob's Score to 100 without reading first
-tint -Key "Bob" -Bucket "team" -Property Score -Value 100
+tint "Bob" team Score 100
 
 # Add a new property to Alice
-tint Alice team -Property Level -Value "Senior"
+tint Alice team Level "Senior"
 
 # Verify both changes
 scoop -Key "Bob", "Alice" -Bucket "team"
@@ -1545,10 +1545,10 @@ $users | fill -Bucket "team" -KeyProperty Name -Quiet
 '@
                                 Code = @'
 # Bobs Score auf 100 setzen, ohne vorher zu lesen
-tint -Key "Bob" -Bucket "team" -Property Score -Value 100
+tint "Bob" team Score 100
 
 # Alice eine neue Eigenschaft hinzufügen
-tint Alice team -Property Level -Value "Senior"
+tint Alice team Level "Senior"
 
 # Beide Änderungen überprüfen
 scoop -Key "Bob", "Alice" -Bucket "team"

@@ -285,10 +285,10 @@ $user.Email = "alice@new.com"
 Set-BucketObject -Bucket users -Key "Alice" -InputObject $user
 
 # Single property update — no read needed
-Set-BucketObject -Bucket team -Key "Bob" -Property Score -Value 100
+Set-BucketObject "Bob" team Score 100
 
 # Using the tint alias (key first, bucket second)
-tint Bob team -Property Role -Value "Lead"
+tint Bob team Role "Lead"
 ```
 
 ---

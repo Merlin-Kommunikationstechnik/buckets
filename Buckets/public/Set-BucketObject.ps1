@@ -62,9 +62,9 @@ function Set-BucketObject {
         [Parameter(Mandatory = $true, Position = 1, ParameterSetName = "PropertyValue")]
         [Alias("_BucketName")]
         [string]$Bucket,
-        [Parameter(Mandatory = $true, ParameterSetName = "PropertyValue")]
+        [Parameter(Mandatory = $true, Position = 2, ParameterSetName = "PropertyValue")]
         [string]$Property,
-        [Parameter(Mandatory = $true, ParameterSetName = "PropertyValue")]
+        [Parameter(Mandatory = $true, Position = 3, ParameterSetName = "PropertyValue")]
         [PSObject]$Value,
         [string]$Path,
         [ValidateRange(1, 100)][int]$Depth = 20,
