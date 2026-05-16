@@ -1737,6 +1737,27 @@ Test-It "Set-BucketObject -PassThru returns updated metadata" {
     $null -ne $result -and $result.Bucket -eq "users" -and $result.UpdatedKeys -contains "Alice"
 }
 
+Test-It "Set-BucketObject -Property -Value updates a single property" {
+    New-BucketObject -Bucket "sbo-pv" -InputObject @{ Name = "Item"; Count = 10; Active = $true } -Key "item1" -Quiet
+    Use-Bucket "sbo-pv"
+    Set-BucketObject -Bucket "sbo-pv" -Key "item1" -Property Count -Value 99 -Quiet
+    $obj = Get-BucketObject -Bucket "sbo-pv" -Key "item1"
+    $obj.Name -eq "Item" -and $obj.Count -eq 99 -and $obj.Active -eq $true
+}
+
+Test-It "Set-BucketObject -Property -Value adds a new property" {
+    Set-BucketObject -Bucket "sbo-pv" -Key "item1" -Property "NewField" -Value "added" -Quiet
+    $obj = Get-BucketObject -Bucket "sbo-pv" -Key "item1"
+    $obj.NewField -eq "added"
+}
+
+Test-It "Set-BucketObject -Property -Value on nonexistent key throws" {
+    $ok = $false
+    try { Set-BucketObject -Bucket "sbo-pv" -Key "nonexistent" -Property "X" -Value 1 -ErrorAction Stop }
+    catch { $ok = $_.Exception.Message -match "not found" }
+    $ok
+}
+
 # ============================================================
 # 36. Set-Bucket (rename/move bucket)
 # ============================================================

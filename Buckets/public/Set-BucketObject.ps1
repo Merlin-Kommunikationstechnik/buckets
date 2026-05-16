@@ -9,6 +9,8 @@ function Set-BucketObject {
     the entire object replaces the stored version. If the piped object lacks metadata, only
     its properties are merged into the existing object (partial update).
 
+    Use -Property and -Value to set a single property without reading the object first.
+
     Preserves the storage format (JSON or binary) of the existing file. If JSON serialization
     fails on complex types, falls back to binary format.
     .PARAMETER InputObject
@@ -20,6 +22,11 @@ function Set-BucketObject {
     .PARAMETER Key
     Object key to update. Auto-resolved from pipeline metadata if omitted.
     Required when piping partial updates.
+    .PARAMETER Property
+    Name of the property to update. Requires -Value. When specified, reads the existing object,
+    sets the property, and saves it back.
+    .PARAMETER Value
+    New value for the property specified by -Property.
     .PARAMETER Path
     Root directory for bucket storage. Default: $HOME/.buckets.
     .PARAMETER Depth
@@ -40,12 +47,25 @@ function Set-BucketObject {
     Set-BucketObject -InputObject @{ Role = "admin" } -Bucket users -Key Name
     .EXAMPLE
     Get-BucketObject -Bucket logs -Key "log-001" | ForEach-Object { $_.Level = "INFO"; $_ } | Set-BucketObject -Quiet
+    .EXAMPLE
+    Set-BucketObject -Bucket team -Key "Bob" -Property Score -Value 100
     #>
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = "Pipeline")]
     param(
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][PSObject]$InputObject,
-        [Parameter(ValueFromPipelineByPropertyName = $true)][Alias("_BucketName")][string]$Bucket,
-        [Parameter(ValueFromPipelineByPropertyName = $true)][Alias("_BucketKey")][string]$Key,
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, ParameterSetName = "Pipeline")]
+        [PSObject]$InputObject,
+        [Parameter(ValueFromPipelineByPropertyName = $true, ParameterSetName = "Pipeline")]
+        [Parameter(Mandatory = $true, ParameterSetName = "PropertyValue")]
+        [Alias("_BucketName")]
+        [string]$Bucket,
+        [Parameter(ValueFromPipelineByPropertyName = $true, ParameterSetName = "Pipeline")]
+        [Parameter(Mandatory = $true, ParameterSetName = "PropertyValue")]
+        [Alias("_BucketKey")]
+        [string]$Key,
+        [Parameter(Mandatory = $true, ParameterSetName = "PropertyValue")]
+        [string]$Property,
+        [Parameter(Mandatory = $true, ParameterSetName = "PropertyValue")]
+        [PSObject]$Value,
         [string]$Path,
         [ValidateRange(1, 100)][int]$Depth = 20,
         [ValidateRange(1, 100)][int]$BinaryDepth = 5,
@@ -59,34 +79,42 @@ function Set-BucketObject {
         $bucketPath = $null; $savedCount = 0; $lastBucket = ''
         $useVerbose = $VerbosePreference -eq 'Continue'; $useQuiet = $Quiet.IsPresent
         $updatedKeys = [System.Collections.ArrayList]::new()
+        $isPropertySet = $PSCmdlet.ParameterSetName -eq "PropertyValue"
     }
 
     process {
-        $isPatch = -not ($InputObject.PSObject.Properties['_BucketName'] -and $InputObject.PSObject.Properties['_BucketKey'])
-
         if ($null -eq $bucketPath) {
             if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
             $Path = Resolve-SafePath -Path $Path
         }
 
-        if ($isPatch) {
+        if ($isPropertySet) {
             if ([string]::IsNullOrWhiteSpace($Bucket) -or [string]::IsNullOrWhiteSpace($Key)) {
-                throw "When piping partial updates, you must specify -Bucket and -Key explicitly."
+                throw "When using -Property and -Value, you must specify -Bucket and -Key."
             }
         }
         else {
-            if ([string]::IsNullOrWhiteSpace($Bucket) -or [string]::IsNullOrWhiteSpace($Key)) {
-                if ($InputObject.PSObject.Properties['_BucketName']) { $Bucket = $InputObject._BucketName }
-                if ($InputObject.PSObject.Properties['_BucketKey']) { $Key = $InputObject._BucketKey }
+            $isPatch = -not ($InputObject.PSObject.Properties['_BucketName'] -and $InputObject.PSObject.Properties['_BucketKey'])
+
+            if ($isPatch) {
                 if ([string]::IsNullOrWhiteSpace($Bucket) -or [string]::IsNullOrWhiteSpace($Key)) {
-                    throw "Cannot determine bucket and key. Use -Bucket and -Key parameters, or pipe an object from Get-BucketObject."
+                    throw "When piping partial updates, you must specify -Bucket and -Key explicitly."
                 }
             }
-        }
+            else {
+                if ([string]::IsNullOrWhiteSpace($Bucket) -or [string]::IsNullOrWhiteSpace($Key)) {
+                    if ($InputObject.PSObject.Properties['_BucketName']) { $Bucket = $InputObject._BucketName }
+                    if ($InputObject.PSObject.Properties['_BucketKey']) { $Key = $InputObject._BucketKey }
+                    if ([string]::IsNullOrWhiteSpace($Bucket) -or [string]::IsNullOrWhiteSpace($Key)) {
+                        throw "Cannot determine bucket and key. Use -Bucket and -Key parameters, or pipe an object from Get-BucketObject."
+                    }
+                }
+            }
 
-        if ($InputObject.PSObject.Properties[$Key]) {
-            $resolvedKey = $InputObject.$Key
-            if ($null -ne $resolvedKey) { $Key = $resolvedKey -replace '[\\/:\*\?"<>\|\[\]]', '_' }
+            if ($InputObject.PSObject.Properties[$Key]) {
+                $resolvedKey = $InputObject.$Key
+                if ($null -ne $resolvedKey) { $Key = $resolvedKey -replace '[\\/:\*\?"<>\|\[\]]', '_' }
+            }
         }
 
         if ($null -eq $bucketPath) {
@@ -104,7 +132,15 @@ function Set-BucketObject {
         $filePath = $file.FullName
         $useJson = $file.Extension -eq ".json" -and -not $AsBinary
 
-        if ($isPatch) {
+        if ($isPropertySet) {
+            $existing = Read-BucketFile -File ([System.IO.FileInfo]::new($filePath))
+            if ($null -eq $existing) { throw "Failed to read existing object '$Key' in bucket '$Bucket'" }
+            if ($existing -is [hashtable]) { $existing[$Property] = $Value }
+            elseif ($existing.PSObject.Properties[$Property]) { $existing.PSObject.Properties[$Property].Value = $Value }
+            else { $existing | Add-Member -NotePropertyName $Property -NotePropertyValue $Value }
+            $InputObject = $existing
+        }
+        elseif ($isPatch) {
             $existing = Read-BucketFile -File ([System.IO.FileInfo]::new($filePath))
             if ($null -eq $existing) { throw "Failed to read existing object '$Key' in bucket '$Bucket'" }
             if ($InputObject -is [hashtable]) {

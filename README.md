@@ -239,6 +239,20 @@ Set-BucketObject
     [-PassThru]
     [-Quiet]
     [<CommonParameters>]
+
+Set-BucketObject
+    -Bucket <string>
+    -Key <string>
+    -Property <string>
+    -Value <Object>
+    [[-Path] <string>]
+    [-Depth <int>]
+    [-BinaryDepth <int>]
+    [-AsBinary]
+    [-Compress]
+    [-PassThru]
+    [-Quiet]
+    [<CommonParameters>]
 ```
 
 | Parameter | Description | Default |
@@ -246,6 +260,8 @@ Set-BucketObject
 | `-InputObject` | Updated object. Pipeline input binds `_BucketName` and `_BucketKey` automatically | Required, accepts pipeline |
 | `-Bucket` | Bucket name (optional when piped from `Get-BucketObject`) | Bound from pipeline or required |
 | `-Key` | Object key (optional when piped from `Get-BucketObject`) | Bound from pipeline or required |
+| `-Property` | Property name to update. Requires `-Value` | — |
+| `-Value` | New value for `-Property` | — |
 | `-Path` | Storage root directory | `$HOME/.buckets` |
 | `-Depth` | JSON serialization depth | `20` |
 | `-BinaryDepth` | Binary serialization depth (1–100) | `5` |
@@ -267,6 +283,12 @@ Get-BucketObject -Bucket users -Key "Alice" | ForEach-Object {
 $user = Get-BucketObject -Bucket users -Key "Alice"
 $user.Email = "alice@new.com"
 Set-BucketObject -Bucket users -Key "Alice" -InputObject $user
+
+# Single property update — no read needed
+Set-BucketObject -Bucket team -Key "Bob" -Property Score -Value 100
+
+# Using the blend alias
+blend team Bob -Property Role -Value "Lead"
 ```
 
 ---
@@ -953,7 +975,7 @@ The provider is created automatically on module import via `Sync-BucketDrive`. R
 |----------------|-------------|
 | `New-BucketObject` (`fill`) | Save objects to a bucket |
 | `Get-BucketObject` (`scoop`) | Retrieve objects from buckets |
-| `Set-BucketObject` | Update an existing object |
+| `Set-BucketObject` (`blend`) | Update an existing object |
 | `Remove-BucketObject` (`spill`) | Remove objects by key, filter, or all |
 | `Copy-BucketObject` | Copy objects within or between buckets |
 | `Rename-BucketObject` | Rename an object's key |

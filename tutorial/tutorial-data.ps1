@@ -111,11 +111,12 @@ Remove-Item -Path $oldWayDir -Recurse -Force -ErrorAction SilentlyContinue
   to manage, no JSON to parse. Objects go in, objects come out — the module
   handles the filesystem for you.
 
-  Throughout this Quick Start, we will use the three aliases provided by
+  Throughout this Quick Start, we will use the four aliases provided by
   the module:
 
     fill   = New-BucketObject    — store objects
     scoop  = Get-BucketObject    — retrieve objects
+    blend  = Set-BucketObject    — update objects
     dip    = Get-Bucket           — list buckets
 
   These are shorter and easier to type during interactive use.
@@ -766,10 +767,11 @@ scoop -Bucket "dir-listing"
                                 Key = "01-aliases-reference"
                                 Title = "Aliases & Shortcuts Reference"
                                 Body = @'
-  Three aliases are exported by the module:
+  Four aliases are exported by the module:
 
     fill   = New-BucketObject     — save objects
     scoop  = Get-BucketObject     — retrieve objects
+    blend  = Set-BucketObject     — update objects
     dip    = Get-Bucket            — list buckets
 
   Pipeline parameter binding via metadata:
@@ -1413,10 +1415,11 @@ Remove-Item -Path $oldWayDir -Recurse -Force -ErrorAction SilentlyContinue
   keine Pfade zu verwalten, kein JSON zu parsen. Objekte rein, Objekte raus —
   das Modul kümmert sich um das Dateisystem.
 
-  In diesem Schnellstart verwenden wir die drei Aliase des Moduls:
+  In diesem Schnellstart verwenden wir die vier Aliase des Moduls:
 
     fill   = New-BucketObject    — Objekte speichern
     scoop  = Get-BucketObject    — Objekte abrufen
+    blend  = Set-BucketObject    — Objekte aktualisieren
     dip    = Get-Bucket           — Buckets auflisten
 
   Sie sind kürzer und leichter zu tippen.
@@ -2078,10 +2081,11 @@ scoop -Bucket "dir-listing"
                                 Key = "01-aliases-reference"
                                 Title = "Alias-Referenz"
                                 Body = @'
-  Drei Aliase werden vom Modul exportiert:
+  Vier Aliase werden vom Modul exportiert:
 
     fill   = New-BucketObject     — Objekte speichern
     scoop  = Get-BucketObject     — Objekte abrufen
+    blend  = Set-BucketObject     — Objekte aktualisieren
     dip    = Get-Bucket            — Buckets auflisten
 
   Pipeline-Parameterbindung über Metadaten:
