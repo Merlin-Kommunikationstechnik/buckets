@@ -177,11 +177,11 @@ function QuickRemove {
     $bucket = Read-Host "  Bucket name"
     $key = Read-Host "  Key (or Enter to remove ALL)"
     if ([string]::IsNullOrWhiteSpace($key)) {
-        Remove-BucketItem -Bucket $bucket -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
+        Remove-BucketObject -Bucket $bucket -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
         Write-Host "  All objects removed from '$bucket'." -ForegroundColor Green
     }
     else {
-        Remove-BucketItem -Bucket $bucket -Key $key -WarningAction SilentlyContinue
+        Remove-BucketObject -Bucket $bucket -Key $key -WarningAction SilentlyContinue
         Write-Host "  Removed '$key' from '$bucket'." -ForegroundColor Green
     }
 }

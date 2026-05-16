@@ -54,7 +54,7 @@ function New-Bucket {
 
     if ($PSCmdlet.ShouldProcess("bucket '$Name'", "Create")) {
         if ($exists -and $Force) {
-            Remove-BucketItem -Bucket $Name -Path $Path -Drop -Force -Quiet
+            Remove-BucketObject -Bucket $Name -Path $Path -Drop -Force -Quiet
         }
         Ensure-BucketExists -Name $Name -Path $Path | Out-Null
 

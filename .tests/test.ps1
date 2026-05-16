@@ -232,7 +232,7 @@ Test-It "Mixed formats (JSON + binary) in same bucket" {
 # 8. Object operations (Copy, Rename, Export/Import)
 # ============================================================
 Write-Host "`n[8] Object operations (Copy, Rename, Export)" -ForegroundColor Blue
-Remove-BucketItem -Bucket "archive" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+Remove-BucketObject -Bucket "archive" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
 
 Test-It "Copy-BucketObject cross-bucket preserves user data" {
     Copy-BucketObject -Bucket users -Key "Alice" -DestinationBucket archive -Quiet
@@ -253,7 +253,7 @@ Test-It "Export/Import bucket round-trips correctly" {
     $exportJson = Join-Path $PSScriptRoot "test-export.json"
     Export-Bucket -Bucket users -OutputFile $exportPath -AsBinary -Quiet
     Export-Bucket -Bucket logs -OutputFile $exportJson -Quiet
-    Remove-BucketItem -Bucket "import-test" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    Remove-BucketObject -Bucket "import-test" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     Import-Bucket -Bucket import-test -InputFile $exportPath -AsBinary -Quiet
     Use-Bucket "import-test"
     $imported = Get-BucketObject -Bucket import-test
@@ -267,7 +267,7 @@ Test-It "Export/Import bucket round-trips correctly" {
 Write-Host "`n[9] Binary compression (-Compress — GZip)" -ForegroundColor Blue
 
 Test-It "Binary compression reduces file size" {
-    Remove-BucketItem -Bucket "compressed" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    Remove-BucketObject -Bucket "compressed" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     New-BucketObject -Bucket compressed -InputObject @{ _Id = "comp"; Data = "x" * 5000; Type = "compressed" } -KeyProperty "_Id" -AsBinary -Compress -Quiet
     Use-Bucket "compressed"
     New-BucketObject -Bucket compressed -InputObject @{ _Id = "uncomp"; Data = "x" * 5000; Type = "uncompressed" } -KeyProperty "_Id" -AsBinary -Quiet
@@ -283,8 +283,8 @@ Test-It "Binary compression reduces file size" {
 Write-Host "`n[10] -WhatIf support (preview deletes without execution)" -ForegroundColor Blue
 
 Test-It "-WhatIf preview does not delete objects" {
-    Remove-BucketItem -Bucket users -Key "Bob" -WhatIf
-    Remove-BucketItem -Bucket "users" -WhatIf -Drop -Force -WarningAction SilentlyContinue | Out-Null
+    Remove-BucketObject -Bucket users -Key "Bob" -WhatIf
+    Remove-BucketObject -Bucket "users" -WhatIf -Drop -Force -WarningAction SilentlyContinue | Out-Null
     $remaining = Get-BucketObject -Bucket users -WarningAction SilentlyContinue
     @($remaining).Count -eq 4
 }
@@ -293,7 +293,7 @@ Test-It "-WhatIf preview does not delete objects" {
 # 11. Round-trip integrity
 # ============================================================
 Write-Host "`n[11] Round-trip integrity (save/load complex types and null)" -ForegroundColor Blue
-Remove-BucketItem -Bucket "roundtrip" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+Remove-BucketObject -Bucket "roundtrip" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
 Use-Bucket "roundtrip"
 $roundTrip = [PSCustomObject]@{
     _Id = "test"
@@ -335,17 +335,17 @@ Test-It "Get-BucketObject on nonexistent bucket returns empty" {
     $null -eq $result
 }
 
-Test-It "Remove-BucketItem on nonexistent key issues warning" {
+Test-It "Remove-BucketObject on nonexistent key issues warning" {
     $warn = $null
-    Remove-BucketItem -Bucket users -Key "nonexistent-key" -WarningVariable warn -WarningAction SilentlyContinue
+    Remove-BucketObject -Bucket users -Key "nonexistent-key" -WarningVariable warn -WarningAction SilentlyContinue
     $null -ne $warn
 }
 
-Test-It "Remove-BucketItem without -Key removes all objects" {
-    $null = Remove-BucketItem -Bucket "rm-no-key" -Drop -Force -Confirm:$false -Quiet -ErrorAction SilentlyContinue
+Test-It "Remove-BucketObject without -Key removes all objects" {
+    $null = Remove-BucketObject -Bucket "rm-no-key" -Drop -Force -Confirm:$false -Quiet -ErrorAction SilentlyContinue
     New-BucketObject -Bucket "rm-no-key" -InputObject @{ _Id = "a"; V = 1 }, @{ _Id = "b"; V = 2 } -KeyProperty _Id -Quiet
     $before = @(Get-BucketObject -Bucket "rm-no-key").Count
-    Remove-BucketItem -Bucket "rm-no-key" -Confirm:$false -Quiet
+    Remove-BucketObject -Bucket "rm-no-key" -Confirm:$false -Quiet
     $after = @(Get-BucketObject -Bucket "rm-no-key" -WarningAction SilentlyContinue).Count
     $before -eq 2 -and $after -eq 0
 }
@@ -370,14 +370,14 @@ Test-It "Corrupted file returns null with warning" {
 Test-It "Get-BucketObject -Key in default bucket without errors" {
     New-BucketObject -Bucket "default" -InputObject @{ X = 1; _Id = "only-in-a" } -KeyProperty "_Id" -Quiet
     $result = Get-BucketObject -Key "only-in-a" -WarningAction SilentlyContinue -ErrorVariable getErr
-    Remove-BucketItem -Bucket "default" -Quiet
+    Remove-BucketObject -Bucket "default" -Quiet
     $null -ne $result -and $getErr.Count -eq 0
 }
 
 Test-It "Get-BucketObject -Key with case mismatch" {
     New-BucketObject -Bucket casetest -InputObject @{ Val = 42; _Id = "MixedCase-Key" } -KeyProperty "_Id" -Quiet
     $result = Get-BucketObject -Bucket casetest -Key "mixedcase-key" -WarningAction SilentlyContinue -ErrorVariable getErr
-    Remove-BucketItem -Bucket casetest -Drop -Force -Confirm:$false -Quiet
+    Remove-BucketObject -Bucket casetest -Drop -Force -Confirm:$false -Quiet
     $null -ne $result -and $result.Val -eq 42 -and $getErr.Count -eq 0
 }
 
@@ -402,7 +402,7 @@ Test-It "Set-BucketObject auto-patch (PSCustomObject) adds new fields" {
     New-BucketObject -Bucket users -InputObject ([PSCustomObject]@{ _Id = "patch-obj"; Name = "Test"; Val = 1 }) -KeyProperty "_Id" -Quiet
     [PSCustomObject]@{ Val = 99; NewField = "added" } | Set-BucketObject -Bucket users -Key "patch-obj" -Quiet
     $patched = Get-BucketObject -Bucket users -Key "patch-obj"
-    Remove-BucketItem -Bucket users -Key "patch-obj" -Quiet
+    Remove-BucketObject -Bucket users -Key "patch-obj" -Quiet
     $patched.Val -eq 99 -and $patched.Name -eq "Test" -and $patched.NewField -eq "added"
 }
 
@@ -426,7 +426,7 @@ $deData = @{ Country = "Germany"; Currency = "EUR" }
 $cityData = @{ City = "Berlin"; Employees = 150 }
 $teamData = @{ Team = "Team A"; Lead = "Alice"; Members = 5 }
 
-Remove-BucketItem -Bucket "org" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+Remove-BucketObject -Bucket "org" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
 New-BucketObject -Bucket "org" -InputObject $orgData -Key "meta" -Quiet
 New-BucketObject -Bucket "org/eu" -InputObject $euData -Key "info" -Quiet
 New-BucketObject -Bucket "org/eu/de" -InputObject $deData -Key "info" -Quiet
@@ -468,15 +468,15 @@ Test-It "Provider navigation shows nested bucket structure" {
 }
 
 # Remove tests
-Test-It "Remove-BucketItem -Drop at deep level preserves parent" {
-    Remove-BucketItem -Bucket $nestedBucket -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+Test-It "Remove-BucketObject -Drop at deep level preserves parent" {
+    Remove-BucketObject -Bucket $nestedBucket -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     $deepGone = $null -eq (Get-BucketObject -Bucket $nestedBucket -Key "profile" -WarningAction SilentlyContinue)
     $parentIntact = (Get-BucketObject -Bucket "org/eu/de/berlin" -Key "info").City -eq "Berlin"
     $deepGone -and $parentIntact
 }
 
-Test-It "Remove-BucketItem -Drop -Recurse removes entire tree" {
-    Remove-BucketItem -Bucket "org" -Drop -Recurse -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+Test-It "Remove-BucketObject -Drop -Recurse removes entire tree" {
+    Remove-BucketObject -Bucket "org" -Drop -Recurse -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     -not (Test-Path (Join-Path $testRoot "org"))
 }
 
@@ -564,7 +564,7 @@ Test-It "Get-Bucket -Tree handles missing subdirectory gracefully" {
 # ============================================================
 Write-Host "`n[18] Edge cases" -ForegroundColor Blue
 
-Remove-BucketItem -Bucket "edge" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+Remove-BucketObject -Bucket "edge" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
 
 <#
   1. Overwrite behavior
@@ -711,7 +711,7 @@ Test-It "Empty bucket (InputObject `@() creates no objects)" {
     New-BucketObject -Bucket empty -InputObject @() -Quiet
     Use-Bucket "empty"
     $emptyCount = @(Get-BucketObject -Bucket empty -WarningAction SilentlyContinue).Count
-    Remove-BucketItem -Bucket "empty" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    Remove-BucketObject -Bucket "empty" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     $emptyCount -eq 0
 }
 
@@ -763,7 +763,7 @@ Test-It "JSON depth auto-increment (deep object)" {
     for ($i = 2; $i -le 25; $i++) { $deep = @{ "L$i" = $deep } }
     New-BucketObject -Bucket edge -InputObject $deep -Key "json-deep" -Depth 2 -Quiet
     $retrieved = Get-BucketObject -Bucket edge -Key "json-deep"
-    Remove-BucketItem -Bucket edge -Key "json-deep" -Quiet
+    Remove-BucketObject -Bucket edge -Key "json-deep" -Quiet
     $null -ne $retrieved
 }
 
@@ -777,7 +777,7 @@ Test-It "JSON fallback to binary (circular ref)" {
     $circ | Add-Member -NotePropertyName "Self" -NotePropertyValue $circ
     New-BucketObject -Bucket edge -InputObject $circ -KeyProperty _Id -Quiet -WarningAction SilentlyContinue
     $retrieved = Get-BucketObject -Bucket edge -Key "circ" -WarningAction SilentlyContinue
-    Remove-BucketItem -Bucket edge -Key "circ" -Quiet
+    Remove-BucketObject -Bucket edge -Key "circ" -Quiet
     $null -ne $retrieved -and $retrieved.Name -eq "loop"
 }
 
@@ -792,7 +792,7 @@ Test-It "JSON shallow object stays as .json" {
     $datPath = Join-Path (Get-BucketRoot) "edge/json-shallow.dat"
     $isJson = Test-Path $jsonPath
     $isNotDat = -not (Test-Path $datPath)
-    Remove-BucketItem -Bucket edge -Key "json-shallow" -Quiet
+    Remove-BucketObject -Bucket edge -Key "json-shallow" -Quiet
     $isJson -and $isNotDat
 }
 
@@ -802,7 +802,7 @@ Test-It "JSON shallow object stays as .json" {
 Write-Host "`n[19] AutoIndex" -ForegroundColor Blue
 
 Test-It "AutoIndex within-batch duplicates" {
-    Remove-BucketItem -Bucket "ai-dup" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    Remove-BucketObject -Bucket "ai-dup" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     $items = @(
         [PSCustomObject]@{ Name = "Alice"; Role = "admin" },
         [PSCustomObject]@{ Name = "Bob"; Role = "user" },
@@ -811,22 +811,22 @@ Test-It "AutoIndex within-batch duplicates" {
     $result = $items | New-BucketObject -Bucket ai-dup -KeyProperty Name -AutoIndex -PassThru -Quiet
     $keyNames = (Get-BucketKeys -Bucket ai-dup).Key
     $ok = $keyNames.Count -eq 3 -and $keyNames -contains "Alice" -and $keyNames -contains "Alice_1" -and $keyNames -contains "Bob"
-    Remove-BucketItem -Bucket "ai-dup" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    Remove-BucketObject -Bucket "ai-dup" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     $ok
 }
 
 Test-It "AutoIndex pre-existing key on disk" {
-    Remove-BucketItem -Bucket "ai-pre" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    Remove-BucketObject -Bucket "ai-pre" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     New-BucketObject -Bucket ai-pre -InputObject @{ _Id = "test"; Val = 1 } -KeyProperty _Id -Quiet
     New-BucketObject -Bucket ai-pre -InputObject @{ _Id = "test"; Val = 2 } -KeyProperty _Id -AutoIndex -PassThru -Quiet | Out-Null
     $keyNames = (Get-BucketKeys -Bucket ai-pre).Key
     $ok = $keyNames.Count -eq 2 -and $keyNames -contains "test" -and $keyNames -contains "test_1"
-    Remove-BucketItem -Bucket "ai-pre" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    Remove-BucketObject -Bucket "ai-pre" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     $ok
 }
 
 Test-It "AutoIndex with -Overwrite" {
-    Remove-BucketItem -Bucket "ai-ow" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    Remove-BucketObject -Bucket "ai-ow" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     New-BucketObject -Bucket ai-ow -InputObject @{ _Id = "x"; Val = 1 } -KeyProperty _Id -Quiet
     $items = @(
         [PSCustomObject]@{ _Id = "x"; Val = 10 },
@@ -836,21 +836,21 @@ Test-It "AutoIndex with -Overwrite" {
     $keyNames = (Get-BucketKeys -Bucket ai-ow).Key
     $objX = Get-BucketObject -Bucket ai-ow -Key "x"
     $ok = $keyNames.Count -eq 2 -and $objX.Val -eq 10 -and $keyNames -contains "x_1"
-    Remove-BucketItem -Bucket "ai-ow" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    Remove-BucketObject -Bucket "ai-ow" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     $ok
 }
 
 Test-It "AutoIndex with -Key (single key, multi-object pipeline)" {
-    Remove-BucketItem -Bucket "ai-key" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    Remove-BucketObject -Bucket "ai-key" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     1..3 | ForEach-Object { [PSCustomObject]@{ Num = $_ } } | New-BucketObject -Bucket ai-key -Key "item" -AutoIndex -PassThru -Quiet | Out-Null
     $keyNames = (Get-BucketKeys -Bucket ai-key).Key
     $ok = $keyNames.Count -eq 3 -and $keyNames -contains "item" -and $keyNames -contains "item_1" -and $keyNames -contains "item_2"
-    Remove-BucketItem -Bucket "ai-key" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    Remove-BucketObject -Bucket "ai-key" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     $ok
 }
 
 Test-It "AutoIndex without duplicates (no index)" {
-    Remove-BucketItem -Bucket "ai-none" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    Remove-BucketObject -Bucket "ai-none" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     $items = @(
         [PSCustomObject]@{ Name = "Alice"; Role = "admin" },
         [PSCustomObject]@{ Name = "Bob"; Role = "user" }
@@ -858,12 +858,12 @@ Test-It "AutoIndex without duplicates (no index)" {
     $result = $items | New-BucketObject -Bucket ai-none -KeyProperty Name -AutoIndex -PassThru
     $keyNames = (Get-BucketKeys -Bucket ai-none).Key
     $ok = $keyNames.Count -eq 2 -and $keyNames -contains "Alice" -and $keyNames -contains "Bob" -and "Alice_1" -notin $keyNames
-    Remove-BucketItem -Bucket "ai-none" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    Remove-BucketObject -Bucket "ai-none" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     $ok
 }
 
 Test-It "AutoIndex PassThru includes Indexed count" {
-    Remove-BucketItem -Bucket "ai-pt" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    Remove-BucketObject -Bucket "ai-pt" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     $items = @(
         [PSCustomObject]@{ Name = "x"; V = 1 },
         [PSCustomObject]@{ Name = "x"; V = 2 },
@@ -871,7 +871,7 @@ Test-It "AutoIndex PassThru includes Indexed count" {
     )
     $result = $items | New-BucketObject -Bucket ai-pt -KeyProperty Name -AutoIndex -PassThru
     $ok = $result.Indexed -eq 2
-    Remove-BucketItem -Bucket "ai-pt" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    Remove-BucketObject -Bucket "ai-pt" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     $ok
 }
 
@@ -880,31 +880,31 @@ Test-It "AutoIndex PassThru includes Indexed count" {
 # ============================================================
 Write-Host "`n[20] Output improvements" -ForegroundColor Blue
 
-Test-It "Remove-BucketItem -PassThru Key has no file extension" {
-    Remove-BucketItem -Bucket "pt-ext" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+Test-It "Remove-BucketObject -PassThru Key has no file extension" {
+    Remove-BucketObject -Bucket "pt-ext" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     New-BucketObject -Bucket pt-ext -InputObject @{ Id = 1; Name = "test" } -Key "del1" -Quiet
-    $result = Remove-BucketItem -Bucket pt-ext -Key "del1" -PassThru
+    $result = Remove-BucketObject -Bucket pt-ext -Key "del1" -PassThru
     $ok = $result.Key -eq "del1" -and $result.Key -notmatch "\.(json|dat)$"
-    Remove-BucketItem -Bucket "pt-ext" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    Remove-BucketObject -Bucket "pt-ext" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     $ok
 }
 
-Test-It "Remove-BucketItem -PassThru Key has no file extension" {
-    Remove-BucketItem -Bucket "pt-all" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+Test-It "Remove-BucketObject -PassThru Key has no file extension" {
+    Remove-BucketObject -Bucket "pt-all" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     New-BucketObject -Bucket pt-all -InputObject @{ Id = 1 } -Key "a" -Quiet
     New-BucketObject -Bucket pt-all -InputObject @{ Id = 2 } -Key "b" -Quiet
-    $results = @(Remove-BucketItem -Bucket pt-all -PassThru -Confirm:$false)
+    $results = @(Remove-BucketObject -Bucket pt-all -PassThru -Confirm:$false)
     $ok = $results.Count -eq 2 -and ($results | ForEach-Object { $_.Key -notmatch "\.(json|dat)$" }) -notcontains $false
-    Remove-BucketItem -Bucket "pt-all" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    Remove-BucketObject -Bucket "pt-all" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     $ok
 }
 
 Test-It "Set-BucketObject -PassThru includes UpdatedKeys" {
-    Remove-BucketItem -Bucket "sbo-pt" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    Remove-BucketObject -Bucket "sbo-pt" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     New-BucketObject -Bucket sbo-pt -InputObject @{ Name = "Alice" } -Key "user1" -Quiet
     $result = @{ Name = "Bob" } | Set-BucketObject -Bucket sbo-pt -Key "user1" -PassThru
     $ok = $result.UpdatedKeys -contains "user1" -and $result.Saved -eq 1
-    Remove-BucketItem -Bucket "sbo-pt" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    Remove-BucketObject -Bucket "sbo-pt" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     $ok
 }
 
@@ -915,28 +915,28 @@ Test-It "Get-BucketObject warns on nonexistent literal bucket" {
 }
 
 Test-It "Get-Bucket -Name wildcard and exact path support" {
-    Remove-BucketItem -Bucket "gn-wild" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
-    Remove-BucketItem -Bucket "gn-other" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    Remove-BucketObject -Bucket "gn-wild" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    Remove-BucketObject -Bucket "gn-other" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     New-BucketObject -Bucket gn-wild -InputObject @{ X = 1 } -Key "a" -Quiet
     New-BucketObject -Bucket gn-other -InputObject @{ X = 2 } -Key "b" -Quiet
     $wildcardResult = @(Get-Bucket -Name "gn-w*")
     $exactResult = @(Get-Bucket -Name "gn-other")
     $ok = $wildcardResult.Count -eq 1 -and $wildcardResult[0].Name -eq "gn-wild"
     $ok = $ok -and $exactResult.Count -eq 1 -and $exactResult[0].Name -eq "b" -and $exactResult[0].Type -eq "Object"
-    Remove-BucketItem -Bucket "gn-wild" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
-    Remove-BucketItem -Bucket "gn-other" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    Remove-BucketObject -Bucket "gn-wild" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    Remove-BucketObject -Bucket "gn-other" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     $ok
 }
 
 Test-It "Import-Bucket skip shows key names" {
-    Remove-BucketItem -Bucket "imp-skip" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    Remove-BucketObject -Bucket "imp-skip" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     New-BucketObject -Bucket imp-skip -InputObject @{ Name = "alice" } -Key "alice" -Quiet
     New-BucketObject -Bucket imp-skip -InputObject @{ Name = "bob" } -Key "bob" -Quiet
     $exportPath = Join-Path $testRoot "imp-skip-test.clixml"
     Export-Bucket -Bucket imp-skip -OutputFile $exportPath -AsBinary -Quiet
     $result = Import-Bucket -Bucket imp-skip -InputFile $exportPath -AsBinary 6>&1 | Out-String
     $ok = $result -match "skipped" -and $result -match "alice"
-    Remove-BucketItem -Bucket "imp-skip" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    Remove-BucketObject -Bucket "imp-skip" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     Remove-Item $exportPath -Force -ErrorAction SilentlyContinue
     $ok
 }
@@ -947,7 +947,7 @@ Test-It "Import-Bucket skip shows key names" {
 Write-Host "`n[21] Funnels" -ForegroundColor Blue
 
 # Seed data for funnel tests
-Remove-BucketItem -Bucket "edge" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+Remove-BucketObject -Bucket "edge" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
 New-BucketObject -Bucket edge -InputObject @{ _Id = "f1"; Role = "admin"; Level = 5 } -KeyProperty _Id -Quiet
 New-BucketObject -Bucket edge -InputObject @{ _Id = "f2"; Role = "user"; Level = 3 } -KeyProperty _Id -Quiet
 New-BucketObject -Bucket edge -InputObject @{ _Id = "f3"; Role = "user"; Level = 1 } -KeyProperty _Id -Quiet
@@ -1112,7 +1112,7 @@ Test-It "AppliesTo on fill, type matches" {
     $null = "hello" | New-BucketObject -Bucket edge -Key "appliesto-match" -Funnel "test-appliesto" -Quiet
     $saved = Get-BucketObject -Bucket edge -Key "appliesto-match"
     Remove-Funnel -Name "test-appliesto" -Quiet -Confirm:$false
-    Remove-BucketItem -Bucket edge -Key "appliesto-match" -Quiet
+    Remove-BucketObject -Bucket edge -Key "appliesto-match" -Quiet
     $null -ne $saved -and $saved -eq "HELLO"
 }
 
@@ -1125,7 +1125,7 @@ Test-It "AppliesTo on fill, type mismatch passes through" {
     $null = 42 | New-BucketObject -Bucket edge -Key "appliesto-nomatch" -Funnel "test-appliesto2" -Quiet
     $saved = Get-BucketObject -Bucket edge -Key "appliesto-nomatch"
     Remove-Funnel -Name "test-appliesto2" -Quiet -Confirm:$false
-    Remove-BucketItem -Bucket edge -Key "appliesto-nomatch" -Quiet
+    Remove-BucketObject -Bucket edge -Key "appliesto-nomatch" -Quiet
     $null -ne $saved -and $saved -eq 42
 }
 
@@ -1141,7 +1141,7 @@ Test-It "AppliesTo on scoop filters correctly" {
     $null = 99 | New-BucketObject -Bucket $bucket -Key "n" -Quiet
     $results = Get-BucketObject -Bucket $bucket -Funnel "test-scoop"
     Remove-Funnel -Name "test-scoop" -Quiet -Confirm:$false
-    Remove-BucketItem -Bucket $bucket -Drop -Force -Confirm:$false -Recurse -Quiet
+    Remove-BucketObject -Bucket $bucket -Drop -Force -Confirm:$false -Recurse -Quiet
     $results.Count -eq 2 -and ($results -contains "Alice") -and ($results -contains 99)
 }
 
@@ -1156,7 +1156,7 @@ Test-It "AppliesTo absent = legacy behavior" {
     $null = 15 | New-BucketObject -Bucket $bucket -Key "high" -Quiet
     $results = Get-BucketObject -Bucket $bucket -Funnel "test-legacy"
     Remove-Funnel -Name "test-legacy" -Quiet -Confirm:$false
-    Remove-BucketItem -Bucket $bucket -Drop -Force -Confirm:$false -Recurse -Quiet
+    Remove-BucketObject -Bucket $bucket -Drop -Force -Confirm:$false -Recurse -Quiet
     $results.Count -eq 1 -and $results -eq 15
 }
 
@@ -1183,7 +1183,7 @@ Test-It "Transform on scoop adds property" {
     New-BucketObject -Bucket $bucket -InputObject @{ _Id = "ft3"; Name = "Carol"; Role = "user" } -KeyProperty _Id -Quiet
     $result = Get-BucketObject -Bucket $bucket -Funnel "test-transform-scoop"
     Remove-Funnel -Name "test-transform-scoop" -Quiet -Confirm:$false
-    Remove-BucketItem -Bucket $bucket -Drop -Force -Confirm:$false -Recurse -Quiet
+    Remove-BucketObject -Bucket $bucket -Drop -Force -Confirm:$false -Recurse -Quiet
     @($result).Count -eq 3 -and @($result | Where-Object { $_.Scooped -eq $true }).Count -eq 3
 }
 
@@ -1209,7 +1209,7 @@ Test-It "Multi-emit on fill splits object into multiple items" {
     New-BucketObject -Bucket $bucket -InputObject $obj -KeyProperty Name -Funnel "test-multi-fill" -Quiet
     $results = Get-BucketObject -Bucket $bucket
     Remove-Funnel -Name "test-multi-fill" -Quiet -Confirm:$false
-    Remove-BucketItem -Bucket $bucket -Drop -Force -Confirm:$false -Recurse -Quiet
+    Remove-BucketObject -Bucket $bucket -Drop -Force -Confirm:$false -Recurse -Quiet
     @($results).Count -eq 3 -and ($results.Name -contains "Alice") -and ($results.Name -contains "Bob") -and ($results.Name -contains "Carol")
 }
 
@@ -1224,7 +1224,7 @@ Test-It "Multi-emit on scoop expands object into multiple items" {
     $results = Get-BucketObject -Bucket $bucket -Funnel {
         $label = $_.Label; $_.Parts | ForEach-Object { [PSCustomObject]@{ Part = $_; Label = $label } }
     }
-    Remove-BucketItem -Bucket $bucket -Drop -Force -Confirm:$false -Recurse -Quiet
+    Remove-BucketObject -Bucket $bucket -Drop -Force -Confirm:$false -Recurse -Quiet
     @($results).Count -eq 3 -and ($results.Part -contains "A") -and ($results.Part -contains "B") -and ($results.Part -contains "C") -and ($results[0].Label -eq "Test") -and ($results[0]._BucketName -eq $bucket) -and ($results[0]._BucketKey -eq "compound")
 }
 
@@ -1239,7 +1239,7 @@ Test-It "Multi-emit skips null entries" {
     $results = Get-BucketObject -Bucket $bucket -Funnel {
         $_.Items | ForEach-Object { if ($_ -ne $null) { [PSCustomObject]@{ Value = $_; Label = $_.Label } } else { $null } }
     }
-    Remove-BucketItem -Bucket $bucket -Drop -Force -Confirm:$false -Recurse -Quiet
+    Remove-BucketObject -Bucket $bucket -Drop -Force -Confirm:$false -Recurse -Quiet
     @($results).Count -eq 2 -and ($results.Value -contains "keep") -and ($results.Value -contains "also-keep")
 }
 
@@ -1269,7 +1269,7 @@ Test-It "Expanded count in PassThru" {
     } -Force -Quiet
     $result = New-BucketObject -Bucket $bucket -InputObject $obj -KeyProperty Member -Funnel "test-exp-pt" -PassThru
     Remove-Funnel -Name "test-exp-pt" -Quiet -Confirm:$false
-    Remove-BucketItem -Bucket $bucket -Drop -Force -Confirm:$false -Recurse -Quiet
+    Remove-BucketObject -Bucket $bucket -Drop -Force -Confirm:$false -Recurse -Quiet
     $result.Saved -eq 2 -and $result.Expanded -eq 1 -and $null -ne $result.StoredKeys
 }
 
@@ -1333,9 +1333,9 @@ Test-It "Get-BucketStats returns object count, total size, and timestamps" {
 
 Test-It "Get-BucketStats on empty bucket returns zero count" {
     $emptyTest = "empty-stats"
-    Remove-BucketItem -Bucket $emptyTest -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    Remove-BucketObject -Bucket $emptyTest -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     New-BucketObject -Bucket $emptyTest -InputObject @{ _Id = "tmp" } -KeyProperty _Id -Quiet
-    Remove-BucketItem -Bucket $emptyTest -Key "tmp" -Quiet
+    Remove-BucketObject -Bucket $emptyTest -Key "tmp" -Quiet
     $stats = Get-BucketStats -Bucket $emptyTest -WarningAction SilentlyContinue
     $null -eq $stats -or $stats.ObjectCount -eq 0
 }
@@ -1444,7 +1444,7 @@ Test-It "Get-BucketRoot follows Set-BucketRoot changes" {
 Write-Host "`n[27] -Match with `$null values" -ForegroundColor Blue
 
 Test-It "Get-BucketObject -Match with $null finds objects where property is absent" {
-    Remove-BucketItem -Bucket "match-null" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    Remove-BucketObject -Bucket "match-null" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     New-BucketObject -Bucket "match-null" -InputObject @{ _Id = "has-deleted"; Name = "A"; Deleted = $null } -KeyProperty _Id -Quiet
     New-BucketObject -Bucket "match-null" -InputObject @{ _Id = "no-deleted"; Name = "B" } -KeyProperty _Id -Quiet
     Use-Bucket "match-null"
@@ -1453,7 +1453,7 @@ Test-It "Get-BucketObject -Match with $null finds objects where property is abse
 }
 
 Test-It "Get-BucketObject -Match with string in fresh bucket" {
-    Remove-BucketItem -Bucket "match-str" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    Remove-BucketObject -Bucket "match-str" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     New-BucketObject -Bucket "match-str" -InputObject @{ _Id = "a"; Role = "admin"; Name = "Alice" }, @{ _Id = "b"; Role = "user"; Name = "Bob" } -KeyProperty _Id -Quiet
     Use-Bucket "match-str"
     $result = Get-BucketObject -Bucket "match-str" -Match @{ Role = "admin" }
@@ -1510,33 +1510,33 @@ Test-It "Import-Bucket warns when key sanitizes to empty" {
 }
 
 # ============================================================
-# 29. Remove-BucketItem -Match / -Filter
+# 29. Remove-BucketObject -Match / -Filter
 # ============================================================
-Write-Host "`n[29] Remove-BucketItem -Match / -Filter" -ForegroundColor Blue
+Write-Host "`n[29] Remove-BucketObject -Match / -Filter" -ForegroundColor Blue
 
-Test-It "Remove-BucketItem -Match removes matching objects" {
-    Remove-BucketItem -Bucket "rm-match" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+Test-It "Remove-BucketObject -Match removes matching objects" {
+    Remove-BucketObject -Bucket "rm-match" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     New-BucketObject -Bucket "rm-match" -InputObject @{ _Id = "a"; Role = "admin" }, @{ _Id = "b"; Role = "user" }, @{ _Id = "c"; Role = "admin" } -KeyProperty _Id -Quiet
     Use-Bucket "rm-match"
-    Remove-BucketItem -Bucket "rm-match" -Match @{ Role = "admin" } -Confirm:$false -Quiet
+    Remove-BucketObject -Bucket "rm-match" -Match @{ Role = "admin" } -Confirm:$false -Quiet
     $remaining = Get-BucketObject -Bucket "rm-match"
     @($remaining).Count -eq 1 -and $remaining[0].Role -eq "user"
 }
 
-Test-It "Remove-BucketItem -Filter removes matching objects" {
-    Remove-BucketItem -Bucket "rm-filter" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+Test-It "Remove-BucketObject -Filter removes matching objects" {
+    Remove-BucketObject -Bucket "rm-filter" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     New-BucketObject -Bucket "rm-filter" -InputObject @{ _Id = "x"; V = 10 }, @{ _Id = "y"; V = 20 }, @{ _Id = "z"; V = 30 } -KeyProperty _Id -Quiet
     Use-Bucket "rm-filter"
-    Remove-BucketItem -Bucket "rm-filter" -Filter { $_.V -gt 15 } -Confirm:$false -Quiet
+    Remove-BucketObject -Bucket "rm-filter" -Filter { $_.V -gt 15 } -Confirm:$false -Quiet
     $remaining = Get-BucketObject -Bucket "rm-filter"
     @($remaining).Count -eq 1 -and $remaining[0].V -eq 10
 }
 
-Test-It "Remove-BucketItem -Match -PassThru returns removed keys" {
-    Remove-BucketItem -Bucket "rm-pt" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+Test-It "Remove-BucketObject -Match -PassThru returns removed keys" {
+    Remove-BucketObject -Bucket "rm-pt" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     New-BucketObject -Bucket "rm-pt" -InputObject @{ _Id = "a"; T = 1 }, @{ _Id = "b"; T = 2 } -KeyProperty _Id -Quiet
     Use-Bucket "rm-pt"
-    $removed = Remove-BucketItem -Bucket "rm-pt" -Match @{ T = 2 } -PassThru -Confirm:$false -Quiet
+    $removed = Remove-BucketObject -Bucket "rm-pt" -Match @{ T = 2 } -PassThru -Confirm:$false -Quiet
     @($removed).Count -eq 1 -and $removed[0].Key -eq "b"
 }
 
@@ -1546,7 +1546,7 @@ Test-It "Remove-BucketItem -Match -PassThru returns removed keys" {
 Write-Host "`n[30] BinaryDepth explicit values" -ForegroundColor Blue
 
 Test-It "BinaryDepth=1 stores and retrieves simple objects" {
-    Remove-BucketItem -Bucket "bd-1" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    Remove-BucketObject -Bucket "bd-1" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     New-BucketObject -Bucket "bd-1" -InputObject @{ _Id = "s"; Name = "simple"; Val = 123 } -KeyProperty _Id -AsBinary -BinaryDepth 1 -Quiet
     Use-Bucket "bd-1"
     $obj = Get-BucketObject -Bucket "bd-1" -Key "s"
@@ -1554,7 +1554,7 @@ Test-It "BinaryDepth=1 stores and retrieves simple objects" {
 }
 
 Test-It "BinaryDepth=100 stores and retrieves objects" {
-    Remove-BucketItem -Bucket "bd-100" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    Remove-BucketObject -Bucket "bd-100" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     New-BucketObject -Bucket "bd-100" -InputObject @{ _Id = "h"; Name = "deep binary"; Data = "x" * 500 } -KeyProperty _Id -AsBinary -BinaryDepth 100 -Quiet
     Use-Bucket "bd-100"
     $obj = Get-BucketObject -Bucket "bd-100" -Key "h"
@@ -1562,7 +1562,7 @@ Test-It "BinaryDepth=100 stores and retrieves objects" {
 }
 
 Test-It "BinaryDepth auto-increments on depth failure" {
-    Remove-BucketItem -Bucket "bd-auto" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    Remove-BucketObject -Bucket "bd-auto" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     $deep = [PSCustomObject]@{ _Id = "a"; L1 = [PSCustomObject]@{ L2 = [PSCustomObject]@{ L3 = [PSCustomObject]@{ L4 = [PSCustomObject]@{ L5 = [PSCustomObject]@{ L6 = "deep" } } } } } }
     New-BucketObject -Bucket "bd-auto" -InputObject $deep -KeyProperty _Id -AsBinary -BinaryDepth 2 -WarningAction SilentlyContinue -Quiet
     Use-Bucket "bd-auto"
@@ -1682,12 +1682,12 @@ Test-It "Export-Bucket to JSON format creates valid JSON" {
 }
 
 Test-It "Import-Bucket -Overwrite replaces existing keys" {
-    Remove-BucketItem -Bucket "imp-over" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    Remove-BucketObject -Bucket "imp-over" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     $exportPath = Join-Path $testRoot "imp-over-export.clixml"
     New-BucketObject -Bucket "imp-over" -InputObject @{ _Id = "key1"; Val = "original" } -KeyProperty _Id -Quiet
     Export-Bucket -Bucket "imp-over" -OutputFile $exportPath -AsBinary -Quiet
     New-BucketObject -Bucket "imp-over" -InputObject @{ _Id = "key1"; Val = "updated" } -KeyProperty _Id -Overwrite -Quiet
-    Remove-BucketItem -Bucket "imp-over" -Key "key1" -Quiet
+    Remove-BucketObject -Bucket "imp-over" -Key "key1" -Quiet
     Import-Bucket -Bucket "imp-over" -InputFile $exportPath -AsBinary -Overwrite -Quiet
     $obj = Get-BucketObject -Bucket "imp-over" -Key "key1"
     Remove-Item $exportPath -Force -ErrorAction SilentlyContinue
@@ -1695,11 +1695,11 @@ Test-It "Import-Bucket -Overwrite replaces existing keys" {
 }
 
 Test-It "Import-Bucket without -Overwrite skips existing keys" {
-    Remove-BucketItem -Bucket "imp-skip2" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    Remove-BucketObject -Bucket "imp-skip2" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     $exportPath = Join-Path $testRoot "imp-skip-export.clixml"
     New-BucketObject -Bucket "imp-skip2" -InputObject @{ _Id = "k1"; Val = "orig" }, @{ _Id = "k2"; Val = "also-orig" } -KeyProperty _Id -Quiet
     Export-Bucket -Bucket "imp-skip2" -OutputFile $exportPath -AsBinary -Quiet
-    Remove-BucketItem -Bucket "imp-skip2" -Key "k2" -Quiet
+    Remove-BucketObject -Bucket "imp-skip2" -Key "k2" -Quiet
     Import-Bucket -Bucket "imp-skip2" -InputFile $exportPath -AsBinary -Quiet
     $obj = Get-BucketObject -Bucket "imp-skip2" -Key "k2"
     Remove-Item $exportPath -Force -ErrorAction SilentlyContinue
@@ -1766,7 +1766,7 @@ Test-It "Set-BucketObject -Property -Value on nonexistent key throws" {
 Write-Host "`n[36] Set-Bucket (rename/move bucket)" -ForegroundColor Blue
 
 Test-It "Set-Bucket renames top-level bucket" {
-    Remove-BucketItem -Bucket "sb-rename" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+    Remove-BucketObject -Bucket "sb-rename" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
     New-BucketObject -Bucket "sb-rename" -InputObject @{ Id = 1; Name = "test" } -Key "obj1" -Quiet
     Use-Bucket "sb-rename"
     Set-Bucket "sb-rename" "sb-renamed" -Quiet
@@ -1887,20 +1887,20 @@ Test-It "Export-Bucket -Depth 2 exports root + one level" {
 }
 
 # ============================================================
-# 40. Remove-BucketItem -Recurse / -Depth
+# 40. Remove-BucketObject -Recurse / -Depth
 # ============================================================
-Write-Host "`n[40] Remove-BucketItem -Recurse / -Depth" -ForegroundColor Blue
+Write-Host "`n[40] Remove-BucketObject -Recurse / -Depth" -ForegroundColor Blue
 
 # Recreate nested test data
-Remove-BucketItem -Bucket "rm-rec" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
+Remove-BucketObject -Bucket "rm-rec" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
 New-BucketObject -Bucket "rm-rec" -InputObject @{ _Id = "root"; V = 1 } -KeyProperty _Id -Quiet
 New-BucketObject -Bucket "rm-rec/sub" -InputObject @{ _Id = "sub"; V = 2 } -KeyProperty _Id -Quiet
 New-BucketObject -Bucket "rm-rec/sub/deep" -InputObject @{ _Id = "deep"; V = 3 } -KeyProperty _Id -Quiet
 Use-Bucket "rm-rec"
 
-Test-It "Remove-BucketItem -Recurse removes nested objects" {
+Test-It "Remove-BucketObject -Recurse removes nested objects" {
     $before = @(Get-BucketObject -Bucket "rm-rec" -Recurse).Count
-    Remove-BucketItem -Bucket "rm-rec" -Recurse -Confirm:$false -Quiet
+    Remove-BucketObject -Bucket "rm-rec" -Recurse -Confirm:$false -Quiet
     $after = @(Get-BucketObject -Bucket "rm-rec" -Recurse -WarningAction SilentlyContinue).Count
     $before -eq 3 -and $after -eq 0
 }
@@ -1910,8 +1910,8 @@ New-BucketObject -Bucket "rm-rec" -InputObject @{ _Id = "root"; V = 1 } -KeyProp
 New-BucketObject -Bucket "rm-rec/sub" -InputObject @{ _Id = "sub"; V = 2 } -KeyProperty _Id -Quiet
 New-BucketObject -Bucket "rm-rec/sub/deep" -InputObject @{ _Id = "deep"; V = 3 } -KeyProperty _Id -Quiet
 
-Test-It "Remove-BucketItem -Depth 1 removes root only" {
-    Remove-BucketItem -Bucket "rm-rec" -Recurse -Depth 1 -Confirm:$false -Quiet
+Test-It "Remove-BucketObject -Depth 1 removes root only" {
+    Remove-BucketObject -Bucket "rm-rec" -Recurse -Depth 1 -Confirm:$false -Quiet
     $remaining = Get-BucketObject -Bucket "rm-rec" -Recurse
     $remaining.Count -eq 2 -and ($remaining._Id -contains "sub") -and ($remaining._Id -contains "deep")
 }
@@ -1919,16 +1919,16 @@ Test-It "Remove-BucketItem -Depth 1 removes root only" {
 # Recreate for depth 2 test
 New-BucketObject -Bucket "rm-rec" -InputObject @{ _Id = "root"; V = 1 } -KeyProperty _Id -Quiet
 
-Test-It "Remove-BucketItem -Depth 2 removes root + one level" {
-    Remove-BucketItem -Bucket "rm-rec" -Recurse -Depth 2 -Confirm:$false -Quiet
+Test-It "Remove-BucketObject -Depth 2 removes root + one level" {
+    Remove-BucketObject -Bucket "rm-rec" -Recurse -Depth 2 -Confirm:$false -Quiet
     $remaining = Get-BucketObject -Bucket "rm-rec/sub" -Recurse
     @($remaining).Count -eq 1 -and $remaining[0]._Id -eq "deep"
 }
 
-Test-It "Remove-BucketItem -Key -Recurse finds across nested buckets" {
+Test-It "Remove-BucketObject -Key -Recurse finds across nested buckets" {
     New-BucketObject -Bucket "rm-rec/sub" -InputObject @{ _Id = "target"; V = 99 } -KeyProperty _Id -Quiet
     New-BucketObject -Bucket "rm-rec/sub/deep" -InputObject @{ _Id = "target"; V = 100 } -KeyProperty _Id -Quiet
-    Remove-BucketItem -Bucket "rm-rec" -Key "target" -Recurse -Confirm:$false -Quiet
+    Remove-BucketObject -Bucket "rm-rec" -Key "target" -Recurse -Confirm:$false -Quiet
     $remaining = Get-BucketObject -Bucket "rm-rec" -Recurse -Key "target" -WarningAction SilentlyContinue
     $null -eq $remaining
 }
@@ -1963,7 +1963,7 @@ Test-It "Default path via `$HOME/.buckets is constructable on any platform" {
 }
 
 Test-It "Unicode bucket name round-trip" {
-    Remove-BucketItem -Bucket "üñî-café" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
+    Remove-BucketObject -Bucket "üñî-café" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
     New-BucketObject -Bucket "üñî-café" -InputObject @{ _Id = "meta"; Name = "test" } -KeyProperty _Id -Quiet
     Use-Bucket "üñî-café"
     $obj = Get-BucketObject -Bucket "üñî-café" -Key "meta"
@@ -1971,7 +1971,7 @@ Test-It "Unicode bucket name round-trip" {
 }
 
 Test-It "Dotted bucket names work" {
-    Remove-BucketItem -Bucket "org.v2" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
+    Remove-BucketObject -Bucket "org.v2" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
     New-BucketObject -Bucket "org.v2/sub" -InputObject @{ _Id = "a"; V = 1 } -KeyProperty _Id -Quiet
     Use-Bucket "org.v2"
     $obj = Get-BucketObject -Bucket "org.v2/sub" -Key "a"
@@ -1979,7 +1979,7 @@ Test-It "Dotted bucket names work" {
 }
 
 Test-It "Bucket name with spaces" {
-    Remove-BucketItem -Bucket "my bucket" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
+    Remove-BucketObject -Bucket "my bucket" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
     New-BucketObject -Bucket "my bucket" -InputObject @{ _Id = "obj"; Val = 42 } -KeyProperty _Id -Quiet
     Use-Bucket "my bucket"
     $obj = Get-BucketObject -Bucket "my bucket" -Key "obj"
@@ -1987,7 +1987,7 @@ Test-It "Bucket name with spaces" {
 }
 
 Test-It "Leading-dot hidden bucket name" {
-    Remove-BucketItem -Bucket ".hidden" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
+    Remove-BucketObject -Bucket ".hidden" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
     New-BucketObject -Bucket ".hidden" -InputObject @{ _Id = "h"; Data = "secret" } -KeyProperty _Id -Quiet
     Use-Bucket ".hidden"
     $obj = Get-BucketObject -Bucket ".hidden" -Key "h"
@@ -2000,14 +2000,14 @@ Test-It "Leading-dot hidden bucket name" {
 Write-Host "`n[42] New-Bucket cmdlet" -ForegroundColor Blue
 
 Test-It "New-Bucket creates an empty bucket directory" {
-    Remove-BucketItem -Bucket "nb-test" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
+    Remove-BucketObject -Bucket "nb-test" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
     New-Bucket "nb-test" -Quiet
     $bucketPath = Join-Path (Get-BucketRoot) "nb-test"
     (Test-Path $bucketPath) -and ((Get-ChildItem $bucketPath -Filter "*.json").Count -eq 0)
 }
 
 Test-It "New-Bucket creates nested bucket path" {
-    Remove-BucketItem -Bucket "nb-nested" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
+    Remove-BucketObject -Bucket "nb-nested" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
     New-Bucket "nb-nested/sub/a" -Quiet
     $bucketPath = Join-Path (Get-BucketRoot) "nb-nested/sub/a"
     Test-Path $bucketPath
@@ -2028,20 +2028,20 @@ Test-It "New-Bucket -Force recreates existing bucket" {
 }
 
 Test-It "New-Bucket -PassThru returns bucket info" {
-    Remove-BucketItem -Bucket "nb-pt" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
+    Remove-BucketObject -Bucket "nb-pt" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
     $result = New-Bucket "nb-pt" -PassThru -Quiet
     $null -ne $result -and $result.Name -eq "nb-pt" -and $result.ObjectCount -eq 0 -and $result.HasSubBuckets -eq $false
 }
 
 Test-It "New-Bucket -WhatIf does not create bucket" {
-    Remove-BucketItem -Bucket "nb-whatif" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
+    Remove-BucketObject -Bucket "nb-whatif" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
     New-Bucket "nb-whatif" -WhatIf -Quiet
     $bucketPath = Join-Path (Get-BucketRoot) "nb-whatif"
     -not (Test-Path $bucketPath)
 }
 
 Test-It "New-Bucket bucket is visible via Get-Bucket listing" {
-    Remove-BucketItem -Bucket "nb-list" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
+    Remove-BucketObject -Bucket "nb-list" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
     New-Bucket "nb-list" -Quiet
     $buckets = Get-Bucket
     $null -ne $buckets -and ($buckets.Name -contains "nb-list")
@@ -2053,7 +2053,7 @@ Test-It "New-Bucket bucket is visible via Get-Bucket listing" {
 Write-Host "`n[43] Expand / Reconstruct (-Expand)" -ForegroundColor Blue
 
 Test-It "Expand: simple hashtable round-trip" {
-    Remove-BucketItem -Bucket "expand-simple" -Drop -Force -Confirm:$false -Recurse -Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
+    Remove-BucketObject -Bucket "expand-simple" -Drop -Force -Confirm:$false -Recurse -Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
     $original = @{ host = "localhost"; port = 8080; ssl = $true }
     $original | New-BucketObject -Bucket "expand-simple" -Expand -Quiet
     Use-Bucket "expand-simple"
@@ -2062,7 +2062,7 @@ Test-It "Expand: simple hashtable round-trip" {
 }
 
 Test-It "Expand: nested hashtable round-trip" {
-    Remove-BucketItem -Bucket "expand-nested" -Drop -Force -Confirm:$false -Recurse -Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
+    Remove-BucketObject -Bucket "expand-nested" -Drop -Force -Confirm:$false -Recurse -Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
     $original = @{
         server = @{ host = "db01"; port = 5432 }
         logging = @{ level = "debug"; file = "/var/log/app.log" }
@@ -2074,7 +2074,7 @@ Test-It "Expand: nested hashtable round-trip" {
 }
 
 Test-It "Expand: array of primitives round-trip" {
-    Remove-BucketItem -Bucket "expand-array" -Drop -Force -Confirm:$false -Recurse -Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
+    Remove-BucketObject -Bucket "expand-array" -Drop -Force -Confirm:$false -Recurse -Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
     $original = @("alpha", "beta", "gamma")
     $original | New-BucketObject -Bucket "expand-array" -Key "items" -Expand -Quiet
     Use-Bucket "expand-array"
@@ -2083,7 +2083,7 @@ Test-It "Expand: array of primitives round-trip" {
 }
 
 Test-It "Expand: array of objects round-trip" {
-    Remove-BucketItem -Bucket "expand-objarr" -Drop -Force -Confirm:$false -Recurse -Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
+    Remove-BucketObject -Bucket "expand-objarr" -Drop -Force -Confirm:$false -Recurse -Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
     $original = @(
         @{ name = "Alice"; role = "admin" }
         @{ name = "Bob"; role = "user" }
@@ -2095,7 +2095,7 @@ Test-It "Expand: array of objects round-trip" {
 }
 
 Test-It "Expand: mixed scalar + container properties" {
-    Remove-BucketItem -Bucket "expand-mixed" -Drop -Force -Confirm:$false -Recurse -Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
+    Remove-BucketObject -Bucket "expand-mixed" -Drop -Force -Confirm:$false -Recurse -Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
     $original = @{
         name = "app"
         version = 1.0
@@ -2109,7 +2109,7 @@ Test-It "Expand: mixed scalar + container properties" {
 }
 
 Test-It "Expand: -Filter on reconstructed object" {
-    Remove-BucketItem -Bucket "expand-filter" -Drop -Force -Confirm:$false -Recurse -Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
+    Remove-BucketObject -Bucket "expand-filter" -Drop -Force -Confirm:$false -Recurse -Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
     $original = @{ host = "web01"; env = "prod"; ttl = 300 }
     $original | New-BucketObject -Bucket "expand-filter" -Expand -Quiet
     Use-Bucket "expand-filter"
@@ -2118,7 +2118,7 @@ Test-It "Expand: -Filter on reconstructed object" {
 }
 
 Test-It "Expand: -ExpandDepth limits recursion" {
-    Remove-BucketItem -Bucket "expand-depth" -Drop -Force -Confirm:$false -Recurse -Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
+    Remove-BucketObject -Bucket "expand-depth" -Drop -Force -Confirm:$false -Recurse -Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
     $original = @{
         level1 = @{
             level2 = @{
@@ -2134,7 +2134,7 @@ Test-It "Expand: -ExpandDepth limits recursion" {
 }
 
 Test-It "Expand: type preservation (int, bool, null)" {
-    Remove-BucketItem -Bucket "expand-types" -Drop -Force -Confirm:$false -Recurse -Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
+    Remove-BucketObject -Bucket "expand-types" -Drop -Force -Confirm:$false -Recurse -Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
     $original = @{ intVal = [int]42; boolVal = $true; nullVal = $null; strVal = "hello" }
     $original | New-BucketObject -Bucket "expand-types" -AsBinary -Expand -Quiet
     Use-Bucket "expand-types"
@@ -2143,7 +2143,7 @@ Test-It "Expand: type preservation (int, bool, null)" {
 }
 
 Test-It "Expand: -Key acts as sub-bucket prefix" {
-    Remove-BucketItem -Bucket "expand-key" -Drop -Force -Confirm:$false -Recurse -Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
+    Remove-BucketObject -Bucket "expand-key" -Drop -Force -Confirm:$false -Recurse -Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
     $original = @{ host = "db01"; port = 5432 }
     $original | New-BucketObject -Bucket "expand-key" -Key "database" -Expand -Quiet
     Use-Bucket "expand-key"
@@ -2152,7 +2152,7 @@ Test-It "Expand: -Key acts as sub-bucket prefix" {
 }
 
 Test-It "Expand: empty hashtable produces nothing" {
-    Remove-BucketItem -Bucket "expand-empty" -Drop -Force -Confirm:$false -Recurse -Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
+    Remove-BucketObject -Bucket "expand-empty" -Drop -Force -Confirm:$false -Recurse -Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
     @{} | New-BucketObject -Bucket "expand-empty" -Expand -Quiet
     Use-Bucket "expand-empty"
     $r = Get-BucketObject -Bucket "expand-empty" -Expand
@@ -2160,7 +2160,7 @@ Test-It "Expand: empty hashtable produces nothing" {
 }
 
 Test-It "Expand: KeyProperty with array expands indexed" {
-    Remove-BucketItem -Bucket "expand-kp" -Drop -Force -Confirm:$false -Recurse -Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
+    Remove-BucketObject -Bucket "expand-kp" -Drop -Force -Confirm:$false -Recurse -Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
     $items = @(
         @{ id = "a"; val = 10 }
         @{ id = "b"; val = 20 }
@@ -2172,7 +2172,7 @@ Test-It "Expand: KeyProperty with array expands indexed" {
 }
 
 Test-It "Expand: property name sanitization" {
-    Remove-BucketItem -Bucket "expand-san" -Drop -Force -Confirm:$false -Recurse -Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
+    Remove-BucketObject -Bucket "expand-san" -Drop -Force -Confirm:$false -Recurse -Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
     $original = @{ "bad/key" = "value"; "another:name" = 42 }
     $original | New-BucketObject -Bucket "expand-san" -Expand -Quiet
     Use-Bucket "expand-san"
@@ -2187,11 +2187,11 @@ Get-Funnel | Where-Object Name -like "test-funnel*" | ForEach-Object {
 }
 
 # Cleanup edge bucket
-Remove-BucketItem -Bucket "edge" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
-Remove-BucketItem -Bucket "a" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+Remove-BucketObject -Bucket "edge" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
+Remove-BucketObject -Bucket "a" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet
 
 foreach ($bucket in $createdBuckets) {
-    Remove-BucketItem -Bucket $bucket -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
+    Remove-BucketObject -Bucket $bucket -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse -Quiet
 }
 
 $dotSep = "·" * 52

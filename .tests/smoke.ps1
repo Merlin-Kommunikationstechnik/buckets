@@ -71,7 +71,7 @@ Test-Feature "AutoIndex without -AutoIndex skips duplicates" {
 }
 
 Test-Feature "AutoIndex -Overwrite replaces first, indexes rest" {
-    Remove-BucketItem -Bucket "smoke/ow" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet -ErrorAction SilentlyContinue
+    Remove-BucketObject -Bucket "smoke/ow" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet -ErrorAction SilentlyContinue
     New-BucketObject -Bucket "smoke/ow" -InputObject @{ _Id = "k"; V = 1 } -KeyProperty _Id -Quiet
     $items = @([PSCustomObject]@{ _Id = "k"; V = 10 }, [PSCustomObject]@{ _Id = "k"; V = 20 })
     $r = $items | New-BucketObject -Bucket "smoke/ow" -KeyProperty _Id -AutoIndex -Overwrite -PassThru
@@ -79,7 +79,7 @@ Test-Feature "AutoIndex -Overwrite replaces first, indexes rest" {
 }
 
 Test-Feature "AutoIndex -Key with pipeline" {
-    Remove-BucketItem -Bucket "smoke/key" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet -ErrorAction SilentlyContinue
+    Remove-BucketObject -Bucket "smoke/key" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet -ErrorAction SilentlyContinue
     1..3 | ForEach-Object { [PSCustomObject]@{ N = $_ } } | New-BucketObject -Bucket "smoke/key" -Key "item" -AutoIndex -PassThru | Out-Null
     $keys = (Get-BucketKeys -Bucket "smoke/key").Key
     $keys.Count -eq 3 -and "item" -in $keys -and "item_1" -in $keys -and "item_2" -in $keys
@@ -94,7 +94,7 @@ Test-Feature "AutoIndex no duplicates = no indexing" {
 }
 
 Test-Feature "AutoIndex PassThru includes Indexed" {
-    Remove-BucketItem -Bucket "smoke/pt" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet -ErrorAction SilentlyContinue
+    Remove-BucketObject -Bucket "smoke/pt" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Quiet -ErrorAction SilentlyContinue
     $items = @([PSCustomObject]@{ Name = "z"; V = 1 }, [PSCustomObject]@{ Name = "z"; V = 2 })
     $r = $items | New-BucketObject -Bucket "smoke/pt" -KeyProperty Name -AutoIndex -PassThru
     $r.Indexed -eq 1
@@ -102,7 +102,7 @@ Test-Feature "AutoIndex PassThru includes Indexed" {
 
 # === 3. Cleanup ===
 foreach ($b in $createdBuckets) {
-    Remove-BucketItem -Bucket $b -Drop -Force -Confirm:$false -Recurse -WarningAction SilentlyContinue
+    Remove-BucketObject -Bucket $b -Drop -Force -Confirm:$false -Recurse -WarningAction SilentlyContinue
 }
 
 Set-BucketRoot (Join-Path $HOME ".buckets")

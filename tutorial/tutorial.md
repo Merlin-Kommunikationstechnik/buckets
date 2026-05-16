@@ -53,7 +53,7 @@ The six core cmdlets:
 
   fill   · New-BucketObject      write objects
   scoop  · Get-BucketObject      read objects
-  drain  · Remove-BucketItem     delete objects (add -Drop for bucket dir)
+  drain  · Remove-BucketObject     delete objects (add -Drop for bucket dir)
   dip    · Get-Bucket            list buckets
 
 Defaults: JSON depth 20, Binary depth 5, path C:\Users\berfelde/.buckets
@@ -1348,7 +1348,7 @@ catch { Write-Host "    Error: -Bucket and -Key required" -ForegroundColor Green
 
   Error: -Bucket and -Key required
 
-## 4. Delete — Remove-BucketItem
+## 4. Delete — Remove-BucketObject
 ---
 
 ### 4.1 Preview with -WhatIf
@@ -1359,7 +1359,7 @@ safe to try before you delete.
 
 
 ```powershell
-Remove-BucketItem -Bucket team -Key "Bob" -WhatIf
+Remove-BucketObject -Bucket team -Key "Bob" -WhatIf
 ```
 
 
@@ -1370,7 +1370,7 @@ Delete by key is straightforward. Pass the key of the object you want to remove.
 
 
 ```powershell
-Remove-BucketItem -Bucket team -Key "Bob" -Quiet
+Remove-BucketObject -Bucket team -Key "Bob" -Quiet
 scoop -Bucket team
 ```
 
@@ -1412,7 +1412,7 @@ Buckets is forgiving about missing objects.
 
 
 ```powershell
-Remove-BucketItem -Bucket team -Key "Zoe"
+Remove-BucketObject -Bucket team -Key "Zoe"
 ```
 
 
@@ -1424,7 +1424,7 @@ set validation rejects the command.
 
 
 ```powershell
-Remove-BucketItem -Bucket team -ErrorAction SilentlyContinue
+Remove-BucketObject -Bucket team -ErrorAction SilentlyContinue
 ```
 
 
@@ -1436,7 +1436,7 @@ one command.
 
 
 ```powershell
-Remove-BucketItem -Bucket team -Match @{ Role = "QA" } -Quiet
+Remove-BucketObject -Bucket team -Match @{ Role = "QA" } -Quiet
 scoop -Bucket team
 ```
 
@@ -1486,7 +1486,7 @@ Here, any inactive member gets removed.
 
 
 ```powershell
-Remove-BucketItem -Bucket team -Filter { $_.Active -eq $false } -Quiet
+Remove-BucketObject -Bucket team -Filter { $_.Active -eq $false } -Quiet
 scoop -Bucket team
 ```
 
@@ -1535,7 +1535,7 @@ Name   : Frank
 
 
 ```powershell
-Remove-BucketItem -Bucket team -Quiet
+Remove-BucketObject -Bucket team -Quiet
 scoop -Bucket team
 ```
 
@@ -1550,7 +1550,7 @@ or confirmation messages.
 ```powershell
 $tmp = @{ Data = "gone" }
 $tmp | fill -Bucket temp -Key "bye-bye" -Quiet
-Remove-BucketItem -Bucket temp -Key "bye-bye" -PassThru -Quiet
+Remove-BucketObject -Bucket temp -Key "bye-bye" -PassThru -Quiet
 ```
 
 ```
@@ -1617,7 +1617,7 @@ destination, and new key — useful for pipeline logging.
 
 ```powershell
 Copy-BucketObject -Bucket team -Key "Alice" -DestinationKey "Alice-pass" -PassThru -Quiet
-Remove-BucketItem -Bucket team -Key "Alice-pass" -Quiet
+Remove-BucketObject -Bucket team -Key "Alice-pass" -Quiet
 ```
 
 ```
@@ -2495,7 +2495,7 @@ types                  2
 users                  5
 ```
 
-## 6a. Remove-BucketItem — safety and wildcards
+## 6a. Remove-BucketObject — safety and wildcards
 ---
 
 ### 6a.1 Preview removal
@@ -2505,7 +2505,7 @@ users                  5
 
 
 ```powershell
-Remove-BucketItem -Bucket "team" -Drop -WhatIf
+Remove-BucketObject -Bucket "team" -Drop -WhatIf
 ```
 
 
@@ -2520,7 +2520,7 @@ Wildcard patterns work too. Preview removing all buckets matching a pattern.
 
 
 ```powershell
-Remove-BucketItem -Bucket "t*" -Drop -WhatIf
+Remove-BucketObject -Bucket "t*" -Drop -WhatIf
 ```
 
 
@@ -2542,7 +2542,7 @@ refuses to remove directories with other file types.
 ```powershell
 $tmp = @{ A = 1 }
 $tmp | fill -Bucket temp-remove -Key "x" -Quiet
-Remove-BucketItem -Bucket temp-remove -Drop -Force -Confirm:$false
+Remove-BucketObject -Bucket temp-remove -Drop -Force -Confirm:$false
 ```
 
 temp-remove · 1 object removed
@@ -2550,7 +2550,7 @@ temp-remove · 1 object removed
 ### 6a.4 Safety check on removal
 ---
 
-Safety first: Remove-BucketItem with -Drop checks that a directory contains only bucket files.
+Safety first: Remove-BucketObject with -Drop checks that a directory contains only bucket files.
 If it finds unexpected file types (like .exe), it skips the directory with a
 warning rather than deleting it.
 
@@ -2559,7 +2559,7 @@ warning rather than deleting it.
 $badDir = Join-Path (Get-BucketRoot) "not-a-bucket"
 $null = New-Item -ItemType Directory -Path $badDir -Force
 Set-Content -Path (Join-Path $badDir "evil.exe") -Value "x" -NoNewline
-Remove-BucketItem -Bucket "not-a-bucket" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue 2>$null
+Remove-BucketObject -Bucket "not-a-bucket" -Drop -Force -Confirm:$false -WarningAction SilentlyContinue 2>$null
 Remove-Item $badDir -Recurse -Force -ErrorAction SilentlyContinue
 ```
 
@@ -2967,7 +2967,7 @@ to another using familiar filesystem commands.
 
 ```powershell
 Copy-Item "buckets:\team\Alice" "buckets:\team\Alice-pscopy" -Force
-Remove-BucketItem -Bucket team -Key "Alice-pscopy" -Quiet
+Remove-BucketObject -Bucket team -Key "Alice-pscopy" -Quiet
 ```
 
 
@@ -3273,7 +3273,7 @@ New York US         8300000
 ### 9.12 Removing nested trees
 ---
 
-Remove-BucketItem with -Drop -Recurse deletes an entire nested tree. A single command
+Remove-BucketObject with -Drop -Recurse deletes an entire nested tree. A single command
 removes org and everything under it.
 
 
@@ -3281,7 +3281,7 @@ removes org and everything under it.
 @{ Name="Berlin"; Population=3600000; Country="DE" } | fill -Bucket "org/eu/de/cities" -Key "Berlin"
 @{ Name="London"; Population=8900000; Country="UK" } | fill -Bucket "org/eu/uk/cities" -Key "London"
 @{ Name="New York"; Population=8300000; Country="US" } | fill -Bucket "org/us/cities" -Key "New York"
-Remove-BucketItem -Bucket "org" -Drop -Recurse -Force -Confirm:$false
+Remove-BucketObject -Bucket "org" -Drop -Recurse -Force -Confirm:$false
 ```
 
 org · 0 objects removed

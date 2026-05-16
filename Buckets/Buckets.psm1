@@ -69,7 +69,7 @@ $null = Ensure-BucketExists -Name "default"
 
 Set-Alias -Name fill -Value New-BucketObject
 Set-Alias -Name scoop -Value Get-BucketObject
-Set-Alias -Name drain -Value Remove-BucketItem
+Set-Alias -Name drain -Value Remove-BucketObject
 Set-Alias -Name dip -Value Get-Bucket
 
 Set-Alias -Name tint -Value Set-BucketObject
@@ -132,7 +132,7 @@ $script:KeyCompleterBlock = {
     }
 }
 
-@('New-BucketObject', 'Get-BucketObject', 'Set-BucketObject', 'Remove-BucketItem',
+@('New-BucketObject', 'Get-BucketObject', 'Set-BucketObject', 'Remove-BucketObject',
   'Get-BucketStats', 'Copy-BucketObject', 'Rename-BucketObject',
   'Move-BucketObject', 'Export-Bucket', 'Import-Bucket', 'fill') | ForEach-Object {
     Register-ArgumentCompleter -CommandName $_ -ParameterName Bucket -ScriptBlock $script:CompleterBlock
@@ -147,7 +147,7 @@ Register-ArgumentCompleter -CommandName Move-BucketObject -ParameterName Destina
 
 Register-ArgumentCompleter -CommandName Set-Bucket -ParameterName NewName -ScriptBlock $script:CompleterBlock
 
-@('Get-BucketObject', 'Set-BucketObject', 'Remove-BucketItem',
+@('Get-BucketObject', 'Set-BucketObject', 'Remove-BucketObject',
   'Copy-BucketObject', 'Rename-BucketObject', 'Move-BucketObject') | ForEach-Object {
     Register-ArgumentCompleter -CommandName $_ -ParameterName Key -ScriptBlock $script:KeyCompleterBlock
 }
@@ -220,7 +220,7 @@ foreach ($cmd in $nativeCommands) {
 
 Export-ModuleMember -Function @(
     'New-BucketObject', 'Get-BucketObject', 'Set-BucketObject',
-    'Remove-BucketItem', 'New-Bucket', 'Get-Bucket', 'Set-Bucket',
+    'Remove-BucketObject', 'New-Bucket', 'Get-Bucket', 'Set-Bucket',
     'Get-BucketStats', 'Get-BucketKeys', 'Get-BucketObjectStats',
     'Copy-BucketObject', 'Rename-BucketObject',
     'Move-BucketObject', 'Export-Bucket', 'Import-Bucket',

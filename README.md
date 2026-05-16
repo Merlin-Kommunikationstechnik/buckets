@@ -293,12 +293,12 @@ tint Bob team Role "Lead"
 
 ---
 
-### Remove-BucketItem (alias: `drain`)
+### Remove-BucketObject (alias: `drain`)
 
 Removes objects from a bucket or deletes the bucket directory itself.
 
 ```powershell
-Remove-BucketItem
+Remove-BucketObject
     [-Bucket] <string[]>
     [[-Key] <string[]>]
     [-Match <hashtable>]
@@ -331,28 +331,28 @@ Remove-BucketItem
 
 ```powershell
 # Remove by key (from default bucket)
-Remove-BucketItem -Key "Alice"
+Remove-BucketObject -Key "Alice"
 
 # Remove by key from a specific bucket
-Remove-BucketItem -Bucket users -Key "Alice"
+Remove-BucketObject -Bucket users -Key "Alice"
 
 # Remove all objects from bucket (keep directory)
-Remove-BucketItem -Bucket users
+Remove-BucketObject -Bucket users
 
 # Remove all objects from bucket (recursive)
-Remove-BucketItem -Bucket org -Recurse
+Remove-BucketObject -Bucket org -Recurse
 
 # Remove matching objects
-Remove-BucketItem -Bucket users -Match @{ Status = "inactive" }
+Remove-BucketObject -Bucket users -Match @{ Status = "inactive" }
 
 # Remove with WhatIf preview
-Remove-BucketItem -Bucket temp -WhatIf
+Remove-BucketObject -Bucket temp -WhatIf
 
 # Delete bucket directory itself
-Remove-BucketItem -Bucket users -Drop
+Remove-BucketObject -Bucket users -Drop
 
 # Delete multiple buckets
-Remove-BucketItem -Bucket users, temp -Drop -Force
+Remove-BucketObject -Bucket users, temp -Drop -Force
 ```
 
 ---
@@ -637,12 +637,12 @@ NewestObject : 2024-01-20 14:22:00
 
 ---
 
-### Remove-BucketItem — Drop (bucket removal)
+### Remove-BucketObject — Drop (bucket removal)
 
-Use `Remove-BucketItem -Drop` to delete the bucket directory itself. Supports wildcards, nested buckets, safety checks (`.dat`/`.json` only), and colored pre-confirmation summary.
+Use `Remove-BucketObject -Drop` to delete the bucket directory itself. Supports wildcards, nested buckets, safety checks (`.dat`/`.json` only), and colored pre-confirmation summary.
 
 ```powershell
-Remove-BucketItem
+Remove-BucketObject
     [-Bucket] <string[]>
     [-Drop]
     [-Recurse]
@@ -665,23 +665,23 @@ Remove-BucketItem
 
 ```powershell
 # Single bucket (with confirmation)
-Remove-BucketItem -Bucket users -Drop
+Remove-BucketObject -Bucket users -Drop
 
 # Multiple buckets
-Remove-BucketItem -Bucket users, temp -Drop -Force
+Remove-BucketObject -Bucket users, temp -Drop -Force
 
 # Wildcard patterns
-Remove-BucketItem -Bucket "temp*" -Drop -Force
-Remove-BucketItem -Bucket "*_archive" -Drop -Force
+Remove-BucketObject -Bucket "temp*" -Drop -Force
+Remove-BucketObject -Bucket "*_archive" -Drop -Force
 
 # Nested bucket with all sub-buckets
-Remove-BucketItem -Bucket "projects/myapp" -Drop -Recurse
+Remove-BucketObject -Bucket "projects/myapp" -Drop -Recurse
 
 # All buckets (with confirmation)
-Remove-BucketItem -Bucket * -Drop
+Remove-BucketObject -Bucket * -Drop
 
 # Preview without removing
-Remove-BucketItem -Bucket * -Drop -WhatIf
+Remove-BucketObject -Bucket * -Drop -WhatIf
 ```
 
 Safe by design: only removes directories containing exclusively `.dat`/`.json` files (or empty). Skips buckets with other file types with a warning.
@@ -988,7 +988,7 @@ The provider is created automatically on module import via `Sync-BucketDrive`. R
 | `New-BucketObject` (`fill`) | Save objects to a bucket |
 | `Get-BucketObject` (`scoop`) | Retrieve objects from buckets |
 | `Set-BucketObject` (`tint`) | Update an existing object |
-| `Remove-BucketItem` (`drain`) | Remove objects (or buckets with `-Drop`) |
+| `Remove-BucketObject` (`drain`) | Remove objects (or buckets with `-Drop`) |
 | `Copy-BucketObject` | Copy objects within or between buckets |
 | `Rename-BucketObject` | Rename an object's key |
 | `Move-BucketObject` | Move objects between buckets |

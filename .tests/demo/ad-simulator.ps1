@@ -437,7 +437,7 @@ $servers | Select-Object sAMAccountName, operatingSystem, type | Format-Table
 Write-Host "    Total: $($servers.Count) active servers" -ForegroundColor DarkGray
 
 foreach ($bucket in $createdBuckets) {
-    Remove-BucketItem -Bucket $bucket -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse
+    Remove-BucketObject -Bucket $bucket -Drop -Force -Confirm:$false -WarningAction SilentlyContinue -Recurse
 }
 
 Write-InfoBlock -Mode bottom

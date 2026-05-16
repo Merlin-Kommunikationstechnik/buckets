@@ -177,7 +177,7 @@ function Action-Delete {
 
     $confirm = Read-Host "  Delete '$($todo.Title)'? (y/n)"
     if ($confirm -eq "y") {
-        Remove-BucketItem -Bucket todos -Key $key -Quiet
+        Remove-BucketObject -Bucket todos -Key $key -Quiet
         Write-Host "  Deleted #$key" -ForegroundColor Green
     }
 }

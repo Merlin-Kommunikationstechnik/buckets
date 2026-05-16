@@ -70,7 +70,7 @@ PowerShellVersion = '7.0'
 
 # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
 FunctionsToExport = 'New-BucketObject', 'Get-BucketObject', 'Set-BucketObject',
-               'Remove-BucketItem', 'New-Bucket', 'Get-Bucket', 'Set-Bucket',
+               'Remove-BucketObject', 'New-Bucket', 'Get-Bucket', 'Set-Bucket',
                'Get-BucketKeys', 'Get-BucketObjectStats', 'Get-BucketStats',
                'Copy-BucketObject', 'Rename-BucketObject',
                'Move-BucketObject', 'Export-Bucket', 'Import-Bucket',

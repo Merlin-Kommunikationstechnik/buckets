@@ -24,7 +24,7 @@ function tut-wipe {
     $protected = if ($script:preChapterBuckets) { $script:preChapterBuckets } else { $script:userBuckets }
     $toRemove = $current | Where-Object { $_ -notin $protected }
     if ($toRemove) {
-        Remove-BucketItem -Bucket $toRemove -Drop -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue -WarningAction SilentlyContinue -Quiet
+        Remove-BucketObject -Bucket $toRemove -Drop -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue -WarningAction SilentlyContinue -Quiet
         $script:tutorialBuckets = ($script:tutorialBuckets + $toRemove) | Select-Object -Unique
         $script:tutorialBuckets | Set-Content (Join-Path $root ".tutorial-buckets") -Force
     }
@@ -32,7 +32,7 @@ function tut-wipe {
 
 function tut-cleanup {
     tut-wipe
-    Remove-BucketItem -Bucket "tutorials" -Drop -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue -WarningAction SilentlyContinue -Quiet
+    Remove-BucketObject -Bucket "tutorials" -Drop -Recurse -Force -Confirm:$false -ErrorAction SilentlyContinue -WarningAction SilentlyContinue -Quiet
 }
 
 # ---------- input ----------
@@ -203,7 +203,7 @@ $script:tutorialBuckets = @()
 if (Test-Path $marker) {
     $stale = Get-Content $marker
     if ($stale) {
-        Remove-BucketItem -Bucket $stale -Drop -Force -Confirm:$false -ErrorAction SilentlyContinue -WarningAction SilentlyContinue -Quiet
+        Remove-BucketObject -Bucket $stale -Drop -Force -Confirm:$false -ErrorAction SilentlyContinue -WarningAction SilentlyContinue -Quiet
     }
     Remove-Item $marker -Force -ErrorAction SilentlyContinue
 }

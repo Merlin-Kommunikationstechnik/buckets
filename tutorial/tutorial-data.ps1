@@ -50,7 +50,7 @@ $TutorialData = @{
     fill   · New-BucketObject      write objects
     scoop  · Get-BucketObject      read objects
     tint   · Set-BucketObject      update objects
-    drain  · Remove-BucketItem     delete objects (or add -Drop for bucket)
+    drain  · Remove-BucketObject     delete objects (or add -Drop for bucket)
     dip    · Get-Bucket            list buckets
 
   Defaults: Binary depth 5, JSON depth 20, path $HOME/.buckets
@@ -117,7 +117,7 @@ Remove-Item -Path $oldWayDir -Recurse -Force -ErrorAction SilentlyContinue
     fill   = New-BucketObject    — store objects
     scoop  = Get-BucketObject    — retrieve objects
     tint   = Set-BucketObject    — update objects
-    drain  = Remove-BucketItem   — delete objects
+    drain  = Remove-BucketObject   — delete objects
     dip    = Get-Bucket          — list buckets
 
   These are shorter and easier to type during interactive use.
@@ -195,7 +195,7 @@ scoop -Key "Alice" -Bucket "team"
                                 Key = "04-delete"
                                 Title = "Delete: removing objects"
                                 Body = @'
-  Remove-BucketItem (alias: drain) removes objects. Always preview
+  Remove-BucketObject (alias: drain) removes objects. Always preview
   with -WhatIf before deleting — it shows what would be removed without
   actually deleting anything.
 
@@ -212,10 +212,10 @@ $users | fill -Bucket "team" -KeyProperty Name -Quiet
 '@
                                 Code = @'
 # Preview deletion of a single object
-Remove-BucketItem -Key "Bob" -Bucket "team" -WhatIf
+Remove-BucketObject -Key "Bob" -Bucket "team" -WhatIf
 
 # Actually delete it
-Remove-BucketItem -Key "Bob" -Bucket "team" -Quiet
+Remove-BucketObject -Key "Bob" -Bucket "team" -Quiet
 
 # Confirm: Carol and Alice remain, Bob is gone
 scoop -Bucket "team"
@@ -532,7 +532,7 @@ $teamData | fill -Bucket team -KeyProperty Name -Quiet
 '@
                                 Code = @'
 # Preview what would be deleted — no actual removal, perfectly safe
-Remove-BucketItem -Key "Bob" -Bucket team -WhatIf
+Remove-BucketObject -Key "Bob" -Bucket team -WhatIf
 '@
                             }
                             @{
@@ -553,16 +553,16 @@ $teamData | fill -Bucket team -KeyProperty Name -Quiet
 '@
                                 Code = @'
 # Preview: shows exactly what -All would delete (dry run, nothing removed)
-Remove-BucketItem -Bucket team -WhatIf
+Remove-BucketObject -Bucket team -WhatIf
 # Actually delete everything in the bucket (the bucket directory stays on disk)
-Remove-BucketItem -Bucket team -Quiet
+Remove-BucketObject -Bucket team -Quiet
 '@
                             }
                             @{
                                 Key = "03-match"
                                 Title = "Filtered removal with -Match"
                                 Body = @'
-  -Match also works on Remove-BucketItem. Deletes only objects
+  -Match also works on Remove-BucketObject. Deletes only objects
   whose properties match the hashtable. Useful for bulk cleanup.
 '@
                                 SetupCode = @'
@@ -577,9 +577,9 @@ $teamData | fill -Bucket team -KeyProperty Name -Quiet
 '@
                                 Code = @'
 # Preview: only archived objects would be removed, active ones kept
-Remove-BucketItem -Bucket team -Match @{ Status = "archived" } -WhatIf
+Remove-BucketObject -Bucket team -Match @{ Status = "archived" } -WhatIf
 # Actually remove archived objects, showing which keys were deleted
-Remove-BucketItem -Bucket team -Match @{ Status = "archived" } -PassThru
+Remove-BucketObject -Bucket team -Match @{ Status = "archived" } -PassThru
 '@
                             }
                         )
@@ -770,7 +770,7 @@ scoop -Bucket "dir-listing"
     fill   = New-BucketObject     — save objects
     scoop  = Get-BucketObject     — retrieve objects
     tint   = Set-BucketObject     — update objects
-    drain  = Remove-BucketItem    — delete objects
+    drain  = Remove-BucketObject    — delete objects
     dip    = Get-Bucket           — list buckets
 
   Pipeline parameter binding via metadata:
@@ -1352,7 +1352,7 @@ $r = Get-BucketObject -Bucket "mixed-demo" -Expand
     fill   · New-BucketObject      Objekte schreiben
     scoop  · Get-BucketObject      Objekte lesen
     tint   · Set-BucketObject      Objekte aktualisieren
-    drain  · Remove-BucketItem     Objekte löschen (oder -Drop für Bucket)
+    drain  · Remove-BucketObject     Objekte löschen (oder -Drop für Bucket)
     dip    · Get-Bucket            Buckets auflisten
 
   Standardeinstellungen: Binary-Tiefe 5, JSON-Tiefe 20, Pfad $HOME/.buckets
@@ -1419,7 +1419,7 @@ Remove-Item -Path $oldWayDir -Recurse -Force -ErrorAction SilentlyContinue
     fill   = New-BucketObject    — Objekte speichern
     scoop  = Get-BucketObject    — Objekte abrufen
     tint   = Set-BucketObject    — Objekte aktualisieren
-    drain  = Remove-BucketItem   — Objekte löschen
+    drain  = Remove-BucketObject   — Objekte löschen
     dip    = Get-Bucket          — Buckets auflisten
 
   Sie sind kürzer und leichter zu tippen.
@@ -1498,7 +1498,7 @@ scoop -Key "Alice" -Bucket "team"
                                 Key = "04-delete"
                                 Title = "Löschen: Objekte entfernen"
                                 Body = @'
-  Remove-BucketItem (Alias: drain) entfernt Objekte. Verwende
+  Remove-BucketObject (Alias: drain) entfernt Objekte. Verwende
   immer -WhatIf für eine Vorschau vor dem Löschen — es zeigt, was entfernt
   würde, ohne tatsächlich etwas zu löschen.
 
@@ -1515,10 +1515,10 @@ $users | fill -Bucket "team" -KeyProperty Name -Quiet
 '@
                                 Code = @'
 # Vorschau: Löschen eines einzelnen Objekts
-Remove-BucketItem -Key "Bob" -Bucket "team" -WhatIf
+Remove-BucketObject -Key "Bob" -Bucket "team" -WhatIf
 
 # Tatsächlich löschen
-Remove-BucketItem -Key "Bob" -Bucket "team" -Quiet
+Remove-BucketObject -Key "Bob" -Bucket "team" -Quiet
 
 # Bestätigen: Carol und Alice sind noch da, Bob ist weg
 scoop -Bucket "team"
@@ -1842,7 +1842,7 @@ $teamData | fill -Bucket team -KeyProperty Name -Quiet
 '@
                                 Code = @'
 # Zeige Vorschau, was gelöscht würde — keine tatsächliche Löschung, völlig sicher
-Remove-BucketItem -Key "Bob" -Bucket team -WhatIf
+Remove-BucketObject -Key "Bob" -Bucket team -WhatIf
 '@
                             }
                             @{
@@ -1863,16 +1863,16 @@ $teamData | fill -Bucket team -KeyProperty Name -Quiet
 '@
                                 Code = @'
 # Vorschau: zeigt, was -All löschen würde (Probelauf, nichts wird entfernt)
-Remove-BucketItem -Bucket team -WhatIf
+Remove-BucketObject -Bucket team -WhatIf
 # Lösche tatsächlich alles im Bucket (das Bucket-Verzeichnis bleibt erhalten)
-Remove-BucketItem -Bucket team -Quiet
+Remove-BucketObject -Bucket team -Quiet
 '@
                             }
                             @{
                                 Key = "03-match"
                                 Title = "Gezieltes Löschen mit -Match"
                                 Body = @'
-  -Match funktioniert auch bei Remove-BucketItem. Es löscht nur Objekte,
+  -Match funktioniert auch bei Remove-BucketObject. Es löscht nur Objekte,
   deren Eigenschaften mit der Hashtable übereinstimmen. Nützlich für
   gezielte Bereinigung.
 '@
@@ -1888,9 +1888,9 @@ $teamData | fill -Bucket team -KeyProperty Name -Quiet
 '@
                                 Code = @'
 # Vorschau: nur archivierte Objekte würden entfernt, aktive bleiben
-Remove-BucketItem -Bucket team -Match @{ Status = "archived" } -WhatIf
+Remove-BucketObject -Bucket team -Match @{ Status = "archived" } -WhatIf
 # Entferne tatsächlich archivierte Objekte, zeige welche gelöscht wurden
-Remove-BucketItem -Bucket team -Match @{ Status = "archived" } -PassThru
+Remove-BucketObject -Bucket team -Match @{ Status = "archived" } -PassThru
 '@
                             }
                         )
@@ -2084,7 +2084,7 @@ scoop -Bucket "dir-listing"
     fill   = New-BucketObject     — Objekte speichern
     scoop  = Get-BucketObject     — Objekte abrufen
     tint   = Set-BucketObject     — Objekte aktualisieren
-    drain  = Remove-BucketItem    — Objekte löschen
+    drain  = Remove-BucketObject    — Objekte löschen
     dip    = Get-Bucket           — Buckets auflisten
 
   Pipeline-Parameterbindung über Metadaten:

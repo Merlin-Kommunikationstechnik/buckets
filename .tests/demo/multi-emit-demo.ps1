@@ -18,7 +18,7 @@ $root = Join-Path ([System.IO.Path]::GetTempPath()) "buckets-demo-multi-emit"
 Set-BucketRoot $root
 
 # Clean slate from any prior failed run
-Remove-BucketItem -Bucket orders, servers, events, reports, mixed, colors -Drop -Force -Confirm:$false -Recurse -Quiet -ErrorAction SilentlyContinue
+Remove-BucketObject -Bucket orders, servers, events, reports, mixed, colors -Drop -Force -Confirm:$false -Recurse -Quiet -ErrorAction SilentlyContinue
 Remove-Funnel -Name demo-split -Quiet -Confirm:$false -ErrorAction SilentlyContinue
 Remove-Funnel -Name demo-index -Quiet -Confirm:$false -ErrorAction SilentlyContinue
 
@@ -130,7 +130,7 @@ Write-Host "`n--- cleanup ---" -ForegroundColor DarkGray
 Write-Host "  Removing funnels, buckets, and temp directory" -ForegroundColor DarkGray
 Remove-Funnel -Name demo-split -Quiet -Confirm:$false
 Remove-Funnel -Name demo-index -Quiet -Confirm:$false
-Remove-BucketItem -Bucket orders, servers, events, reports, mixed, colors -Drop -Force -Confirm:$false -Recurse -Quiet
+Remove-BucketObject -Bucket orders, servers, events, reports, mixed, colors -Drop -Force -Confirm:$false -Recurse -Quiet
 Set-BucketRoot (Join-Path $HOME ".buckets")
 Remove-Item $root -Recurse -Force -ErrorAction SilentlyContinue
 

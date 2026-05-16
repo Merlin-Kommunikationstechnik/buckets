@@ -1,4 +1,4 @@
-function Remove-BucketItem {
+function Remove-BucketObject {
     <#
     .SYNOPSIS
     Removes objects from a bucket or deletes the bucket directory itself.
@@ -38,17 +38,17 @@ function Remove-BucketItem {
     .PARAMETER Quiet
     Suppress progress output.
     .EXAMPLE
-    Remove-BucketItem -Bucket logs -Key "log-003"
+    Remove-BucketObject -Bucket logs -Key "log-003"
     .EXAMPLE
-    Remove-BucketItem -Bucket temp
+    Remove-BucketObject -Bucket temp
     .EXAMPLE
-    Remove-BucketItem -Bucket temp -Drop -Force
+    Remove-BucketObject -Bucket temp -Drop -Force
     .EXAMPLE
-    Remove-BucketItem -Bucket users -Match @{ Active = $false }
+    Remove-BucketObject -Bucket users -Match @{ Active = $false }
     .EXAMPLE
-    Remove-BucketItem -Bucket users -Filter { $_.Status -eq "cancelled" }
+    Remove-BucketObject -Bucket users -Filter { $_.Status -eq "cancelled" }
     .EXAMPLE
-    Get-BucketObject -Bucket users -Match @{Role="guest"} | Remove-BucketItem
+    Get-BucketObject -Bucket users -Match @{Role="guest"} | Remove-BucketObject
     #>
     [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Medium', DefaultParameterSetName = 'ByAll')]
     param(
@@ -271,7 +271,7 @@ function Remove-BucketItem {
                 $target = "bucket '$($r.Name)' ($($r.Objects) object(s), $($r.Size))"
                 $shouldRemove = $Force
                 if (-not $Force) {
-                    $shouldRemove = $PSCmdlet.ShouldProcess($target, "Remove-BucketItem")
+                    $shouldRemove = $PSCmdlet.ShouldProcess($target, "Remove-BucketObject")
                 }
 
                 if ($shouldRemove) {
@@ -359,7 +359,7 @@ function Remove-BucketItem {
                 } else {
                     foreach ($file in $matchedFiles) {
                         $fileKey = [System.IO.Path]::GetFileNameWithoutExtension($file.Name)
-                        if ($PSCmdlet.ShouldProcess("object '$fileKey' from bucket '$Bucket'", "Remove-BucketItem")) {
+                        if ($PSCmdlet.ShouldProcess("object '$fileKey' from bucket '$Bucket'", "Remove-BucketObject")) {
                             if ($PassThru) {
                                 [PSCustomObject]@{ Bucket = $Bucket; Key = $fileKey }
                             }
@@ -387,7 +387,7 @@ function Remove-BucketItem {
                 $file = Find-ObjectFile -BucketPath $bucketPath -Key $singleKey
                 if (-not $file) { continue }
                 $fileKey = [System.IO.Path]::GetFileNameWithoutExtension($file.Name)
-                if ($PSCmdlet.ShouldProcess("object '$fileKey' from bucket '$Bucket'", "Remove-BucketItem")) {
+                if ($PSCmdlet.ShouldProcess("object '$fileKey' from bucket '$Bucket'", "Remove-BucketObject")) {
                     if ($PassThru) { [PSCustomObject]@{ Bucket = $Bucket; Key = $fileKey } }
                     [System.IO.File]::Delete($file.FullName)
                     $parentDir = [System.IO.Path]::GetDirectoryName($file.FullName)
@@ -440,7 +440,7 @@ function Remove-BucketItem {
             }
 
             $target = "matching objects from bucket '$Bucket'"
-            if (-not $PSCmdlet.ShouldProcess($target, "Remove-BucketItem")) { return }
+            if (-not $PSCmdlet.ShouldProcess($target, "Remove-BucketObject")) { return }
 
             $matchedFiles = [System.Collections.ArrayList]::new()
             $matchedKeys = [System.Collections.ArrayList]::new()
@@ -516,7 +516,7 @@ function Remove-BucketItem {
         }
 
         $target = "$($allFiles.Count) object(s) from bucket '$Bucket'"
-        if ($PSCmdlet.ShouldProcess($target, "Remove-BucketItem")) {
+        if ($PSCmdlet.ShouldProcess($target, "Remove-BucketObject")) {
             $allFiles | ForEach-Object { [System.IO.File]::Delete($_.FullName) }
             if ($Recurse) {
                 $emptyDirKeys = [System.Collections.ArrayList]::new()
