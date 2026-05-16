@@ -18,9 +18,9 @@ $root = Join-Path ([System.IO.Path]::GetTempPath()) "buckets-demo-multi-emit"
 Set-BucketRoot $root
 
 # Clean slate from any prior failed run
-Remove-BucketObject -Bucket orders, servers, events, reports, mixed, colors -Drop -Force -Confirm:$false -Recurse -Quiet -ErrorAction SilentlyContinue
-Remove-Funnel -Name demo-split -Quiet -Confirm:$false -ErrorAction SilentlyContinue
-Remove-Funnel -Name demo-index -Quiet -Confirm:$false -ErrorAction SilentlyContinue
+Remove-BucketObject -Bucket orders, servers, events, reports, mixed, colors -Drop -Force -Confirm:$false -Recurse -Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
+try { Remove-Funnel -Name demo-split -Quiet -Confirm:$false -ErrorAction SilentlyContinue } catch {}
+try { Remove-Funnel -Name demo-index -Quiet -Confirm:$false -ErrorAction SilentlyContinue } catch {}
 
 Write-Host "========== Multi-emit funnel demo ==========" -ForegroundColor Cyan
 

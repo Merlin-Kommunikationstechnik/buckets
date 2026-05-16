@@ -194,8 +194,8 @@ function Remove-BucketObject {
                     }
                 }
 
-                $stats = Get-BucketStats -Bucket $bPath -Path $Path -ErrorAction SilentlyContinue
                 $relName = $bPath.Substring($Path.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar).Replace([System.IO.Path]::DirectorySeparatorChar, '/')
+                $stats = Get-BucketStats -Bucket $relName -Path $Path -ErrorAction SilentlyContinue
 
                 $removable += [PSCustomObject]@{
                     Name = $relName
