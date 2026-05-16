@@ -244,7 +244,7 @@ $users | fill -Bucket "team" -KeyProperty Name -Quiet
 tint -Bucket "team" -Key "Bob" -Property Score -Value 100
 
 # Add a new property to Alice
-tint team Alice -Property Role -Value "Lead"
+tint team Alice -Property Level -Value "Senior"
 
 # Verify both changes
 scoop -Bucket "team" -Key "Bob", "Alice"
@@ -1548,7 +1548,7 @@ $users | fill -Bucket "team" -KeyProperty Name -Quiet
 tint -Bucket "team" -Key "Bob" -Property Score -Value 100
 
 # Alice eine neue Eigenschaft hinzufügen
-tint team Alice -Property Role -Value "Lead"
+tint team Alice -Property Level -Value "Senior"
 
 # Beide Änderungen überprüfen
 scoop -Bucket "team" -Key "Bob", "Alice"
