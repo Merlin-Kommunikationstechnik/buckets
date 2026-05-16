@@ -376,7 +376,7 @@ while ($true) {
 
         if ($hasCode) {
             Write-Host "  · Lesson" -ForegroundColor DarkGray
-            $script:lastCode = $lesson.Code
+            $script:lastCode = if ($hasSetup) { "$($lesson.SetupCode)`n`n$($lesson.Code)" } else { $lesson.Code }
             tut-write-code $lesson.Code
             try {
                 $codeTokens = $null; $codeErrors = $null

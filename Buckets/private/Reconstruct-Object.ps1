@@ -1,9 +1,19 @@
 function Reconstruct-Object {
     [CmdletBinding()]
-    param([Parameter(Mandatory = $true)][string]$DirPath)
+    param(
+        [Parameter(Mandatory = $true)][string]$DirPath,
+        [int]$Depth = [int]::MaxValue,
+        [int]$CurrentDepth = 0,
+        [System.Collections.Generic.HashSet[string]]$Visited
+    )
 
     $di = [System.IO.DirectoryInfo]::new($DirPath)
     if (-not $di.Exists) { return $null }
+
+    if ($null -eq $Visited) { $Visited = [System.Collections.Generic.HashSet[string]]::new() }
+    $dirResolved = [System.IO.Path]::GetFullPath($(if ($null -ne $di.LinkTarget) { $di.LinkTarget } else { $di.FullName }))
+    if ($Visited.Contains($dirResolved)) { return $null }
+    $null = $Visited.Add($dirResolved)
 
     $props = [ordered]@{}
     $allNumeric = $true
@@ -33,10 +43,12 @@ function Reconstruct-Object {
             $value = Read-BucketFile -File $file
             if ($null -ne $value) { $items[$idx] = $value }
         }
-        foreach ($subDir in $di.GetDirectories()) {
-            if ($subDir.Name -eq '.buckets') { continue }
-            $idx = [int]$subDir.Name
-            $items[$idx] = Reconstruct-Object -DirPath $subDir.FullName
+        if ($CurrentDepth -lt $Depth) {
+            foreach ($subDir in $di.GetDirectories()) {
+                if ($subDir.Name -eq '.buckets') { continue }
+                $idx = [int]$subDir.Name
+                $items[$idx] = Reconstruct-Object -DirPath $subDir.FullName -Depth $Depth -CurrentDepth ($CurrentDepth + 1) -Visited $Visited
+            }
         }
         if ($items.Count -eq 0) { return $null }
         $sorted = $items.Keys | Sort-Object
@@ -49,9 +61,11 @@ function Reconstruct-Object {
             $value = Read-BucketFile -File $file
             if ($null -ne $value) { $result[$key] = $value }
         }
-        foreach ($subDir in $di.GetDirectories()) {
-            if ($subDir.Name -eq '.buckets') { continue }
-            $result[$subDir.Name] = Reconstruct-Object -DirPath $subDir.FullName
+        if ($CurrentDepth -lt $Depth) {
+            foreach ($subDir in $di.GetDirectories()) {
+                if ($subDir.Name -eq '.buckets') { continue }
+                $result[$subDir.Name] = Reconstruct-Object -DirPath $subDir.FullName -Depth $Depth -CurrentDepth ($CurrentDepth + 1) -Visited $Visited
+            }
         }
         if ($result.Count -eq 0) { return $null }
         return [PSCustomObject]$result

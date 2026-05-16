@@ -13,11 +13,16 @@ function Read-BucketFile {
             if ($isCompressed) {
                 try {
                     $ms = [System.IO.MemoryStream]::new($rawBytes)
-                    $decompressed = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionMode]::Decompress)
-                    $reader = [System.IO.StreamReader]::new($decompressed)
-                    $decoded = $reader.ReadToEnd()
-                    $reader.Close()
-                    $decompressed.Close()
+                    try {
+                        $decompressed = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionMode]::Decompress)
+                        try {
+                            $reader = [System.IO.StreamReader]::new($decompressed)
+                            try { $decoded = $reader.ReadToEnd() }
+                            finally { $reader.Close() }
+                        }
+                        finally { $decompressed.Close() }
+                    }
+                    finally { $ms.Dispose() }
                 }
                 catch {
                     Write-Warning "Failed to decompress '$($File.Name)': $_"
@@ -30,7 +35,7 @@ function Read-BucketFile {
                     $decoded = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($decoded))
                 }
             }
-            $obj = [System.Management.Automation.PSSerializer]::Deserialize($decoded)
+            $obj = Read-SafeClixml -Clixml $decoded
             # Convert hashtables to PSCustomObject
             if ($obj -is [hashtable]) {
                 $ordered = [ordered]@{}

@@ -227,6 +227,7 @@ function Remove-Bucket {
                 $finalDirs = @($finalDi.GetDirectories())
                 foreach ($f in $finalFiles) { $f.Delete() }
                 foreach ($d in $finalDirs) {
+                    if ($d.Name -eq '.buckets') { continue }
                     $hasBucketFiles = $d.GetFiles("*.dat").Length -gt 0 -or $d.GetFiles("*.json").Length -gt 0
                     if (-not $hasBucketFiles -and $d.GetDirectories().Length -eq 0) {
                         $d.Delete()

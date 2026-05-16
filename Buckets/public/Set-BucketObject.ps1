@@ -138,51 +138,73 @@ function Set-BucketObject {
                 $writeSuccess = $true
             }
             catch {
+                $tmpBinary = $null
                 try {
                     $xml = [System.Management.Automation.PSSerializer]::Serialize($InputObject, $BinaryDepth)
                     $rawBytes = [System.Text.Encoding]::UTF8.GetBytes($xml)
-                    if (Test-Path $filePath) { Remove-Item $filePath -Force }
-                    $filePath = [System.IO.Path]::ChangeExtension($filePath, ".dat")
+                    $binaryFilePath = [System.IO.Path]::ChangeExtension($filePath, ".dat")
+                    $tmpBinary = $binaryFilePath + ".tmp"
                     if ($Compress) {
                         $ms = [System.IO.MemoryStream]::new()
-                        $cs = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionLevel]::Optimal)
-                        $cs.Write($rawBytes, 0, $rawBytes.Length)
-                        $cs.Close()
-                        [System.IO.File]::WriteAllBytes($filePath, $ms.ToArray())
+                        try {
+                            $cs = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionLevel]::Optimal)
+                            try { $cs.Write($rawBytes, 0, $rawBytes.Length) }
+                            finally { $cs.Close() }
+                            [System.IO.File]::WriteAllBytes($tmpBinary, $ms.ToArray())
+                        }
+                        finally { $ms.Dispose() }
                     }
-                    else { [System.IO.File]::WriteAllBytes($filePath, $rawBytes) }
+                    else { [System.IO.File]::WriteAllBytes($tmpBinary, $rawBytes) }
+                    if (Test-Path $filePath) { Remove-Item $filePath -Force }
+                    [System.IO.File]::Move($tmpBinary, $binaryFilePath)
+                    $tmpBinary = $null
+                    $filePath = $binaryFilePath
                     Write-Warning "Object '$Key' too complex for JSON, saved as binary instead"
                     $writeSuccess = $true
                 }
-                catch { throw "Failed to serialize object '$Key' as binary: $_" }
+                catch {
+                    if ($null -ne $tmpBinary -and (Test-Path $tmpBinary)) { Remove-Item $tmpBinary -Force -ErrorAction SilentlyContinue }
+                    throw "Failed to serialize object '$Key' as binary: $_"
+                }
             }
         }
         else {
+            $oldFilePath = if ($AsBinary -and $filePath -like "*.json") { $filePath } else { $null }
             if ($AsBinary -and $filePath -like "*.json") {
-                if (Test-Path $filePath) { Remove-Item $filePath -Force }
                 $filePath = [System.IO.Path]::ChangeExtension($filePath, ".dat")
             }
             $currentDepth = $BinaryDepth; $serialized = $false
             $maxLoopDepth = [Math]::Max(10, $BinaryDepth)
-            while (-not $serialized -and $currentDepth -le $maxLoopDepth) {
-                try {
-                    $xml = [System.Management.Automation.PSSerializer]::Serialize($InputObject, $currentDepth)
-                    $rawBytes = [System.Text.Encoding]::UTF8.GetBytes($xml)
-                    if ($Compress) {
-                        $ms = [System.IO.MemoryStream]::new()
-                        $cs = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionLevel]::Optimal)
-                        $cs.Write($rawBytes, 0, $rawBytes.Length)
-                        $cs.Close()
-                        [System.IO.File]::WriteAllBytes($filePath, $ms.ToArray())
+            $tmpFilePath = $filePath + ".tmp"
+            try {
+                while (-not $serialized -and $currentDepth -le $maxLoopDepth) {
+                    try {
+                        $xml = [System.Management.Automation.PSSerializer]::Serialize($InputObject, $currentDepth)
+                        $rawBytes = [System.Text.Encoding]::UTF8.GetBytes($xml)
+                        if ($Compress) {
+                            $ms = [System.IO.MemoryStream]::new()
+                            try {
+                                $cs = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionLevel]::Optimal)
+                                try { $cs.Write($rawBytes, 0, $rawBytes.Length) }
+                                finally { $cs.Close() }
+                                [System.IO.File]::WriteAllBytes($tmpFilePath, $ms.ToArray())
+                            }
+                            finally { $ms.Dispose() }
+                        }
+                        else { [System.IO.File]::WriteAllBytes($tmpFilePath, $rawBytes) }
+                        $serialized = $true
+                        if ($currentDepth -gt $BinaryDepth) { Write-Verbose "Binary serialization required depth $currentDepth (default: $BinaryDepth)" }
                     }
-                    else { [System.IO.File]::WriteAllBytes($filePath, $rawBytes) }
-                    $serialized = $true
-                    if ($currentDepth -gt $BinaryDepth) { Write-Verbose "Binary serialization required depth $currentDepth (default: $BinaryDepth)" }
+                    catch { $currentDepth++ }
                 }
-                catch { $currentDepth++ }
+                if (-not $serialized) { throw "Failed to serialize object '$Key' at any binary depth" }
+                if ($null -ne $oldFilePath -and (Test-Path $oldFilePath)) { Remove-Item $oldFilePath -Force }
+                [System.IO.File]::Move($tmpFilePath, $filePath, $true)
+                $writeSuccess = $true
             }
-            if (-not $serialized) { throw "Failed to serialize object '$Key' at any binary depth" }
-            $writeSuccess = $true
+            finally {
+                if (Test-Path $tmpFilePath) { Remove-Item $tmpFilePath -Force -ErrorAction SilentlyContinue }
+            }
         }
 
         if ($writeSuccess) {

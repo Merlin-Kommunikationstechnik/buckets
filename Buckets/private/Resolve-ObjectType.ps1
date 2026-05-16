@@ -18,11 +18,16 @@ function Resolve-ObjectType {
             $isCompressed = $true
             try {
                 $ms = [System.IO.MemoryStream]::new($bytes)
-                $gz = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionMode]::Decompress)
-                $buf = [byte[]]::new(2048)
-                $null = $gz.Read($buf, 0, 2048)
-                $gz.Close(); $ms.Close()
-                $text = [System.Text.Encoding]::UTF8.GetString($buf).TrimStart()
+                try {
+                    $gz = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionMode]::Decompress)
+                    try {
+                        $buf = [byte[]]::new(2048)
+                        $null = $gz.Read($buf, 0, 2048)
+                        $text = [System.Text.Encoding]::UTF8.GetString($buf).TrimStart()
+                    }
+                    finally { $gz.Close() }
+                }
+                finally { $ms.Dispose() }
                 if ($text -match '<T>\s*\[.*?\]') { return @{ Type = "Array"; IsCompressed = $true } }
                 if ($text -match '<T>\s*System\.Collections\.(ArrayList|Generic\.List)') { return @{ Type = "Array"; IsCompressed = $true } }
                 if ($text -match '<T>\s*System\.(String|Int\d+|Boolean|Double|Single|Decimal|Long|Float|Byte)') { return @{ Type = "Value"; IsCompressed = $true } }

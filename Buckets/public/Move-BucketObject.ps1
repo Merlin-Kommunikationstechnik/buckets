@@ -66,7 +66,13 @@ function Move-BucketObject {
     $ext = $sourceFile.Extension
     $destFile = Join-Path $destBucketPath "${safeDestKey}${ext}"
     [System.IO.File]::Copy($sourceFile, $destFile)
-    [System.IO.File]::Delete($sourceFile)
+    try {
+        [System.IO.File]::Delete($sourceFile)
+    }
+    catch {
+        try { [System.IO.File]::Delete($destFile) } catch { }
+        throw "Failed to delete source object after copy; destination was removed to roll back: $_"
+    }
     Write-Verbose "Moved [$Bucket/$Key] to [$DestinationBucket/$safeDestKey]"
 
     if ($PassThru) {

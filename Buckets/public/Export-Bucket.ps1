@@ -42,14 +42,14 @@ function Export-Bucket {
     if ([string]::IsNullOrWhiteSpace($Path)) { $Path = Get-DefaultPath }
     $Path = Resolve-SafePath -Path $Path
 
-    $allObjects = @()
+    $allObjects = [System.Collections.ArrayList]::new()
     $exportedBuckets = 0
     $exportedObjects = 0
 
     foreach ($b in $Bucket) {
         $objects = Get-BucketObject -Bucket $b -Path $Path -Recurse:$Recurse -Depth $Depth
         if ($objects) {
-            $allObjects += $objects
+            $null = $allObjects.AddRange(@($objects))
             $exportedBuckets++
             $exportedObjects += @($objects).Count
         }
@@ -70,10 +70,13 @@ function Export-Bucket {
         $rawBytes = [System.Text.Encoding]::UTF8.GetBytes($xml)
         if ($Compress) {
             $ms = [System.IO.MemoryStream]::new()
-            $cs = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionLevel]::Optimal)
-            $cs.Write($rawBytes, 0, $rawBytes.Length)
-            $cs.Close()
-            [System.IO.File]::WriteAllBytes($OutputFile, $ms.ToArray())
+            try {
+                $cs = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionLevel]::Optimal)
+                try { $cs.Write($rawBytes, 0, $rawBytes.Length) }
+                finally { $cs.Close() }
+                [System.IO.File]::WriteAllBytes($OutputFile, $ms.ToArray())
+            }
+            finally { $ms.Dispose() }
         }
         else {
             [System.IO.File]::WriteAllBytes($OutputFile, $rawBytes)

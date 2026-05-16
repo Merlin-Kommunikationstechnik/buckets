@@ -65,8 +65,8 @@ function Remove-BucketObject {
         $Path = Resolve-SafePath -Path $Path
 
         function _GatherFiles {
-            param([string]$Dir, [int]$CurrentDepth, [int]$MaxDepth, [string[]]$Key)
-            $files = @()
+            param([string]$Dir, [int]$CurrentDepth, [int]$MaxDepth, [string[]]$Key, [System.Collections.Generic.HashSet[string]]$Visited)
+            $files = [System.Collections.ArrayList]::new()
             $di = [System.IO.DirectoryInfo]::new($Dir)
             $allFiles = @($di.GetFiles("*.json")) + @($di.GetFiles("*.dat"))
             $keys = @($Key | Where-Object { $_ })
@@ -75,19 +75,23 @@ function Remove-BucketObject {
                 $allFiles = @($allFiles | Where-Object {
                     $base = [System.IO.Path]::GetFileNameWithoutExtension($_.Name).ToLowerInvariant()
                     foreach ($t in $targets) {
-                        if ($base -eq $t -or $base.StartsWith("${t}_") -or $base.StartsWith("${t}.")) { return $true }
+                        $matched = if ($t -match '[\*\?]') { $base -like $t } else { $base -eq $t }
+                        if ($matched) { return $true }
                     }
                     return $false
                 })
             }
-            $files += $allFiles
+            foreach ($f in $allFiles) { $null = $files.Add($f) }
             if ($CurrentDepth -lt $MaxDepth) {
                 foreach ($sub in $di.GetDirectories()) {
                     if ($sub.Name -eq '.buckets') { continue }
-                    $files += _GatherFiles -Dir $sub.FullName -CurrentDepth ($CurrentDepth + 1) -MaxDepth $MaxDepth -Key $Key
+                    $subResolved = [System.IO.Path]::GetFullPath($(if ($null -ne $sub.LinkTarget) { $sub.LinkTarget } else { $sub.FullName }))
+                    if ($Visited.Contains($subResolved)) { continue }
+                    $null = $Visited.Add($subResolved)
+                    foreach ($f in (_GatherFiles -Dir $sub.FullName -CurrentDepth ($CurrentDepth + 1) -MaxDepth $MaxDepth -Key $Key -Visited $Visited)) { $null = $files.Add($f) }
                 }
             }
-            $files
+            $files.ToArray()
         }
     }
 
@@ -112,7 +116,7 @@ function Remove-BucketObject {
             $allProcessed = $true
 
             $di = [System.IO.DirectoryInfo]::new($bucketPath)
-            $allFiles = if ($Recurse) { _GatherFiles -Dir $bucketPath -CurrentDepth 1 -MaxDepth $Depth } else { @($di.GetFiles("*.json")) + @($di.GetFiles("*.dat")) }
+            $allFiles = if ($Recurse) { $gv = [System.Collections.Generic.HashSet[string]]::new(); _GatherFiles -Dir $bucketPath -CurrentDepth 1 -MaxDepth $Depth -Visited $gv } else { @($di.GetFiles("*.json")) + @($di.GetFiles("*.dat")) }
 
             if ($allFiles.Count -eq 0) { Write-Verbose "Bucket '$Bucket' is already empty"; return }
 
@@ -136,15 +140,20 @@ function Remove-BucketObject {
                 $allFiles | ForEach-Object { [System.IO.File]::Delete($_.FullName) }
                 if ($Recurse) {
                     $emptyDirKeys = [System.Collections.ArrayList]::new()
-                    function _EnumDirs { param([string]$D, [int]$CD)
+                    $edVisited = [System.Collections.Generic.HashSet[string]]::new()
+                    function _EnumDirs { param([string]$D, [int]$CD, [System.Collections.Generic.HashSet[string]]$EDVisited)
                         $null = $emptyDirKeys.Add($D)
                         if ($CD -lt $Depth) {
                             foreach ($s in [System.IO.DirectoryInfo]::new($D).GetDirectories()) {
-                                if ($s.Name -ne '.buckets') { _EnumDirs -D $s.FullName -CD ($CD + 1) }
+                                if ($s.Name -eq '.buckets') { continue }
+                                $sResolved = [System.IO.Path]::GetFullPath($(if ($null -ne $s.LinkTarget) { $s.LinkTarget } else { $s.FullName }))
+                                if ($EDVisited.Contains($sResolved)) { continue }
+                                $null = $EDVisited.Add($sResolved)
+                                _EnumDirs -D $s.FullName -CD ($CD + 1) -EDVisited $EDVisited
                             }
                         }
                     }
-                    _EnumDirs -D $bucketPath -CD 1
+                    _EnumDirs -D $bucketPath -CD 1 -EDVisited $edVisited
                     $emptyDirKeys | Sort-Object Length -Descending | ForEach-Object {
                         $d = [System.IO.DirectoryInfo]::new($_)
                         $d.Refresh()
@@ -181,7 +190,7 @@ function Remove-BucketObject {
         if ($keys.Count -gt 0) {
             $matchedFiles = @()
             if ($Recurse) {
-                $matchedFiles = _GatherFiles -Dir $bucketPath -CurrentDepth 1 -MaxDepth $Depth -Key $keys
+                $gv = [System.Collections.Generic.HashSet[string]]::new(); $matchedFiles = _GatherFiles -Dir $bucketPath -CurrentDepth 1 -MaxDepth $Depth -Key $keys -Visited $gv
             } else {
                 foreach ($singleKey in $keys) {
                     $file = Find-ObjectFile -BucketPath $bucketPath -Key $singleKey
@@ -220,46 +229,55 @@ function Remove-BucketObject {
             $filterProcessed = $true
 
             $di = [System.IO.DirectoryInfo]::new($bucketPath)
-            $allFiles = if ($Recurse) { _GatherFiles -Dir $bucketPath -CurrentDepth 1 -MaxDepth $Depth } else { @($di.GetFiles("*.json")) + @($di.GetFiles("*.dat")) }
+            $allFiles = if ($Recurse) { $gv = [System.Collections.Generic.HashSet[string]]::new(); _GatherFiles -Dir $bucketPath -CurrentDepth 1 -MaxDepth $Depth -Visited $gv } else { @($di.GetFiles("*.json")) + @($di.GetFiles("*.dat")) }
 
             if ($allFiles.Count -eq 0) { Write-Verbose "Bucket '$Bucket' is already empty"; return }
 
-            $matchedFiles = @()
-            $matchedKeys = @()
+            # WhatIf: full preview with matched keys
+            if ($WhatIfPreference) {
+                $matchedKeys = [System.Collections.ArrayList]::new()
+                foreach ($file in $allFiles) {
+                    $obj = Read-BucketFile -File $file
+                    if ($null -eq $obj) { continue }
+                    if ($Match -and -not (Test-MatchFilter -Object $obj -Match $Match)) { continue }
+                    if ($Filter -and ($null -eq ($obj | Where-Object $Filter))) { continue }
+                    $null = $matchedKeys.Add([System.IO.Path]::GetFileNameWithoutExtension($file.Name))
+                }
+                if ($matchedKeys.Count -eq 0) { Write-Verbose "No objects matched the filter criteria in bucket '$Bucket'"; return }
+                Write-Host ""
+                Write-Host "  What if: Remove " -NoNewline -ForegroundColor $script:CMuted
+                Write-Host $matchedKeys.Count -NoNewline -ForegroundColor $script:CNum
+                Write-Host " matching object(s) from " -NoNewline -ForegroundColor $script:CMuted
+                Write-Host $Bucket -NoNewline -ForegroundColor $script:CPath
+                $recurseNote = if ($Recurse) { " (recursive, depth ${Depth})" } else { "" }
+                Write-Host "$recurseNote" -ForegroundColor $script:CMuted
+                $showKeys = $matchedKeys | Select-Object -First 5
+                foreach ($k in $showKeys) { Write-Host "    $k" -ForegroundColor $script:CMuted }
+                if ($matchedKeys.Count -gt 5) { Write-Host "    ... and $($matchedKeys.Count - 5) more" -ForegroundColor $script:CMuted }
+                Write-Host ""
+                return
+            }
+
+            # Confirm prompt before deserialization
+            $target = "matching objects from bucket '$Bucket'"
+            if (-not $PSCmdlet.ShouldProcess($target, "Remove-BucketObject")) { return }
+
+            # Deserialize, match, and delete
+            $matchedFiles = [System.Collections.ArrayList]::new()
+            $matchedKeys = [System.Collections.ArrayList]::new()
             foreach ($file in $allFiles) {
                 $obj = Read-BucketFile -File $file
                 if ($null -eq $obj) { continue }
                 if ($Match -and -not (Test-MatchFilter -Object $obj -Match $Match)) { continue }
-                if ($Filter) {
-                    if ($null -eq ($obj | Where-Object $Filter)) { continue }
-                }
-                $matchedFiles += $file
-                $matchedKeys += [System.IO.Path]::GetFileNameWithoutExtension($file.Name)
+                if ($Filter -and ($null -eq ($obj | Where-Object $Filter))) { continue }
+                $null = $matchedFiles.Add($file)
+                $null = $matchedKeys.Add([System.IO.Path]::GetFileNameWithoutExtension($file.Name))
             }
 
             if ($matchedFiles.Count -eq 0) { Write-Verbose "No objects matched the filter criteria in bucket '$Bucket'"; return }
 
             $matchSize = ($matchedFiles | Measure-Object -Property Length -Sum).Sum
             $sizeStr = if ($matchSize) { "$([math]::Round($matchSize / 1KB, 2)) KB" } else { "0 KB" }
-
-            if ($WhatIfPreference) {
-                Write-Host ""
-                Write-Host "  What if: Remove " -NoNewline -ForegroundColor $script:CMuted
-                Write-Host $matchedFiles.Count -NoNewline -ForegroundColor $script:CNum
-                Write-Host " matching object(s) from " -NoNewline -ForegroundColor $script:CMuted
-                Write-Host $Bucket -NoNewline -ForegroundColor $script:CPath
-                $recurseNote = if ($Recurse) { " (recursive, depth ${Depth})" } else { "" }
-                Write-Host "$recurseNote ($sizeStr)" -ForegroundColor $script:CMuted
-                $showKeys = $matchedKeys | Select-Object -First 5
-                foreach ($k in $showKeys) {
-                    Write-Host "    $k" -ForegroundColor $script:CMuted
-                }
-                if ($matchedKeys.Count -gt 5) {
-                    Write-Host "    ... and $($matchedKeys.Count - 5) more" -ForegroundColor $script:CMuted
-                }
-                Write-Host ""
-                return
-            }
 
             if (-not $Quiet) {
                 Write-Host ""
@@ -270,35 +288,22 @@ function Remove-BucketObject {
                 $recurseNote = if ($Recurse) { " (recursive, depth ${Depth})" } else { "" }
                 Write-Host "$recurseNote ($sizeStr)" -ForegroundColor $script:CMuted
                 $showKeys = $matchedKeys | Select-Object -First 5
-                foreach ($k in $showKeys) {
-                    Write-Host "    " -NoNewline
-                    Write-Host $k -ForegroundColor $script:CNum
-                }
-                if ($matchedKeys.Count -gt 5) {
-                    Write-Host "    ... and $($matchedKeys.Count - 5) more" -ForegroundColor $script:CMuted
-                }
+                foreach ($k in $showKeys) { Write-Host "    " -NoNewline; Write-Host $k -ForegroundColor $script:CNum }
+                if ($matchedKeys.Count -gt 5) { Write-Host "    ... and $($matchedKeys.Count - 5) more" -ForegroundColor $script:CMuted }
                 Write-Host ""
             }
 
-            $target = "$($matchedFiles.Count) matching object(s) from bucket '$Bucket'"
-            if ($PSCmdlet.ShouldProcess($target, "Remove-BucketObject")) {
-                foreach ($f in $matchedFiles) {
-                    if ($PassThru) {
-                        $relPath = $f.FullName.Substring($bucketPath.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar)
-                        $keyOnly = [System.IO.Path]::ChangeExtension($relPath, $null).TrimEnd('.')
-                        [PSCustomObject]@{ Bucket = $Bucket; Key = $keyOnly }
-                    }
-                    [System.IO.File]::Delete($f.FullName)
+            foreach ($f in $matchedFiles) {
+                if ($PassThru) {
+                    $relPath = $f.FullName.Substring($bucketPath.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar)
+                    $keyOnly = [System.IO.Path]::ChangeExtension($relPath, $null).TrimEnd('.')
+                    [PSCustomObject]@{ Bucket = $Bucket; Key = $keyOnly }
                 }
-                if (-not $PassThru -and -not $Quiet) {
-                    Write-Host "$Bucket" -NoNewline -ForegroundColor $script:CPath
-                    Write-Host " · " -NoNewline -ForegroundColor $script:CMuted
-                    $objLabel = if ($matchedFiles.Count -eq 1) { "1 object" } else { "$($matchedFiles.Count) objects" }
-                    Write-Host $objLabel -NoNewline -ForegroundColor $script:CNum
-                    Write-Host " removed (matched)" -ForegroundColor $script:CMuted
-                }
+                [System.IO.File]::Delete($f.FullName)
+                $removedCount++
+                $lastBucket = $Bucket
+                $null = $removedKeys.Add([System.IO.Path]::GetFileNameWithoutExtension($f.Name))
             }
-            elseif (-not $WhatIfPreference) { Write-Verbose "Would remove $($matchedFiles.Count) object(s) from bucket '$Bucket'" }
             return
         }
 

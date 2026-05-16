@@ -51,15 +51,20 @@ function Import-Bucket {
             $isCompressed = $rawBytes.Length -ge 2 -and $rawBytes[0] -eq 0x1F -and $rawBytes[1] -eq 0x8B
             if ($isCompressed) {
                 $ms = [System.IO.MemoryStream]::new($rawBytes)
-                $decompressed = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionMode]::Decompress)
-                $reader = [System.IO.StreamReader]::new($decompressed)
-                $content = $reader.ReadToEnd()
-                $reader.Close()
-                $decompressed.Close()
-                $objects = [System.Management.Automation.PSSerializer]::Deserialize($content)
+                try {
+                    $decompressed = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionMode]::Decompress)
+                    try {
+                        $reader = [System.IO.StreamReader]::new($decompressed)
+                        try { $content = $reader.ReadToEnd() }
+                        finally { $reader.Close() }
+                    }
+                    finally { $decompressed.Close() }
+                }
+                finally { $ms.Dispose() }
+                $objects = Read-SafeClixml -Clixml $content
             }
             else {
-                $objects = [System.Management.Automation.PSSerializer]::Deserialize([System.Text.Encoding]::UTF8.GetString($rawBytes))
+                $objects = Read-SafeClixml -Clixml ([System.Text.Encoding]::UTF8.GetString($rawBytes))
             }
         }
         catch {

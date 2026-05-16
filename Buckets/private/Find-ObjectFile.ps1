@@ -5,11 +5,12 @@ function Find-ObjectFile {
 
     $di = [System.IO.DirectoryInfo]::new($BucketPath)
     $target = $Key.ToLowerInvariant()
+    $hasWildcard = $target -match '[\*\?]'
 
     foreach ($f in @($di.GetFiles("*.json")) + @($di.GetFiles("*.dat"))) {
-        $base = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
-        $baseLower = $base.ToLowerInvariant()
-        if ($baseLower -eq $target -or $baseLower.StartsWith("${target}_") -or $baseLower.StartsWith("${target}.")) { return $f }
+        $baseLower = [System.IO.Path]::GetFileNameWithoutExtension($f.Name).ToLowerInvariant()
+        if ($hasWildcard) { if ($baseLower -like $target) { return $f } }
+        elseif ($baseLower -eq $target) { return $f }
     }
 
     return $null

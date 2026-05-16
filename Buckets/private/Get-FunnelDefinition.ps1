@@ -19,5 +19,5 @@ function Get-FunnelDefinition {
         $script:FunnelCache[$Name] = $def
         return $def
     }
-    throw "Funnel '$Name' not found"
+    return $null
 }

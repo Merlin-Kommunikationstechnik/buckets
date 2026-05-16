@@ -11,10 +11,8 @@ function Get-ObjectFiles {
     foreach ($f in $files) {
         $baseLower = [System.IO.Path]::GetFileNameWithoutExtension($f.Name).ToLowerInvariant()
         foreach ($t in $targets) {
-            if ($baseLower -eq $t -or $baseLower.StartsWith("${t}_") -or $baseLower.StartsWith("${t}.")) {
-                $null = $results.Add($f)
-                break
-            }
+            $matched = if ($t -match '[\*\?]') { $baseLower -like $t } else { $baseLower -eq $t }
+            if ($matched) { $null = $results.Add($f); break }
         }
     }
     return $results.ToArray()

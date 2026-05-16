@@ -1,14 +1,22 @@
 function Scan-Recurse {
-    param([string]$Dir, [int]$currentDepth = 1, [int]$Depth = [int]::MaxValue)
+    param([string]$Dir, [int]$currentDepth = 1, [int]$Depth = [int]::MaxValue, [System.Collections.Generic.HashSet[string]]$Visited)
     $di = [System.IO.DirectoryInfo]::new($Dir)
     $directCount = $di.GetFiles("*.dat").Length + $di.GetFiles("*.json").Length
     $hasSubBuckets = $false
 
+    if ($null -eq $Visited) { $Visited = [System.Collections.Generic.HashSet[string]]::new() }
+    $dirResolved = [System.IO.Path]::GetFullPath($(if ($null -ne $di.LinkTarget) { $di.LinkTarget } else { $di.FullName }))
+    if ($Visited.Contains($dirResolved)) { return }
+    $null = $Visited.Add($dirResolved)
+
     foreach ($child in $di.GetDirectories()) {
         if ($child.Name -eq ".buckets") { continue }
+        $childResolved = [System.IO.Path]::GetFullPath($(if ($null -ne $child.LinkTarget) { $child.LinkTarget } else { $child.FullName }))
+        if ($Visited.Contains($childResolved)) { continue }
+        $null = $Visited.Add($childResolved)
         $hasSubBuckets = $true
         if ($currentDepth -lt $Depth) {
-            Scan-Recurse -Dir $child.FullName -currentDepth ($currentDepth + 1) -Depth $Depth
+            Scan-Recurse -Dir $child.FullName -currentDepth ($currentDepth + 1) -Depth $Depth -Visited $Visited
         }
     }
 

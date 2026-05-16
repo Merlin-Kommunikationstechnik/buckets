@@ -89,8 +89,11 @@ function Get-BucketObject {
 
     $allObjects = [System.Collections.ArrayList]::new()
     $warnedBuckets = @{}
+    $firstLimit = if ($First -gt 0) { $First + [Math]::Max(0, $Skip) } else { 0 }
+    $firstReached = $false
 
-    foreach ($bucketPath in $bucketPaths) {
+    :bucketLoop foreach ($bucketPath in $bucketPaths) {
+        if ($firstReached) { break }
         if (-not [System.IO.Directory]::Exists($bucketPath)) {
             $bucketLeaf = Split-Path $bucketPath -Leaf
             if (-not $warnedBuckets.ContainsKey($bucketLeaf)) {
@@ -112,12 +115,14 @@ function Get-BucketObject {
                 Add-HiddenProperty -Target $reconstructed -Name '_BucketKey' -Value $null
                 Add-HiddenProperty -Target $reconstructed -Name '_BucketFile' -Value $null
                 $null = $allObjects.Add($reconstructed)
+                if ($firstLimit -gt 0 -and $allObjects.Count -ge $firstLimit) { $firstReached = $true; break }
             }
         }
         else {
             $files = Get-ObjectFiles -BucketPath $bucketPath -Key $Key
 
-            foreach ($file in $files) {
+            :fileLoop foreach ($file in $files) {
+                if ($firstReached) { break }
                 if ($null -eq $file -or -not [System.IO.File]::Exists($file.FullName)) { continue }
                 $obj = Read-BucketFile -File $file
                 if ($null -eq $obj) { continue }
@@ -133,12 +138,14 @@ function Get-BucketObject {
                     if ($matchesAppliesTo) {
                         $funnelItems = @($obj | ForEach-Object $funnelDef.Transform) | Where-Object { $_ -ne $null }
                         foreach ($subItem in $funnelItems) {
+                            if ($firstReached) { break fileLoop }
                             $relativePath = $file.FullName.Substring($bucketPath.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar)
                             $keyWithoutExt = [System.IO.Path]::ChangeExtension($relativePath, $null).TrimEnd('.')
                             Add-HiddenProperty -Target $subItem -Name '_BucketName' -Value $bucketName
                             Add-HiddenProperty -Target $subItem -Name '_BucketKey' -Value $keyWithoutExt
                             Add-HiddenProperty -Target $subItem -Name '_BucketFile' -Value $file.FullName
                             $null = $allObjects.Add($subItem)
+                            if ($firstLimit -gt 0 -and $allObjects.Count -ge $firstLimit) { $firstReached = $true; break fileLoop }
                         }
                         continue
                     }
@@ -150,8 +157,10 @@ function Get-BucketObject {
                 Add-HiddenProperty -Target $obj -Name '_BucketKey' -Value $keyWithoutExt
                 Add-HiddenProperty -Target $obj -Name '_BucketFile' -Value $file.FullName
                 $null = $allObjects.Add($obj)
+                if ($firstLimit -gt 0 -and $allObjects.Count -ge $firstLimit) { $firstReached = $true; break fileLoop }
             }
 
+            if ($firstReached) { break }
             if ($Expand -and $Key -and $Key.Count -gt 0) {
                 $subDirs = [System.IO.DirectoryInfo]::new($bucketPath).GetDirectories() | Where-Object { $_.Name -ne '.buckets' }
                 $keysLower = @($Key | ForEach-Object { $_.ToLowerInvariant() })
@@ -159,7 +168,8 @@ function Get-BucketObject {
                     $dirName = $subDir.Name.ToLowerInvariant()
                     $matched = $false
                     foreach ($tk in $keysLower) {
-                        if ($dirName -eq $tk -or $dirName.StartsWith("${tk}_") -or $dirName.StartsWith("${tk}.")) { $matched = $true; break }
+                        $matched = if ($tk -match '[\*\?]') { $dirName -like $tk } else { $dirName -eq $tk }
+                        if ($matched) { break }
                     }
                     if (-not $matched) { continue }
                     $reconstructed = Reconstruct-Object -DirPath $subDir.FullName
@@ -171,6 +181,7 @@ function Get-BucketObject {
                     Add-HiddenProperty -Target $reconstructed -Name '_BucketKey' -Value $subDir.Name
                     Add-HiddenProperty -Target $reconstructed -Name '_BucketFile' -Value $null
                     $null = $allObjects.Add($reconstructed)
+                    if ($firstLimit -gt 0 -and $allObjects.Count -ge $firstLimit) { $firstReached = $true; break }
                 }
             }
         }

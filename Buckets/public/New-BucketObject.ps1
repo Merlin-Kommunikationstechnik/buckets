@@ -69,7 +69,8 @@ function New-BucketObject {
         [switch]$PassThru,
         [object]$Funnel,
         [switch]$Expand,
-        [ValidateRange(1, 20)][int]$ExpandDepth = 5
+        [ValidateRange(1, 20)][int]$ExpandDepth = 5,
+        [ValidateRange(0, [int]::MaxValue)][int]$ThrottleLimit = 10000
     )
 
     begin {
@@ -90,6 +91,112 @@ function New-BucketObject {
         $expandRoot = if ($Path) { Resolve-SafePath -Path $Path } else { Get-DefaultPath }
 
         $funnelDef = Resolve-Funnel $Funnel
+
+        $__processPipelineItem = {
+            param($item, $itemIndex)
+            if ($funnelDef) {
+                $matchesAppliesTo = -not $funnelDef.ContainsKey('AppliesTo') -or ($null -ne ($item | Where-Object $funnelDef.AppliesTo))
+                if ($matchesAppliesTo) {
+                    $funnelItems = @($item | ForEach-Object $funnelDef.Transform) | Where-Object { $_ -ne $null }
+                    if ($funnelItems.Count -eq 0) { $filteredCount++; continue }
+                    $subIdx = 0
+                    $expansionKeys = @{}
+                    foreach ($subItem in $funnelItems) {
+                        $subIdx++
+                        $item = $subItem
+                        $itemFilename = Get-BucketFilename -Item $item -Key $Key -KeyProperty $KeyProperty -AsTimestamp:$AsTimestamp.IsPresent -Index ($itemIndex + $subIdx - 1) -Extension $extension
+                        if ($null -eq $itemFilename) { $missingKeyCount++; continue }
+                        $keyName = if ($itemFilename.OriginalKey) { $itemFilename.OriginalKey } else { [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename) }
+                        if ($funnelItems.Count -gt 1) {
+                            $baseSafeKey = [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename)
+                            $baseOrigKey = $keyName
+                            if ($expansionKeys.ContainsKey($baseSafeKey)) {
+                                $idx = 1
+                                while ($idx -le 10000) {
+                                    $candidateKey = "${baseSafeKey}_${idx}"
+                                    if ($expansionKeys.ContainsKey($candidateKey)) { $idx++; continue }
+                                    break
+                                }
+                                if ($idx -gt 10000) { $safeKey = [Guid]::NewGuid().ToString(); $keyName = $safeKey } else { $safeKey = "${baseSafeKey}_${idx}"; $keyName = "${baseOrigKey}_${idx}" }
+                                $itemFilename = [PSCustomObject]@{ Filename = "${safeKey}${extension}"; Sanitized = $itemFilename.Sanitized; OriginalKey = $keyName }
+                            }
+                            $expansionKeys[[System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename)] = $true
+                        }
+                        if ($subIdx -gt 1) { $expandedCount++ }
+                        if ($AutoIndex) {
+                            $baseSafeKey = [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename)
+                            $baseOrigKey = $keyName
+                            $inBatchCollision = $seenKeys.ContainsKey($baseSafeKey)
+                            $onDiskCollision = -not $Overwrite -and ([System.IO.File]::Exists((Join-Path $bucketPath "${baseSafeKey}.json")) -or [System.IO.File]::Exists((Join-Path $bucketPath "${baseSafeKey}.dat")))
+                            if ($inBatchCollision -or $onDiskCollision) {
+                                $idx = 1
+                                while ($idx -le 10000) {
+                                    $candidateKey = "${baseSafeKey}_${idx}"
+                                    if ($seenKeys.ContainsKey($candidateKey)) { $idx++; continue }
+                                    if (-not $Overwrite -and ([System.IO.File]::Exists((Join-Path $bucketPath "${candidateKey}.json")) -or [System.IO.File]::Exists((Join-Path $bucketPath "${candidateKey}.dat")))) { $idx++; continue }
+                                    break
+                                }
+                                if ($idx -gt 10000) { $safeKey = [Guid]::NewGuid().ToString(); $keyName = $safeKey } else { $safeKey = "${baseSafeKey}_${idx}"; $keyName = "${baseOrigKey}_${idx}" }
+                                $itemFilename = [PSCustomObject]@{ Filename = "${safeKey}${extension}"; Sanitized = $itemFilename.Sanitized; OriginalKey = $keyName }
+                                $indexedCount++
+                                $seenKeys[$safeKey] = $true
+                            } else {
+                                $seenKeys[$baseSafeKey] = $true
+                            }
+                        }
+                        if ($itemFilename.Sanitized) { $sanitizedCount++; $null = $sanitizedKeys.Add([PSCustomObject]@{ Original = $itemFilename.OriginalKey; Sanitized = [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename) }) }
+                        $itemFilePath = Join-Path $bucketPath $itemFilename.Filename
+                        $writeResult = Save-BucketFile -Path $itemFilePath -Item $item -Extension $extension -AsBinary:$AsBinary.IsPresent -Compress:$Compress.IsPresent -Depth $Depth -BinaryDepth $BinaryDepth -Overwrite:$Overwrite.IsPresent -BucketPath $bucketPath -Bucket $Bucket
+                        if ($writeResult.Success) {
+                            $savedCount++
+                            $null = $storedKeys.Add($keyName)
+                            if ($writeResult.Overwritten) { $overwrittenCount++; $null = $overwrittenKeys.Add($keyName) }
+                        }
+                        elseif ($writeResult.Skipped) { $existingKeyCount++; $null = $existingKeyKeys.Add($keyName) }
+                        else { $failedCount++ }
+                        if ($writeResult.Fallback) { $fallbackCount++ }
+                        if ($writeResult.FormatFallback) { $formatFallbackCount++ }
+                    }
+                    continue
+                }
+            }
+            $itemFilename = Get-BucketFilename -Item $item -Key $Key -KeyProperty $KeyProperty -AsTimestamp:$AsTimestamp.IsPresent -Index $itemIndex -Extension $extension
+            if ($null -eq $itemFilename) { $missingKeyCount++; continue }
+            $keyName = if ($itemFilename.OriginalKey) { $itemFilename.OriginalKey } else { [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename) }
+            if ($AutoIndex) {
+                $baseSafeKey = [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename)
+                $baseOrigKey = $keyName
+                $inBatchCollision = $seenKeys.ContainsKey($baseSafeKey)
+                $onDiskCollision = -not $Overwrite -and ([System.IO.File]::Exists((Join-Path $bucketPath "${baseSafeKey}.json")) -or [System.IO.File]::Exists((Join-Path $bucketPath "${baseSafeKey}.dat")))
+                if ($inBatchCollision -or $onDiskCollision) {
+                    $idx = 1
+                    while ($idx -le 10000) {
+                        $candidateKey = "${baseSafeKey}_${idx}"
+                        if ($seenKeys.ContainsKey($candidateKey)) { $idx++; continue }
+                        if (-not $Overwrite -and ([System.IO.File]::Exists((Join-Path $bucketPath "${candidateKey}.json")) -or [System.IO.File]::Exists((Join-Path $bucketPath "${candidateKey}.dat")))) { $idx++; continue }
+                        break
+                    }
+                    if ($idx -gt 10000) { $safeKey = [Guid]::NewGuid().ToString(); $keyName = $safeKey } else { $safeKey = "${baseSafeKey}_${idx}"; $keyName = "${baseOrigKey}_${idx}" }
+                    $itemFilename = [PSCustomObject]@{ Filename = "${safeKey}${extension}"; Sanitized = $itemFilename.Sanitized; OriginalKey = $keyName }
+                    $indexedCount++
+                    $seenKeys[$safeKey] = $true
+                } else {
+                    $seenKeys[$baseSafeKey] = $true
+                }
+            }
+            if ($itemFilename.Sanitized) { $sanitizedCount++; $null = $sanitizedKeys.Add([PSCustomObject]@{ Original = $itemFilename.OriginalKey; Sanitized = [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename) }) }
+            $itemFilePath = Join-Path $bucketPath $itemFilename.Filename
+            $writeResult = Save-BucketFile -Path $itemFilePath -Item $item -Extension $extension -AsBinary:$AsBinary.IsPresent -Compress:$Compress.IsPresent -Depth $Depth -BinaryDepth $BinaryDepth -Overwrite:$Overwrite.IsPresent -BucketPath $bucketPath -Bucket $Bucket
+            if ($writeResult.Success) {
+                $savedCount++
+                $null = $storedKeys.Add($keyName)
+                if ($writeResult.Overwritten) { $overwrittenCount++; $null = $overwrittenKeys.Add($keyName) }
+            }
+            elseif ($writeResult.Skipped) { $existingKeyCount++; $null = $existingKeyKeys.Add($keyName) }
+            else { $failedCount++ }
+            if ($writeResult.Fallback) { $fallbackCount++ }
+            if ($writeResult.FormatFallback) { $formatFallbackCount++ }
+        }
 
         if ($AsTimestamp -and (-not [string]::IsNullOrWhiteSpace($Key) -or -not [string]::IsNullOrWhiteSpace($KeyProperty))) {
             Write-Verbose "Both -Key/-KeyProperty and -AsTimestamp specified. -Key/-KeyProperty takes precedence, -AsTimestamp ignored."
@@ -166,66 +273,60 @@ function New-BucketObject {
                             if ($funnelItems.Count -gt 1) {
                                 $baseSafeKey = [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename)
                                 $baseOrigKey = $keyName
-                                if ($expansionKeys.ContainsKey($baseSafeKey)) {
-                                    $idx = 1
-                                    while ($true) {
-                                        $candidateKey = "${baseSafeKey}_${idx}"
-                                        if ($expansionKeys.ContainsKey($candidateKey)) { $idx++; continue }
-                                        break
-                                    }
-                                    $safeKey = "${baseSafeKey}_${idx}"
-                                    $keyName = "${baseOrigKey}_${idx}"
-                                    $itemFilename = [PSCustomObject]@{ Filename = "${safeKey}${extension}"; Sanitized = $itemFilename.Sanitized; OriginalKey = $keyName }
+                            if ($expansionKeys.ContainsKey($baseSafeKey)) {
+                                $idx = 1
+                                while ($idx -le 10000) {
+                                    $candidateKey = "${baseSafeKey}_${idx}"
+                                    if ($expansionKeys.ContainsKey($candidateKey)) { $idx++; continue }
+                                    break
                                 }
-                                $expansionKeys[[System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename)] = $true
+                                if ($idx -gt 10000) { $safeKey = [Guid]::NewGuid().ToString(); $keyName = $safeKey } else { $safeKey = "${baseSafeKey}_${idx}"; $keyName = "${baseOrigKey}_${idx}" }
+                                $itemFilename = [PSCustomObject]@{ Filename = "${safeKey}${extension}"; Sanitized = $itemFilename.Sanitized; OriginalKey = $keyName }
                             }
-                            if ($subIdx -gt 1) { $expandedCount++ }
+                            $expansionKeys[[System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename)] = $true
+                        }
+                        if ($subIdx -gt 1) { $expandedCount++ }
                             if ($AutoIndex) {
                                 $baseSafeKey = [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename)
                                 $baseOrigKey = $keyName
                                 $inBatchCollision = $seenKeys.ContainsKey($baseSafeKey)
                                 $onDiskCollision = -not $Overwrite -and ([System.IO.File]::Exists((Join-Path $bucketPath "${baseSafeKey}.json")) -or [System.IO.File]::Exists((Join-Path $bucketPath "${baseSafeKey}.dat")))
-                                if ($inBatchCollision -or $onDiskCollision) {
-                                    $idx = 1
-                                    while ($true) {
-                                        $candidateKey = "${baseSafeKey}_${idx}"
-                                        if ($seenKeys.ContainsKey($candidateKey)) { $idx++; continue }
-                                        if (-not $Overwrite -and ([System.IO.File]::Exists((Join-Path $bucketPath "${candidateKey}.json")) -or [System.IO.File]::Exists((Join-Path $bucketPath "${candidateKey}.dat")))) { $idx++; continue }
-                                        break
-                                    }
-                                    $safeKey = "${baseSafeKey}_${idx}"
-                                    $keyName = "${baseOrigKey}_${idx}"
-                                    $itemFilename = [PSCustomObject]@{ Filename = "${safeKey}${extension}"; Sanitized = $itemFilename.Sanitized; OriginalKey = $keyName }
-                                    $indexedCount++
-                                    $seenKeys[$safeKey] = $true
-                                } else {
-                                    $seenKeys[$baseSafeKey] = $true
+                            if ($inBatchCollision -or $onDiskCollision) {
+                                $idx = 1
+                                while ($idx -le 10000) {
+                                    $candidateKey = "${baseSafeKey}_${idx}"
+                                    if ($seenKeys.ContainsKey($candidateKey)) { $idx++; continue }
+                                    if (-not $Overwrite -and ([System.IO.File]::Exists((Join-Path $bucketPath "${candidateKey}.json")) -or [System.IO.File]::Exists((Join-Path $bucketPath "${candidateKey}.dat")))) { $idx++; continue }
+                                    break
                                 }
+                                if ($idx -gt 10000) { $safeKey = [Guid]::NewGuid().ToString(); $keyName = $safeKey } else { $safeKey = "${baseSafeKey}_${idx}"; $keyName = "${baseOrigKey}_${idx}" }
+                                $itemFilename = [PSCustomObject]@{ Filename = "${safeKey}${extension}"; Sanitized = $itemFilename.Sanitized; OriginalKey = $keyName }
+                                $indexedCount++
+                                $seenKeys[$safeKey] = $true
+                            } else {
+                                $seenKeys[$baseSafeKey] = $true
                             }
-                            if ($itemFilename.Sanitized) { $sanitizedCount++; $null = $sanitizedKeys.Add([PSCustomObject]@{ Original = $itemFilename.OriginalKey; Sanitized = [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename) }) }
-                            $itemFilePath = Join-Path $bucketPath $itemFilename.Filename
-                            $writeResult = Save-BucketFile -Path $itemFilePath -Item $item -Extension $extension -AsBinary:$AsBinary.IsPresent -Compress:$Compress.IsPresent -Depth $Depth -BinaryDepth $BinaryDepth -Overwrite:$Overwrite.IsPresent -BucketPath $bucketPath -Bucket $Bucket
-                            if ($writeResult.Success) {
-                                $savedCount++
-                                $null = $storedKeys.Add($keyName)
-                                if ($writeResult.Overwritten) { $overwrittenCount++; $null = $overwrittenKeys.Add($keyName) }
-                                if ($showProgress -and $totalForItems -gt 50) {
-                                    $percent = if ($totalForItems -gt 0) { [math]::Round(($savedCount / $totalForItems) * 100) } else { 0 }
-                                    Write-Progress -Activity "Saving to '$Bucket'" -Status "$savedCount object(s) saved" -PercentComplete $percent -CurrentOperation ([System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename))
-                                }
-                            }
-                            elseif ($writeResult.Skipped) { $existingKeyCount++; $null = $existingKeyKeys.Add($keyName) }
-                            else { $failedCount++ }
-                            if ($writeResult.Fallback) { $fallbackCount++ }
-                            if ($writeResult.FormatFallback) { $formatFallbackCount++ }
                         }
-                        $index += $subIdx - 1
-                        continue
+                        if ($itemFilename.Sanitized) { $sanitizedCount++; $null = $sanitizedKeys.Add([PSCustomObject]@{ Original = $itemFilename.OriginalKey; Sanitized = [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename) }) }
+                        $itemFilePath = Join-Path $bucketPath $itemFilename.Filename
+                        $writeResult = Save-BucketFile -Path $itemFilePath -Item $item -Extension $extension -AsBinary:$AsBinary.IsPresent -Compress:$Compress.IsPresent -Depth $Depth -BinaryDepth $BinaryDepth -Overwrite:$Overwrite.IsPresent -BucketPath $bucketPath -Bucket $Bucket
+                        if ($writeResult.Success) {
+                            $savedCount++
+                            $null = $storedKeys.Add($keyName)
+                            if ($writeResult.Overwritten) { $overwrittenCount++; $null = $overwrittenKeys.Add($keyName) }
+                        }
+                        elseif ($writeResult.Skipped) { $existingKeyCount++; $null = $existingKeyKeys.Add($keyName) }
+                        else { $failedCount++ }
+                        if ($writeResult.Fallback) { $fallbackCount++ }
+                        if ($writeResult.FormatFallback) { $formatFallbackCount++ }
                     }
+                    $index += $subIdx - 1
+                    continue
                 }
-                $itemFilename = Get-BucketFilename -Item $item -Key $Key -KeyProperty $KeyProperty -AsTimestamp:$AsTimestamp.IsPresent -Index $index -Extension $extension
-                if ($null -eq $itemFilename) { $missingKeyCount++; $index++; continue }
-                $keyName = if ($itemFilename.OriginalKey) { $itemFilename.OriginalKey } else { [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename) }
+            }
+            $itemFilename = Get-BucketFilename -Item $item -Key $Key -KeyProperty $KeyProperty -AsTimestamp:$AsTimestamp.IsPresent -Index $index -Extension $extension
+            if ($null -eq $itemFilename) { $missingKeyCount++; $index++; continue }
+            $keyName = if ($itemFilename.OriginalKey) { $itemFilename.OriginalKey } else { [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename) }
                 if ($AutoIndex) {
                     $baseSafeKey = [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename)
                     $baseOrigKey = $keyName
@@ -233,14 +334,13 @@ function New-BucketObject {
                     $onDiskCollision = -not $Overwrite -and ([System.IO.File]::Exists((Join-Path $bucketPath "${baseSafeKey}.json")) -or [System.IO.File]::Exists((Join-Path $bucketPath "${baseSafeKey}.dat")))
                     if ($inBatchCollision -or $onDiskCollision) {
                         $idx = 1
-                        while ($true) {
+                        while ($idx -le 10000) {
                             $candidateKey = "${baseSafeKey}_${idx}"
                             if ($seenKeys.ContainsKey($candidateKey)) { $idx++; continue }
                             if (-not $Overwrite -and ([System.IO.File]::Exists((Join-Path $bucketPath "${candidateKey}.json")) -or [System.IO.File]::Exists((Join-Path $bucketPath "${candidateKey}.dat")))) { $idx++; continue }
                             break
                         }
-                        $safeKey = "${baseSafeKey}_${idx}"
-                        $keyName = "${baseOrigKey}_${idx}"
+                        if ($idx -gt 10000) { $safeKey = [Guid]::NewGuid().ToString(); $keyName = $safeKey } else { $safeKey = "${baseSafeKey}_${idx}"; $keyName = "${baseOrigKey}_${idx}" }
                         $itemFilename = [PSCustomObject]@{ Filename = "${safeKey}${extension}"; Sanitized = $itemFilename.Sanitized; OriginalKey = $keyName }
                         $indexedCount++
                         $seenKeys[$safeKey] = $true
@@ -268,7 +368,42 @@ function New-BucketObject {
             }
         }
         else {
-            $null = $pipeline.Add($InputObject)
+            if ($Expand -and $Key) {
+                $null = $pipeline.Add($InputObject)
+                if ($ThrottleLimit -gt 0 -and $pipeline.Count -ge $ThrottleLimit) {
+                    $flushItems = $pipeline
+                    $pipeline = [System.Collections.ArrayList]::new()
+                    $subBucketPath = Join-Path $bucketPath $Key
+                    $null = Ensure-BucketExists -Name "$Bucket/$Key" -Path $expandRoot
+                    if ($flushItems.Count -eq 1) {
+                        $expandResult = Expand-Object -Item $flushItems[0] -BucketPath $subBucketPath -Extension $extension -AsBinary:$AsBinary.IsPresent -Compress:$Compress.IsPresent -Depth $Depth -BinaryDepth $BinaryDepth -Overwrite:$Overwrite.IsPresent -AutoIndex:$AutoIndex.IsPresent -CurrentDepth 0 -MaxDepth $ExpandDepth -RootPath $expandRoot -BucketName "$Bucket/$Key"
+                    } else {
+                        $erItems = [System.Collections.ArrayList]::new()
+                        foreach ($pi in $flushItems) { $null = $erItems.Add($pi) }
+                        $expandResult = Expand-Object -Item $erItems -BucketPath $subBucketPath -Extension $extension -AsBinary:$AsBinary.IsPresent -Compress:$Compress.IsPresent -Depth $Depth -BinaryDepth $BinaryDepth -Overwrite:$Overwrite.IsPresent -AutoIndex:$AutoIndex.IsPresent -CurrentDepth 0 -MaxDepth $ExpandDepth -RootPath $expandRoot -BucketName "$Bucket/$Key"
+                    }
+                    $savedCount += $expandResult.Saved; $failedCount += $expandResult.Failed
+                    $existingKeyCount += $expandResult.Skipped; $overwrittenCount += $expandResult.Overwritten
+                    $sanitizedCount += $expandResult.Sanitized; $indexedCount += $expandResult.Indexed
+                    $expandBranchCount += $expandResult.Branches; $expandLeafCount += $expandResult.Leaves
+                    foreach ($k in $expandResult.StoredKeys) { $null = $storedKeys.Add($k) }
+                    foreach ($k in $expandResult.SkippedKeys) { $null = $existingKeyKeys.Add($k) }
+                    foreach ($k in $expandResult.SanitizedDetails) { $null = $sanitizedKeys.Add($k) }
+                    foreach ($k in $expandResult.OverwrittenKeys) { $null = $overwrittenKeys.Add($k) }
+                }
+            }
+            else {
+                $null = $pipeline.Add($InputObject)
+                if ($ThrottleLimit -gt 0 -and $pipeline.Count -ge $ThrottleLimit) {
+                    $flushItems = $pipeline
+                    $pipeline = [System.Collections.ArrayList]::new()
+                    $flushIdx = -1
+                    foreach ($raw in $flushItems) {
+                        $flushIdx++
+                        . $__processPipelineItem $raw $flushIdx
+                    }
+                }
+            }
         }
     }
 
@@ -294,124 +429,14 @@ function New-BucketObject {
         }
         elseif ($pipeline.Count -gt 0) {
             $totalForItems = $pipeline.Count
-            $index = 0
+            $index = -1
             foreach ($raw in $pipeline) {
-                $item = $raw
-                if ($funnelDef) {
-                    $matchesAppliesTo = -not $funnelDef.ContainsKey('AppliesTo') -or ($null -ne ($item | Where-Object $funnelDef.AppliesTo))
-                    if ($matchesAppliesTo) {
-                        $funnelItems = @($item | ForEach-Object $funnelDef.Transform) | Where-Object { $_ -ne $null }
-                        if ($funnelItems.Count -eq 0) { $filteredCount++; $index++; continue }
-                        $subIdx = 0
-                        $expansionKeys = @{}
-                        foreach ($subItem in $funnelItems) {
-                            $subIdx++
-                            $item = $subItem
-                            $itemFilename = Get-BucketFilename -Item $item -Key $Key -KeyProperty $KeyProperty -AsTimestamp:$AsTimestamp.IsPresent -Index ($index + $subIdx - 1) -Extension $extension
-                            if ($null -eq $itemFilename) { $missingKeyCount++; continue }
-                            $keyName = if ($itemFilename.OriginalKey) { $itemFilename.OriginalKey } else { [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename) }
-                            if ($funnelItems.Count -gt 1) {
-                                $baseSafeKey = [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename)
-                                $baseOrigKey = $keyName
-                                if ($expansionKeys.ContainsKey($baseSafeKey)) {
-                                    $idx = 1
-                                    while ($true) {
-                                        $candidateKey = "${baseSafeKey}_${idx}"
-                                        if ($expansionKeys.ContainsKey($candidateKey)) { $idx++; continue }
-                                        break
-                                    }
-                                    $safeKey = "${baseSafeKey}_${idx}"
-                                    $keyName = "${baseOrigKey}_${idx}"
-                                    $itemFilename = [PSCustomObject]@{ Filename = "${safeKey}${extension}"; Sanitized = $itemFilename.Sanitized; OriginalKey = $keyName }
-                                }
-                                $expansionKeys[[System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename)] = $true
-                            }
-                            if ($subIdx -gt 1) { $expandedCount++ }
-                            if ($AutoIndex) {
-                                $baseSafeKey = [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename)
-                                $baseOrigKey = $keyName
-                                $inBatchCollision = $seenKeys.ContainsKey($baseSafeKey)
-                                $onDiskCollision = -not $Overwrite -and ([System.IO.File]::Exists((Join-Path $bucketPath "${baseSafeKey}.json")) -or [System.IO.File]::Exists((Join-Path $bucketPath "${baseSafeKey}.dat")))
-                                if ($inBatchCollision -or $onDiskCollision) {
-                                    $idx = 1
-                                    while ($true) {
-                                        $candidateKey = "${baseSafeKey}_${idx}"
-                                        if ($seenKeys.ContainsKey($candidateKey)) { $idx++; continue }
-                                        if (-not $Overwrite -and ([System.IO.File]::Exists((Join-Path $bucketPath "${candidateKey}.json")) -or [System.IO.File]::Exists((Join-Path $bucketPath "${candidateKey}.dat")))) { $idx++; continue }
-                                        break
-                                    }
-                                    $safeKey = "${baseSafeKey}_${idx}"
-                                    $keyName = "${baseOrigKey}_${idx}"
-                                    $itemFilename = [PSCustomObject]@{ Filename = "${safeKey}${extension}"; Sanitized = $itemFilename.Sanitized; OriginalKey = $keyName }
-                                    $indexedCount++
-                                    $seenKeys[$safeKey] = $true
-                                } else {
-                                    $seenKeys[$baseSafeKey] = $true
-                                }
-                            }
-                            if ($itemFilename.Sanitized) { $sanitizedCount++; $null = $sanitizedKeys.Add([PSCustomObject]@{ Original = $itemFilename.OriginalKey; Sanitized = [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename) }) }
-                            $itemFilePath = Join-Path $bucketPath $itemFilename.Filename
-                            $writeResult = Save-BucketFile -Path $itemFilePath -Item $item -Extension $extension -AsBinary:$AsBinary.IsPresent -Compress:$Compress.IsPresent -Depth $Depth -BinaryDepth $BinaryDepth -Overwrite:$Overwrite.IsPresent -BucketPath $bucketPath -Bucket $Bucket
-                            if ($writeResult.Success) {
-                                $savedCount++
-                                $null = $storedKeys.Add($keyName)
-                                if ($writeResult.Overwritten) { $overwrittenCount++; $null = $overwrittenKeys.Add($keyName) }
-                                if ($showProgress -and $totalForItems -gt 50) {
-                                    $percent = if ($totalForItems -gt 0) { [math]::Round(($savedCount / $totalForItems) * 100) } else { 0 }
-                                    Write-Progress -Activity "Saving to '$Bucket'" -Status "$savedCount object(s) saved" -PercentComplete $percent -CurrentOperation ([System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename))
-                                }
-                            }
-                            elseif ($writeResult.Skipped) { $existingKeyCount++; $null = $existingKeyKeys.Add($keyName) }
-                            else { $failedCount++ }
-                            if ($writeResult.Fallback) { $fallbackCount++ }
-                            if ($writeResult.FormatFallback) { $formatFallbackCount++ }
-                        }
-                        $index += $subIdx - 1
-                        continue
-                    }
-                }
-                $itemFilename = Get-BucketFilename -Item $item -Key $Key -KeyProperty $KeyProperty -AsTimestamp:$AsTimestamp.IsPresent -Index $index -Extension $extension
-                if ($null -eq $itemFilename) { $missingKeyCount++; $index++; continue }
-                $keyName = if ($itemFilename.OriginalKey) { $itemFilename.OriginalKey } else { [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename) }
-                if ($AutoIndex) {
-                    $baseSafeKey = [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename)
-                    $baseOrigKey = $keyName
-                    $inBatchCollision = $seenKeys.ContainsKey($baseSafeKey)
-                    $onDiskCollision = -not $Overwrite -and ([System.IO.File]::Exists((Join-Path $bucketPath "${baseSafeKey}.json")) -or [System.IO.File]::Exists((Join-Path $bucketPath "${baseSafeKey}.dat")))
-                    if ($inBatchCollision -or $onDiskCollision) {
-                        $idx = 1
-                        while ($true) {
-                            $candidateKey = "${baseSafeKey}_${idx}"
-                            if ($seenKeys.ContainsKey($candidateKey)) { $idx++; continue }
-                            if (-not $Overwrite -and ([System.IO.File]::Exists((Join-Path $bucketPath "${candidateKey}.json")) -or [System.IO.File]::Exists((Join-Path $bucketPath "${candidateKey}.dat")))) { $idx++; continue }
-                            break
-                        }
-                        $safeKey = "${baseSafeKey}_${idx}"
-                        $keyName = "${baseOrigKey}_${idx}"
-                        $itemFilename = [PSCustomObject]@{ Filename = "${safeKey}${extension}"; Sanitized = $itemFilename.Sanitized; OriginalKey = $keyName }
-                        $indexedCount++
-                        $seenKeys[$safeKey] = $true
-                    } else {
-                        $seenKeys[$baseSafeKey] = $true
-                    }
-                }
-                if ($itemFilename.Sanitized) { $sanitizedCount++; $null = $sanitizedKeys.Add([PSCustomObject]@{ Original = $itemFilename.OriginalKey; Sanitized = [System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename) }) }
-                $itemFilePath = Join-Path $bucketPath $itemFilename.Filename
-                $writeResult = Save-BucketFile -Path $itemFilePath -Item $item -Extension $extension -AsBinary:$AsBinary.IsPresent -Compress:$Compress.IsPresent -Depth $Depth -BinaryDepth $BinaryDepth -Overwrite:$Overwrite.IsPresent -BucketPath $bucketPath -Bucket $Bucket
-                if ($writeResult.Success) {
-                    $savedCount++
-                    $null = $storedKeys.Add($keyName)
-                    if ($writeResult.Overwritten) { $overwrittenCount++; $null = $overwrittenKeys.Add($keyName) }
-                    if ($showProgress -and $totalForItems -gt 50) {
-                        $percent = if ($totalForItems -gt 0) { [math]::Round(($savedCount / $totalForItems) * 100) } else { 0 }
-                        Write-Progress -Activity "Saving to '$Bucket'" -Status "$savedCount object(s) saved" -PercentComplete $percent -CurrentOperation ([System.IO.Path]::GetFileNameWithoutExtension($itemFilename.Filename))
-                    }
-                }
-                elseif ($writeResult.Skipped) { $existingKeyCount++; $null = $existingKeyKeys.Add($keyName) }
-                else { $failedCount++ }
-                if ($writeResult.Fallback) { $fallbackCount++ }
-                if ($writeResult.FormatFallback) { $formatFallbackCount++ }
                 $index++
+                . $__processPipelineItem $raw $index
+                if ($showProgress -and $totalForItems -gt 50) {
+                    $percent = if ($totalForItems -gt 0) { [math]::Round(($index / $totalForItems) * 100) } else { 0 }
+                    Write-Progress -Activity "Saving to '$Bucket'" -Status "$savedCount object(s) saved" -PercentComplete $percent
+                }
             }
         }
 

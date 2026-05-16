@@ -22,6 +22,7 @@ function Get-Funnel {
 
     if ($Name) {
         $def = Get-FunnelDefinition -Name $Name
+        if ($null -eq $def) { return }
         $out = [PSCustomObject]@{ Name = $Name; Transform = $def.Transform; Description = $def.Description }
         if ($def.AppliesTo) { $out | Add-Member -NotePropertyName AppliesTo -NotePropertyValue $def.AppliesTo }
         $out

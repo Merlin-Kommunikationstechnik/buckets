@@ -13,7 +13,8 @@ function Expand-Object {
         [int]$CurrentDepth = 0,
         [int]$MaxDepth = 5,
         [string]$RootPath,
-        [string]$BucketName
+        [string]$BucketName,
+        [ValidateRange(1, 10000)][int]$MaxProperties = 100
     )
 
     $result = @{
@@ -33,15 +34,21 @@ function Expand-Object {
     if ($isDict) {
         $propNames = if ($Item -is [hashtable]) { $Item.Keys } else { $Item.Keys }
         $seenKeys = @{}
+        $propIndex = 0
         foreach ($pname in $propNames) {
+            $propIndex++
+            if ($propIndex -gt $MaxProperties) {
+                Write-Warning "Expand-Object truncated at $MaxProperties properties per level (hashtable)"
+                break
+            }
             $value = $Item[$pname]
             $safeKey = $pname -replace '[\\/:\*\?"<>\|\[\]]', '_'
             if ($safeKey -match '^_+$' -or [string]::IsNullOrWhiteSpace($safeKey)) { continue }
             $wasSanitized = $safeKey -ne $pname
             if ($AutoIndex -and $seenKeys.ContainsKey($safeKey)) {
                 $idxVal = 1
-                while ($seenKeys.ContainsKey("${safeKey}_${idxVal}")) { $idxVal++ }
-                $safeKey = "${safeKey}_${idxVal}"
+                while ($idxVal -le 10000 -and $seenKeys.ContainsKey("${safeKey}_${idxVal}")) { $idxVal++ }
+                if ($idxVal -gt 10000) { $safeKey = [Guid]::NewGuid().ToString() } else { $safeKey = "${safeKey}_${idxVal}" }
                 $result.Indexed++
             }
             $seenKeys[$safeKey] = $true
@@ -86,7 +93,13 @@ function Expand-Object {
         }
     }
     elseif ($isArray) {
+        $propIndex = 0
         for ($i = 0; $i -lt $Item.Count; $i++) {
+            $propIndex++
+            if ($propIndex -gt $MaxProperties) {
+                Write-Warning "Expand-Object truncated at $MaxProperties array elements per level"
+                break
+            }
             $element = $Item[$i]
             $idxKey = $i.ToString()
             $elemIsDict = $null -ne $element -and ($element -is [hashtable] -or $element -is [System.Collections.IDictionary])
@@ -129,15 +142,21 @@ function Expand-Object {
         $propNames = @($Item.PSObject.Properties | Where-Object { $_.MemberType -in @('Property', 'NoteProperty', 'ScriptProperty', 'CodeProperty', 'AliasProperty') } | ForEach-Object { $_.Name })
         if ($propNames.Count -eq 0) { return $result }
         $seenKeys = @{}
+        $propIndex = 0
         foreach ($pname in $propNames) {
+            $propIndex++
+            if ($propIndex -gt $MaxProperties) {
+                Write-Warning "Expand-Object truncated at $MaxProperties properties per level (PSObject)"
+                break
+            }
             $value = $Item.$pname
             $safeKey = $pname -replace '[\\/:\*\?"<>\|\[\]]', '_'
             if ($safeKey -match '^_+$' -or [string]::IsNullOrWhiteSpace($safeKey)) { continue }
             $wasSanitized = $safeKey -ne $pname
             if ($AutoIndex -and $seenKeys.ContainsKey($safeKey)) {
                 $idxVal = 1
-                while ($seenKeys.ContainsKey("${safeKey}_${idxVal}")) { $idxVal++ }
-                $safeKey = "${safeKey}_${idxVal}"
+                while ($idxVal -le 10000 -and $seenKeys.ContainsKey("${safeKey}_${idxVal}")) { $idxVal++ }
+                if ($idxVal -gt 10000) { $safeKey = [Guid]::NewGuid().ToString() } else { $safeKey = "${safeKey}_${idxVal}" }
                 $result.Indexed++
             }
             $seenKeys[$safeKey] = $true
