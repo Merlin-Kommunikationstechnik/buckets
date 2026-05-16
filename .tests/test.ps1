@@ -2035,7 +2035,7 @@ Test-It "New-Bucket bucket is visible via Get-Bucket listing" {
 Write-Host "`n[43] Expand / Reconstruct (-Expand)" -ForegroundColor Blue
 
 Test-It "Expand: simple hashtable round-trip" {
-    Remove-Bucket "expand-simple" -Force -Confirm:$false -Recurse -Quiet -ErrorAction SilentlyContinue
+    Remove-Bucket "expand-simple" -Force -Confirm:$false -Recurse -Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
     $original = @{ host = "localhost"; port = 8080; ssl = $true }
     $original | New-BucketObject -Bucket "expand-simple" -Expand -Quiet
     Use-Bucket "expand-simple"
@@ -2044,7 +2044,7 @@ Test-It "Expand: simple hashtable round-trip" {
 }
 
 Test-It "Expand: nested hashtable round-trip" {
-    Remove-Bucket "expand-nested" -Force -Confirm:$false -Recurse -Quiet -ErrorAction SilentlyContinue
+    Remove-Bucket "expand-nested" -Force -Confirm:$false -Recurse -Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
     $original = @{
         server = @{ host = "db01"; port = 5432 }
         logging = @{ level = "debug"; file = "/var/log/app.log" }
@@ -2056,7 +2056,7 @@ Test-It "Expand: nested hashtable round-trip" {
 }
 
 Test-It "Expand: array of primitives round-trip" {
-    Remove-Bucket "expand-array" -Force -Confirm:$false -Recurse -Quiet -ErrorAction SilentlyContinue
+    Remove-Bucket "expand-array" -Force -Confirm:$false -Recurse -Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
     $original = @("alpha", "beta", "gamma")
     $original | New-BucketObject -Bucket "expand-array" -Key "items" -Expand -Quiet
     Use-Bucket "expand-array"
@@ -2065,7 +2065,7 @@ Test-It "Expand: array of primitives round-trip" {
 }
 
 Test-It "Expand: array of objects round-trip" {
-    Remove-Bucket "expand-objarr" -Force -Confirm:$false -Recurse -Quiet -ErrorAction SilentlyContinue
+    Remove-Bucket "expand-objarr" -Force -Confirm:$false -Recurse -Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
     $original = @(
         @{ name = "Alice"; role = "admin" }
         @{ name = "Bob"; role = "user" }
@@ -2077,7 +2077,7 @@ Test-It "Expand: array of objects round-trip" {
 }
 
 Test-It "Expand: mixed scalar + container properties" {
-    Remove-Bucket "expand-mixed" -Force -Confirm:$false -Recurse -Quiet -ErrorAction SilentlyContinue
+    Remove-Bucket "expand-mixed" -Force -Confirm:$false -Recurse -Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
     $original = @{
         name = "app"
         version = 1.0
@@ -2091,7 +2091,7 @@ Test-It "Expand: mixed scalar + container properties" {
 }
 
 Test-It "Expand: -Filter on reconstructed object" {
-    Remove-Bucket "expand-filter" -Force -Confirm:$false -Recurse -Quiet -ErrorAction SilentlyContinue
+    Remove-Bucket "expand-filter" -Force -Confirm:$false -Recurse -Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
     $original = @{ host = "web01"; env = "prod"; ttl = 300 }
     $original | New-BucketObject -Bucket "expand-filter" -Expand -Quiet
     Use-Bucket "expand-filter"
@@ -2100,7 +2100,7 @@ Test-It "Expand: -Filter on reconstructed object" {
 }
 
 Test-It "Expand: -ExpandDepth limits recursion" {
-    Remove-Bucket "expand-depth" -Force -Confirm:$false -Recurse -Quiet -ErrorAction SilentlyContinue
+    Remove-Bucket "expand-depth" -Force -Confirm:$false -Recurse -Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
     $original = @{
         level1 = @{
             level2 = @{
@@ -2116,7 +2116,7 @@ Test-It "Expand: -ExpandDepth limits recursion" {
 }
 
 Test-It "Expand: type preservation (int, bool, null)" {
-    Remove-Bucket "expand-types" -Force -Confirm:$false -Recurse -Quiet -ErrorAction SilentlyContinue
+    Remove-Bucket "expand-types" -Force -Confirm:$false -Recurse -Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
     $original = @{ intVal = [int]42; boolVal = $true; nullVal = $null; strVal = "hello" }
     $original | New-BucketObject -Bucket "expand-types" -AsBinary -Expand -Quiet
     Use-Bucket "expand-types"
@@ -2125,7 +2125,7 @@ Test-It "Expand: type preservation (int, bool, null)" {
 }
 
 Test-It "Expand: -Key acts as sub-bucket prefix" {
-    Remove-Bucket "expand-key" -Force -Confirm:$false -Recurse -Quiet -ErrorAction SilentlyContinue
+    Remove-Bucket "expand-key" -Force -Confirm:$false -Recurse -Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
     $original = @{ host = "db01"; port = 5432 }
     $original | New-BucketObject -Bucket "expand-key" -Key "database" -Expand -Quiet
     Use-Bucket "expand-key"
@@ -2134,7 +2134,7 @@ Test-It "Expand: -Key acts as sub-bucket prefix" {
 }
 
 Test-It "Expand: empty hashtable produces nothing" {
-    Remove-Bucket "expand-empty" -Force -Confirm:$false -Recurse -Quiet -ErrorAction SilentlyContinue
+    Remove-Bucket "expand-empty" -Force -Confirm:$false -Recurse -Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
     @{} | New-BucketObject -Bucket "expand-empty" -Expand -Quiet
     Use-Bucket "expand-empty"
     $r = Get-BucketObject -Bucket "expand-empty" -Expand
@@ -2142,7 +2142,7 @@ Test-It "Expand: empty hashtable produces nothing" {
 }
 
 Test-It "Expand: KeyProperty with array expands indexed" {
-    Remove-Bucket "expand-kp" -Force -Confirm:$false -Recurse -Quiet -ErrorAction SilentlyContinue
+    Remove-Bucket "expand-kp" -Force -Confirm:$false -Recurse -Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
     $items = @(
         @{ id = "a"; val = 10 }
         @{ id = "b"; val = 20 }
@@ -2154,7 +2154,7 @@ Test-It "Expand: KeyProperty with array expands indexed" {
 }
 
 Test-It "Expand: property name sanitization" {
-    Remove-Bucket "expand-san" -Force -Confirm:$false -Recurse -Quiet -ErrorAction SilentlyContinue
+    Remove-Bucket "expand-san" -Force -Confirm:$false -Recurse -Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
     $original = @{ "bad/key" = "value"; "another:name" = 42 }
     $original | New-BucketObject -Bucket "expand-san" -Expand -Quiet
     Use-Bucket "expand-san"
