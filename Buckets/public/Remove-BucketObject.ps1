@@ -60,9 +60,9 @@ function Remove-BucketObject {
         [Alias('_BucketKey')]
         [string[]]$Key,
 
-        [Parameter(Mandatory = $true, Position = 0, ParameterSetName = 'ByAll')]
+        [Parameter(Position = 0, ParameterSetName = 'ByAll')]
         [Parameter(Mandatory = $true, ParameterSetName = 'ByFilter')]
-        [Parameter(Mandatory = $true, ParameterSetName = 'DropBucket')]
+        [Parameter(ParameterSetName = 'DropBucket')]
         [Parameter(ParameterSetName = 'ByKey')]
         [Parameter(ValueFromPipelineByPropertyName = $true)]
         [Alias('_BucketName')]
@@ -96,7 +96,11 @@ function Remove-BucketObject {
 
         [switch]$PassThru,
 
-        [switch]$Quiet
+        [switch]$Quiet,
+
+        [Parameter(ParameterSetName = 'ByAll')]
+        [Parameter(ParameterSetName = 'DropBucket')]
+        [switch]$All
     )
 
     begin {
@@ -149,6 +153,11 @@ function Remove-BucketObject {
                 if ($null -eq $Key -or $Key.Count -eq 0 -or ($Key.Count -eq 1 -and [string]::IsNullOrWhiteSpace($Key[0]))) { $Key = @($InputObject._BucketKey) }
                 $fromPipeline = $true
             }
+        }
+
+        if ($All) {
+            $Bucket = @('*')
+            $Recurse = $true
         }
 
         if ($Drop) {
