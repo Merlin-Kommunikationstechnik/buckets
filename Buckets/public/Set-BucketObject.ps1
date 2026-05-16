@@ -50,7 +50,7 @@ function Set-BucketObject {
     .EXAMPLE
     Set-BucketObject -Bucket team -Key "Bob" -Property Score -Value 100
     #>
-    [CmdletBinding(DefaultParameterSetName = "Pipeline")]
+    [CmdletBinding(SupportsShouldProcess = $true, DefaultParameterSetName = "Pipeline")]
     param(
         [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true, ParameterSetName = "Pipeline")]
         [PSObject]$InputObject,
@@ -80,6 +80,7 @@ function Set-BucketObject {
         $useVerbose = $VerbosePreference -eq 'Continue'; $useQuiet = $Quiet.IsPresent
         $updatedKeys = [System.Collections.ArrayList]::new()
         $isPropertySet = $PSCmdlet.ParameterSetName -eq "PropertyValue"
+        $isPatch = $false
     }
 
     process {
@@ -145,10 +146,13 @@ function Set-BucketObject {
             $matchingFiles = @($file)
         }
 
+        if ($hasKeyWildcard -and -not $isPropertySet) { $isPatch = $true }
+
         foreach ($file in $matchingFiles) {
             $fileKey = [System.IO.Path]::GetFileNameWithoutExtension($file.Name)
             $filePath = $file.FullName
             $useJson = $file.Extension -eq ".json" -and -not $AsBinary
+            $objectToSave = $InputObject
 
             if ($isPropertySet) {
                 $existing = Read-BucketFile -File ([System.IO.FileInfo]::new($filePath))
@@ -156,7 +160,7 @@ function Set-BucketObject {
                 if ($existing -is [hashtable]) { $existing[$Property] = $Value }
                 elseif ($existing.PSObject.Properties[$Property]) { $existing.PSObject.Properties[$Property].Value = $Value }
                 else { $existing | Add-Member -NotePropertyName $Property -NotePropertyValue $Value }
-                $InputObject = $existing
+                $objectToSave = $existing
             }
             elseif ($isPatch) {
                 $existing = Read-BucketFile -File ([System.IO.FileInfo]::new($filePath))
@@ -181,84 +185,89 @@ function Set-BucketObject {
                         }
                     }
                 }
-                $InputObject = $existing
+                $objectToSave = $existing
             }
 
             $writeSuccess = $false
-            if ($useJson) {
-                try {
-                    $json = ConvertTo-Json -InputObject $InputObject -Depth $Depth -Compress -WarningAction SilentlyContinue
-                    [System.IO.File]::WriteAllText($filePath, $json, [System.Text.Encoding]::UTF8)
-                    $writeSuccess = $true
-                }
-                catch {
-                    $tmpBinary = $null
+            if ($PSCmdlet.ShouldProcess("$Bucket/$fileKey", "Update object")) {
+                if ($useJson) {
                     try {
-                        $xml = [System.Management.Automation.PSSerializer]::Serialize($InputObject, $BinaryDepth)
-                        $rawBytes = [System.Text.Encoding]::UTF8.GetBytes($xml)
-                        $binaryFilePath = [System.IO.Path]::ChangeExtension($filePath, ".dat")
-                        $tmpBinary = $binaryFilePath + ".tmp"
-                        if ($Compress) {
-                            $ms = [System.IO.MemoryStream]::new()
-                            try {
-                                $cs = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionLevel]::Optimal)
-                                try { $cs.Write($rawBytes, 0, $rawBytes.Length) }
-                                finally { $cs.Close() }
-                                [System.IO.File]::WriteAllBytes($tmpBinary, $ms.ToArray())
-                            }
-                            finally { $ms.Dispose() }
-                        }
-                        else { [System.IO.File]::WriteAllBytes($tmpBinary, $rawBytes) }
-                        if (Test-Path $filePath) { Remove-Item $filePath -Force }
-                        [System.IO.File]::Move($tmpBinary, $binaryFilePath)
-                        $tmpBinary = $null
-                        $filePath = $binaryFilePath
-                        Write-Warning "Object '$fileKey' too complex for JSON, saved as binary instead"
+                        $json = ConvertTo-Json -InputObject $objectToSave -Depth $Depth -Compress -WarningAction SilentlyContinue
+                        [System.IO.File]::WriteAllText($filePath, $json, [System.Text.Encoding]::UTF8)
                         $writeSuccess = $true
                     }
                     catch {
-                        if ($null -ne $tmpBinary -and (Test-Path $tmpBinary)) { Remove-Item $tmpBinary -Force -ErrorAction SilentlyContinue }
-                        throw "Failed to serialize object '$fileKey' as binary: $_"
-                    }
-                }
-            }
-            else {
-                $oldFilePath = if ($AsBinary -and $filePath -like "*.json") { $filePath } else { $null }
-                if ($AsBinary -and $filePath -like "*.json") {
-                    $filePath = [System.IO.Path]::ChangeExtension($filePath, ".dat")
-                }
-                $currentDepth = $BinaryDepth; $serialized = $false
-                $maxLoopDepth = [Math]::Max(10, $BinaryDepth)
-                $tmpFilePath = $filePath + ".tmp"
-                try {
-                    while (-not $serialized -and $currentDepth -le $maxLoopDepth) {
+                        $tmpBinary = $null
                         try {
-                            $xml = [System.Management.Automation.PSSerializer]::Serialize($InputObject, $currentDepth)
+                            $xml = [System.Management.Automation.PSSerializer]::Serialize($objectToSave, $BinaryDepth)
                             $rawBytes = [System.Text.Encoding]::UTF8.GetBytes($xml)
+                            $binaryFilePath = [System.IO.Path]::ChangeExtension($filePath, ".dat")
+                            $tmpBinary = $binaryFilePath + ".tmp"
                             if ($Compress) {
                                 $ms = [System.IO.MemoryStream]::new()
                                 try {
                                     $cs = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionLevel]::Optimal)
                                     try { $cs.Write($rawBytes, 0, $rawBytes.Length) }
                                     finally { $cs.Close() }
-                                    [System.IO.File]::WriteAllBytes($tmpFilePath, $ms.ToArray())
+                                    [System.IO.File]::WriteAllBytes($tmpBinary, $ms.ToArray())
                                 }
                                 finally { $ms.Dispose() }
                             }
-                            else { [System.IO.File]::WriteAllBytes($tmpFilePath, $rawBytes) }
-                            $serialized = $true
-                            if ($currentDepth -gt $BinaryDepth) { Write-Verbose "Binary serialization required depth $currentDepth (default: $BinaryDepth)" }
+                            else { [System.IO.File]::WriteAllBytes($tmpBinary, $rawBytes) }
+                            if (Test-Path $filePath) { Remove-Item $filePath -Force }
+                            [System.IO.File]::Move($tmpBinary, $binaryFilePath)
+                            $tmpBinary = $null
+                            $filePath = $binaryFilePath
+                            Write-Warning "Object '$fileKey' too complex for JSON, saved as binary instead"
+                            $writeSuccess = $true
                         }
-                        catch { $currentDepth++ }
+                        catch {
+                            if ($null -ne $tmpBinary -and (Test-Path $tmpBinary)) { Remove-Item $tmpBinary -Force -ErrorAction SilentlyContinue }
+                            throw "Failed to serialize object '$fileKey' as binary: $_"
+                        }
                     }
-                    if (-not $serialized) { throw "Failed to serialize object '$fileKey' at any binary depth" }
-                    if ($null -ne $oldFilePath -and (Test-Path $oldFilePath)) { Remove-Item $oldFilePath -Force }
-                    [System.IO.File]::Move($tmpFilePath, $filePath, $true)
-                    $writeSuccess = $true
                 }
-                finally {
-                    if (Test-Path $tmpFilePath) { Remove-Item $tmpFilePath -Force -ErrorAction SilentlyContinue }
+                else {
+                    $oldFilePath = if ($AsBinary -and $filePath -like "*.json") { $filePath } else { $null }
+                    if ($AsBinary -and $filePath -like "*.json") {
+                        $filePath = [System.IO.Path]::ChangeExtension($filePath, ".dat")
+                    }
+                    $currentDepth = $BinaryDepth; $serialized = $false
+                    $maxLoopDepth = [Math]::Max(10, $BinaryDepth)
+                    $tmpFilePath = $filePath + ".tmp"
+                    try {
+                        while (-not $serialized -and $currentDepth -le $maxLoopDepth) {
+                            try {
+                                $xml = [System.Management.Automation.PSSerializer]::Serialize($objectToSave, $currentDepth)
+                                $rawBytes = [System.Text.Encoding]::UTF8.GetBytes($xml)
+                                if ($Compress) {
+                                    $ms = [System.IO.MemoryStream]::new()
+                                    try {
+                                        $cs = [System.IO.Compression.GZipStream]::new($ms, [System.IO.Compression.CompressionLevel]::Optimal)
+                                        try { $cs.Write($rawBytes, 0, $rawBytes.Length) }
+                                        finally { $cs.Close() }
+                                        [System.IO.File]::WriteAllBytes($tmpFilePath, $ms.ToArray())
+                                    }
+                                    finally { $ms.Dispose() }
+                                }
+                                else { [System.IO.File]::WriteAllBytes($tmpFilePath, $rawBytes) }
+                                $serialized = $true
+                                if ($currentDepth -gt $BinaryDepth) { Write-Verbose "Binary serialization required depth $currentDepth (default: $BinaryDepth)" }
+                            }
+                            catch { $currentDepth++ }
+                        }
+                        if (-not $serialized) { throw "Failed to serialize object '$fileKey' at any binary depth" }
+                        if ($null -ne $oldFilePath -and (Test-Path $oldFilePath)) { Remove-Item $oldFilePath -Force }
+                        [System.IO.File]::Move($tmpFilePath, $filePath, $true)
+                        $writeSuccess = $true
+                    }
+                    finally {
+                        if (Test-Path $tmpFilePath) { Remove-Item $tmpFilePath -Force -ErrorAction SilentlyContinue }
+                    }
                 }
+            }
+            else {
+                $writeSuccess = $true
             }
 
             if ($writeSuccess) {
