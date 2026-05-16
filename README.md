@@ -48,8 +48,10 @@ New-BucketObject
     [-Depth <int>]
     [-BinaryDepth <int>]
     [-AsTimestamp]
-[-AsBinary]
+    [-AsBinary]
     [-Compress]
+    [-Expand]
+    [-ExpandDepth <int>]
     [-Overwrite]
     [-AutoIndex]
     [-Quiet]
@@ -67,6 +69,8 @@ New-BucketObject
 | `-BinaryDepth` | Binary serialization depth (1–100) | `5` |
 | `-AsBinary` | Store in binary format (`.dat`) | `false` |
 | `-Compress` | GZip compress binary output | `false` |
+| `-Expand` | Decompose nested objects into sub-buckets. Only `[PSCustomObject]`, hashtables, and `ICollection` types are expanded — system types (FileInfo, Process, etc.) are saved as regular objects with a warning | `false` |
+| `-ExpandDepth` | Max nesting depth for expansion (1–20) | `5` |
 | `-Overwrite` | Overwrite existing objects with the same key | `false` |
 | `-AutoIndex` | Append `_1`, `_2`, etc. to duplicate keys instead of skipping | `false` |
 | `-Quiet` | Suppress output | `false` |
@@ -108,6 +112,18 @@ New-BucketObject -Bucket logs -InputObject $logs -AsBinary -Compress
 
 # Custom storage location
 New-BucketObject -Path /tmp/buckets -InputObject $data -KeyProperty Name
+
+# Expand a PSCustomObject into browsable sub-buckets
+[PSCustomObject]@{ host = "localhost"; config = @{ port = 8080; ssl = $true } } | fill -Bucket demo -Expand
+
+# Expand with -Key: sub-bucket prefix
+[PSCustomObject]@{ name = "app"; version = 1.0 } | fill -Bucket demo -Key "service" -Expand
+
+# Expand with -ExpandDepth: limit nesting
+[PSCustomObject]@{ level1 = @{ level2 = @{ leaf = "deep" } } } | fill -Bucket demo -Expand -ExpandDepth 1
+
+# Expand a PSCustomObject array with -KeyProperty (each item gets its own sub-bucket)
+@{ id = "a"; val = 10 }, @{ id = "b"; val = 20 } | fill -Bucket demo -KeyProperty id -Expand
 ```
 
 ---
@@ -120,12 +136,13 @@ Warns on nonexistent literal (non-wildcard) bucket names.
 ```powershell
 Get-BucketObject
     [[-Bucket] <string[]>]
-    [[-Key] <string>]
+    [[-Key] <string[]>]
     [-Path <string>]
     [-Match <hashtable>]
     [-Filter <scriptblock>]
     [-Recurse]
     [-NoRecurse]
+    [-Expand]
     [-First <int>]
     [-Skip <int>]
     [<CommonParameters>]
@@ -134,12 +151,13 @@ Get-BucketObject
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `-Bucket` | Bucket name(s) to search (supports wildcards `*`, `?`). Position 0. | All buckets |
-| `-Key` | Object key to retrieve (prefix match, case-insensitive). Position 1. | All objects |
+| `-Key` | Object key(s) to retrieve (prefix match, case-insensitive, accepts array). Position 1. | All objects |
 | `-Path` | Storage root directory | `$HOME/.buckets` |
 | `-Match` | Hashtable of exact-match filters (supports `$null` for absent properties) | — |
 | `-Filter` | ScriptBlock for custom filtering (`$_` references the object) | — |
 | `-Recurse` | Included for backward compatibility. Recursion is now the default. | — |
 | `-NoRecurse` | Suppress recursion — only return objects from the specified bucket directory | — |
+| `-Expand` | Reconstruct expanded sub-buckets back into nested objects | `false` |
 | `-First` | Return only the first N objects | — |
 | `-Skip` | Skip the first N objects | — |
 
@@ -190,6 +208,15 @@ Get-BucketObject -Key "special-item"
 # Limit results
 Get-BucketObject -Bucket users -First 10
 Get-BucketObject -Bucket users -Skip 5 -First 5
+
+# Expand: reconstruct expanded sub-buckets back into nested objects
+Get-BucketObject -Bucket demo -Expand
+
+# Expand with -Key
+Get-BucketObject -Bucket demo -Key "service" -Expand
+
+# Multi-key retrieve (string array)
+Get-BucketObject -Bucket team -Key "Grace", "Heidi", "Ivan"
 ```
 
 ---
@@ -754,6 +781,25 @@ Get-BucketObject -Bucket users | ForEach-Object {
 ---
 
 ## Storage Structure
+
+### Expand layout
+
+When an object is saved with `-Expand`, its properties become sub-buckets and files instead of a single file:
+
+```
+.buckets/expand-demo/
+├── host.dat              (scalar property)
+├── port.dat              (scalar property)
+└── config/               (nested object becomes sub-bucket)
+    ├── port.dat
+    └── ssl.dat
+```
+
+Retrieving with `-Expand` reconstructs the original nested object.
+
+**Safety guard**: Only `[PSCustomObject]`, hashtables (`IDictionary`), and true collections (`ICollection`) are expandable. System types (FileInfo, Process, ServiceController, XmlDocument, etc.) are saved as regular objects with a warning — this prevents accidental disk flooding from deeply nested system object expansion.
+
+### Standard nesting
 
 Buckets support nesting via path separators in bucket names. Nested buckets are real subdirectories:
 
