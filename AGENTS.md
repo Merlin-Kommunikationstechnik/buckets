@@ -7,7 +7,7 @@ PowerShell module for file-based PSObject storage using directory-backed "bucket
 1. **Safety** — don't touch what we shouldn't; protect the user from errors (path traversal guards, `SupportsShouldProcess`, empty key rejection, corrupted file warnings instead of hard failures)
 2. **Cross-platform compatibility** — works on Windows, macOS, and Linux with the same behavior (path separators, case-sensitivity awareness, PowerShell 7+)
 3. **Data integrity on store and retrieval** — round-trip fidelity is guaranteed; binary fallback on JSON depth overflow, compression preserves structure, corrupted files warn and return `$null` rather than crash
-4. **Speed** — optimized for throughput (caching, binary as default, lazy enumeration, `ArrayList` for pipeline buffering)
+4. **Speed** — optimized for throughput (caching, JSON as default, lazy enumeration, `ArrayList` for pipeline buffering)
 5. **Filesystem abstraction** — user thinks in buckets and objects, not files and extensions; hide `.dat`/`.json` internals, no file extensions in UI, tree view shows bucket structure not filesystem hierarchy
 6. **Sleek and pretty** — clean tree/list output, standardized cleanup patterns, consistent formatting
 
@@ -40,8 +40,9 @@ PowerShell module for file-based PSObject storage using directory-backed "bucket
 
 ## Storage Conventions
 - Default path: `$HOME/.buckets` (overridable via `-Path`)
-- Default format: Binary (`.dat`), for full .NET type preservation via PSSerializer
-- JSON format: `-AsJSON` switch (`.json`), human-readable and interoperable
+- Default format: JSON (`.json`), human-readable and interoperable
+- Binary format: `-AsBinary` switch (`.dat`), for full .NET type preservation via PSSerializer
+- `_BucketTypes` — reserved property name embedded in JSON files to preserve original .NET types on round-trip (Int32, Single, DateTime, etc.). Automatically added on save, stripped on read.
 - JSON auto-depth: auto-increments from `-Depth` (default 20) up to 100 to avoid truncation; falls back to binary with `Write-Warning` if still truncated or on exception
 - `BinaryDepth` default: 5 (ValidateRange 1-100), only relevant for `-AsBinary` or binary fallback
 - Arrays stored as individual files
@@ -142,7 +143,7 @@ Benchmarks measure write/read throughput for 1k and 10k objects (simple + comple
 - No emojis in code or comments
 - Parameter descriptions in README and help must match actual code exactly
 - All exported cmdlets need full comment-based help with examples
-- Binary format is the default (handles complex system objects)
+- JSON is the default format (human-readable); use `-AsBinary` for full .NET type preservation
 - `New-BucketObject` default: progress + summary; `-Verbose` for per-object details; `-Quiet` for silence
 - Default path resolves dynamically at call time via `Get-DefaultPath` (not at module load)
 - `Set-BucketObject` outputs summary line by default; includes updated key names (up to 5, then "... N more"); use `-PassThru` to emit objects to pipeline, `-Quiet` for silence

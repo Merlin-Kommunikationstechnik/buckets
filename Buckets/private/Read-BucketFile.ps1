@@ -54,7 +54,7 @@ function Read-BucketFile {
             $content = [System.Text.Encoding]::UTF8.GetString($rawBytes)
             if ($content.StartsWith([char]0xFEFF)) { $content = $content.Substring(1) }
             $obj = $content | ConvertFrom-Json
-            # Convert hashtables to PSCustomObject
+            $obj = Restore-JsonTypes -InputObject $obj
             if ($obj -is [hashtable]) {
                 $ordered = [ordered]@{}
                 foreach ($kvp in $obj.GetEnumerator()) { $ordered[$kvp.Key] = $kvp.Value }

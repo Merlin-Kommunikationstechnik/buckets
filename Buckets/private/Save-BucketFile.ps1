@@ -55,12 +55,22 @@ function Save-BucketFile {
         }
     }
     else {
+        $typeMap = Build-BucketTypes -InputObject $Item
+        $hasTypeMap = $typeMap.Count -gt 0
+        if ($hasTypeMap) {
+            if ($Item -is [hashtable]) { $Item['_BucketTypes'] = $typeMap }
+            else { $Item | Add-Member -NotePropertyName '_BucketTypes' -NotePropertyValue $typeMap -Force }
+        }
         try {
             $json = ConvertTo-Json -InputObject $Item -Depth $Depth -Compress -WarningAction SilentlyContinue
             [System.IO.File]::WriteAllText($Path, $json, [System.Text.Encoding]::UTF8)
             $writeSuccess = $true
         }
         catch {
+            if ($hasTypeMap) {
+                if ($Item -is [hashtable]) { $Item.Remove('_BucketTypes') }
+                else { $p = $Item.PSObject.Properties['_BucketTypes']; if ($p) { $Item.PSObject.Properties.Remove($p) } }
+            }
             try {
                 $xml = [System.Management.Automation.PSSerializer]::Serialize($Item, $BinaryDepth)
                 $rawBytes = [System.Text.Encoding]::UTF8.GetBytes($xml)
@@ -95,6 +105,10 @@ function Save-BucketFile {
             catch {
                 Write-Verbose "Failed to serialize object '$([System.IO.Path]::GetFileNameWithoutExtension($Path))' as binary: $_"
             }
+        }
+        if ($hasTypeMap) {
+            if ($Item -is [hashtable]) { $Item.Remove('_BucketTypes') }
+            else { $p = $Item.PSObject.Properties['_BucketTypes']; if ($p) { $Item.PSObject.Properties.Remove($p) } }
         }
     }
 

@@ -43,7 +43,7 @@ $TutorialData = @{
                                 Body = @'
   Every bucket is a directory under a root path. The default root is:
 
-  Each object is one file — .dat (binary, default) or .json (opt-in).
+  Each object is one file — .json (JSON, default) or .dat (binary, via -AsBinary).
   The filename (minus extension) is the object's key.
 
   The six core cmdlets:
@@ -268,8 +268,8 @@ scoop -Key "Bob", "Alice" -Bucket "team"
                                 Body = @'
   Let's save your first object — a simple hashtable describing a user. We give it
   an explicit key "Alice" with -Key, which becomes its key. By default,
-  Buckets uses a binary format that preserves the full .NET type information, so
-  hashtables, custom objects, even FileInfo — all survive the round trip.
+  Buckets uses JSON format for human readability. Type information (Int32, Single, DateTime, etc.)
+  is stored as embedded metadata (`_BucketTypes`) and restored automatically on read.
 '@
                                 SetupCode = @'
 # Create a sample user hashtable to store in a bucket
