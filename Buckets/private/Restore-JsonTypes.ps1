@@ -61,15 +61,22 @@ function Apply-TypeMap {
             $targetType = [Type]::GetType($arrayElemType)
             if ($null -ne $targetType) {
                 $arr = [System.Collections.ArrayList]::new()
+                $elementMismatch = $false
                 foreach ($elem in $propValue) {
-                    if ($null -eq $elem -or $elem.GetType() -eq $targetType) { $null = $arr.Add($elem); continue }
+                    if ($null -eq $elem) { $null = $arr.Add($elem); continue }
+                    if ($elem.GetType() -eq $targetType) { $null = $arr.Add($elem); continue }
                     $converted = Convert-ToType -Value $elem -TypeName $arrayElemType
-                    $null = $arr.Add(if ($null -ne $converted) { $converted } else { $elem })
+                    if ($null -ne $converted) { $null = $arr.Add($converted) }
+                    else { $null = $arr.Add($elem); $elementMismatch = $true }
                 }
-                $typedArr = [Array]::CreateInstance($targetType, $arr.Count)
-                $arr.CopyTo($typedArr, 0)
-                if ($InputObject -is [hashtable]) { $InputObject[$propName] = $typedArr }
-                else { $InputObject.PSObject.Properties[$propName].Value = $typedArr }
+                if ($elementMismatch) {
+                    $result = $arr.ToArray()
+                } else {
+                    $result = [Array]::CreateInstance($targetType, $arr.Count)
+                    $arr.CopyTo($result, 0)
+                }
+                if ($InputObject -is [hashtable]) { $InputObject[$propName] = $result }
+                else { $InputObject.PSObject.Properties[$propName].Value = $result }
             }
         }
         else {
@@ -101,7 +108,7 @@ function Get-TypeMapEntry {
     param($TypeMap, [string]$Key)
     if ($TypeMap -is [PSCustomObject]) {
         $p = $TypeMap.PSObject.Properties[$Key]
-        return if ($p) { $p.Value } else { $null }
+        return ($p ? $p.Value : $null)
     }
     if ($TypeMap -is [hashtable] -and $TypeMap.ContainsKey($Key)) { return $TypeMap[$Key] }
     return $null
